@@ -10,7 +10,7 @@ interface SimpleRichEditorProps {
   initialValue?: string
   onChange?: (content: string) => void
   onFocus?: () => void
-  onBlur?: () => void
+  onBlur?: (e: React.FocusEvent) => void
   autoFocus?: boolean
   onMakeNote?: (selectedText: string) => void
 }
