@@ -55,7 +55,7 @@ export function SimpleRichEditor({
 
         try {
           range.surroundContents(headingElement)
-        } catch (e) {
+        } catch {
           // If can't surround, insert at cursor
           headingElement.textContent = 'Heading'
           range.insertNode(headingElement)

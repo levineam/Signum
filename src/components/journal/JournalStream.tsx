@@ -5,7 +5,7 @@ import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 import { Card } from '@/components/ui/card'
 import { sampleJournalEntries } from '@/data/sampleEntries'
 import { Calendar, BookOpen, X, RefreshCw } from 'lucide-react'
-import { getCurrentPrompt, getNextPrompt, dismissPromptForSession, isPromptDismissedForSession } from '@/utils/journalPrompts'
+import { getNextPrompt, dismissPromptForSession } from '@/utils/journalPrompts'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
 import { NoteViewer } from '@/components/notes/NoteViewer'
 import { Note } from '@/types/note'
@@ -227,10 +227,6 @@ export function JournalStream() {
         year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
       })
     }
-  }
-
-  const getEntryForDate = (date: string): JournalEntry | undefined => {
-    return entries.find(e => e.date === date)
   }
 
   const isToday = (dateStr: string) => {
