@@ -1,17 +1,17 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session, AuthResponse, AuthTokenResponse } from '@supabase/supabase-js'
+import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
 interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  signUp: (email: string, password: string) => Promise<AuthResponse>
-  signIn: (email: string, password: string) => Promise<AuthTokenResponse>
+  signUp: (email: string, password: string) => Promise<{ data: any; error: any }>
+  signIn: (email: string, password: string) => Promise<{ data: any; error: any }>
   signOut: () => Promise<void>
-  resetPassword: (email: string) => Promise<AuthResponse>
+  resetPassword: (email: string) => Promise<{ data: any; error: any }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
