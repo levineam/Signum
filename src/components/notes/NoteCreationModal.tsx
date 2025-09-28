@@ -1,0 +1,138 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
+import { createNote } from '@/lib/notes'
+import { Note } from '@/types/note'
+import { FileText, Save, X } from 'lucide-react'
+
+interface NoteCreationModalProps {
+  isOpen: boolean
+  onClose: () => void
+  initialTitle: string
+  onNoteCreated?: (note: Note) => void
+}
+
+export function NoteCreationModal({
+  isOpen,
+  onClose,
+  initialTitle,
+  onNoteCreated
+}: NoteCreationModalProps) {
+  const [title, setTitle] = useState(initialTitle)
+  const [content, setContent] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Update title when initialTitle changes
+  useEffect(() => {
+    if (isOpen && initialTitle) {
+      setTitle(initialTitle)
+    }
+  }, [isOpen, initialTitle])
+
+  const handleSave = async () => {
+    if (!title.trim()) return
+
+    setIsSaving(true)
+    try {
+      const newNote = createNote({
+        title: title.trim(),
+        content: content.trim()
+      })
+
+      onNoteCreated?.(newNote)
+      handleClose()
+    } catch (error) {
+      console.error('Error creating note:', error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleClose = () => {
+    setTitle('')
+    setContent('')
+    setIsSaving(false)
+    onClose()
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleClose()
+    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault()
+      handleSave()
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent
+        className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
+        onKeyDown={handleKeyDown}
+      >
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Create New Note
+          </DialogTitle>
+          <DialogDescription>
+            Create a new note from your selected text or start writing from scratch.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 flex flex-col gap-4 min-h-0">
+          <div className="flex-shrink-0 space-y-2">
+            <Label htmlFor="note-title">Title</Label>
+            <Input
+              id="note-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter note title..."
+              className="text-lg font-medium"
+              autoFocus
+            />
+          </div>
+
+          <div className="flex-1 flex flex-col min-h-0 space-y-2">
+            <Label htmlFor="note-content">Content</Label>
+            <div className="flex-1 min-h-[300px]">
+              <SimpleRichEditor
+                value={content}
+                placeholder="Start writing your note content..."
+                onChange={setContent}
+              />
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="flex-shrink-0 pt-4">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSaving}
+            className="flex items-center gap-2"
+          >
+            <X className="h-4 w-4" />
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={!title.trim() || isSaving}
+            className="flex items-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {isSaving ? 'Creating...' : 'Create Note'}
+          </Button>
+          <div className="text-xs text-muted-foreground ml-2">
+            Ctrl+Enter to save
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
