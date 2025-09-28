@@ -28,22 +28,22 @@ export function AuthForms({ mode, onToggleMode }: AuthFormsProps) {
     try {
       if (showResetPassword) {
         const { error } = await resetPassword(email)
-        if (error) {
-          setMessage(error.message)
+        if (error && typeof error === 'object' && 'message' in error) {
+          setMessage((error as { message: string }).message)
         } else {
           setMessage('Password reset email sent! Check your inbox.')
         }
       } else if (mode === 'signup') {
         const { error } = await signUp(email, password)
-        if (error) {
-          setMessage(error.message)
+        if (error && typeof error === 'object' && 'message' in error) {
+          setMessage((error as { message: string }).message)
         } else {
           setMessage('Check your email for the confirmation link!')
         }
       } else {
         const { error } = await signIn(email, password)
-        if (error) {
-          setMessage(error.message)
+        if (error && typeof error === 'object' && 'message' in error) {
+          setMessage((error as { message: string }).message)
         }
       }
     } catch {
