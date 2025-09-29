@@ -1,18 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { JournalStream } from '@/components/journal/JournalStream'
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState('journal')
+  const router = useRouter()
+
+  useEffect(() => {
+    const handleNavigateToNotes = () => {
+      setActiveSection('notes')
+    }
+
+    window.addEventListener('navigate-to-notes', handleNavigateToNotes)
+    return () => window.removeEventListener('navigate-to-notes', handleNavigateToNotes)
+  }, [])
+
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section)
+    if (section === 'notes') {
+      router.push('/notes')
+    }
+  }
 
   const renderContent = () => {
     switch (activeSection) {
       case 'journal':
         return <JournalStream />
-      case 'notes':
-        return <div className="p-6 text-center text-muted-foreground">Notes feature coming soon...</div>
       case 'feedback':
         return <div className="p-6 text-center text-muted-foreground">Feedback feature coming soon...</div>
       case 'articles':
@@ -28,7 +44,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+      <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
       <main className="lg:pl-64">
         {renderContent()}
       </main>

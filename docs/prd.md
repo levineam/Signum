@@ -488,7 +488,62 @@ so that I can easily navigate between connected thoughts.
 - **Storage**: `/src/lib/links.ts` (bidirectional link relationship tracking)
 - **Types**: Complete link and note relationship type definitions
 
-#### Story 2.4: Personal Ontology Extraction Foundation 🚧 PRIORITIZED - IN PROGRESS
+#### Story 2.3.5: Notes Page UI Foundation ✅ COMPLETED
+
+As a user,
+I want a dedicated Notes page where I can view and edit my personal ontology (Values, Beliefs, Aims) and other reflective notes,
+so that I have a centralized place to refine my thinking before implementing AI-powered extraction.
+
+##### Acceptance Criteria
+
+**UI Layout:**
+1. ✅ Notes page accessible via sidebar "Notes" button
+2. ✅ Pinned row at top displaying 3 special notes:
+   - Values (single consolidated note)
+   - Beliefs (single consolidated note)
+   - Aims (single note with two sections: Todos and Goals)
+3. ✅ Each pinned card shows title and character count
+4. ✅ Below pinned row: chronological list of regular notes (reverse chronological order)
+5. ✅ Empty state message: "No notes yet. Create notes from your journal entries."
+
+**Note Editing:**
+1. ✅ Click any note card to open full-page editor
+2. ✅ Plain text editing (no rich text formatting for MVP)
+3. ✅ Aims note shows two fixed sections with separate textareas:
+   - "Todos" heading (fixed, not user-editable)
+   - "Goals" heading (fixed, not user-editable)
+4. ✅ Auto-save on blur or manual Save button
+5. ✅ Back button returns to main app
+
+**Data Management:**
+1. ✅ Pinned notes auto-created empty on first visit
+2. ✅ All data stored in localStorage
+3. ✅ Note type system: `'values' | 'beliefs' | 'aims' | 'regular'`
+4. ✅ Character count calculation combines both sections for Aims note
+
+**Technical Implementation:**
+- ✅ `/src/types/note.ts` - Updated with `type` and `isPinned` fields
+- ✅ `/src/lib/notes.ts` - Helper functions for pinned notes
+- ✅ `/src/components/notes/PinnedNoteCard.tsx` - Pinned note display
+- ✅ `/src/components/notes/RegularNoteCard.tsx` - Regular note preview
+- ✅ `/src/components/notes/NotesPage.tsx` - Main page layout
+- ✅ `/src/app/notes/page.tsx` - Route wrapper
+- ✅ `/src/app/notes/[id]/page.tsx` - Dynamic note editor with Next.js 15 async params support
+
+##### Success Metrics
+1. ✅ Users can create and edit all three ontology notes
+2. ✅ Character counts update correctly after saving
+3. ✅ Aims note properly separates Todos and Goals
+4. ✅ Navigation between Notes page and editor works smoothly
+
+##### Notes
+- This story was completed as a UI-first approach to validate the Notes page UX before implementing AI extraction
+- Regular notes are view-only for now - creation will come from journal entries in later stories
+- No creation button by design - forces intentional note creation from journaling context
+
+---
+
+#### Story 2.4: Personal Ontology Extraction Foundation 🚧 PRIORITIZED - NEXT
 
 As a reflective journaler,
 I want the system to automatically identify and extract my core Values, Beliefs, and Aims from my journal entries,

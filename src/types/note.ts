@@ -5,6 +5,8 @@ export interface Note {
   createdAt: string
   updatedAt: string
   userId?: string // Optional for now since we're using localStorage
+  type: 'values' | 'beliefs' | 'aims' | 'regular'
+  isPinned: boolean
 }
 
 export interface CreateNoteRequest {

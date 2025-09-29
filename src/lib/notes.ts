@@ -1,6 +1,11 @@
 import { Note, CreateNoteRequest } from '@/types/note'
 
 const NOTES_STORAGE_KEY = 'signum-notes'
+const PINNED_NOTE_IDS = {
+  values: 'pinned-values',
+  beliefs: 'pinned-beliefs',
+  aims: 'pinned-aims'
+}
 
 export function generateNoteId(): string {
   return `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -35,7 +40,9 @@ export function createNote(request: CreateNoteRequest): Note {
     title: request.title,
     content: request.content || '',
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    type: 'regular',
+    isPinned: false
   }
 
   const existingNotes = getNotes()
@@ -80,4 +87,73 @@ export function deleteNote(id: string): boolean {
 export function getNoteById(id: string): Note | null {
   const notes = getNotes()
   return notes.find(note => note.id === id) || null
+}
+
+export function initializePinnedNotes(): void {
+  const existingNotes = getNotes()
+  const now = new Date().toISOString()
+
+  // Check if pinned notes already exist
+  const hasValues = existingNotes.some(n => n.id === PINNED_NOTE_IDS.values)
+  const hasBeliefs = existingNotes.some(n => n.id === PINNED_NOTE_IDS.beliefs)
+  const hasAims = existingNotes.some(n => n.id === PINNED_NOTE_IDS.aims)
+
+  const newNotes: Note[] = []
+
+  if (!hasValues) {
+    newNotes.push({
+      id: PINNED_NOTE_IDS.values,
+      title: 'Values',
+      content: '',
+      createdAt: now,
+      updatedAt: now,
+      type: 'values',
+      isPinned: true
+    })
+  }
+
+  if (!hasBeliefs) {
+    newNotes.push({
+      id: PINNED_NOTE_IDS.beliefs,
+      title: 'Beliefs',
+      content: '',
+      createdAt: now,
+      updatedAt: now,
+      type: 'beliefs',
+      isPinned: true
+    })
+  }
+
+  if (!hasAims) {
+    newNotes.push({
+      id: PINNED_NOTE_IDS.aims,
+      title: 'Aims',
+      content: JSON.stringify({ todos: '', goals: '' }),
+      createdAt: now,
+      updatedAt: now,
+      type: 'aims',
+      isPinned: true
+    })
+  }
+
+  if (newNotes.length > 0) {
+    saveNotes([...existingNotes, ...newNotes])
+  }
+}
+
+export function getPinnedNotes(): Note[] {
+  const notes = getNotes()
+  return notes
+    .filter(note => note.isPinned)
+    .sort((a, b) => {
+      const order = ['values', 'beliefs', 'aims']
+      return order.indexOf(a.type) - order.indexOf(b.type)
+    })
+}
+
+export function getRegularNotes(): Note[] {
+  const notes = getNotes()
+  return notes
+    .filter(note => !note.isPinned)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 }
