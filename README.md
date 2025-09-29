@@ -4,7 +4,7 @@ A journaling-first social platform designed to help users lead more meaningful l
 
 ## 🚀 Live Application
 
-**Production URL:** [https://signum.vercel.app](https://signum.vercel.app)
+**Production URL:** [https://ontology-mu.vercel.app](https://ontology-mu.vercel.app)
 
 ## About
 
@@ -65,7 +65,7 @@ This application is deployed on Vercel with automatic deployments from the `main
 ### Deployment Pipeline
 - **Source:** GitHub repository push to `main`
 - **Build:** Vercel automatically builds with Next.js
-- **Deploy:** Live at [https://signum.vercel.app](https://signum.vercel.app)
+- **Deploy:** Live at [https://ontology-mu.vercel.app](https://ontology-mu.vercel.app)
 
 ### Manual Deployment
 ```bash
@@ -81,7 +81,7 @@ vercel deploy --prod
 
 ## 🔗 Links
 
-- **Production App:** [https://signum.vercel.app](https://signum.vercel.app)
+- **Production App:** [https://ontology-mu.vercel.app](https://ontology-mu.vercel.app)
 - **GitHub Repository:** [https://github.com/levineam/Signum](https://github.com/levineam/Signum)
 - **Vercel Dashboard:** [https://vercel.com/levineams-projects/signum](https://vercel.com/levineams-projects/signum)
 

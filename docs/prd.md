@@ -24,7 +24,7 @@ The solution combines two key innovations: gentle background AI that builds pers
 ## Current Status
 
 **Deployment Status:** ✅ **LIVE IN PRODUCTION**
-- **Production URL:** https://signum.vercel.app
+- **Production URL:** https://ontology-mu.vercel.app
 - **GitHub Repository:** https://github.com/levineam/Signum
 - **Deployment Pipeline:** Automated via GitHub → Vercel integration
 
