@@ -1,8 +1,31 @@
 # Signum
 
-A modern journaling and note-taking application built with Next.js.
+A journaling-first social platform designed to help users lead more meaningful lives through personal insight and community connection.
+
+## 🚀 Live Application
+
+**Production URL:** [https://signum.vercel.app](https://signum.vercel.app)
 
 ## About
+
+Signum addresses the gap in digital platforms that optimize for external metrics rather than personal insight and meaning-making. It provides a calm, frictionless space for journaling and self-discovery, then uniquely connects those personal insights to meaningful social experiences.
+
+### Key Features
+
+- **WYSIWYG Rich Text Editor** - Seamless journal entry creation and editing
+- **Smart Note Creation** - Create linked notes from highlighted text
+- **Bidirectional Linking** - Navigate between connected thoughts and entries
+- **Cloud Persistence** - All data securely stored with Supabase
+- **Authentication System** - Secure user accounts and data privacy
+
+### Tech Stack
+
+- **Framework:** Next.js 15.5.3 with Turbopack
+- **Authentication:** Supabase Auth
+- **Database:** Supabase PostgreSQL
+- **UI Components:** shadcn/ui with Tailwind CSS
+- **Deployment:** Vercel with GitHub integration
+- **Language:** TypeScript
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
@@ -35,8 +58,31 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## 🚢 Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This application is deployed on Vercel with automatic deployments from the `main` branch.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Deployment Pipeline
+- **Source:** GitHub repository push to `main`
+- **Build:** Vercel automatically builds with Next.js
+- **Deploy:** Live at [https://signum.vercel.app](https://signum.vercel.app)
+
+### Manual Deployment
+```bash
+# Using Vercel CLI
+vercel deploy --prod
+```
+
+## 📚 Documentation
+
+- **Product Requirements:** [`docs/prd.md`](./docs/prd.md)
+- **Project Brief:** [`docs/project-brief.md`](./docs/project-brief.md)
+- **MCP Usage Guide:** [`.claude/CLAUDE.md`](./.claude/CLAUDE.md)
+
+## 🔗 Links
+
+- **Production App:** [https://signum.vercel.app](https://signum.vercel.app)
+- **GitHub Repository:** [https://github.com/levineam/Signum](https://github.com/levineam/Signum)
+- **Vercel Dashboard:** [https://vercel.com/levineams-projects/signum](https://vercel.com/levineams-projects/signum)
+
+Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
