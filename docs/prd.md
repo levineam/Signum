@@ -40,17 +40,23 @@ The solution combines two key innovations: gentle background AI that builds pers
 - ✅ Journal entry creation and editing
 - ✅ Text selection and note creation from highlights
 - ✅ Bidirectional linking between entries and notes
+- ✅ Notes Page with Personal Ontology UI (Values, Beliefs, Aims)
+- ✅ 20 sample notes for ontology extraction testing
 - ✅ Sample journal data for testing
 - ✅ Authentication system
-- ✅ Cloud data persistence
+- ✅ Cloud data persistence (partial - needs unification)
 - ✅ Responsive UI with shadcn/ui components
 
-**Next Priority:** AI Personal Ontology System (Epic 4)
+**Next Priorities:**
+1. **Story 2.3.6**: Unified Note Data Model & Supabase Migration (CRITICAL - prerequisite for AI)
+2. **Story 2.4**: AI Personal Ontology Extraction with GPT-5-mini
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|---------|
+| 2025-09-30 | 3.2 | **MAJOR REFACTOR:** Added Story 2.3.6 (Unified Note Data Model & Supabase Migration) as critical prerequisite for AI features. Updated Story 2.4 with GPT-5-mini integration, Supabase storage, and MVP scope. Created comprehensive documentation: `/docs/openai-gpt5-api.md`, `/docs/data-model-unification.md`, `/docs/story-2.4-updated.md` | John (PM) |
+| 2025-09-30 | 3.1 | Story 2.3.5 completed - Notes Page UI Foundation with Personal Ontology cards. Added 20 sample notes designed for ontology extraction testing (see `/scripts/seed-ontology-notes.js`) | Claude Code |
 | 2025-09-28 | 3.0 | **MAJOR MILESTONE:** Consolidated repository structure, deployed to production, established CI/CD pipeline. All foundational features implemented and functional. | Claude Code |
 | 2025-09-27 | 2.5 | Course correction: Prioritizing Personal Ontology (Epic 4) over Epic 2 remaining stories. Story 2.3 (Hyperlink Creation) completed. Expanding sample data to 20 entries for AI testing | John (PM) |
 | 2025-09-26 | 2.4 | Story 2.2 completed - Note Creation from Highlighted Text implemented with modal interface and duplicate prevention consideration | John (PM) |
@@ -514,6 +520,10 @@ so that I have a centralized place to refine my thinking before implementing AI-
    - "Goals" heading (fixed, not user-editable)
 4. ✅ Auto-save on blur or manual Save button
 5. ✅ Back button returns to main app
+6. 🔄 **CORRECTION NEEDED**: Values, Beliefs, and Aims notes should be READ-ONLY (AI-populated only)
+   - Manual editing increases cognitive load
+   - Contradicts core principle: minimize friction, maximize note creation
+   - These notes should ONLY be populated autonomously through AI analysis
 
 **Data Management:**
 1. ✅ Pinned notes auto-created empty on first visit
@@ -540,199 +550,409 @@ so that I have a centralized place to refine my thinking before implementing AI-
 - This story was completed as a UI-first approach to validate the Notes page UX before implementing AI extraction
 - Regular notes are view-only for now - creation will come from journal entries in later stories
 - No creation button by design - forces intentional note creation from journaling context
+- **CRITICAL DESIGN PRINCIPLE**: Values/Beliefs/Aims notes must be AI-populated only to minimize cognitive load and encourage natural journaling. Manual editing capability was incorrectly implemented and needs correction.
+
+##### Sample Notes for Ontology Testing
+To prepare for AI Ontology Extraction (Stories 2.3.6 & 2.4), 20 sample notes were created with rich semantic content:
+- **Script Location**: `/scripts/seed-ontology-notes.js` (browser console script)
+- **Usage**: See `/scripts/README.md` for instructions
+- **Content Design**: Notes contain diverse themes, values, relationships, and life events specifically designed to test ontology extraction:
+  - **Values**: Compassion, meaning, justice, presence, personal agency, integrity
+  - **Key People**: Sarah Johnson, Marcus Chen, Dr. Priya Patel, Emma (daughter)
+  - **Organizations**: GreenFuture nonprofit, Impact Investors Network
+  - **Themes**: Work-life balance, community building, entrepreneurship, AI ethics, parenting, personal growth
+  - **Life Events**: Career changes, health diagnoses, business failures, learning journeys
+  - **Philosophical Concepts**: Justice vs. charity, identity beyond work, meaning vs. happiness
+- **Testing Goal**: Validate that GPT-5 can successfully extract values, beliefs, relationships, and recurring themes from realistic personal notes
 
 ---
 
-#### Story 2.4: Personal Ontology Extraction Foundation 🚧 PRIORITIZED - NEXT
+#### Story 2.3.6: Unified Note Data Model & Supabase Migration 🚧 PRIORITIZED - NEXT
+
+As a developer,
+I want a unified Note data model with all content stored in Supabase instead of separate localStorage structures,
+so that journal entries and notes share infrastructure, enabling the AI to analyze all content uniformly and supporting future multi-device access.
+
+##### Problem Statement
+
+Currently, the codebase treats "journal entries" and "notes" as **separate, parallel entities** with different interfaces and storage:
+
+**Journal Entry** (`src/components/journal/JournalStream.tsx`):
+```typescript
+interface JournalEntry {
+  id: string
+  date: string        // YYYY-MM-DD format
+  content: string
+  lastModified: string
+  isSample?: boolean
+}
+// Stored in: localStorage['journal-entries']
+```
+
+**Note** (`src/types/note.ts`):
+```typescript
+interface Note {
+  id: string
+  title: string
+  content: string
+  createdAt: string
+  updatedAt: string
+  userId?: string
+  type: 'values' | 'beliefs' | 'aims' | 'regular'
+  isPinned: boolean
+}
+// Stored in: localStorage['signum-notes']
+```
+
+**Why This Is Problematic:**
+1. **Conceptual confusion**: Journal entries ARE a type of note, not a separate entity
+2. **Duplicate logic**: Separate CRUD operations, storage, and UI components
+3. **AI complexity**: Story 2.4 must handle two different data sources and formats
+4. **No multi-device sync**: localStorage prevents accessing data across devices
+5. **Scaling issues**: Adding new note types requires parallel implementations
+
+##### Acceptance Criteria
+
+**Data Model:**
+1. ✅ Single unified `Note` interface with `noteType` discriminator field
+2. ✅ NoteType enum includes:
+   - `'journal-entry'` - Daily journaling (replaces JournalEntry)
+   - `'reflection'` - Created from highlighted journal text
+   - `'ontology-value'` - AI-extracted value
+   - `'ontology-belief'` - AI-extracted belief
+   - `'ontology-aim'` - AI-extracted aim
+   - `'custom'` - User-created standalone note
+3. ✅ Metadata field (JSONB) for type-specific data:
+   - Journal entries: `journalDate`, `prompt`
+   - Reflections: `sourceNoteId`, `sourceQuote`
+   - Ontology items: `confidence`, `extractedFrom`, `aiReasoning`
+4. ✅ TypeScript interfaces updated in `/src/types/note.ts`
+
+**Supabase Schema:**
+1. ✅ Create `notes` table with unified schema
+2. ✅ Columns: `id`, `user_id`, `title`, `content`, `note_type`, `is_pinned`, `metadata`, `created_at`, `updated_at`
+3. ✅ Indexes on: `user_id`, `note_type`, `created_at`, `metadata->>'journalDate'`
+4. ✅ RLS policies: Users can only CRUD their own notes
+5. ✅ Trigger: Auto-update `updated_at` on modification
+
+**Data Migration:**
+1. ✅ Migrate localStorage journal entries → Supabase with `noteType: 'journal-entry'`
+2. ✅ Migrate localStorage notes → Supabase with `noteType: 'custom'` (legacy `'regular'` type → `'custom'`)
+3. ✅ Convert `JournalEntry.date` → `Note.metadata.journalDate`
+4. ✅ Convert `Note.type` → `Note.noteType` (rename field to avoid confusion)
+5. ✅ Preserve all sample data (20 sample notes + journal entries)
+6. ✅ Migration script: `/scripts/migrate-to-unified-model.ts`
+
+**Code Refactoring:**
+1. ✅ Remove `JournalEntry` interface
+2. ✅ Update `JournalStream` component to query: `WHERE noteType = 'journal-entry'`
+3. ✅ Update `NotesPage` component to query: `WHERE noteType IN ('custom', 'reflection')`
+4. ✅ Create `/src/lib/supabase/notes.ts` for unified CRUD operations
+5. ✅ Remove localStorage dependencies (except UI state like collapsed sidebar)
+6. ✅ Update all components using old interfaces
+
+##### Technical Implementation
+
+**Supabase Schema** (see `/docs/data-model-unification.md` for complete details):
+```sql
+CREATE TABLE notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  note_type TEXT NOT NULL CHECK (note_type IN (
+    'journal-entry', 'reflection', 'ontology-value',
+    'ontology-belief', 'ontology-aim', 'custom'
+  )),
+  is_pinned BOOLEAN DEFAULT FALSE,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Indexes
+CREATE INDEX idx_notes_user_id ON notes(user_id);
+CREATE INDEX idx_notes_note_type ON notes(note_type);
+CREATE INDEX idx_notes_created_at ON notes(created_at DESC);
+CREATE INDEX idx_notes_journal_date ON notes((metadata->>'journalDate'))
+  WHERE note_type = 'journal-entry';
+
+-- RLS
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can CRUD their own notes"
+  ON notes FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Auto-update timestamp
+CREATE TRIGGER notes_updated_at
+  BEFORE UPDATE ON notes
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at();
+```
+
+**TypeScript Interfaces:**
+```typescript
+// src/types/note.ts (UPDATED)
+export type NoteType =
+  | 'journal-entry'
+  | 'reflection'
+  | 'ontology-value'
+  | 'ontology-belief'
+  | 'ontology-aim'
+  | 'custom'
+
+export interface Note {
+  id: string
+  userId: string
+  title: string
+  content: string
+  noteType: NoteType
+  isPinned: boolean
+  metadata: NoteMetadata
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NoteMetadata {
+  // For journal entries
+  journalDate?: string          // YYYY-MM-DD
+  prompt?: string               // ACT-inspired prompt
+
+  // For reflections
+  sourceNoteId?: string
+  sourceQuote?: string
+
+  // For ontology items
+  confidence?: 'high' | 'medium' | 'low'
+  extractedFrom?: string[]
+  aiReasoning?: string
+
+  // General
+  tags?: string[]
+  isSample?: boolean
+}
+```
+
+**Database Operations:**
+```typescript
+// src/lib/supabase/notes.ts (NEW)
+import { createClient } from '@/lib/supabase'
+
+export async function getJournalEntries(userId: string) {
+  const supabase = createClient()
+  return supabase
+    .from('notes')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('note_type', 'journal-entry')
+    .order('metadata->>journalDate', { ascending: false })
+}
+
+export async function getRegularNotes(userId: string) {
+  const supabase = createClient()
+  return supabase
+    .from('notes')
+    .select('*')
+    .eq('user_id', userId)
+    .in('note_type', ['custom', 'reflection'])
+    .order('created_at', { ascending: false })
+}
+
+export async function getOntologyNotes(userId: string) {
+  const supabase = createClient()
+  return supabase
+    .from('notes')
+    .select('*')
+    .eq('user_id', userId)
+    .in('note_type', ['ontology-value', 'ontology-belief', 'ontology-aim'])
+    .eq('is_pinned', true)
+}
+
+// ... CRUD operations
+```
+
+##### Migration Strategy
+
+**Phase 1: Schema Setup**
+1. Create Supabase migration file
+2. Run migration on dev database
+3. Test queries with sample data
+4. Verify RLS policies work correctly
+
+**Phase 2: Dual-Write Period (Optional)**
+1. Write to both localStorage AND Supabase
+2. Read from Supabase with localStorage fallback
+3. Allow gradual testing in production
+4. Monitor for any data inconsistencies
+
+**Phase 3: Component Updates**
+1. Update `JournalStream` to use unified model
+2. Update `NotesPage` to use unified model
+3. Update type definitions across codebase
+4. Remove `JournalEntry` interface references
+
+**Phase 4: Data Migration**
+1. Create migration script for existing users
+2. Convert localStorage data → Supabase format
+3. Verify all data migrated correctly
+4. Archive old localStorage keys
+
+**Phase 5: Cleanup**
+1. Remove localStorage CRUD functions
+2. Remove compatibility layer
+3. Update tests to use new model
+4. Update documentation
+
+##### Testing Requirements
+
+**Unit Tests:**
+1. Note type validation (valid/invalid noteType values)
+2. Metadata structure for each note type
+3. Query helpers return correct filtered results
+4. Migration script converts data correctly
+
+**Integration Tests:**
+1. Full CRUD operations through Supabase
+2. RLS policies prevent unauthorized access
+3. Index performance for large datasets
+4. Migration from localStorage → Supabase preserves all data
+
+**Manual Testing:**
+1. Create new journal entry → stored as `noteType: 'journal-entry'`
+2. Create note from highlight → stored as `noteType: 'reflection'`
+3. Verify 20 sample notes migrated correctly
+4. Check journal stream displays entries by date
+5. Check notes page displays regular notes
+6. Verify no localStorage dependencies remain
+
+##### Success Metrics
+
+1. **Data Integrity**: 100% of localStorage data successfully migrated
+2. **Performance**: Queries return in < 200ms with 1000+ notes
+3. **Code Quality**: Single source of truth for all note-related code
+4. **Developer Experience**: Unified API simplifies future feature development
+
+##### Documentation References
+
+- **Complete Architecture**: `/docs/data-model-unification.md`
+- **Supabase Project**: https://supabase.com/dashboard/project/otyvmmgakowcdsxehwox
+- **Current JournalEntry**: `src/components/journal/JournalStream.tsx:11-17`
+- **Current Note**: `src/types/note.ts:1-10`
+
+##### Notes
+
+- This is a **prerequisite for Story 2.4** (AI Ontology Extraction)
+- Estimated effort: **2-3 days** (significant refactoring)
+- Risk: Medium (touches core data model and multiple components)
+- Benefit: Enables multi-device sync, simplifies AI analysis, reduces technical debt
+
+---
+
+#### Story 2.4: AI Personal Ontology Extraction Foundation 🚧 NEXT AFTER 2.3.6
+
+**Prerequisites:** Story 2.3.6 (Unified Note Data Model) ✅ Complete
 
 As a reflective journaler,
-I want the system to automatically identify and extract my core Values, Beliefs, and Aims from my journal entries,
+I want the system to automatically identify and extract my core Values, Beliefs, and Aims from **all my notes**,
 so that I can build a structured personal ontology that helps me understand my authentic self and track my philosophical evolution over time.
+
+##### Context & Documentation
+
+- **Complete Implementation Guide**: `/docs/story-2.4-updated.md`
+- **GPT-5-mini API Documentation**: `/docs/openai-gpt5-api.md`
+- **Data Model Reference**: `/docs/data-model-unification.md`
+- **Supabase Project**: https://supabase.com/dashboard/project/otyvmmgakowcdsxehwox
+- **Sample Test Data**: 20 notes in system (see `/scripts/seed-ontology-notes.js`)
+
+##### MVP Scope (Story 2.4.1)
+
+This story implements the **simplest possible working extraction** to validate value to users.
+
+**What's Included:**
+- Manual "Analyze My Notes" button on Notes page
+- Processes up to 20 most recent notes (excluding ontology notes)
+- Direct population of Values/Beliefs/Aims cards (no approval workflow)
+- GPT-5-mini for cost efficiency
+- Supabase storage (unified Note model with `noteType: 'ontology-*'`)
+
+**What's Deferred to Post-MVP:**
+- Suggestion review/approval UI (Story 2.4.2)
+- Incremental processing (Story 2.4.3)
+- Analytics dashboard (Story 2.4.4)
 
 ##### Acceptance Criteria
 
 **Core Functionality:**
-1. ✅ System analyzes journal entries using OpenAI GPT-5 to extract philosophical concepts
-2. ✅ Extracted concepts are automatically categorized as:
-   - **Values**: Core principles that guide decisions (e.g., "integrity", "independence", "compassion")
-   - **Beliefs**: Fundamental truths about the world (e.g., "happiness is a choice", "people are inherently good")
-   - **Aims**: Life goals and aspirations (e.g., "cultivate mindfulness", "build meaningful relationships")
-3. ✅ Each extraction includes:
-   - Confidence score (high/medium/low based on clarity and context)
-   - Source attribution (which journal entry, specific quote)
-   - Extraction timestamp
-   - AI reasoning for categorization
-4. ✅ Minimum entry length of 100 words required for meaningful extraction
-5. ✅ System processes up to 3 entries per analysis batch to manage API costs
+1. ✅ System analyzes notes using OpenAI GPT-5-mini (cost-efficient model)
+2. ✅ Manual trigger via "Analyze My Notes" button on Notes page
+3. ✅ Processes notes where `noteType IN ('journal-entry', 'reflection', 'custom')` (up to 20 most recent)
+4. ✅ Each extraction includes:
+   - Concept text (short, memorable phrase)
+   - Category (value/belief/aim)
+   - Confidence score (high/medium/low)
+   - Source note IDs
+   - AI reasoning
+5. ✅ High-confidence extractions automatically stored as ontology notes:
+   - `noteType: 'ontology-value'` → populates Values card
+   - `noteType: 'ontology-belief'` → populates Beliefs card
+   - `noteType: 'ontology-aim'` → populates Aims card
 
-**User Interface Requirements:**
-1. ✅ New "Ontology" section added to sidebar navigation (icon: Brain or Sparkles)
-2. ✅ Suggestion cards display:
-   - Extracted concept text (e.g., "Independence and self-determination")
-   - Category badge (Value/Belief/Aim) with color coding
-   - Confidence indicator (★★★ for high, ★★ for medium, ★ for low)
-   - Source preview (first 100 chars of journal entry)
-   - Action buttons: Approve, Edit, Reject, View Source
-3. ✅ Approved ontology dashboard shows:
-   - Three columns for Values, Beliefs, and Aims
-   - Count badges for each category
-   - Timeline view showing when concepts were added
-   - Search/filter functionality
-4. ✅ Visual feedback during AI processing (loading spinner, progress indicator)
-5. ✅ Empty state with helpful onboarding when no ontology items exist
+**UI Integration:**
+1. ✅ "Analyze My Notes" button on Notes page
+2. ✅ Loading spinner during extraction
+3. ✅ Success toast: "Found X values, Y beliefs, Z aims"
+4. ✅ Error toast for API failures
+5. ✅ Cards auto-refresh after extraction
 
-**Data Management:**
-1. ✅ LocalStorage schema:
-   ```typescript
-   interface OntologySuggestion {
-     id: string
-     type: 'value' | 'belief' | 'aim'
-     text: string
-     confidence: 'high' | 'medium' | 'low'
-     sourceEntryId: string
-     sourceQuote: string
-     extractedAt: string
-     aiReasoning: string
-     status: 'pending' | 'approved' | 'rejected' | 'edited'
-     editedText?: string
-     reviewedAt?: string
-   }
-   ```
-2. ✅ Duplicate detection prevents suggesting already approved/rejected concepts
-3. ✅ Maximum 10 pending suggestions shown at once (FIFO queue)
-4. ✅ Export functionality for backup (JSON format)
+**Data Storage (Supabase):**
+1. ✅ Ontology items stored in unified `notes` table
+2. ✅ Deduplication by title (case-insensitive)
+3. ✅ Metadata includes: `confidence`, `extractedFrom`, `aiReasoning`
 
 **API Integration:**
-1. ✅ OpenAI API key stored securely in environment variables (server-side only)
-2. ✅ Rate limiting: Maximum 10 API calls per day per user
-3. ✅ Graceful degradation when API unavailable or limits reached
-4. ✅ API Security:
-   - Never expose API keys in frontend code
-   - Use Next.js API routes for all OpenAI calls
-   - Validate and sanitize all inputs before API calls
-   - Implement proper error handling for API failures
-5. ✅ Model configuration:
-   - Model: `gpt-5` for best performance and reasoning capabilities
-   - Use Responses API for optimal chain-of-thought processing
-   - Reasoning effort: `medium` for balanced performance and quality
-   - Verbosity: `medium` for detailed but concise explanations
-   - Note: temperature, top_p, logprobs NOT supported in GPT-5
-6. ✅ Prompt template optimized for philosophical extraction:
-   ```
-   System: You are an expert at analyzing journal entries to extract personal values, beliefs, and aims.
-   Extract and categorize insights into three categories:
-   - Values: Core principles that guide decisions
-   - Beliefs: Fundamental truths the person holds
-   - Aims: Goals and aspirations
+1. ✅ Next.js API route: `/src/app/api/extract-ontology/route.ts`
+2. ✅ Model: `gpt-5-mini` (cost-efficient)
+3. ✅ Responses API with `reasoning.effort: 'medium'`
+4. ✅ API key: `OPENAI_API_KEY` environment variable (server-side only)
+5. ✅ Error handling for API failures
 
-   Return as structured JSON with extracted concepts, confidence scores, and reasoning.
-   ```
+##### Technical Implementation
 
-##### Technical Specifications
+**See `/docs/story-2.4-updated.md` for complete details including:**
+- Full architecture diagram
+- Component structure
+- API route implementation
+- Prompt engineering templates
+- TypeScript interfaces
+- Testing strategy
+- Implementation checklist
 
-**Architecture:**
-```
-┌─────────────────┐     ┌──────────────┐     ┌─────────────┐
-│  Journal Entry  │────▶│  AI Service  │────▶│  Ontology   │
-│   (Trigger)     │     │  (Extract)   │     │   Storage   │
-└─────────────────┘     └──────────────┘     └─────────────┘
-                              │                      │
-                              ▼                      ▼
-                        ┌──────────────┐     ┌─────────────┐
-                        │  Suggestion  │     │  Dashboard  │
-                        │    Queue     │     │    View     │
-                        └──────────────┘     └─────────────┘
-```
-
-**Component Structure:**
-- `/src/components/ontology/OntologySection.tsx` - Main container
-- `/src/components/ontology/SuggestionCard.tsx` - Individual suggestion UI
-- `/src/components/ontology/OntologyDashboard.tsx` - Approved items view
-- `/src/components/ontology/ExtractionStatus.tsx` - Processing feedback
-- `/src/app/api/extract-ontology/route.ts` - Next.js API route for GPT-5 Responses API calls
-- `/src/services/ontologyExtractor.ts` - Frontend service to call API route
-- `/src/lib/ontologyStorage.ts` - LocalStorage management
-- `/src/utils/ontologyHelpers.ts` - Deduplication, validation utilities
-
-**State Management:**
-```typescript
-interface OntologyState {
-  suggestions: OntologySuggestion[]
-  approvedItems: ApprovedOntologyItem[]
-  processingStatus: 'idle' | 'extracting' | 'error'
-  dailyApiCallsUsed: number
-  lastExtractionDate: string
-}
-```
-
-##### Edge Cases & Error Handling
-
-1. **API Failures:**
-   - Show user-friendly error: "Ontology extraction temporarily unavailable"
-   - Queue entries for retry when service restored
-   - Log errors for debugging
-
-2. **Insufficient Content:**
-   - Entries under 100 words show message: "Entry too short for meaningful extraction"
-   - Combine multiple short entries if user approves
-
-3. **Conflicting Extractions:**
-   - If AI extracts contradicting beliefs, present both with context
-   - Allow user to choose which represents current thinking
-
-4. **Storage Limits:**
-   - Warn when approaching localStorage limit (5MB)
-   - Implement cleanup of old rejected suggestions
-
-5. **Rate Limiting:**
-   - Clear indication of daily limit (e.g., "7 of 10 extractions used today")
-   - Reset counter at midnight user's local time
+**Key Files:**
+- `/src/app/api/extract-ontology/route.ts` - API route (NEW)
+- `/src/components/notes/OntologyAnalysisButton.tsx` - UI component (NEW)
+- `/src/lib/ontology/deduplication.ts` - Deduplication logic (NEW)
+- `/src/utils/ontologyPrompts.ts` - Prompt templates (NEW)
 
 ##### Success Metrics
 
-1. **Engagement:**
-   - 80% of users review at least one AI suggestion within first week
-   - 60% approval rate for high-confidence suggestions
+1. **Extraction Success Rate**: > 95% of extractions complete without errors
+2. **Quality**: Manual review shows > 80% relevance of extracted items
+3. **Performance**: Extraction completes within 10 seconds
+4. **Cost**: < $0.10 per 20-note extraction with GPT-5-mini
 
-2. **Quality:**
-   - Less than 10% of approved items later edited/removed
-   - High confidence suggestions have 75%+ approval rate
+##### Testing with Sample Data
 
-3. **Performance:**
-   - Extraction completes within 5 seconds per entry
-   - UI remains responsive during extraction
-   - Token usage optimized with GPT-5's reasoning efficiency
-   - Cost tracking: Improved cost efficiency with GPT-5's optimized reasoning
-   - Chain-of-thought passing reduces redundant reasoning in multi-turn conversations
+**Expected Results with 20 Sample Notes:**
+- Values card: 5-8 values (e.g., "Compassion", "Integrity", "Presence")
+- Beliefs card: 5-10 beliefs (e.g., "Meaning over happiness", "People have inherent wisdom")
+- Aims card: 3-5 aims (e.g., "Balance ambition with presence", "Build community connections")
 
-##### Future Enhancements (Not in MVP)
+##### Future Enhancements (Post-MVP)
 
-1. **Advanced GPT-5 Features:** Leverage custom tools and allowed tools for enhanced extraction
-2. **Batch Processing:** Process all historical entries on first activation
-3. **Ontology Evolution:** Track how values/beliefs change over time
-4. **Social Sharing:** Compare ontologies with friends (privacy-controlled)
-5. **Smart Prompts:** Generate journal prompts based on ontology gaps
-6. **Supabase Migration:** Move to server-side processing for better performance
-7. **Advanced Parameters:** Utilize new GPT-5 features like verbosity control and reasoning effort
-
-##### Testing Requirements
-
-1. **Unit Tests:**
-   - Extraction prompt formatting
-   - Deduplication logic
-   - Storage operations
-   - API error handling
-
-2. **Integration Tests:**
-   - Full extraction workflow with mock API
-   - Approval/rejection flow
-   - Dashboard data display
-
-3. **Manual Testing:**
-   - Test with all 20 sample entries
-   - Verify extraction quality across different writing styles
-   - Test rate limiting and error states
-   - Verify localStorage persistence
+- **Story 2.4.2**: Suggestion review/approval workflow
+- **Story 2.4.3**: Incremental analysis (only new notes)
+- **Story 2.4.4**: Analytics dashboard and evolution tracking
 
 #### Story 2.5: Bidirectional Link Database Schema (DEFERRED)
 
