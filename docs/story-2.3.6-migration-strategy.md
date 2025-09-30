@@ -378,9 +378,11 @@ export async function migrateLocalStorageToSupabase(
 
   try {
     // Step 1: Migrate journal entries
+    // CRITICAL: Keep existingTitles accumulator outside loop to prevent collisions
     const journalEntries = getLocalStorageJournalEntries()
+    const existingTitles: string[] = []
     for (const entry of journalEntries) {
-      const newId = await migrateJournalEntry(entry, userId, result)
+      const newId = await migrateJournalEntry(entry, userId, existingTitles, result)
       result.idMapping.set(entry.id, newId)
     }
 
