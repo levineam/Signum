@@ -26,7 +26,7 @@ export function RegularNoteCard({ note }: RegularNoteCardProps) {
   }
 
   return (
-    <Link href={`/notes/${note.id}`}>
+    <Link href={`/notes/${note.id}`} className="block mb-4">
       <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
         <CardContent className="p-4">
           <div className="flex justify-between items-start gap-4">

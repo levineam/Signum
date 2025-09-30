@@ -32,7 +32,7 @@ export function NotesPage() {
       {/* Pinned Notes Section */}
       <section>
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-          Pinned
+          Personal Ontology
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {pinnedNotes.map((note) => (
@@ -51,7 +51,7 @@ export function NotesPage() {
             <p>No notes yet. Create notes from your journal entries.</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-4">
             {regularNotes.map((note) => (
               <RegularNoteCard key={note.id} note={note} />
             ))}

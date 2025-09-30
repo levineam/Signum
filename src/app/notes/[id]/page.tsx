@@ -90,6 +90,9 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     )
   }
 
+  // Check if this is an AI-populated ontology note (read-only)
+  const isOntologyNote = note.type === 'values' || note.type === 'beliefs' || note.type === 'aims'
+
   return (
     <div className="max-w-3xl mx-auto p-6">
       {/* Header with Back Button */}
@@ -98,13 +101,24 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
           <ArrowLeft className="h-4 w-4" />
           Back to Notes
         </Button>
-        <Button onClick={handleSave} size="sm">
-          Save
-        </Button>
+        {!isOntologyNote && (
+          <Button onClick={handleSave} size="sm">
+            Save
+          </Button>
+        )}
       </div>
 
       {/* Note Title */}
       <h1 className="text-3xl font-bold mb-6">{note.title}</h1>
+
+      {/* Ontology note description */}
+      {isOntologyNote && (
+        <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-md px-4 py-3 mb-6">
+          <p className="text-sm text-yellow-900 dark:text-yellow-100">
+            This note is automatically updated as you write in your journal.
+          </p>
+        </div>
+      )}
 
       {/* Editor Content */}
       <div className="space-y-6">
@@ -113,28 +127,44 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
             {/* Todos Section */}
             <div>
               <h2 className="text-xl font-semibold mb-3">Todos</h2>
-              <Textarea
-                value={aimsContent.todos}
-                onChange={(e) => setAimsContent({ ...aimsContent, todos: e.target.value })}
-                placeholder="List your actionable items here..."
-                className="min-h-[200px] resize-none"
-                onBlur={handleSave}
-              />
+              {aimsContent.todos ? (
+                <div className="min-h-[200px] p-4 rounded-md border bg-muted/30 whitespace-pre-wrap">
+                  {aimsContent.todos}
+                </div>
+              ) : (
+                <div className="min-h-[200px] p-4 rounded-md border bg-muted/30 text-muted-foreground italic">
+                  No todos extracted yet. Keep journaling to populate this automatically.
+                </div>
+              )}
             </div>
 
             {/* Goals Section */}
             <div>
               <h2 className="text-xl font-semibold mb-3">Goals</h2>
-              <Textarea
-                value={aimsContent.goals}
-                onChange={(e) => setAimsContent({ ...aimsContent, goals: e.target.value })}
-                placeholder="List your long-term goals here..."
-                className="min-h-[200px] resize-none"
-                onBlur={handleSave}
-              />
+              {aimsContent.goals ? (
+                <div className="min-h-[200px] p-4 rounded-md border bg-muted/30 whitespace-pre-wrap">
+                  {aimsContent.goals}
+                </div>
+              ) : (
+                <div className="min-h-[200px] p-4 rounded-md border bg-muted/30 text-muted-foreground italic">
+                  No goals extracted yet. Keep journaling to populate this automatically.
+                </div>
+              )}
             </div>
           </>
+        ) : isOntologyNote ? (
+          // Read-only display for Values and Beliefs
+          content ? (
+            <div className="min-h-[400px] p-4 rounded-md border bg-muted/30 whitespace-pre-wrap">
+              {content}
+            </div>
+          ) : (
+            <div className="min-h-[400px] p-4 rounded-md border bg-muted/30 text-muted-foreground italic">
+              No {note.title.toLowerCase()} extracted yet. Keep journaling to populate this automatically.
+            </div>
+          )
         ) : (
+          // Editable for regular notes
           <Textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -146,9 +176,11 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       </div>
 
       {/* Footer Instructions */}
-      <div className="mt-8 text-sm text-muted-foreground">
-        <p>Changes are auto-saved when you click outside the text area or click Save.</p>
-      </div>
+      {!isOntologyNote && (
+        <div className="mt-8 text-sm text-muted-foreground">
+          <p>Changes are auto-saved when you click outside the text area or click Save.</p>
+        </div>
+      )}
     </div>
   )
 }
