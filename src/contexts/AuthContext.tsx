@@ -3,8 +3,8 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import { needsMigration } from '@/lib/migrations/migrateToSupabase'
-import { MigrationModal } from '@/components/migration/MigrationModal'
+// import { needsMigration } from '@/lib/migrations/migrateToSupabase'
+// import { MigrationModal } from '@/components/migration/MigrationModal'
 
 interface AuthContextType {
   user: User | null
@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showMigration, setShowMigration] = useState(false)
+  // const [showMigration, setShowMigration] = useState(false)
 
   useEffect(() => {
     // Get initial session
@@ -31,10 +31,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null)
       setLoading(false)
 
-      // Check if migration is needed
-      if (session?.user && needsMigration()) {
-        setShowMigration(true)
-      }
+      // MIGRATION DISABLED: Will be enabled after Phases 5-6 complete
+      // (JournalStream and NotesPage need to read from Supabase first)
+      // See Story 2.3.6 implementation plan
+      // if (session?.user && needsMigration()) {
+      //   setShowMigration(true)
+      // }
     })
 
     // Listen for auth changes
@@ -45,10 +47,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null)
       setLoading(false)
 
-      // Check if migration is needed on auth state change
-      if (session?.user && needsMigration()) {
-        setShowMigration(true)
-      }
+      // MIGRATION DISABLED: Will be enabled after Phases 5-6 complete
+      // (JournalStream and NotesPage need to read from Supabase first)
+      // See Story 2.3.6 implementation plan
+      // if (session?.user && needsMigration()) {
+      //   setShowMigration(true)
+      // }
     })
 
     return () => subscription.unsubscribe()
@@ -91,7 +95,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {showMigration && user && (
+      {/* MIGRATION MODAL DISABLED until Phases 5-6 complete */}
+      {/* {showMigration && user && (
         <MigrationModal
           userId={user.id}
           onComplete={() => {
@@ -101,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }}
           onSkip={() => setShowMigration(false)}
         />
-      )}
+      )} */}
       {children}
     </AuthContext.Provider>
   )
