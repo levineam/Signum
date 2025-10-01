@@ -12,12 +12,27 @@ import {
   ExtractionResult
 } from '@/utils/ontologyPrompts'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
+// Initialize OpenAI client only if API key is available
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    })
+  : null
 
 export async function POST(request: NextRequest) {
   try {
+    // 0. Check if OpenAI is configured
+    if (!openai) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'OpenAI API key not configured',
+          details: 'Please set OPENAI_API_KEY environment variable'
+        },
+        { status: 500 }
+      )
+    }
+
     // 1. Parse request body
     const body = await request.json()
     const { notes } = body as { notes: Note[] }
