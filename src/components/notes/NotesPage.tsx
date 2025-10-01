@@ -5,18 +5,46 @@ import { initializePinnedNotes, getPinnedNotes, getRegularNotes } from '@/lib/no
 import { Note } from '@/types/note'
 import { PinnedNoteCard } from './PinnedNoteCard'
 import { RegularNoteCard } from './RegularNoteCard'
+import { OntologyAnalysisButton } from './OntologyAnalysisButton'
+import { sampleJournalEntries } from '@/data/sampleEntries'
 
 export function NotesPage() {
   const [pinnedNotes, setPinnedNotes] = useState<Note[]>([])
   const [regularNotes, setRegularNotes] = useState<Note[]>([])
+
+  const loadNotes = () => {
+    setPinnedNotes(getPinnedNotes())
+
+    // Get regular notes from localStorage
+    const localStorageNotes = getRegularNotes()
+
+    // Convert journal entries to Note format
+    const journalNotes: Note[] = sampleJournalEntries.map(entry => ({
+      id: entry.id,
+      userId: '',
+      title: `Journal Entry - ${entry.date}`,
+      content: entry.content,
+      noteType: 'journal-entry' as const,
+      isPinned: false,
+      metadata: {},
+      createdAt: entry.lastModified,
+      updatedAt: entry.lastModified
+    }))
+
+    // Combine and sort by date
+    const allNotes = [...localStorageNotes, ...journalNotes].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+
+    setRegularNotes(allNotes)
+  }
 
   useEffect(() => {
     // Initialize pinned notes if they don't exist
     initializePinnedNotes()
 
     // Load notes
-    setPinnedNotes(getPinnedNotes())
-    setRegularNotes(getRegularNotes())
+    loadNotes()
   }, [])
 
   return (
@@ -31,9 +59,12 @@ export function NotesPage() {
 
       {/* Pinned Notes Section */}
       <section>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-          Personal Ontology
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Personal Ontology
+          </h2>
+          <OntologyAnalysisButton onComplete={loadNotes} />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {pinnedNotes.map((note) => (
             <PinnedNoteCard key={note.id} note={note} />
