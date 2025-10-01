@@ -61,12 +61,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   }
 
   const handleBack = () => {
-    router.push('/')
-    // Small delay to ensure state updates before navigation
-    setTimeout(() => {
-      // Trigger section change via URL state or event
-      window.dispatchEvent(new CustomEvent('navigate-to-notes'))
-    }, 0)
+    router.push('/notes')
   }
 
   if (isLoading) {
