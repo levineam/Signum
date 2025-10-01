@@ -48,13 +48,13 @@ The solution combines two key innovations: gentle background AI that builds pers
 - ✅ Responsive UI with shadcn/ui components
 
 **Next Priorities:**
-1. **Story 2.3.6**: Unified Note Data Model & Supabase Migration (CRITICAL - prerequisite for AI)
-2. **Story 2.4**: AI Personal Ontology Extraction with GPT-5-mini
+1. **Story 2.4**: AI Personal Ontology Extraction with GPT-5-mini (Supabase foundation ready)
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|---------|
+| 2025-10-01 | 3.3 | Story 2.3.6 completed (simplified) - Supabase foundation built without premature migration complexity. Database schema, types, and CRUD operations ready. App continues using localStorage for prototype phase. See `/docs/story-2.3.6.md` | Claude Code |
 | 2025-09-30 | 3.2 | **MAJOR REFACTOR:** Added Story 2.3.6 (Unified Note Data Model & Supabase Migration) as critical prerequisite for AI features. Updated Story 2.4 with GPT-5-mini integration, Supabase storage, and MVP scope. Created comprehensive documentation: `/docs/openai-gpt5-api.md`, `/docs/data-model-unification.md`, `/docs/story-2.4-updated.md` | John (PM) |
 | 2025-09-30 | 3.1 | Story 2.3.5 completed - Notes Page UI Foundation with Personal Ontology cards. Added 20 sample notes designed for ontology extraction testing (see `/scripts/seed-ontology-notes.js`) | Claude Code |
 | 2025-09-28 | 3.0 | **MAJOR MILESTONE:** Consolidated repository structure, deployed to production, established CI/CD pipeline. All foundational features implemented and functional. | Claude Code |
@@ -567,285 +567,74 @@ To prepare for AI Ontology Extraction (Stories 2.3.6 & 2.4), 20 sample notes wer
 
 ---
 
-#### Story 2.3.6: Unified Note Data Model & Supabase Migration 🚧 PRIORITIZED - NEXT
+#### Story 2.3.6: Unified Note Data Model & Supabase Foundation ✅ COMPLETE (Simplified for Prototype)
 
 As a developer,
-I want a unified Note data model with all content stored in Supabase instead of separate localStorage structures,
-so that journal entries and notes share infrastructure, enabling the AI to analyze all content uniformly and supporting future multi-device access.
+I want a unified Note data model and Supabase foundation ready to use,
+so that when we're ready to switch from localStorage, we have a clean migration path without premature complexity.
 
-##### Problem Statement
+##### What We Built
 
-Currently, the codebase treats "journal entries" and "notes" as **separate, parallel entities** with different interfaces and storage:
+**Supabase Foundation (Ready When Needed):**
+- ✅ Database schema with unified `notes` table
+- ✅ Unified TypeScript types (`Note` interface with `noteType` discriminator)
+- ✅ Complete CRUD operations in `src/lib/supabase/notes.ts`
+- ✅ Row-Level Security (RLS) policies
+- ✅ Indexes for performance
 
-**Journal Entry** (`src/components/journal/JournalStream.tsx`):
-```typescript
-interface JournalEntry {
-  id: string
-  date: string        // YYYY-MM-DD format
-  content: string
-  lastModified: string
-  isSample?: boolean
-}
-// Stored in: localStorage['journal-entries']
-```
+**Current State:**
+- App continues using localStorage (no breaking changes)
+- Supabase foundation ready but not actively used
+- Clean migration path when we need it
 
-**Note** (`src/types/note.ts`):
-```typescript
-interface Note {
-  id: string
-  title: string
-  content: string
-  createdAt: string
-  updatedAt: string
-  userId?: string
-  type: 'values' | 'beliefs' | 'aims' | 'regular'
-  isPinned: boolean
-}
-// Stored in: localStorage['signum-notes']
-```
+**Why Simplified:**
+- Zero users = no migration needed yet
+- Prototype phase = fast iteration more important than premature optimization
+- Can switch to Supabase with 2 component updates when ready
+- Migration code preserved in git history if ever needed
 
-**Why This Is Problematic:**
-1. **Conceptual confusion**: Journal entries ARE a type of note, not a separate entity
-2. **Duplicate logic**: Separate CRUD operations, storage, and UI components
-3. **AI complexity**: Story 2.4 must handle two different data sources and formats
-4. **No multi-device sync**: localStorage prevents accessing data across devices
-5. **Scaling issues**: Adding new note types requires parallel implementations
+##### What's Ready
 
-##### Acceptance Criteria
+**✅ Database Schema** (`supabase/migrations/20250930000000_unified_notes_schema.sql`)
+- Unified `notes` table with `note_type` discriminator
+- Support for: `journal-entry | reflection | ontology-value | ontology-belief | ontology-aim | custom`
+- JSONB metadata field for type-specific data
+- RLS policies and indexes
 
-**Data Model:**
-1. ✅ Single unified `Note` interface with `noteType` discriminator field
-2. ✅ NoteType enum includes:
-   - `'journal-entry'` - Daily journaling (replaces JournalEntry)
-   - `'reflection'` - Created from highlighted journal text
-   - `'ontology-value'` - AI-extracted value
-   - `'ontology-belief'` - AI-extracted belief
-   - `'ontology-aim'` - AI-extracted aim
-   - `'custom'` - User-created standalone note
-3. ✅ Metadata field (JSONB) for type-specific data:
-   - Journal entries: `journalDate`, `prompt`
-   - Reflections: `sourceNoteId`, `sourceQuote`
-   - Ontology items: `confidence`, `extractedFrom`, `aiReasoning`
-4. ✅ TypeScript interfaces updated in `/src/types/note.ts`
+**✅ TypeScript Types** (`src/types/note.ts`)
+- Unified `Note` interface
+- `NoteType` enum
+- Request/response types for CRUD
 
-**Supabase Schema:**
-1. ✅ Create `notes` table with unified schema
-2. ✅ Columns: `id`, `user_id`, `title`, `content`, `note_type`, `is_pinned`, `metadata`, `created_at`, `updated_at`
-3. ✅ Indexes on: `user_id`, `note_type`, `created_at`, `metadata->>'journalDate'`
-4. ✅ RLS policies: Users can only CRUD their own notes
-5. ✅ Trigger: Auto-update `updated_at` on modification
+**✅ CRUD Operations** (`src/lib/supabase/notes.ts`)
+- `getJournalEntries()`, `getRegularNotes()`, `getOntologyNotes()`
+- `createNote()`, `updateNote()`, `deleteNote()`
+- `createLink()`, `deleteLink()` for relationships
+- `initializeOntologyNotes()` for new users
 
-**Data Migration:**
-1. ✅ Migrate localStorage journal entries → Supabase with `noteType: 'journal-entry'`
-2. ✅ Migrate localStorage notes → Supabase with `noteType: 'custom'` (legacy `'regular'` type → `'custom'`)
-3. ✅ Convert `JournalEntry.date` → `Note.metadata.journalDate`
-4. ✅ Convert `Note.type` → `Note.noteType` (rename field to avoid confusion)
-5. ✅ Preserve all sample data (20 sample notes + journal entries)
-6. ✅ Migration script: `/scripts/migrate-to-unified-model.ts`
+**⏳ Not Yet Integrated** (Intentional - localStorage still works)
+- JournalStream still reads from localStorage
+- NotesPage still reads from localStorage
+- No migration script (not needed for zero users)
 
-**Code Refactoring:**
-1. ✅ Remove `JournalEntry` interface
-2. ✅ Update `JournalStream` component to query: `WHERE noteType = 'journal-entry'`
-3. ✅ Update `NotesPage` component to query: `WHERE noteType IN ('custom', 'reflection')`
-4. ✅ Create `/src/lib/supabase/notes.ts` for unified CRUD operations
-5. ✅ Remove localStorage dependencies (except UI state like collapsed sidebar)
-6. ✅ Update all components using old interfaces
+##### How to Switch to Supabase (When Ready)
 
-##### Technical Implementation
+**Simple 2-Step Process:**
+1. Update `JournalStream` component to call `getJournalEntries(userId)` instead of localStorage
+2. Update `NotesPage` component to call `getRegularNotes(userId)` and `getOntologyNotes(userId)`
 
-**Supabase Schema** (see `/docs/data-model-unification.md` for complete details):
-```sql
-CREATE TABLE notes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  content TEXT NOT NULL,
-  note_type TEXT NOT NULL CHECK (note_type IN (
-    'journal-entry', 'reflection', 'ontology-value',
-    'ontology-belief', 'ontology-aim', 'custom'
-  )),
-  is_pinned BOOLEAN DEFAULT FALSE,
-  metadata JSONB DEFAULT '{}',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
+**Data Handling Options:**
+- **Option A**: Tell early users data will reset (acceptable for prototype)
+- **Option B**: Build simple migration script if needed (code exists in git history)
 
--- Indexes
-CREATE INDEX idx_notes_user_id ON notes(user_id);
-CREATE INDEX idx_notes_note_type ON notes(note_type);
-CREATE INDEX idx_notes_created_at ON notes(created_at DESC);
-CREATE INDEX idx_notes_journal_date ON notes((metadata->>'journalDate'))
-  WHERE note_type = 'journal-entry';
+##### Documentation
 
--- RLS
-ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can CRUD their own notes"
-  ON notes FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+See **`/docs/story-2.3.6.md`** for complete details on what was built and how to use it.
 
--- Auto-update timestamp
-CREATE TRIGGER notes_updated_at
-  BEFORE UPDATE ON notes
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at();
-```
+##### Status
 
-**TypeScript Interfaces:**
-```typescript
-// src/types/note.ts (UPDATED)
-export type NoteType =
-  | 'journal-entry'
-  | 'reflection'
-  | 'ontology-value'
-  | 'ontology-belief'
-  | 'ontology-aim'
-  | 'custom'
-
-export interface Note {
-  id: string
-  userId: string
-  title: string
-  content: string
-  noteType: NoteType
-  isPinned: boolean
-  metadata: NoteMetadata
-  createdAt: string
-  updatedAt: string
-}
-
-export interface NoteMetadata {
-  // For journal entries
-  journalDate?: string          // YYYY-MM-DD
-  prompt?: string               // ACT-inspired prompt
-
-  // For reflections
-  sourceNoteId?: string
-  sourceQuote?: string
-
-  // For ontology items
-  confidence?: 'high' | 'medium' | 'low'
-  extractedFrom?: string[]
-  aiReasoning?: string
-
-  // General
-  tags?: string[]
-  isSample?: boolean
-}
-```
-
-**Database Operations:**
-```typescript
-// src/lib/supabase/notes.ts (NEW)
-import { createClient } from '@/lib/supabase'
-
-export async function getJournalEntries(userId: string) {
-  const supabase = createClient()
-  return supabase
-    .from('notes')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('note_type', 'journal-entry')
-    .order('metadata->>journalDate', { ascending: false })
-}
-
-export async function getRegularNotes(userId: string) {
-  const supabase = createClient()
-  return supabase
-    .from('notes')
-    .select('*')
-    .eq('user_id', userId)
-    .in('note_type', ['custom', 'reflection'])
-    .order('created_at', { ascending: false })
-}
-
-export async function getOntologyNotes(userId: string) {
-  const supabase = createClient()
-  return supabase
-    .from('notes')
-    .select('*')
-    .eq('user_id', userId)
-    .in('note_type', ['ontology-value', 'ontology-belief', 'ontology-aim'])
-    .eq('is_pinned', true)
-}
-
-// ... CRUD operations
-```
-
-##### Migration Strategy
-
-**Phase 1: Schema Setup**
-1. Create Supabase migration file
-2. Run migration on dev database
-3. Test queries with sample data
-4. Verify RLS policies work correctly
-
-**Phase 2: Dual-Write Period (Optional)**
-1. Write to both localStorage AND Supabase
-2. Read from Supabase with localStorage fallback
-3. Allow gradual testing in production
-4. Monitor for any data inconsistencies
-
-**Phase 3: Component Updates**
-1. Update `JournalStream` to use unified model
-2. Update `NotesPage` to use unified model
-3. Update type definitions across codebase
-4. Remove `JournalEntry` interface references
-
-**Phase 4: Data Migration**
-1. Create migration script for existing users
-2. Convert localStorage data → Supabase format
-3. Verify all data migrated correctly
-4. Archive old localStorage keys
-
-**Phase 5: Cleanup**
-1. Remove localStorage CRUD functions
-2. Remove compatibility layer
-3. Update tests to use new model
-4. Update documentation
-
-##### Testing Requirements
-
-**Unit Tests:**
-1. Note type validation (valid/invalid noteType values)
-2. Metadata structure for each note type
-3. Query helpers return correct filtered results
-4. Migration script converts data correctly
-
-**Integration Tests:**
-1. Full CRUD operations through Supabase
-2. RLS policies prevent unauthorized access
-3. Index performance for large datasets
-4. Migration from localStorage → Supabase preserves all data
-
-**Manual Testing:**
-1. Create new journal entry → stored as `noteType: 'journal-entry'`
-2. Create note from highlight → stored as `noteType: 'reflection'`
-3. Verify 20 sample notes migrated correctly
-4. Check journal stream displays entries by date
-5. Check notes page displays regular notes
-6. Verify no localStorage dependencies remain
-
-##### Success Metrics
-
-1. **Data Integrity**: 100% of localStorage data successfully migrated
-2. **Performance**: Queries return in < 200ms with 1000+ notes
-3. **Code Quality**: Single source of truth for all note-related code
-4. **Developer Experience**: Unified API simplifies future feature development
-
-##### Documentation References
-
-- **Complete Architecture**: `/docs/data-model-unification.md`
-- **Supabase Project**: https://supabase.com/dashboard/project/otyvmmgakowcdsxehwox
-- **Current JournalEntry**: `src/components/journal/JournalStream.tsx:11-17`
-- **Current Note**: `src/types/note.ts:1-10`
-
-##### Notes
-
-- This is a **prerequisite for Story 2.4** (AI Ontology Extraction)
-- Estimated effort: **2-3 days** (significant refactoring)
-- Risk: Medium (touches core data model and multiple components)
-- Benefit: Enables multi-device sync, simplifies AI analysis, reduces technical debt
+**Complete**: Supabase foundation ready ✅
+**Next**: Story 2.4 can proceed with AI integration (will use Supabase when components are updated)
 
 ---
 
