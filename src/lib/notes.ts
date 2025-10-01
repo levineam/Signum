@@ -165,3 +165,67 @@ export function getRegularNotes(): Note[] {
     .filter(note => !note.isPinned)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 }
+
+/**
+ * Store ontology items (for AI extraction - Story 2.4)
+ * Handles deduplication by title (case-insensitive)
+ */
+export function storeOntologyItems(
+  items: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[],
+  noteType: 'ontology-value' | 'ontology-belief' | 'ontology-aim'
+): Note[] {
+  const existingNotes = getNotes()
+  const now = new Date().toISOString()
+
+  // Create map of existing ontology notes by lowercase title
+  const existingMap = new Map<string, Note>()
+  existingNotes
+    .filter(note => note.noteType === noteType)
+    .forEach(note => {
+      existingMap.set(note.title.toLowerCase(), note)
+    })
+
+  const createdNotes: Note[] = []
+  const updatedNotes: Note[] = []
+
+  // Process each item
+  for (const item of items) {
+    const lowercaseTitle = item.title.toLowerCase()
+    const existing = existingMap.get(lowercaseTitle)
+
+    if (existing) {
+      // Update existing note
+      const updated: Note = {
+        ...existing,
+        content: item.content,
+        metadata: {
+          ...existing.metadata,
+          ...item.metadata
+        },
+        updatedAt: now
+      }
+      updatedNotes.push(updated)
+    } else {
+      // Create new note
+      const newNote: Note = {
+        ...item,
+        id: generateNoteId(),
+        createdAt: now,
+        updatedAt: now
+      }
+      createdNotes.push(newNote)
+    }
+  }
+
+  // Merge updates back
+  const finalNotes = existingNotes.map(note => {
+    const updated = updatedNotes.find(u => u.id === note.id)
+    return updated || note
+  })
+
+  // Add new notes
+  const allNotes = [...finalNotes, ...createdNotes]
+  saveNotes(allNotes)
+
+  return [...createdNotes, ...updatedNotes]
+}
