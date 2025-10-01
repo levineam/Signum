@@ -26,6 +26,8 @@ export interface JournalEntry {
   isSample?: boolean
 }
 
+// Legacy Note interface for localStorage migration
+// Supports both old 'type' field and new 'noteType' field
 export interface Note {
   id: string
   title: string
@@ -33,8 +35,12 @@ export interface Note {
   createdAt: string
   updatedAt: string
   userId?: string
-  type: 'values' | 'beliefs' | 'aims' | 'regular'
+  // Legacy field (pre-refactor)
+  type?: 'values' | 'beliefs' | 'aims' | 'regular'
+  // New field (post-refactor)
+  noteType?: 'ontology-value' | 'ontology-belief' | 'ontology-aim' | 'custom' | 'reflection'
   isPinned: boolean
+  metadata?: Record<string, unknown>
 }
 
 export interface Link {
@@ -254,15 +260,25 @@ async function migrateNote(
     return existing.id
   }
 
-  // Map legacy type to new noteType
-  const noteTypeMapping: Record<string, string> = {
-    regular: 'custom',
-    values: 'ontology-value',
-    beliefs: 'ontology-belief',
-    aims: 'ontology-aim'
-  }
+  // Determine note type - handle both legacy 'type' and new 'noteType' fields
+  let noteType: string
 
-  const noteType = noteTypeMapping[note.type] || 'custom'
+  if (note.noteType) {
+    // Post-refactor: Already using new noteType field
+    noteType = note.noteType
+  } else if (note.type) {
+    // Pre-refactor: Map legacy type to new noteType
+    const legacyTypeMapping: Record<string, string> = {
+      regular: 'custom',
+      values: 'ontology-value',
+      beliefs: 'ontology-belief',
+      aims: 'ontology-aim'
+    }
+    noteType = legacyTypeMapping[note.type] || 'custom'
+  } else {
+    // Fallback if neither field exists
+    noteType = 'custom'
+  }
 
   const { data, error } = await supabase
     .from('notes')
@@ -274,7 +290,11 @@ async function migrateNote(
       is_pinned: note.isPinned,
       metadata: {
         legacyId: note.id,
-        legacyType: note.type
+        // Preserve whichever field exists for rollback capability
+        ...(note.type && { legacyType: note.type }),
+        ...(note.noteType && { legacyNoteType: note.noteType }),
+        // Include any existing metadata from post-refactor notes
+        ...(note.metadata || {})
       },
       created_at: note.createdAt,
       updated_at: note.updatedAt
