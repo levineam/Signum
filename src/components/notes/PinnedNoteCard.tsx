@@ -11,7 +11,9 @@ interface PinnedNoteCardProps {
 export function PinnedNoteCard({ note }: PinnedNoteCardProps) {
   const getCharCount = (content: string) => {
     // For aims notes, parse JSON and count both sections
-    if (note.type === 'aims') {
+    // Support both old (type) and new (noteType) field names during migration
+    const noteType = 'type' in note ? (note as { type: string }).type : note.noteType
+    if (noteType === 'aims' || noteType === 'ontology-aim') {
       try {
         const parsed = JSON.parse(content)
         return (parsed.todos || '').length + (parsed.goals || '').length

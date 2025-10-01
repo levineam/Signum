@@ -37,12 +37,14 @@ export function createNote(request: CreateNoteRequest): Note {
   const now = new Date().toISOString()
   const newNote: Note = {
     id: generateNoteId(),
+    userId: '', // Will be set during migration
     title: request.title,
     content: request.content || '',
+    noteType: request.noteType || 'custom',
+    isPinned: request.isPinned || false,
+    metadata: request.metadata || {},
     createdAt: now,
-    updatedAt: now,
-    type: 'regular',
-    isPinned: false
+    updatedAt: now
   }
 
   const existingNotes = getNotes()
@@ -103,36 +105,42 @@ export function initializePinnedNotes(): void {
   if (!hasValues) {
     newNotes.push({
       id: PINNED_NOTE_IDS.values,
+      userId: '',
       title: 'Values',
       content: '',
+      noteType: 'ontology-value',
+      isPinned: true,
+      metadata: {},
       createdAt: now,
-      updatedAt: now,
-      type: 'values',
-      isPinned: true
+      updatedAt: now
     })
   }
 
   if (!hasBeliefs) {
     newNotes.push({
       id: PINNED_NOTE_IDS.beliefs,
+      userId: '',
       title: 'Beliefs',
       content: '',
+      noteType: 'ontology-belief',
+      isPinned: true,
+      metadata: {},
       createdAt: now,
-      updatedAt: now,
-      type: 'beliefs',
-      isPinned: true
+      updatedAt: now
     })
   }
 
   if (!hasAims) {
     newNotes.push({
       id: PINNED_NOTE_IDS.aims,
+      userId: '',
       title: 'Aims',
       content: JSON.stringify({ todos: '', goals: '' }),
+      noteType: 'ontology-aim',
+      isPinned: true,
+      metadata: {},
       createdAt: now,
-      updatedAt: now,
-      type: 'aims',
-      isPinned: true
+      updatedAt: now
     })
   }
 
@@ -146,8 +154,8 @@ export function getPinnedNotes(): Note[] {
   return notes
     .filter(note => note.isPinned)
     .sort((a, b) => {
-      const order = ['values', 'beliefs', 'aims']
-      return order.indexOf(a.type) - order.indexOf(b.type)
+      const order = ['ontology-value', 'ontology-belief', 'ontology-aim']
+      return order.indexOf(a.noteType) - order.indexOf(b.noteType)
     })
 }
 

@@ -11,7 +11,7 @@
  * - User ID assignment for all records
  */
 
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { generateJournalTitle } from '@/utils/generateJournalTitle'
 
 // ============================================================================
@@ -54,7 +54,7 @@ export interface MigrationResult {
   success: boolean
   migratedCount: number
   idMapping: Map<string, string>
-  errors: Array<{ record: any; error: string }>
+  errors: Array<{ record: JournalEntry | Note | null; error: string }>
 }
 
 // ============================================================================
@@ -72,7 +72,6 @@ export async function migrateLocalStorageToSupabase(
   userId: string,
   onProgress?: (progress: MigrationProgress) => void
 ): Promise<MigrationResult> {
-  const supabase = createClient()
   const result: MigrationResult = {
     success: false,
     migratedCount: 0,
@@ -182,7 +181,7 @@ async function migrateJournalEntry(
   entry: JournalEntry,
   userId: string,
   existingTitles: string[],
-  supabase: ReturnType<typeof createClient>
+  supabase: typeof import('@/lib/supabase').supabase
 ): Promise<string> {
   // Generate title using hybrid strategy
   const title = generateJournalTitle(entry, {
@@ -226,7 +225,7 @@ async function migrateJournalEntry(
 async function migrateNote(
   note: Note,
   userId: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: typeof import('@/lib/supabase').supabase
 ): Promise<string> {
   // Map legacy type to new noteType
   const noteTypeMapping: Record<string, string> = {
@@ -270,7 +269,7 @@ async function migrateLinks(
   links: Link[],
   idMapping: Map<string, string>,
   userId: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: typeof import('@/lib/supabase').supabase
 ): Promise<void> {
   for (const link of links) {
     const sourceId = idMapping.get(link.sourceId)
@@ -303,7 +302,7 @@ async function migrateLinks(
 async function updateContentReferences(
   idMapping: Map<string, string>,
   userId: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: typeof import('@/lib/supabase').supabase
 ): Promise<void> {
   // Fetch all notes that might contain links
   const { data: notes, error } = await supabase

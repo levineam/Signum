@@ -3,7 +3,7 @@
  * Story 2.3.6: Replaces localStorage-based operations.
  */
 
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import {
   Note,
   Link,
@@ -21,8 +21,6 @@ import {
  * Get all journal entries for a user, sorted by journal date (newest first).
  */
 export async function getJournalEntries(userId: string): Promise<Note[]> {
-  const supabase = createClient()
-
   const { data, error } = await supabase
     .from('notes')
     .select('*')
@@ -42,8 +40,6 @@ export async function getJournalEntries(userId: string): Promise<Note[]> {
  * Get regular notes (custom and reflection) for a user.
  */
 export async function getRegularNotes(userId: string): Promise<Note[]> {
-  const supabase = createClient()
-
   const { data, error } = await supabase
     .from('notes')
     .select('*')
@@ -63,8 +59,6 @@ export async function getRegularNotes(userId: string): Promise<Note[]> {
  * Get pinned ontology notes (Values, Beliefs, Aims) for a user.
  */
 export async function getOntologyNotes(userId: string): Promise<Note[]> {
-  const supabase = createClient()
-
   const { data, error } = await supabase
     .from('notes')
     .select('*')
@@ -92,8 +86,6 @@ export async function getNoteById(
   noteId: string,
   userId: string
 ): Promise<Note | null> {
-  const supabase = createClient()
-
   const { data, error } = await supabase
     .from('notes')
     .select('*')
@@ -120,7 +112,7 @@ export async function createNote(
   request: CreateNoteRequest,
   userId: string
 ): Promise<Note> {
-  const supabase = createClient()
+  
 
   const { data, error } = await supabase
     .from('notes')
@@ -150,9 +142,9 @@ export async function updateNote(
   request: UpdateNoteRequest,
   userId: string
 ): Promise<Note> {
-  const supabase = createClient()
+  
 
-  const updates: Record<string, any> = {}
+  const updates: Record<string, string | boolean | object> = {}
 
   if (request.title !== undefined) updates.title = request.title
   if (request.content !== undefined) updates.content = request.content
@@ -191,7 +183,7 @@ export async function deleteNote(
   noteId: string,
   userId: string
 ): Promise<void> {
-  const supabase = createClient()
+  
 
   const { error } = await supabase
     .from('notes')
@@ -216,7 +208,7 @@ export async function getLinksForNote(
   noteId: string,
   userId: string
 ): Promise<Link[]> {
-  const supabase = createClient()
+  
 
   const { data, error } = await supabase
     .from('links')
@@ -239,7 +231,7 @@ export async function getOutgoingLinks(
   noteId: string,
   userId: string
 ): Promise<Link[]> {
-  const supabase = createClient()
+  
 
   const { data, error } = await supabase
     .from('links')
@@ -262,7 +254,7 @@ export async function getIncomingLinks(
   noteId: string,
   userId: string
 ): Promise<Link[]> {
-  const supabase = createClient()
+  
 
   const { data, error } = await supabase
     .from('links')
@@ -285,7 +277,7 @@ export async function createLink(
   request: CreateLinkRequest,
   userId: string
 ): Promise<Link> {
-  const supabase = createClient()
+  
 
   const { data, error } = await supabase
     .from('links')
@@ -313,7 +305,7 @@ export async function deleteLink(
   linkId: string,
   userId: string
 ): Promise<void> {
-  const supabase = createClient()
+  
 
   const { error } = await supabase
     .from('links')
@@ -334,7 +326,17 @@ export async function deleteLink(
 /**
  * Maps database column names to app-friendly camelCase.
  */
-function mapDatabaseNoteToNote(dbNote: any): Note {
+function mapDatabaseNoteToNote(dbNote: {
+  id: string
+  user_id: string
+  title: string
+  content: string
+  note_type: string
+  is_pinned: boolean
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}): Note {
   return {
     id: dbNote.id,
     userId: dbNote.user_id,
@@ -348,22 +350,46 @@ function mapDatabaseNoteToNote(dbNote: any): Note {
   }
 }
 
-function mapDatabaseNotesToNotes(dbNotes: any[]): Note[] {
+function mapDatabaseNotesToNotes(dbNotes: Array<{
+  id: string
+  user_id: string
+  title: string
+  content: string
+  note_type: string
+  is_pinned: boolean
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}>): Note[] {
   return dbNotes.map(mapDatabaseNoteToNote)
 }
 
-function mapDatabaseLinkToLink(dbLink: any): Link {
+function mapDatabaseLinkToLink(dbLink: {
+  id: string
+  source_note_id: string
+  target_note_id: string
+  link_type: string
+  user_id: string
+  created_at: string
+}): Link {
   return {
     id: dbLink.id,
     sourceNoteId: dbLink.source_note_id,
     targetNoteId: dbLink.target_note_id,
-    linkType: dbLink.link_type,
+    linkType: dbLink.link_type as import('@/types/note').LinkType,
     userId: dbLink.user_id,
     createdAt: dbLink.created_at
   }
 }
 
-function mapDatabaseLinksToLinks(dbLinks: any[]): Link[] {
+function mapDatabaseLinksToLinks(dbLinks: Array<{
+  id: string
+  source_note_id: string
+  target_note_id: string
+  link_type: string
+  user_id: string
+  created_at: string
+}>): Link[] {
   return dbLinks.map(mapDatabaseLinkToLink)
 }
 
@@ -376,7 +402,7 @@ function mapDatabaseLinksToLinks(dbLinks: any[]): Link[] {
  * Creates empty Values, Beliefs, and Aims notes.
  */
 export async function initializeOntologyNotes(userId: string): Promise<void> {
-  const supabase = createClient()
+  
 
   const ontologyNotes = [
     {
@@ -417,7 +443,7 @@ export async function initializeOntologyNotes(userId: string): Promise<void> {
  * Check if user has any journal entries.
  */
 export async function hasJournalEntries(userId: string): Promise<boolean> {
-  const supabase = createClient()
+  
 
   const { count, error } = await supabase
     .from('notes')

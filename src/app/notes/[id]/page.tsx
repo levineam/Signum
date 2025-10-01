@@ -27,7 +27,9 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       if (loadedNote) {
         setNote(loadedNote)
 
-        if (loadedNote.type === 'aims') {
+        // Support both old (type) and new (noteType) field names during migration
+        const noteType = 'type' in loadedNote ? (loadedNote as { type: string }).type : loadedNote.noteType
+        if (noteType === 'aims' || noteType === 'ontology-aim') {
           try {
             const parsed = JSON.parse(loadedNote.content)
             setAimsContent(parsed)
@@ -46,7 +48,9 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const handleSave = () => {
     if (!note) return
 
-    const newContent = note.type === 'aims'
+    // Support both old (type) and new (noteType) field names during migration
+    const noteType = 'type' in note ? (note as { type: string }).type : note.noteType
+    const newContent = (noteType === 'aims' || noteType === 'ontology-aim')
       ? JSON.stringify(aimsContent)
       : content
 
@@ -91,7 +95,10 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   }
 
   // Check if this is an AI-populated ontology note (read-only)
-  const isOntologyNote = note.type === 'values' || note.type === 'beliefs' || note.type === 'aims'
+  // Support both old (type) and new (noteType) field names during migration
+  const noteType = 'type' in note ? (note as { type: string }).type : note.noteType
+  const isOntologyNote = noteType === 'values' || noteType === 'beliefs' || noteType === 'aims' ||
+    noteType === 'ontology-value' || noteType === 'ontology-belief' || noteType === 'ontology-aim'
 
   return (
     <div className="max-w-3xl mx-auto p-6">
@@ -122,7 +129,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
 
       {/* Editor Content */}
       <div className="space-y-6">
-        {note.type === 'aims' ? (
+        {(noteType === 'aims' || noteType === 'ontology-aim') ? (
           <>
             {/* Todos Section */}
             <div>

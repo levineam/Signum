@@ -41,7 +41,8 @@ export function NoteCreationModal({
     try {
       const newNote = createNote({
         title: title.trim(),
-        content: content.trim()
+        content: content.trim(),
+        noteType: 'custom' // Notes created from UI are custom notes
       })
 
       onNoteCreated?.(newNote)
