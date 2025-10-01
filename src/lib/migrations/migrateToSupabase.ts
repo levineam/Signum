@@ -183,6 +183,20 @@ async function migrateJournalEntry(
   existingTitles: string[],
   supabase: typeof import('@/lib/supabase').supabase
 ): Promise<string> {
+  // Check if already migrated (idempotency)
+  const { data: existing } = await supabase
+    .from('notes')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('note_type', 'journal-entry')
+    .eq('metadata->>legacyId', entry.id)
+    .single()
+
+  if (existing) {
+    // Already migrated, return existing ID
+    return existing.id
+  }
+
   // Generate title using hybrid strategy
   const title = generateJournalTitle(entry, {
     useContentPreview: true,
@@ -227,6 +241,19 @@ async function migrateNote(
   userId: string,
   supabase: typeof import('@/lib/supabase').supabase
 ): Promise<string> {
+  // Check if already migrated (idempotency)
+  const { data: existing } = await supabase
+    .from('notes')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('metadata->>legacyId', note.id)
+    .single()
+
+  if (existing) {
+    // Already migrated, return existing ID
+    return existing.id
+  }
+
   // Map legacy type to new noteType
   const noteTypeMapping: Record<string, string> = {
     regular: 'custom',
@@ -278,6 +305,21 @@ async function migrateLinks(
     // Skip if either ID wasn't migrated
     if (!sourceId || !targetId) {
       console.warn(`Skipping link ${link.sourceId} -> ${link.targetId}: Missing mapped IDs`)
+      continue
+    }
+
+    // Check if link already exists (idempotency)
+    const { data: existing } = await supabase
+      .from('links')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('source_note_id', sourceId)
+      .eq('target_note_id', targetId)
+      .eq('link_type', link.linkType || 'created_from')
+      .single()
+
+    if (existing) {
+      // Already migrated, skip
       continue
     }
 
