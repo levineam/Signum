@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
     // 4. Build prompt
     const prompt = buildExtractionPrompt(notesToAnalyze)
 
-    // 5. Call OpenAI GPT-4o-mini for cost-efficient ontology extraction
+    // 5. Call OpenAI GPT-5-mini for cost-efficient ontology extraction
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       messages: [
         {
           role: 'system',
