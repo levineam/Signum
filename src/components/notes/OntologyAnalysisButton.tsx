@@ -87,35 +87,46 @@ export function OntologyAnalysisButton({
 
       // 7. Store results by updating the 3 pinned ontology cards
       const extraction: ExtractionResult = result.extraction
-      const currentNotes = getNotes()
 
-      // Update Values card
-      const valuesCard = currentNotes.find(n => n.id === 'pinned-values')
-      if (valuesCard && extraction.values.length > 0) {
-        const valuesList = extraction.values
-          .map(v => `• ${v.text}\n  ${v.reasoning}`)
-          .join('\n\n')
-        updateNote('pinned-values', { content: valuesList })
+      // Update Values card - store structured data in metadata
+      if (extraction.values.length > 0) {
+        updateNote('pinned-values', {
+          content: '', // Keep empty - data is in metadata
+          metadata: {
+            items: extraction.values.map(v => ({
+              name: v.text,
+              confidence: v.confidence,
+              excerpts: v.sourceExcerpts
+            }))
+          }
+        })
       }
 
       // Update Beliefs card
-      const beliefsCard = currentNotes.find(n => n.id === 'pinned-beliefs')
-      if (beliefsCard && extraction.beliefs.length > 0) {
-        const beliefsList = extraction.beliefs
-          .map(b => `• ${b.text}\n  ${b.reasoning}`)
-          .join('\n\n')
-        updateNote('pinned-beliefs', { content: beliefsList })
+      if (extraction.beliefs.length > 0) {
+        updateNote('pinned-beliefs', {
+          content: '',
+          metadata: {
+            items: extraction.beliefs.map(b => ({
+              name: b.text,
+              confidence: b.confidence,
+              excerpts: b.sourceExcerpts
+            }))
+          }
+        })
       }
 
       // Update Aims card
-      const aimsCard = currentNotes.find(n => n.id === 'pinned-aims')
-      if (aimsCard && extraction.aims.length > 0) {
-        const aimsList = extraction.aims
-          .map(a => `• ${a.text}\n  ${a.reasoning}`)
-          .join('\n\n')
-        // Aims uses JSON format
+      if (extraction.aims.length > 0) {
         updateNote('pinned-aims', {
-          content: JSON.stringify({ todos: '', goals: aimsList })
+          content: '',
+          metadata: {
+            items: extraction.aims.map(a => ({
+              name: a.text,
+              confidence: a.confidence,
+              excerpts: a.sourceExcerpts
+            }))
+          }
         })
       }
 

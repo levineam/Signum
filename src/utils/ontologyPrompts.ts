@@ -14,8 +14,11 @@ export interface ExtractionResult {
 export interface OntologyItem {
   text: string
   confidence: 'high' | 'medium' | 'low'
-  sourceNoteIds: string[]
-  reasoning: string
+  sourceExcerpts: Array<{
+    noteId: string
+    noteTitle: string
+    excerpt: string
+  }>
 }
 
 /**
@@ -41,8 +44,10 @@ Your task is to identify:
 IMPORTANT GUIDELINES:
 - Extract only HIGH-CONFIDENCE items that appear multiple times or are stated explicitly
 - Keep extracted text SHORT and MEMORABLE (2-5 words ideally)
-- Include source note IDs for traceability
-- Provide brief reasoning for each extraction
+- For each value/belief/aim, provide ALL relevant excerpts you find (no limit on count)
+- Each excerpt should be 1-2 sentences of actual text from the notes
+- Include the exact quote that demonstrates this concept
+- Provide noteId and noteTitle for each excerpt
 - Look for recurring themes across multiple notes
 - Distinguish between values (principles), beliefs (truths), and aims (goals)
 
@@ -56,24 +61,49 @@ Return your analysis as JSON in this exact format:
     {
       "text": "Compassion",
       "confidence": "high",
-      "sourceNoteIds": ["note-id-1", "note-id-2"],
-      "reasoning": "Recurring theme about listening and empowering others across multiple entries"
+      "sourceExcerpts": [
+        {
+          "noteId": "note-id-1",
+          "noteTitle": "Journal Entry - Oct 15",
+          "excerpt": "Sometimes the most valuable conversations are the ones where you just witness each other's experience without trying to fix anything."
+        },
+        {
+          "noteId": "note-id-2",
+          "noteTitle": "Reflection on Sarah",
+          "excerpt": "It's comforting to know that someone else is also figuring things out as they go. Just being present for each other matters."
+        }
+      ]
     }
   ],
   "beliefs": [
     {
       "text": "Meaning over happiness",
       "confidence": "high",
-      "sourceNoteIds": ["note-id-3"],
-      "reasoning": "Explicitly stated philosophy about prioritizing purpose"
+      "sourceExcerpts": [
+        {
+          "noteId": "note-id-3",
+          "noteTitle": "Journal Entry - Oct 12",
+          "excerpt": "I'm realizing that constantly chasing happiness might miss the point. Maybe what matters is finding meaning, even in difficult moments."
+        }
+      ]
     }
   ],
   "aims": [
     {
       "text": "Balance ambition with presence",
       "confidence": "high",
-      "sourceNoteIds": ["note-id-1", "note-id-4"],
-      "reasoning": "Consistent goal mentioned when reflecting on work-life decisions"
+      "sourceExcerpts": [
+        {
+          "noteId": "note-id-1",
+          "noteTitle": "Work Reflection",
+          "excerpt": "I keep pushing for the next milestone, but I'm missing what's happening right now with my family."
+        },
+        {
+          "noteId": "note-id-4",
+          "noteTitle": "Journal Entry - Oct 20",
+          "excerpt": "Need to find a way to pursue my goals without sacrificing presence in the moment."
+        }
+      ]
     }
   ]
 }
@@ -102,6 +132,22 @@ export function parseExtractionResult(
     ) {
       throw new Error('Invalid response structure')
     }
+
+    // Validate each item has sourceExcerpts
+    const validateItem = (item: any) => {
+      if (!item.sourceExcerpts || !Array.isArray(item.sourceExcerpts)) {
+        throw new Error('Invalid response: missing sourceExcerpts array')
+      }
+      item.sourceExcerpts.forEach((excerpt: any) => {
+        if (!excerpt.noteId || !excerpt.noteTitle || !excerpt.excerpt) {
+          throw new Error('Invalid excerpt: missing required fields (noteId, noteTitle, excerpt)')
+        }
+      })
+    }
+
+    parsed.values?.forEach(validateItem)
+    parsed.beliefs?.forEach(validateItem)
+    parsed.aims?.forEach(validateItem)
 
     // Filter to only high-confidence items
     const filterHighConfidence = (items: OntologyItem[]) =>
