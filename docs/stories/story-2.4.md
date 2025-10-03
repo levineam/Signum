@@ -221,7 +221,7 @@ Response: {
 
 **2025-10-03: UX Correction - Source Excerpts with Hyperlinks**
 
-**Model Update:** Changed from `gpt-4-turbo-preview` to `gpt-5-mini` as originally specified for cost efficiency.
+**Model Update:** Changed from `gpt-4-turbo-preview` to `gpt-4o-mini` for cost efficiency (gpt-5-mini not yet available in API).
 
 **Issue Identified:**
 - Initial implementation showed AI reasoning/definitions instead of source excerpts
@@ -233,7 +233,7 @@ Response: {
 1. **Data Model Update** (`src/utils/ontologyPrompts.ts`):
    - Changed `OntologyItem` interface from `reasoning: string` to `sourceExcerpts` array
    - Each excerpt includes: `noteId`, `noteTitle`, `excerpt` (actual quote from note)
-   - Updated GPT-5-mini prompt to return actual quotes instead of AI reasoning
+   - Updated GPT-4o-mini prompt to return actual quotes instead of AI reasoning
    - Added validation for excerpt structure in response parser
 
 2. **Storage Update** (`src/components/notes/OntologyAnalysisButton.tsx`):
