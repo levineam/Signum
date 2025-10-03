@@ -45,23 +45,15 @@ This project uses PR-based deployment with auto-deploy to Vercel. You MUST follo
 
 ## When to Create a Dedicated Dev Branch
 
-**Currently**: Using PR preview deployments (sufficient for solo development)
+**Currently**: Using PR preview deployments only (sufficient for solo development)
 
 **Create a dedicated `dev` branch when:**
-1. **Team Growth**: Multiple developers need a shared staging environment
-2. **Integration Testing**: Multiple features need testing together before production
-3. **Persistent Staging**: Need a stable staging URL that doesn't change with PRs
-4. **Client Demos**: Need a reliable demo environment separate from production
-5. **Data Migrations**: Complex database migrations need extended testing period
-6. **Breaking Changes**: Major refactors need isolated testing with production-like data
+- Multiple developers need a shared staging environment
+- Multiple features need integration testing together before production
+- Client demos require a persistent staging URL
+- Complex database migrations need extended testing periods
 
-**How to set up dev branch workflow (when needed):**
-1. Create `dev` branch: `git checkout -b dev`
-2. Configure Vercel to deploy `dev` branch to staging URL
-3. Update workflow: Feature branches → PR to `dev` → Test on staging → PR to `main` → Production
-4. Add separate environment variables for staging (Supabase, OpenAI, etc.)
-
-**Current status**: ✅ PR preview deployments are sufficient. Revisit when team grows or integration testing needs increase.
+**If needed**: Ask user before creating dev branch. Then configure Vercel for dev branch deployment with separate environment variables.
 
 ## NEVER Do This
 
