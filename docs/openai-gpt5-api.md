@@ -2,13 +2,22 @@
 
 **Source:** OpenAI Platform Documentation (via Context7 MCP)
 **Date Retrieved:** 2025-09-30
+**Date Verified:** 2025-10-03
 **Relevance:** Story 2.4 - AI Personal Ontology Extraction
+
+## ⚠️ IMPORTANT: GPT-5 Uses Different API Endpoint
+
+**GPT-5 models (`gpt-5`, `gpt-5-mini`, `gpt-5-nano`) ONLY work with the Responses API (`/v1/responses`)**
+
+- ❌ **DO NOT** use `openai.chat.completions.create()`
+- ✅ **DO** use `openai.responses.create()`
+- ❌ **DO NOT** assume new models don't exist without checking documentation
+- ✅ **DO** use Context7 MCP to verify current API structure
 
 ## Overview
 
-GPT-5 is OpenAI's latest reasoning model, available via two API approaches:
-1. **Responses API** (`/v1/responses`) - New API with enhanced reasoning controls
-2. **Chat Completions API** (`/v1/chat/completions`) - Traditional API with GPT-5 support
+GPT-5 is OpenAI's latest reasoning model, available ONLY via:
+1. **Responses API** (`/v1/responses`) - Required for GPT-5 models
 
 ## Key Features
 
@@ -20,12 +29,37 @@ GPT-5 is OpenAI's latest reasoning model, available via two API approaches:
 
 - **gpt-5**: Full reasoning model
 - **gpt-5-mini**: Smaller, faster variant (recommended for MVP cost efficiency)
+- **gpt-5-nano**: Smallest, fastest variant
+
+## Unsupported Parameters (Will Cause Errors)
+
+GPT-5 models **DO NOT** support these parameters from Chat Completions API:
+- ❌ `temperature` - Use `reasoning.effort` instead
+- ❌ `top_p` - Not available
+- ❌ `logprobs` - Not available
+- ❌ `max_tokens` - Use `max_output_tokens` instead
+- ❌ `max_completion_tokens` - Use `max_output_tokens` instead
+- ❌ `response_format` - JSON output is automatic based on prompt
+- ❌ `messages` array - Use single `input` string instead
 
 ## API Endpoints
 
-### 1. Responses API (Recommended for Story 2.4)
+### Responses API (ONLY Option for GPT-5)
 
 **Endpoint:** `POST https://api.openai.com/v1/responses`
+
+**TypeScript/Node.js:**
+```typescript
+const response = await openai.responses.create({
+  model: 'gpt-5-mini',
+  input: 'Your prompt here',
+  reasoning: {
+    effort: 'medium'  // 'minimal' | 'low' | 'medium' | 'high'
+  }
+})
+
+const text = response.output_text  // NOT response.choices[0].message.content
+```
 
 **Request Structure:**
 ```json
@@ -34,7 +68,11 @@ GPT-5 is OpenAI's latest reasoning model, available via two API approaches:
   "input": "Your prompt here",
   "reasoning": {
     "effort": "minimal" | "low" | "medium" | "high"
-  }
+  },
+  "text": {
+    "verbosity": "low" | "medium" | "high"
+  },
+  "max_output_tokens": 2000
 }
 ```
 
