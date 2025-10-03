@@ -134,11 +134,11 @@ export function parseExtractionResult(
     }
 
     // Validate each item has sourceExcerpts
-    const validateItem = (item: any) => {
+    const validateItem = (item: OntologyItem) => {
       if (!item.sourceExcerpts || !Array.isArray(item.sourceExcerpts)) {
         throw new Error('Invalid response: missing sourceExcerpts array')
       }
-      item.sourceExcerpts.forEach((excerpt: any) => {
+      item.sourceExcerpts.forEach((excerpt) => {
         if (!excerpt.noteId || !excerpt.noteTitle || !excerpt.excerpt) {
           throw new Error('Invalid excerpt: missing required fields (noteId, noteTitle, excerpt)')
         }

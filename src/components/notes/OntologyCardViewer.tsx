@@ -25,7 +25,7 @@ export function OntologyCardViewer({ note }: OntologyCardViewerProps) {
       <div className="text-muted-foreground text-center py-12">
         <p className="text-lg font-medium mb-2">Empty</p>
         <p className="text-sm">
-          Click "Analyze My Notes" on the Notes page to populate this card with AI-extracted insights.
+          Click &ldquo;Analyze My Notes&rdquo; on the Notes page to populate this card with AI-extracted insights.
         </p>
       </div>
     )
@@ -42,7 +42,7 @@ export function OntologyCardViewer({ note }: OntologyCardViewerProps) {
             {item.excerpts.map((excerpt, excerptIndex) => (
               <li key={excerptIndex} className="text-sm leading-relaxed">
                 <span className="text-muted-foreground italic">
-                  "{excerpt.excerpt}"
+                  &ldquo;{excerpt.excerpt}&rdquo;
                 </span>
                 {' '}
                 <Link

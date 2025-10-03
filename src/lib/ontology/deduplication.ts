@@ -36,11 +36,11 @@ export function deduplicateOntologyItems(
     // Check if exists in localStorage
     const existingNote = existingTitlesMap.get(lowercaseTitle)
     if (existingNote) {
-      // Merge source IDs
-      const existingSourceIds =
-        (existingNote.metadata?.extractedFrom as string[]) || []
-      const mergedSourceIds = [
-        ...new Set([...existingSourceIds, ...item.sourceNoteIds])
+      // Merge excerpts (combine with new item's excerpts)
+      const existingExcerpts = (existingNote.metadata?.items?.[0]?.excerpts || [])
+      const mergedExcerpts = [
+        ...existingExcerpts,
+        ...item.sourceExcerpts
       ]
 
       // Keep higher confidence
@@ -52,15 +52,11 @@ export function deduplicateOntologyItems(
           ? item.confidence
           : existingConfidence
 
-      // Update reasoning to combine
-      const updatedReasoning = `${existingNote.metadata?.aiReasoning || ''}; ${item.reasoning}`.trim()
-
       // Create updated item
       deduplicatedItems.push({
         text: existingNote.title, // Keep original casing
         confidence: newConfidence as 'high' | 'medium' | 'low',
-        sourceNoteIds: mergedSourceIds,
-        reasoning: updatedReasoning
+        sourceExcerpts: mergedExcerpts
       })
 
       continue
@@ -75,12 +71,11 @@ export function deduplicateOntologyItems(
 
       if (existingIndex !== -1) {
         const existing = deduplicatedItems[existingIndex]
-        // Merge source IDs
-        existing.sourceNoteIds = [
-          ...new Set([...existing.sourceNoteIds, ...item.sourceNoteIds])
+        // Merge excerpts
+        existing.sourceExcerpts = [
+          ...existing.sourceExcerpts,
+          ...item.sourceExcerpts
         ]
-        // Combine reasoning
-        existing.reasoning = `${existing.reasoning}; ${item.reasoning}`.trim()
       }
 
       continue
@@ -104,13 +99,16 @@ export function ontologyItemsToNotes(
   return items.map((item) => ({
     userId: '', // Will be set by caller
     title: item.text,
-    content: item.reasoning,
+    content: '', // Keep empty - data is in metadata
     noteType,
     isPinned: true, // Ontology items are always pinned
     metadata: {
       confidence: item.confidence,
-      extractedFrom: item.sourceNoteIds,
-      aiReasoning: item.reasoning
+      items: [{
+        name: item.text,
+        confidence: item.confidence,
+        excerpts: item.sourceExcerpts
+      }]
     }
   }))
 }
