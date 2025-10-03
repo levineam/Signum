@@ -72,26 +72,16 @@ export async function POST(request: NextRequest) {
     // 4. Build prompt
     const prompt = buildExtractionPrompt(notesToAnalyze)
 
-    // 5. Call OpenAI GPT-4o-mini for cost-efficient ontology extraction
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are an expert at analyzing personal notes to extract values, beliefs, and aims. Always respond with valid JSON only.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
-      max_tokens: 2000
+    // 5. Call OpenAI GPT-5-mini using Responses API
+    const response = await openai.responses.create({
+      model: 'gpt-5-mini',
+      input: prompt,
+      reasoning: {
+        effort: 'medium' // Balanced for philosophical analysis
+      }
     })
 
-    const responseText = completion.choices[0]?.message?.content
+    const responseText = response.output_text
 
     if (!responseText) {
       throw new Error('No response from OpenAI')
