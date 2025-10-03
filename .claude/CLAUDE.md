@@ -1,18 +1,5 @@
 # Signum Project Instructions
 
-## 🔍 CRITICAL: Verify Before Assuming
-
-**NEVER assume new models, APIs, or features don't exist without verification.**
-
-When encountering unfamiliar models or APIs:
-1. ✅ **DO** use Context7 MCP (`mcp__context7__get-library-docs`) to check current documentation
-2. ✅ **DO** search for the specific model/API name (e.g., "gpt-5-mini parameters")
-3. ✅ **DO** read error messages carefully - they often indicate correct parameters
-4. ❌ **DO NOT** assume a model doesn't exist because you're unfamiliar with it
-5. ❌ **DO NOT** switch to older models without verifying the new one doesn't work
-
-**Example**: GPT-5-mini exists but uses `/v1/responses` API, not `/v1/chat/completions`. Switching to gpt-4o-mini without checking would be wrong.
-
 # 🚨 MANDATORY PR-BASED WORKFLOW
 
 This project uses PR-based deployment with auto-deploy to Vercel. You MUST follow this workflow for ALL changes.
@@ -77,6 +64,7 @@ This project uses PR-based deployment with auto-deploy to Vercel. You MUST follo
 ❌ NEVER assume small changes don't need PRs
 ❌ NEVER deploy without testing locally first
 ❌ NEVER merge to production without testing on Vercel preview first
+❌ NEVER assume new AI models/APIs don't exist - verify with Context7 MCP or documentation first
 
 ---
 
