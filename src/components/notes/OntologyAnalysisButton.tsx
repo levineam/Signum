@@ -9,7 +9,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { getNotes, updateNote } from '@/lib/notes'
+import { getNotes, updateNote, getPinnedNotes } from '@/lib/notes'
 import { ExtractionResult } from '@/utils/ontologyPrompts'
 
 interface OntologyAnalysisButtonProps {
@@ -70,9 +70,19 @@ export function OntologyAnalysisButton({
       // 7. Store results by updating the 3 pinned ontology cards
       const extraction: ExtractionResult = result.extraction
 
+      // Fetch actual pinned notes to get their real Supabase UUIDs
+      const pinnedNotes = await getPinnedNotes()
+      const valuesNote = pinnedNotes.find(n => n.noteType === 'ontology-value')
+      const beliefsNote = pinnedNotes.find(n => n.noteType === 'ontology-belief')
+      const aimsNote = pinnedNotes.find(n => n.noteType === 'ontology-aim')
+
+      if (!valuesNote || !beliefsNote || !aimsNote) {
+        throw new Error('Pinned ontology notes not found. Try refreshing the page.')
+      }
+
       // Update Values card - store structured data in metadata
       // Always update, even if empty, to prevent stale metadata
-      await updateNote('pinned-values', {
+      await updateNote(valuesNote.id, {
         content: '', // Keep empty - data is in metadata
         metadata: {
           items: extraction.values.map(v => ({
@@ -84,7 +94,7 @@ export function OntologyAnalysisButton({
       })
 
       // Update Beliefs card - always update to prevent stale metadata
-      await updateNote('pinned-beliefs', {
+      await updateNote(beliefsNote.id, {
         content: '',
         metadata: {
           items: extraction.beliefs.map(b => ({
@@ -96,7 +106,7 @@ export function OntologyAnalysisButton({
       })
 
       // Update Aims card - always update to prevent stale metadata
-      await updateNote('pinned-aims', {
+      await updateNote(aimsNote.id, {
         content: '',
         metadata: {
           items: extraction.aims.map(a => ({
