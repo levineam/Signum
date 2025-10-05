@@ -46,13 +46,20 @@ export function JournalStream() {
       const journalNotes = allNotes.filter(note => note.noteType === 'journal-entry')
 
       // Convert Note format to JournalEntry format
-      const journalEntries: JournalEntry[] = journalNotes.map(note => ({
-        id: note.id,
-        date: (note.metadata as { journalDate?: string }).journalDate || note.createdAt.split('T')[0],
-        content: note.content,
-        lastModified: note.updatedAt,
-        isSample: (note.metadata as { isSample?: boolean }).isSample
-      }))
+      const journalEntries: JournalEntry[] = journalNotes.map(note => {
+        // Safely handle metadata (can be null for legacy notes)
+        const meta = note.metadata || {}
+        const journalDate = (meta as { journalDate?: string }).journalDate
+        const isSample = (meta as { isSample?: boolean }).isSample
+
+        return {
+          id: note.id,
+          date: journalDate || note.createdAt.split('T')[0],
+          content: note.content,
+          lastModified: note.updatedAt,
+          isSample: Boolean(isSample)
+        }
+      })
 
       // Check if today's entry exists
       const todayEntry = journalEntries.find(e => e.date === today)
