@@ -33,15 +33,25 @@ export function NoteViewer({
 
   useEffect(() => {
     if (noteId && isOpen) {
+      let isActive = true
+
       getNoteById(noteId).then(foundNote => {
-        if (foundNote) {
-          setNote(foundNote)
-          setEditTitle(foundNote.title)
-          setEditContent(foundNote.content || '')
-        } else {
-          setNote(null)
+        // Only update state if this effect is still active (noteId hasn't changed)
+        if (isActive) {
+          if (foundNote) {
+            setNote(foundNote)
+            setEditTitle(foundNote.title)
+            setEditContent(foundNote.content || '')
+          } else {
+            setNote(null)
+          }
         }
       })
+
+      // Cleanup function to prevent stale updates
+      return () => {
+        isActive = false
+      }
     }
   }, [noteId, isOpen])
 

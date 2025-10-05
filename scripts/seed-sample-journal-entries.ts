@@ -12,18 +12,24 @@ import { createClient } from '@supabase/supabase-js'
 const PROTOTYPE_USER_ID = '00000000-0000-0000-0000-000000000000'
 
 async function seedSampleJournalEntries() {
-  // Initialize Supabase client
+  // Initialize Supabase client with service role key to bypass RLS
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!supabaseUrl || !supabaseKey) {
+  if (!supabaseUrl || !supabaseServiceKey) {
     console.error('❌ Missing Supabase environment variables')
     console.error('   NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? 'Set' : 'Missing')
-    console.error('   NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseKey ? 'Set' : 'Missing')
+    console.error('   SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? 'Set' : 'Missing')
+    console.error('\n⚠️  Note: SUPABASE_SERVICE_ROLE_KEY is required for seeding')
+    console.error('   Get it from: https://supabase.com/dashboard/project/otyvmmgakowcdsxehwox/settings/api')
     process.exit(1)
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey)
+  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      persistSession: false // Prevent session caching on server
+    }
+  })
 
   console.log('🌱 Starting sample journal entry seeding...')
   console.log(`   User ID: ${PROTOTYPE_USER_ID}`)

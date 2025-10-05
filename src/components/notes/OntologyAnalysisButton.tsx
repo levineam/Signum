@@ -71,46 +71,41 @@ export function OntologyAnalysisButton({
       const extraction: ExtractionResult = result.extraction
 
       // Update Values card - store structured data in metadata
-      if (extraction.values.length > 0) {
-        await updateNote('pinned-values', {
-          content: '', // Keep empty - data is in metadata
-          metadata: {
-            items: extraction.values.map(v => ({
-              name: v.text,
-              confidence: v.confidence,
-              excerpts: v.sourceExcerpts
-            }))
-          }
-        })
-      }
+      // Always update, even if empty, to prevent stale metadata
+      await updateNote('pinned-values', {
+        content: '', // Keep empty - data is in metadata
+        metadata: {
+          items: extraction.values.map(v => ({
+            name: v.text,
+            confidence: v.confidence,
+            excerpts: v.sourceExcerpts
+          }))
+        }
+      })
 
-      // Update Beliefs card
-      if (extraction.beliefs.length > 0) {
-        await updateNote('pinned-beliefs', {
-          content: '',
-          metadata: {
-            items: extraction.beliefs.map(b => ({
-              name: b.text,
-              confidence: b.confidence,
-              excerpts: b.sourceExcerpts
-            }))
-          }
-        })
-      }
+      // Update Beliefs card - always update to prevent stale metadata
+      await updateNote('pinned-beliefs', {
+        content: '',
+        metadata: {
+          items: extraction.beliefs.map(b => ({
+            name: b.text,
+            confidence: b.confidence,
+            excerpts: b.sourceExcerpts
+          }))
+        }
+      })
 
-      // Update Aims card
-      if (extraction.aims.length > 0) {
-        await updateNote('pinned-aims', {
-          content: '',
-          metadata: {
-            items: extraction.aims.map(a => ({
-              name: a.text,
-              confidence: a.confidence,
-              excerpts: a.sourceExcerpts
-            }))
-          }
-        })
-      }
+      // Update Aims card - always update to prevent stale metadata
+      await updateNote('pinned-aims', {
+        content: '',
+        metadata: {
+          items: extraction.aims.map(a => ({
+            name: a.text,
+            confidence: a.confidence,
+            excerpts: a.sourceExcerpts
+          }))
+        }
+      })
 
       // 8. Show success message
       const { counts } = result

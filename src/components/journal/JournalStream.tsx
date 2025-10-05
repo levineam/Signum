@@ -135,8 +135,12 @@ export function JournalStream() {
 
     // Auto-save after 2 seconds of no typing (longer delay to reduce noise)
     saveTimeoutRef.current = setTimeout(async () => {
-      // Only save if content is not empty and actually changed
-      if (newContent.trim() !== '') {
+      const previousContent = currentEntry?.content || ''
+
+      // Save if content is non-empty OR if we're clearing previously non-empty content
+      const shouldSave = newContent.trim() !== '' || previousContent.trim() !== ''
+
+      if (shouldSave) {
         console.log('Auto-saving entry:', entryId)
         try {
           // Update the note in Supabase
@@ -192,7 +196,7 @@ export function JournalStream() {
       console.log('🔗 Link conversion result:', linkCreated)
 
       // Now update the entry content with the editor's HTML content
-      setTimeout(() => {
+      setTimeout(async () => {
         const updatedContent = editorElement.innerHTML
         console.log('📄 Updated entry content from editor:', updatedContent)
 
@@ -203,20 +207,37 @@ export function JournalStream() {
           return entry
         }))
 
+        // Persist the linked content to Supabase
+        try {
+          await updateNoteInDb(currentEditingEntry, { content: updatedContent })
+          console.log('💾 Persisted link to Supabase')
+        } catch (error) {
+          console.error('Error persisting link to Supabase:', error)
+        }
+
         // Reset the flag after updating
         setCreatingLink(false)
       }, 100)
     } else {
       // Fallback: update entry content directly if no editor element found
+      const linkHtml = `<a href="#" class="note-link text-primary hover:text-primary/80 underline cursor-pointer" data-note-id="${note.id}" contenteditable="false">${selectedText}</a>`
+      let updatedContent = ''
+
       setEntries(prev => prev.map(entry => {
         if (entry.id === currentEditingEntry) {
-          const linkHtml = `<a href="#" class="note-link text-primary hover:text-primary/80 underline cursor-pointer" data-note-id="${note.id}" contenteditable="false">${selectedText}</a>`
-          const updatedContent = entry.content.replace(selectedText, linkHtml)
+          updatedContent = entry.content.replace(selectedText, linkHtml)
           console.log('📄 Updated entry content (fallback):', updatedContent)
           return { ...entry, content: updatedContent, lastModified: new Date().toISOString() }
         }
         return entry
       }))
+
+      // Persist the linked content to Supabase
+      if (updatedContent) {
+        updateNoteInDb(currentEditingEntry, { content: updatedContent })
+          .then(() => console.log('💾 Persisted link to Supabase (fallback)'))
+          .catch(error => console.error('Error persisting link to Supabase:', error))
+      }
 
       setCreatingLink(false)
     }
