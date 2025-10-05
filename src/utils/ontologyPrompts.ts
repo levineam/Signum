@@ -44,7 +44,7 @@ Your task is to identify:
 IMPORTANT GUIDELINES:
 - Extract only HIGH-CONFIDENCE items that appear multiple times or are stated explicitly
 - Keep extracted text SHORT and MEMORABLE (2-5 words ideally)
-- For each value/belief/aim, provide ALL relevant excerpts you find (no limit on count)
+- For each value/belief/aim, provide up to 5 most representative excerpts
 - Each excerpt should be 1-2 sentences of actual text from the notes
 - Include the exact quote that demonstrates this concept
 - Provide noteId and noteTitle for each excerpt
