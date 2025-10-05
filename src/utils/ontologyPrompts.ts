@@ -55,7 +55,7 @@ NOTES TO ANALYZE:
 
 ${notesText}
 
-CRITICAL: You MUST respond with ONLY valid JSON. Do NOT include any explanatory text, markdown formatting, or code blocks. Return ONLY the raw JSON object.
+RESPONSE FORMAT: Prefer returning raw JSON without markdown code blocks. If you include markdown formatting, ensure the content is still valid JSON. Your response will be parsed as JSON.
 
 Return your analysis as JSON in this exact format:
 {
@@ -114,7 +114,8 @@ Only include items with "high" confidence. Return empty arrays if no high-confid
 }
 
 /**
- * Extract JSON from response text, handling markdown code blocks and surrounding text
+ * Extract JSON from response text, defensively handling markdown code blocks and surrounding text.
+ * While the prompt discourages markdown formatting, this function tolerates it for robustness.
  */
 function extractJSON(text: string): string {
   // Try to find JSON in markdown code block
