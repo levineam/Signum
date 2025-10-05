@@ -20,6 +20,20 @@ interface JournalEntry {
   isSample?: boolean
 }
 
+// Helper: Get today's date in local timezone as YYYY-MM-DD
+function getLocalDateString(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Helper: Escape regex special characters in a string
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 export function JournalStream() {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
@@ -37,73 +51,87 @@ export function JournalStream() {
   useEffect(() => {
     // Load journal entries from Supabase
     async function loadEntries() {
-      const today = new Date().toISOString().split('T')[0]
+      try {
+        const today = getLocalDateString() // Use local date instead of UTC
 
-      // Get all notes from Supabase
-      const allNotes = await getNotes()
+        // Get all notes from Supabase
+        const allNotes = await getNotes()
 
-      // Filter to journal entries only
-      const journalNotes = allNotes.filter(note => note.noteType === 'journal-entry')
+        // Filter to journal entries only
+        const journalNotes = allNotes.filter(note => note.noteType === 'journal-entry')
 
-      // Convert Note format to JournalEntry format
-      const journalEntries: JournalEntry[] = journalNotes.map(note => {
-        // Safely handle metadata (can be null for legacy notes)
-        const meta = note.metadata || {}
-        const journalDate = (meta as { journalDate?: string }).journalDate
-        const isSample = (meta as { isSample?: boolean }).isSample
+        // Convert Note format to JournalEntry format
+        const journalEntries: JournalEntry[] = journalNotes.map(note => {
+          // Safely handle metadata (can be null for legacy notes)
+          const meta = note.metadata || {}
+          const journalDate = (meta as { journalDate?: string }).journalDate
+          const isSample = (meta as { isSample?: boolean }).isSample
 
-        return {
-          id: note.id,
-          date: journalDate || note.createdAt.split('T')[0],
-          content: note.content,
-          lastModified: note.updatedAt,
-          isSample: Boolean(isSample)
-        }
-      })
-
-      // Check if today's entry exists
-      const todayEntry = journalEntries.find(e => e.date === today)
-
-      let initialEntries: JournalEntry[] = journalEntries
-      if (!todayEntry) {
-        // Create today's entry if it doesn't exist
-        const newNote = await createNote({
-          title: `Journal Entry - ${today}`,
-          content: '',
-          noteType: 'journal-entry',
-          metadata: { journalDate: today }
+          return {
+            id: note.id,
+            date: journalDate || note.createdAt.split('T')[0],
+            content: note.content,
+            lastModified: note.updatedAt,
+            isSample: Boolean(isSample)
+          }
         })
 
-        const newTodayEntry: JournalEntry = {
-          id: newNote.id,
-          date: today,
-          content: '',
-          lastModified: newNote.createdAt
-        }
-        initialEntries = [newTodayEntry, ...journalEntries]
-      }
+        // Check if today's entry exists
+        const todayEntry = journalEntries.find(e => e.date === today)
 
-      // Process entries to restore HTML links from stored link relationships
-      const entriesWithLinks = initialEntries.map(entry => {
-        const existingLinks = getLinksByEntryId(entry.id)
-        if (existingLinks.length > 0) {
-          let updatedContent = entry.content
-          existingLinks.forEach(link => {
-            const linkHtml = `<a href="#" class="note-link text-primary hover:text-primary/80 underline cursor-pointer" data-note-id="${link.noteId}" contenteditable="false">${link.text}</a>`
-            // Only replace if the text isn't already a link
-            if (!updatedContent.includes(`data-note-id="${link.noteId}"`)) {
-              updatedContent = updatedContent.replace(new RegExp(link.text, 'g'), linkHtml)
-            }
+        let initialEntries: JournalEntry[] = journalEntries
+        if (!todayEntry) {
+          // Create today's entry if it doesn't exist
+          const newNote = await createNote({
+            title: `Journal Entry - ${today}`,
+            content: '',
+            noteType: 'journal-entry',
+            metadata: { journalDate: today }
           })
-          return { ...entry, content: updatedContent }
-        }
-        return entry
-      })
 
-      setEntries(entriesWithLinks)
+          const newTodayEntry: JournalEntry = {
+            id: newNote.id,
+            date: today,
+            content: '',
+            lastModified: newNote.createdAt
+          }
+          initialEntries = [newTodayEntry, ...journalEntries]
+        }
+
+        // Process entries to restore HTML links from stored link relationships
+        const entriesWithLinks = initialEntries.map(entry => {
+          const existingLinks = getLinksByEntryId(entry.id)
+          if (existingLinks.length > 0) {
+            let updatedContent = entry.content
+            existingLinks.forEach(link => {
+              const linkHtml = `<a href="#" class="note-link text-primary hover:text-primary/80 underline cursor-pointer" data-note-id="${link.noteId}" contenteditable="false">${link.text}</a>`
+              // Only replace if the text isn't already a link
+              if (!updatedContent.includes(`data-note-id="${link.noteId}"`)) {
+                // Escape regex special characters and replace only first occurrence
+                const escapedText = escapeRegExp(link.text)
+                updatedContent = updatedContent.replace(new RegExp(escapedText), linkHtml)
+              }
+            })
+            return { ...entry, content: updatedContent }
+          }
+          return entry
+        })
+
+        setEntries(entriesWithLinks)
+      } catch (error) {
+        console.error('Error loading journal entries:', error)
+        // Set safe fallback state - show empty array on error
+        setEntries([])
+        // Optionally show user-facing error message
+        // toast.error('Failed to load journal entries. Please refresh the page.')
+      }
     }
 
-    loadEntries()
+    // Safely invoke async function
+    loadEntries().catch(error => {
+      console.error('Unhandled error in loadEntries:', error)
+      setEntries([])
+    })
 
     // Initialize prompt display - always get a new prompt on page reload
     // Clear any previous dismissal since we want new prompt on each page load
