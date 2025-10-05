@@ -6,7 +6,6 @@ import { Note } from '@/types/note'
 import { PinnedNoteCard } from './PinnedNoteCard'
 import { RegularNoteCard } from './RegularNoteCard'
 import { OntologyAnalysisButton } from './OntologyAnalysisButton'
-import { sampleJournalEntries } from '@/data/sampleEntries'
 
 export function NotesPage() {
   const [pinnedNotes, setPinnedNotes] = useState<Note[]>([])
@@ -15,26 +14,8 @@ export function NotesPage() {
   const loadNotes = async () => {
     setPinnedNotes(await getPinnedNotes())
 
-    // Get regular notes from Supabase
-    const localStorageNotes = await getRegularNotes()
-
-    // Convert journal entries to Note format
-    const journalNotes: Note[] = sampleJournalEntries.map(entry => ({
-      id: entry.id,
-      userId: '',
-      title: `Journal Entry - ${entry.date}`,
-      content: entry.content,
-      noteType: 'journal-entry' as const,
-      isPinned: false,
-      metadata: {},
-      createdAt: entry.lastModified,
-      updatedAt: entry.lastModified
-    }))
-
-    // Combine and sort by date
-    const allNotes = [...localStorageNotes, ...journalNotes].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
+    // Get all regular notes from Supabase (sorted by createdAt DESC)
+    const allNotes = await getRegularNotes()
 
     setRegularNotes(allNotes)
   }

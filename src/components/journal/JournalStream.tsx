@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 import { Card } from '@/components/ui/card'
-import { sampleJournalEntries } from '@/data/sampleEntries'
 import { Calendar, BookOpen, X, RefreshCw } from 'lucide-react'
 import { getNextPrompt, dismissPromptForSession } from '@/utils/journalPrompts'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
@@ -11,6 +10,7 @@ import { NoteViewer } from '@/components/notes/NoteViewer'
 import { Note } from '@/types/note'
 import { createLink, getLinksByEntryId } from '@/lib/links'
 import { convertTextToLink, restoreLinksInEditor } from '@/utils/textToLink'
+import { getNotes, createNote, updateNote as updateNoteInDb } from '@/lib/notes'
 
 interface JournalEntry {
   id: string
@@ -35,42 +35,68 @@ export function JournalStream() {
   const [creatingLink, setCreatingLink] = useState(false)
 
   useEffect(() => {
-    // Initialize with today's entry and sample entries
-    const today = new Date().toISOString().split('T')[0]
-    const todayEntry = sampleJournalEntries.find(e => e.date === today)
+    // Load journal entries from Supabase
+    async function loadEntries() {
+      const today = new Date().toISOString().split('T')[0]
 
-    let initialEntries: JournalEntry[] = []
-    if (!todayEntry) {
-      // Create today's entry if it doesn't exist
-      const newTodayEntry: JournalEntry = {
-        id: `entry-${today}`,
-        date: today,
-        content: '',
-        lastModified: new Date().toISOString()
+      // Get all notes from Supabase
+      const allNotes = await getNotes()
+
+      // Filter to journal entries only
+      const journalNotes = allNotes.filter(note => note.noteType === 'journal-entry')
+
+      // Convert Note format to JournalEntry format
+      const journalEntries: JournalEntry[] = journalNotes.map(note => ({
+        id: note.id,
+        date: (note.metadata as { journalDate?: string }).journalDate || note.createdAt.split('T')[0],
+        content: note.content,
+        lastModified: note.updatedAt,
+        isSample: (note.metadata as { isSample?: boolean }).isSample
+      }))
+
+      // Check if today's entry exists
+      const todayEntry = journalEntries.find(e => e.date === today)
+
+      let initialEntries: JournalEntry[] = journalEntries
+      if (!todayEntry) {
+        // Create today's entry if it doesn't exist
+        const newNote = await createNote({
+          title: `Journal Entry - ${today}`,
+          content: '',
+          noteType: 'journal-entry',
+          metadata: { journalDate: today }
+        })
+
+        const newTodayEntry: JournalEntry = {
+          id: newNote.id,
+          date: today,
+          content: '',
+          lastModified: newNote.createdAt
+        }
+        initialEntries = [newTodayEntry, ...journalEntries]
       }
-      initialEntries = [newTodayEntry, ...sampleJournalEntries]
-    } else {
-      initialEntries = sampleJournalEntries
+
+      // Process entries to restore HTML links from stored link relationships
+      const entriesWithLinks = initialEntries.map(entry => {
+        const existingLinks = getLinksByEntryId(entry.id)
+        if (existingLinks.length > 0) {
+          let updatedContent = entry.content
+          existingLinks.forEach(link => {
+            const linkHtml = `<a href="#" class="note-link text-primary hover:text-primary/80 underline cursor-pointer" data-note-id="${link.noteId}" contenteditable="false">${link.text}</a>`
+            // Only replace if the text isn't already a link
+            if (!updatedContent.includes(`data-note-id="${link.noteId}"`)) {
+              updatedContent = updatedContent.replace(new RegExp(link.text, 'g'), linkHtml)
+            }
+          })
+          return { ...entry, content: updatedContent }
+        }
+        return entry
+      })
+
+      setEntries(entriesWithLinks)
     }
 
-    // Process entries to restore HTML links from stored link relationships
-    const entriesWithLinks = initialEntries.map(entry => {
-      const existingLinks = getLinksByEntryId(entry.id)
-      if (existingLinks.length > 0) {
-        let updatedContent = entry.content
-        existingLinks.forEach(link => {
-          const linkHtml = `<a href="#" class="note-link text-primary hover:text-primary/80 underline cursor-pointer" data-note-id="${link.noteId}" contenteditable="false">${link.text}</a>`
-          // Only replace if the text isn't already a link
-          if (!updatedContent.includes(`data-note-id="${link.noteId}"`)) {
-            updatedContent = updatedContent.replace(new RegExp(link.text, 'g'), linkHtml)
-          }
-        })
-        return { ...entry, content: updatedContent }
-      }
-      return entry
-    })
-
-    setEntries(entriesWithLinks)
+    loadEntries()
 
     // Initialize prompt display - always get a new prompt on page reload
     // Clear any previous dismissal since we want new prompt on each page load
@@ -108,10 +134,16 @@ export function JournalStream() {
     ))
 
     // Auto-save after 2 seconds of no typing (longer delay to reduce noise)
-    saveTimeoutRef.current = setTimeout(() => {
+    saveTimeoutRef.current = setTimeout(async () => {
       // Only save if content is not empty and actually changed
       if (newContent.trim() !== '') {
         console.log('Auto-saving entry:', entryId)
+        try {
+          // Update the note in Supabase
+          await updateNoteInDb(entryId, { content: newContent })
+        } catch (error) {
+          console.error('Error auto-saving journal entry:', error)
+        }
       }
     }, 2000)
   }

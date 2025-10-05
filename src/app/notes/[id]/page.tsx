@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft } from 'lucide-react'
 import { OntologyCardViewer } from '@/components/notes/OntologyCardViewer'
-import { sampleJournalEntries } from '@/data/sampleEntries'
 
 interface AimsContent {
   todos: string
@@ -26,26 +25,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     async function loadNote() {
       const resolvedParams = await params
 
-      // Try to get from Supabase first
-      let loadedNote = await getNoteById(resolvedParams.id)
-
-      // If not in localStorage, check sample journal entries
-      if (!loadedNote) {
-        const sampleEntry = sampleJournalEntries.find(e => e.id === resolvedParams.id)
-        if (sampleEntry) {
-          loadedNote = {
-            id: sampleEntry.id,
-            userId: '',
-            title: `Journal Entry - ${sampleEntry.date}`,
-            content: sampleEntry.content,
-            noteType: 'journal-entry' as const,
-            isPinned: false,
-            metadata: {},
-            createdAt: sampleEntry.lastModified,
-            updatedAt: sampleEntry.lastModified
-          }
-        }
-      }
+      // Get note from Supabase
+      const loadedNote = await getNoteById(resolvedParams.id)
 
       if (loadedNote) {
         setNote(loadedNote)

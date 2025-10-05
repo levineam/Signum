@@ -9,10 +9,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Note } from '@/types/note'
 import { getNotes, updateNote } from '@/lib/notes'
 import { ExtractionResult } from '@/utils/ontologyPrompts'
-import { sampleJournalEntries } from '@/data/sampleEntries'
 
 interface OntologyAnalysisButtonProps {
   onComplete?: () => void
@@ -30,24 +28,8 @@ export function OntologyAnalysisButton({
       // 1. Get all notes from Supabase
       const allNotes = await getNotes()
 
-      // 2. Convert journal entries to Note format
-      const journalNotes: Note[] = sampleJournalEntries.map(entry => ({
-        id: entry.id,
-        userId: '',
-        title: `Journal Entry - ${entry.date}`,
-        content: entry.content,
-        noteType: 'journal-entry' as const,
-        isPinned: false,
-        metadata: {},
-        createdAt: entry.lastModified,
-        updatedAt: entry.lastModified
-      }))
-
-      // 3. Combine notes and journal entries
-      const allContent = [...allNotes, ...journalNotes]
-
-      // 4. Filter to analyzable notes (exclude ontology notes)
-      const notesToAnalyze = allContent.filter(
+      // 2. Filter to analyzable notes (exclude ontology notes)
+      const notesToAnalyze = allNotes.filter(
         (note) =>
           note.noteType === 'custom' ||
           note.noteType === 'journal-entry' ||
