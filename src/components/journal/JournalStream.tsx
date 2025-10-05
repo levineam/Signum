@@ -260,7 +260,9 @@ export function JournalStream() {
 
       setEntries(prev => prev.map(entry => {
         if (entry.id === currentEditingEntry) {
-          updatedContent = entry.content.replace(selectedText, linkHtml)
+          // Escape regex special characters for safe replacement
+          const escapedText = escapeRegExp(selectedText)
+          updatedContent = entry.content.replace(new RegExp(escapedText), linkHtml)
           console.log('📄 Updated entry content (fallback):', updatedContent)
           return { ...entry, content: updatedContent, lastModified: new Date().toISOString() }
         }
