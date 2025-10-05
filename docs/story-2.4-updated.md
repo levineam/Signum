@@ -63,6 +63,45 @@ Build the simplest possible working extraction that demonstrates value to users.
 
 ---
 
+## Supabase Migration (Added During Implementation)
+
+### Context
+
+During testing, the localStorage + sample array approach caused "Note not found" errors:
+- Ontology extraction created references to sample journal entries
+- Links from ontology cards failed because notes weren't in localStorage
+- Testing environment didn't match production behavior
+
+### Solution
+
+Migrate all notes storage to Supabase within this story instead of deferring.
+
+### Implementation
+
+**7-Commit Strategy:**
+1. Foundation: Update notes.ts with Supabase CRUD
+2. Data: Seed script for sample journal entries
+3. UI: NotesPage → Supabase
+4. UI: Note detail page → Supabase (remove fallback)
+5. UI: JournalStream → Supabase
+6. API: Server-side note fetching
+7. Cleanup: Remove localStorage references
+
+**Auth Handling:**
+- Temporary unauthenticated access with fixed user ID: `00000000-0000-0000-0000-000000000000`
+- Allows prototype testing without auth complexity
+- Clean migration path when auth is needed
+
+### Updated Acceptance Criteria
+
+All original criteria plus:
+- ✅ Notes CRUD uses Supabase
+- ✅ Sample data seeded
+- ✅ All UI components fetch from Supabase
+- ✅ No localStorage in production code
+
+---
+
 ## Acceptance Criteria
 
 ### Data Model Prerequisites

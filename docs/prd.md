@@ -54,6 +54,7 @@ The solution combines two key innovations: gentle background AI that builds pers
 
 | Date | Version | Description | Author |
 |------|---------|-------------|---------|
+| 2025-10-05 | 3.4 | **SCOPE EXPANSION:** Story 2.4 expanded to include Supabase migration. Testing revealed localStorage + sample array architecture caused "Note not found" errors. All notes storage migrated to Supabase within Story 2.4. 7-commit implementation strategy with temporary unauthenticated access for prototype phase. | Claude Code |
 | 2025-10-01 | 3.3 | Story 2.3.6 completed (simplified) - Supabase foundation built without premature migration complexity. Database schema, types, and CRUD operations ready. App continues using localStorage for prototype phase. See `/docs/story-2.3.6.md` | Claude Code |
 | 2025-09-30 | 3.2 | **MAJOR REFACTOR:** Added Story 2.3.6 (Unified Note Data Model & Supabase Migration) as critical prerequisite for AI features. Updated Story 2.4 with GPT-5-mini integration, Supabase storage, and MVP scope. Created comprehensive documentation: `/docs/openai-gpt5-api.md`, `/docs/data-model-unification.md`, `/docs/story-2.4-updated.md` | John (PM) |
 | 2025-09-30 | 3.1 | Story 2.3.5 completed - Notes Page UI Foundation with Personal Ontology cards. Added 20 sample notes designed for ontology extraction testing (see `/scripts/seed-ontology-notes.js`) | Claude Code |
@@ -634,11 +635,11 @@ See **`/docs/story-2.3.6.md`** for complete details on what was built and how to
 ##### Status
 
 **Complete**: Supabase foundation ready ✅
-**Next**: Story 2.4 can proceed with AI integration (will use Supabase when components are updated)
+**Integration Status**: ✅ **COMPLETED in Story 2.4** - Components migrated to use Supabase (was originally deferred for prototype phase, but testing revealed localStorage approach caused production mismatches)
 
 ---
 
-#### Story 2.4: AI Personal Ontology Extraction Foundation 🚧 NEXT AFTER 2.3.6
+#### Story 2.4: AI Personal Ontology Extraction with Supabase Migration 🚧 IN PROGRESS
 
 **Prerequisites:** Story 2.3.6 (Unified Note Data Model) ✅ Complete
 
@@ -656,14 +657,18 @@ so that I can build a structured personal ontology that helps me understand my a
 
 ##### MVP Scope (Story 2.4.1)
 
-This story implements the **simplest possible working extraction** to validate value to users.
+This story implements the **simplest possible working extraction** to validate value to users, **including migration from localStorage to Supabase**.
 
 **What's Included:**
+- **Supabase Migration**: All notes storage migrated from localStorage to Supabase
+  - Sample journal entries seeded into database
+  - CRUD operations use Supabase client
+  - Temporary unauthenticated access for prototype phase
 - Manual "Analyze My Notes" button on Notes page
 - Processes up to 20 most recent notes (excluding ontology notes)
 - Direct population of Values/Beliefs/Aims cards (no approval workflow)
 - GPT-5-mini for cost efficiency
-- Supabase storage (unified Note model with `noteType: 'ontology-*'`)
+- Server-side note fetching in API route for security
 
 **What's Deferred to Post-MVP:**
 - Suggestion review/approval UI (Story 2.4.2)
@@ -706,6 +711,15 @@ This story implements the **simplest possible working extraction** to validate v
 4. ✅ API key: `OPENAI_API_KEY` environment variable (server-side only)
 5. ✅ Error handling for API failures
 
+**Supabase Migration:**
+1. ✅ All note CRUD operations use Supabase instead of localStorage
+2. ✅ Sample journal entries seeded into Supabase database
+3. ✅ NotesPage component fetches from Supabase
+4. ✅ Note detail page fetches from Supabase (no sample array fallback)
+5. ✅ JournalStream saves to Supabase with auto-save
+6. ✅ Unauthenticated access enabled for prototype phase
+7. ✅ No localStorage references remain in production code
+
 ##### Technical Implementation
 
 **See `/docs/story-2.4-updated.md` for complete details including:**
@@ -736,6 +750,30 @@ This story implements the **simplest possible working extraction** to validate v
 - Values card: 5-8 values (e.g., "Compassion", "Integrity", "Presence")
 - Beliefs card: 5-10 beliefs (e.g., "Meaning over happiness", "People have inherent wisdom")
 - Aims card: 3-5 aims (e.g., "Balance ambition with presence", "Build community connections")
+
+##### Implementation Notes
+
+**Why Supabase Migration Happened in Story 2.4:**
+
+During Story 2.4 testing, the hybrid localStorage + sample array approach revealed critical issues:
+- **Issue**: Ontology extraction created note references to sample journal entries that only existed in memory, causing "Note not found" errors when clicking links
+- **Root Cause**: Testing environment (localStorage + sample arrays) didn't match production behavior (Supabase)
+- **Decision**: Migrate to Supabase within Story 2.4 instead of deferring to later story
+- **Benefit**: Ensures testing matches production, eliminates complex hybrid logic, validates full end-to-end flow
+
+**Auth Strategy for Prototype:**
+- Unauthenticated access enabled with fixed user ID: `00000000-0000-0000-0000-000000000000`
+- RLS policies configured to allow public access temporarily
+- Migration path: Swap fixed ID with real auth when ready for production
+
+**Commit Structure:**
+1. Update notes.ts with Supabase CRUD
+2. Create and run seed script for sample data
+3. Update NotesPage to fetch from Supabase
+4. Update note detail page and remove fallback logic
+5. Update JournalStream to save to Supabase
+6. Improve extract-ontology to fetch notes server-side
+7. Remove sample data array and localStorage references
 
 ##### Future Enhancements (Post-MVP)
 

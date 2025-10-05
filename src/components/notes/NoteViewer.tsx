@@ -33,14 +33,15 @@ export function NoteViewer({
 
   useEffect(() => {
     if (noteId && isOpen) {
-      const foundNote = getNoteById(noteId)
-      if (foundNote) {
-        setNote(foundNote)
-        setEditTitle(foundNote.title)
-        setEditContent(foundNote.content || '')
-      } else {
-        setNote(null)
-      }
+      getNoteById(noteId).then(foundNote => {
+        if (foundNote) {
+          setNote(foundNote)
+          setEditTitle(foundNote.title)
+          setEditContent(foundNote.content || '')
+        } else {
+          setNote(null)
+        }
+      })
     }
   }, [noteId, isOpen])
 
@@ -61,7 +62,7 @@ export function NoteViewer({
 
     setIsSaving(true)
     try {
-      const updatedNote = updateNote(note.id, {
+      const updatedNote = await updateNote(note.id, {
         title: editTitle.trim(),
         content: editContent
       })
@@ -86,7 +87,7 @@ export function NoteViewer({
 
     setIsDeleting(true)
     try {
-      const success = deleteNote(note.id)
+      const success = await deleteNote(note.id)
       if (success) {
         onNoteDeleted?.(note.id)
         onClose()

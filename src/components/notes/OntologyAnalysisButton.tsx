@@ -27,8 +27,8 @@ export function OntologyAnalysisButton({
     setIsAnalyzing(true)
 
     try {
-      // 1. Get all notes from localStorage
-      const allNotes = getNotes()
+      // 1. Get all notes from Supabase
+      const allNotes = await getNotes()
 
       // 2. Convert journal entries to Note format
       const journalNotes: Note[] = sampleJournalEntries.map(entry => ({
@@ -90,7 +90,7 @@ export function OntologyAnalysisButton({
 
       // Update Values card - store structured data in metadata
       if (extraction.values.length > 0) {
-        updateNote('pinned-values', {
+        await updateNote('pinned-values', {
           content: '', // Keep empty - data is in metadata
           metadata: {
             items: extraction.values.map(v => ({
@@ -104,7 +104,7 @@ export function OntologyAnalysisButton({
 
       // Update Beliefs card
       if (extraction.beliefs.length > 0) {
-        updateNote('pinned-beliefs', {
+        await updateNote('pinned-beliefs', {
           content: '',
           metadata: {
             items: extraction.beliefs.map(b => ({
@@ -118,7 +118,7 @@ export function OntologyAnalysisButton({
 
       // Update Aims card
       if (extraction.aims.length > 0) {
-        updateNote('pinned-aims', {
+        await updateNote('pinned-aims', {
           content: '',
           metadata: {
             items: extraction.aims.map(a => ({

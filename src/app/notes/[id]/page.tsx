@@ -26,8 +26,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     async function loadNote() {
       const resolvedParams = await params
 
-      // Try to get from localStorage first
-      let loadedNote = getNoteById(resolvedParams.id)
+      // Try to get from Supabase first
+      let loadedNote = await getNoteById(resolvedParams.id)
 
       // If not in localStorage, check sample journal entries
       if (!loadedNote) {
@@ -68,7 +68,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     loadNote()
   }, [params])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!note) return
 
     // Support both old (type) and new (noteType) field names during migration
@@ -77,7 +77,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       ? JSON.stringify(aimsContent)
       : content
 
-    const updated = updateNote(note.id, { content: newContent })
+    const updated = await updateNote(note.id, { content: newContent })
     if (updated) {
       setNote(updated)
     }

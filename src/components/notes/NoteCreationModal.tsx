@@ -39,7 +39,7 @@ export function NoteCreationModal({
 
     setIsSaving(true)
     try {
-      const newNote = createNote({
+      const newNote = await createNote({
         title: title.trim(),
         content: content.trim(),
         noteType: 'custom' // Notes created from UI are custom notes

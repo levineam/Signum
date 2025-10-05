@@ -12,11 +12,11 @@ export function NotesPage() {
   const [pinnedNotes, setPinnedNotes] = useState<Note[]>([])
   const [regularNotes, setRegularNotes] = useState<Note[]>([])
 
-  const loadNotes = () => {
-    setPinnedNotes(getPinnedNotes())
+  const loadNotes = async () => {
+    setPinnedNotes(await getPinnedNotes())
 
-    // Get regular notes from localStorage
-    const localStorageNotes = getRegularNotes()
+    // Get regular notes from Supabase
+    const localStorageNotes = await getRegularNotes()
 
     // Convert journal entries to Note format
     const journalNotes: Note[] = sampleJournalEntries.map(entry => ({
@@ -40,11 +40,11 @@ export function NotesPage() {
   }
 
   useEffect(() => {
-    // Initialize pinned notes if they don't exist
-    initializePinnedNotes()
-
-    // Load notes
-    loadNotes()
+    // Initialize pinned notes if they don't exist, then load all notes
+    (async () => {
+      await initializePinnedNotes()
+      await loadNotes()
+    })()
   }, [])
 
   return (
