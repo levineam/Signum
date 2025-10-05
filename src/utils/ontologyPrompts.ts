@@ -55,6 +55,8 @@ NOTES TO ANALYZE:
 
 ${notesText}
 
+CRITICAL: You MUST respond with ONLY valid JSON. Do NOT include any explanatory text, markdown formatting, or code blocks. Return ONLY the raw JSON object.
+
 Return your analysis as JSON in this exact format:
 {
   "values": [
@@ -112,14 +114,35 @@ Only include items with "high" confidence. Return empty arrays if no high-confid
 }
 
 /**
+ * Extract JSON from response text, handling markdown code blocks and surrounding text
+ */
+function extractJSON(text: string): string {
+  // Try to find JSON in markdown code block
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (codeBlockMatch) {
+    return codeBlockMatch[1].trim()
+  }
+
+  // Try to find JSON object by looking for { ... }
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (jsonMatch) {
+    return jsonMatch[0]
+  }
+
+  // If no wrapping found, assume entire text is JSON
+  return text.trim()
+}
+
+/**
  * Parse GPT response into structured extraction result
  */
 export function parseExtractionResult(
   responseText: string
 ): ExtractionResult {
   try {
-    // GPT-5 mini returns JSON directly
-    const parsed = JSON.parse(responseText)
+    // Extract JSON from response (handles markdown blocks and surrounding text)
+    const jsonText = extractJSON(responseText)
+    const parsed = JSON.parse(jsonText)
 
     // Validate structure
     if (
