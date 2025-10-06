@@ -86,13 +86,36 @@ export async function getNoteById(id: string): Promise<Note | null> {
 
 /**
  * Initialize pinned ontology notes (Values, Beliefs, Aims)
+ * Creates any missing ontology notes individually to recover from partial data
  */
 export async function initializePinnedNotes(): Promise<void> {
   try {
-    // Check if ontology notes already exist
+    // Check which ontology notes exist
     const existingOntology = await supabaseNotes.getOntologyNotes(PROTOTYPE_USER_ID)
-    if (existingOntology.length === 0) {
-      await supabaseNotes.initializeOntologyNotes(PROTOTYPE_USER_ID)
+    const existingTypes = new Set(existingOntology.map(note => note.noteType))
+
+    // Define required ontology notes
+    const requiredNotes: Array<{
+      type: 'ontology-value' | 'ontology-belief' | 'ontology-aim'
+      title: string
+      content: string
+    }> = [
+      { type: 'ontology-value', title: 'Values', content: '' },
+      { type: 'ontology-belief', title: 'Beliefs', content: '' },
+      { type: 'ontology-aim', title: 'Aims', content: JSON.stringify({ todos: '', goals: '' }) }
+    ]
+
+    // Create missing notes individually
+    for (const noteConfig of requiredNotes) {
+      if (!existingTypes.has(noteConfig.type)) {
+        await createNote({
+          title: noteConfig.title,
+          content: noteConfig.content,
+          noteType: noteConfig.type,
+          isPinned: true,
+          metadata: {}
+        })
+      }
     }
   } catch (error) {
     console.error('Error initializing pinned notes:', error)
