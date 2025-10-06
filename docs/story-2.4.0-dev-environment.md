@@ -103,12 +103,22 @@ so that I can test security-sensitive changes before they reach main and avoid r
 
 ## Testing & Verification
 
+**Completed 2025-10-06:**
+
 - ✅ Vercel dashboard shows successful deployment from latest `dev` commit.
-- ✅ Visiting the dev URL prompts for Supabase auth; sign in with test account succeeds.
-- ✅ Creating journal entries/notes on dev stores data under the signed-in user only.
-- ✅ Feature-branch PR preview still works and remains isolated from dev.
-- ✅ `git status` / branch protection denies direct pushes to `dev`.
-- ✅ Security review checklist is visible in the PR template.
+- ✅ Dev URL accessible: https://signum-im11dbdvv-levineams-projects.vercel.app
+- ✅ Test users created and confirmed:
+  - dev-test-1@signum.dev (manually confirmed via SQL)
+  - dev-test-2@signum.dev (manually confirmed via SQL)
+- ✅ Both test users can sign in successfully
+- ✅ Both test users can create journal entries
+- ❌ **P0 Security Issue Confirmed:** Data isolation NOT working (expected)
+  - User 1 post visible to User 2
+  - User 2 can edit User 1's posts
+  - Confirms PROTOTYPE_USER_ID sharing issue from PR #3
+  - **This validates Story 2.4.1 is required before production**
+- ✅ Security review checklist added to PR template
+- ⏸️ Branch protection requires GitHub Pro (documented for manual enforcement)
 
 ---
 
