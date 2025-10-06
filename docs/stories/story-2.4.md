@@ -266,7 +266,7 @@ Response: {
 
 ## References
 
-- **Implementation Guide**: `/docs/story-2.4-updated.md`
+- **Implementation Guide**: `/docs/story-2.4.2-ontology-extraction.md`
 - **GPT-5-mini API**: `/docs/openai-gpt5-api.md`
 - **Sample Notes**: `/scripts/seed-ontology-notes.js`
 - **PRD**: `/docs/prd.md` (Story 2.4 section)

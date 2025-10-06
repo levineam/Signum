@@ -39,7 +39,7 @@ Major refactor of Story 2.4 (AI Personal Ontology Extraction) based on PM review
 - **Prerequisites** section clearly states dependency on 2.3.6
 - **Context & Documentation** section with links to detailed docs
 - **MVP Scope** section defines what's in/out
-- Simplified acceptance criteria (points to `/docs/story-2.4-updated.md` for full details)
+- Simplified acceptance criteria (points to `/docs/story-2.4.2-ontology-extraction.md` for full details)
 - Added expected test results with 20 sample notes
 
 **Location in PRD:** Lines 849-952
@@ -82,9 +82,9 @@ Major refactor of Story 2.4 (AI Personal Ontology Extraction) based on PM review
 
 ---
 
-#### `/docs/story-2.4-updated.md`
-- Complete, implementable version of Story 2.4
-- MVP-focused (Story 2.4.1)
+#### `/docs/story-2.4.2-ontology-extraction.md`
+- Complete, implementable version of Story 2.4.2 (Ontology Extraction)
+- MVP extraction scope (now Story 2.4.2)
 - Full implementation guide with:
   - Architecture diagrams
   - Component structure
@@ -113,8 +113,9 @@ Next Priority: Story 2.4 - AI Personal Ontology Extraction with GPT-5
 **After:**
 ```
 Next Priorities:
-1. Story 2.3.6: Unified Note Data Model & Supabase Migration (CRITICAL)
-2. Story 2.4: AI Personal Ontology Extraction with GPT-5-mini
+1. Story 2.4.0: Dev Environment Setup
+2. Story 2.4.1: Complete Auth Integration
+3. Story 2.4.2: AI Personal Ontology Extraction with GPT-5-mini
 ```
 
 **Cloud data persistence** now marked as "(partial - needs unification)"
@@ -124,7 +125,7 @@ Next Priorities:
 ### 5. Change Log Updated
 
 Added version 3.2 entry:
-> **MAJOR REFACTOR:** Added Story 2.3.6 (Unified Note Data Model & Supabase Migration) as critical prerequisite for AI features. Updated Story 2.4 with GPT-5-mini integration, Supabase storage, and MVP scope. Created comprehensive documentation: `/docs/openai-gpt5-api.md`, `/docs/data-model-unification.md`, `/docs/story-2.4-updated.md`
+> **MAJOR REFACTOR:** Added Story 2.3.6 (Unified Note Data Model & Supabase Migration) as critical prerequisite for AI features. Updated Story 2.4 with GPT-5-mini integration, Supabase storage, and MVP scope. Created comprehensive documentation: `/docs/openai-gpt5-api.md`, `/docs/data-model-unification.md`, `/docs/story-2.4.2-ontology-extraction.md`
 
 ---
 
@@ -148,7 +149,7 @@ Added version 3.2 entry:
 
 ### 5. Implementation Guidance ✅
 **Problem:** Acceptance criteria lacked implementation details
-**Solution:** Created `/docs/story-2.4-updated.md` with complete implementation guide
+**Solution:** Created `/docs/story-2.4.2-ontology-extraction.md` with complete implementation guide
 
 ---
 
@@ -183,7 +184,7 @@ Added version 3.2 entry:
 6. Test with 20 sample notes
 
 ### Story 2.4 (Do Second)
-1. Review `/docs/story-2.4-updated.md`
+1. Review `/docs/story-2.4.2-ontology-extraction.md`
 2. Review `/docs/openai-gpt5-api.md`
 3. Set up OPENAI_API_KEY environment variable
 4. Create `/src/app/api/extract-ontology/route.ts`
@@ -197,7 +198,7 @@ Added version 3.2 entry:
 
 1. `/docs/openai-gpt5-api.md` - GPT-5/GPT-5-mini API reference
 2. `/docs/data-model-unification.md` - Unified Note architecture
-3. `/docs/story-2.4-updated.md` - Complete Story 2.4 implementation guide
+3. `/docs/story-2.4.2-ontology-extraction.md` - Complete Story 2.4 implementation guide
 4. `/docs/prd-update-summary.md` - This file
 
 ---
@@ -228,7 +229,7 @@ docs: Major PRD refactor - split Story 2.4, add data model unification
 - Create comprehensive docs:
   - /docs/openai-gpt5-api.md (GPT-5-mini API reference)
   - /docs/data-model-unification.md (unified Note architecture)
-  - /docs/story-2.4-updated.md (complete implementation guide)
+  - /docs/story-2.4.2-ontology-extraction.md (complete implementation guide)
 - Update Current Status and Change Log
 
 Addresses PM feedback:

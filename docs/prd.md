@@ -25,7 +25,7 @@ The solution combines two key innovations: gentle background AI that builds pers
 
 **Deployment Status:** ✅ **LIVE IN PRODUCTION**
 - **Production URL:** https://ontology-mu.vercel.app
-- **Dev URL:** https://dev.ontology-mu.vercel.app
+- **Dev URL:** https://signum-im11dbdvv-levineams-projects.vercel.app
 - **GitHub Repository:** https://github.com/levineam/Signum
 - **Deployment Pipeline:** Automated via GitHub → Vercel integration
 
@@ -60,7 +60,7 @@ The solution combines two key innovations: gentle background AI that builds pers
 | 2025-10-06 | 3.5 | **COURSE CORRECTION:** PR #3 review revealed P0 security issue (shared PROTOTYPE_USER_ID exposing all user data publicly). Root cause: deployment model mismatch - code assumed "prototype phase" that doesn't exist. Split Story 2.4 into 3 sequential stories: 2.4.0 (Dev Environment Setup), 2.4.1 (Complete Auth Integration), 2.4.2 (Ontology Extraction). Created persistent dev environment. Completed auth integration from partial Story 1.3. See `docs/sprint-change-proposal-2025-10-06.md` | John (PM) |
 | 2025-10-05 | 3.4 | **SCOPE EXPANSION:** Story 2.4 expanded to include Supabase migration. Testing revealed localStorage + sample array architecture caused "Note not found" errors. All notes storage migrated to Supabase within Story 2.4. 7-commit implementation strategy with temporary unauthenticated access for prototype phase. | Claude Code |
 | 2025-10-01 | 3.3 | Story 2.3.6 completed (simplified) - Supabase foundation built without premature migration complexity. Database schema, types, and CRUD operations ready. App continues using localStorage for prototype phase. See `/docs/story-2.3.6.md` | Claude Code |
-| 2025-09-30 | 3.2 | **MAJOR REFACTOR:** Added Story 2.3.6 (Unified Note Data Model & Supabase Migration) as critical prerequisite for AI features. Updated Story 2.4 with GPT-5-mini integration, Supabase storage, and MVP scope. Created comprehensive documentation: `/docs/openai-gpt5-api.md`, `/docs/data-model-unification.md`, `/docs/story-2.4-updated.md` | John (PM) |
+| 2025-09-30 | 3.2 | **MAJOR REFACTOR:** Added Story 2.3.6 (Unified Note Data Model & Supabase Migration) as critical prerequisite for AI features. Updated Story 2.4 with GPT-5-mini integration, Supabase storage, and MVP scope. Created comprehensive documentation: `/docs/openai-gpt5-api.md`, `/docs/data-model-unification.md`, `/docs/story-2.4.2-ontology-extraction.md` | John (PM) |
 | 2025-09-30 | 3.1 | Story 2.3.5 completed - Notes Page UI Foundation with Personal Ontology cards. Added 20 sample notes designed for ontology extraction testing (see `/scripts/seed-ontology-notes.js`) | Claude Code |
 | 2025-09-28 | 3.0 | **MAJOR MILESTONE:** Consolidated repository structure, deployed to production, established CI/CD pipeline. All foundational features implemented and functional. | Claude Code |
 | 2025-09-27 | 2.5 | Course correction: Prioritizing Personal Ontology (Epic 4) over Epic 2 remaining stories. Story 2.3 (Hyperlink Creation) completed. Expanding sample data to 20 entries for AI testing | John (PM) |
@@ -671,7 +671,7 @@ so that I can build a structured personal ontology that helps me understand my a
 
 ##### Context & Documentation
 
-- **Complete Implementation Guide**: `/docs/story-2.4-updated.md`
+- **Complete Implementation Guide**: `/docs/story-2.4.2-ontology-extraction.md`
 - **GPT-5-mini API Documentation**: `/docs/openai-gpt5-api.md`
 - **Data Model Reference**: `/docs/data-model-unification.md`
 - **Supabase Project**: https://supabase.com/dashboard/project/otyvmmgakowcdsxehwox
@@ -744,7 +744,7 @@ This story implements the **simplest possible working extraction** to validate v
 
 ##### Technical Implementation
 
-**See `/docs/story-2.4-updated.md` for complete details including:**
+**See `/docs/story-2.4.2-ontology-extraction.md` for complete details including:**
 - Full architecture diagram
 - Component structure
 - API route implementation

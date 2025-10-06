@@ -56,7 +56,7 @@ The migration was **technically correct but strategically wrong** for our deploy
 |----------|-----------------|
 | `docs/prd.md` | - Add changelog entry<br>- Update Epic 4 with 3 stories<br>- Mark Story 1.3 partial<br>- Clarify auth status |
 | `.claude/CLAUDE.md` | - Add dev environment section<br>- Document dev vs prod deployment model<br>- Remove "PR preview only" language |
-| `docs/story-2.4-updated.md` | - Rename to `story-2.4.2-ontology-extraction.md`<br>- Remove PROTOTYPE_USER section<br>- Add prerequisites |
+| `docs/story-2.4.2-ontology-extraction.md` | - ✅ Prerequisites updated<br>- ✅ PROTOTYPE_USER section removed<br>- ✅ References confirmed |
 | **New:** `docs/story-2.4.0-dev-environment.md` | Create new story document |
 | **New:** `docs/story-2.4.1-auth-integration.md` | Create new story document |
 
@@ -352,7 +352,7 @@ See: docs/sprint-change-proposal-2025-10-06.md
 **Branch:** `story-2.4.2-ontology-extraction`
 
 **Tasks:**
-1. Rename `docs/story-2.4-updated.md` → `docs/story-2.4.2-ontology-extraction.md`
+1. ✅ Renamed to `docs/story-2.4.2-ontology-extraction.md`
 2. Update file with prerequisites (2.4.0 and 2.4.1)
 3. Remove "Supabase Migration" and "Auth Handling" sections
 4. Cherry-pick ontology extraction commits from closed PR #3
@@ -560,7 +560,7 @@ For data-related stories, always include:
 3. ⏸️ Claude Code: Update PRD with changes above
 4. ⏸️ Claude Code: Update CLAUDE.md with deployment model
 5. ⏸️ Claude Code: Create story documents (2.4.0, 2.4.1)
-6. ⏸️ Claude Code: Rename story-2.4-updated.md → story-2.4.2-ontology-extraction.md
+6. ✅ Claude Code: Updated `docs/story-2.4.2-ontology-extraction.md` with prerequisites and removed PROTOTYPE_USER section
 
 ### Story 2.4.0 (Next ~2-4 hours)
 1. Create `dev` branch

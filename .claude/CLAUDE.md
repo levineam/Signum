@@ -48,7 +48,7 @@ This project uses PR-based deployment with auto-deploy to Vercel. You MUST follo
 The project uses a three-tier deployment model:
 
 ### Dev Environment (`dev` branch)
-- **URL:** https://dev.ontology-mu.vercel.app
+- **URL:** https://signum-im11dbdvv-levineams-projects.vercel.app
 - **Purpose:** Persistent testing environment with production-like configuration
 - **Auth:** Real Supabase Auth (use test accounts)
 - **Data:** Same Supabase project, separate test users
