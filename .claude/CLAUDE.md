@@ -43,17 +43,49 @@ This project uses PR-based deployment with auto-deploy to Vercel. You MUST follo
 - CORS, authentication, and external API calls need production-like testing
 - AI APIs (OpenAI) have different rate limits and behaviors in production
 
-## When to Create a Dedicated Dev Branch
+## Development Environments
 
-**Currently**: Using PR preview deployments only (sufficient for solo development)
+The project uses a three-tier deployment model:
 
-**Create a dedicated `dev` branch when:**
-- Multiple developers need a shared staging environment
-- Multiple features need integration testing together before production
-- Client demos require a persistent staging URL
-- Complex database migrations need extended testing periods
+### Dev Environment (`dev` branch)
+- **URL:** https://dev.ontology-mu.vercel.app
+- **Purpose:** Persistent testing environment with production-like configuration
+- **Auth:** Real Supabase Auth (use test accounts)
+- **Data:** Same Supabase project, separate test users
+- **Auto-deploys:** On push to `dev` branch
+- **Use for:** Feature integration testing, persistent QA, demo environment
 
-**If needed**: Ask user before creating dev branch. Then configure Vercel for dev branch deployment with separate environment variables.
+### Production Environment (`main` branch)
+- **URL:** https://ontology-mu.vercel.app
+- **Purpose:** Production-ready releases only
+- **Auth:** Real Supabase Auth
+- **Data:** Same Supabase project, real users
+- **Auto-deploys:** On merge to `main`
+- **Use for:** Stable, production-ready features
+
+### PR Preview Deployments
+- **URL:** Ephemeral (provided by Vercel bot in PR comments)
+- **Purpose:** Feature testing before merge to dev
+- **Lifetime:** Exists while PR is open
+- **Use for:** Quick feature validation, code review testing
+
+## Development Workflow
+
+1. **Create feature branch** from `dev`: `git checkout -b story-X.X-description`
+2. **Develop locally** with `npm run dev`
+3. **Create PR targeting `dev`** branch
+4. **Test on PR preview** deployment (wait for Vercel bot URL)
+5. **Merge to `dev`** for persistent testing
+6. **Test on dev environment** with production-like config
+7. **When ready for production:** Create PR from `dev` → `main`
+8. **Final testing** on main's PR preview
+9. **Merge to `main`** for production release
+
+### Branch Protection
+
+- `dev` branch: Protected, requires PR reviews
+- `main` branch: Protected, requires PR reviews
+- Feature branches: Delete after merge to `dev`
 
 ## NEVER Do This
 
