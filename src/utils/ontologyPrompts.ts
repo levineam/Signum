@@ -157,10 +157,13 @@ export function parseExtractionResult(
       throw new Error('Invalid response structure')
     }
 
-    // Validate each item has sourceExcerpts
+    // Validate each item has non-empty sourceExcerpts with valid fields
     const validateItem = (item: OntologyItem) => {
       if (!item.sourceExcerpts || !Array.isArray(item.sourceExcerpts)) {
         throw new Error('Invalid response: missing sourceExcerpts array')
+      }
+      if (item.sourceExcerpts.length === 0) {
+        throw new Error('Invalid response: sourceExcerpts array must contain at least one excerpt')
       }
       item.sourceExcerpts.forEach((excerpt) => {
         if (!excerpt.noteId || !excerpt.noteTitle || !excerpt.excerpt) {
