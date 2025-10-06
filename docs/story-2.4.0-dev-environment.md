@@ -83,8 +83,8 @@ so that I can test security-sensitive changes before they reach main and avoid r
 1. Visit dev deployment: https://signum-im11dbdvv-levineams-projects.vercel.app
 2. Authenticate through Vercel SSO (owner access required)
 3. Sign up for test accounts:
-   - `dev-test-1@signum.local`
-   - `dev-test-2@signum.local`
+   - `dev-test-1@example.com`
+   - `dev-test-2@example.com`
 4. Verify each account can create journal entries
 5. Verify data isolation (test-1 cannot see test-2's data)
 
