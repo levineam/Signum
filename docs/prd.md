@@ -25,12 +25,13 @@ The solution combines two key innovations: gentle background AI that builds pers
 
 **Deployment Status:** ✅ **LIVE IN PRODUCTION**
 - **Production URL:** https://ontology-mu.vercel.app
+- **Dev URL:** https://dev.ontology-mu.vercel.app
 - **GitHub Repository:** https://github.com/levineam/Signum
 - **Deployment Pipeline:** Automated via GitHub → Vercel integration
 
 **Technical Architecture:**
 - **Framework:** Next.js 15.5.3 with Turbopack
-- **Authentication:** Supabase Auth with email/password
+- **Authentication:** Supabase Auth with email/password (UI complete, data layer integration in progress - Story 2.4.1)
 - **Database:** Supabase PostgreSQL
 - **Hosting:** Vercel with automatic deployments
 - **Repository:** Consolidated single-repo structure
@@ -48,12 +49,15 @@ The solution combines two key innovations: gentle background AI that builds pers
 - ✅ Responsive UI with shadcn/ui components
 
 **Next Priorities:**
-1. **Story 2.4**: AI Personal Ontology Extraction with GPT-5-mini (Supabase foundation ready)
+1. **Story 2.4.0**: Dev Environment Setup
+2. **Story 2.4.1**: Complete Auth Integration
+3. **Story 2.4.2**: AI Personal Ontology Extraction with GPT-5-mini
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|---------|
+| 2025-10-06 | 3.5 | **COURSE CORRECTION:** PR #3 review revealed P0 security issue (shared PROTOTYPE_USER_ID exposing all user data publicly). Root cause: deployment model mismatch - code assumed "prototype phase" that doesn't exist. Split Story 2.4 into 3 sequential stories: 2.4.0 (Dev Environment Setup), 2.4.1 (Complete Auth Integration), 2.4.2 (Ontology Extraction). Created persistent dev environment. Completed auth integration from partial Story 1.3. See `docs/sprint-change-proposal-2025-10-06.md` | John (PM) |
 | 2025-10-05 | 3.4 | **SCOPE EXPANSION:** Story 2.4 expanded to include Supabase migration. Testing revealed localStorage + sample array architecture caused "Note not found" errors. All notes storage migrated to Supabase within Story 2.4. 7-commit implementation strategy with temporary unauthenticated access for prototype phase. | Claude Code |
 | 2025-10-01 | 3.3 | Story 2.3.6 completed (simplified) - Supabase foundation built without premature migration complexity. Database schema, types, and CRUD operations ready. App continues using localStorage for prototype phase. See `/docs/story-2.3.6.md` | Claude Code |
 | 2025-09-30 | 3.2 | **MAJOR REFACTOR:** Added Story 2.3.6 (Unified Note Data Model & Supabase Migration) as critical prerequisite for AI features. Updated Story 2.4 with GPT-5-mini integration, Supabase storage, and MVP scope. Created comprehensive documentation: `/docs/openai-gpt5-api.md`, `/docs/data-model-unification.md`, `/docs/story-2.4-updated.md` | John (PM) |
@@ -274,6 +278,24 @@ so that my journal entries are private and built on clean, secure infrastructure
 5. Clean authentication state management across page refreshes
 6. Proper routing protection for unauthenticated users
 7. Security implementation verified to have no legacy vulnerabilities
+
+##### Status: PARTIALLY COMPLETE
+
+**Completed in Epic 1:**
+- ✅ Supabase Auth integration with email/password signup and login
+- ✅ User session management across page refreshes
+- ✅ Password reset functionality
+- ✅ Authentication UI (forms, context, providers)
+- ✅ AuthProvider in root layout
+- ✅ Sidebar shows user email and sign out
+
+**Remaining Work (completed in Story 2.4.1, Epic 4):**
+- ⏸️ Route protection for unauthenticated users
+- ⏸️ Notes CRUD integration with authenticated user
+- ⏸️ RLS policies enforcing authentication
+- ⏸️ PROTOTYPE_USER_ID removal
+
+**Completion:** Story 2.4.1 will complete this work
 
 #### Story 1.4: Clean Database Schema & Data Models
 
@@ -923,6 +945,88 @@ so that I can support the community and access premium features.
 ### Epic 4: AI-Powered Personal Ontology & Enhanced Feedback
 
 **Epic Goal:** Build the background AI processing system that analyzes journal entries to extract personal Values, Beliefs, and Aims, presenting these as gentle suggestions for user approval. Simultaneously enhance the Feedback system to support broader community discussions beyond just app feedback, establishing Signum as a platform for meaningful discourse.
+
+#### Story 2.4.0: Dev Environment Setup ✅ NEXT
+
+As a developer,
+I want a persistent development environment with production-like configuration,
+so that I can test features with real authentication before deploying to production.
+
+##### Acceptance Criteria
+1. `dev` branch created and protected in GitHub
+2. Separate Vercel project configured for `dev` branch
+3. Dev environment accessible at persistent URL (dev.ontology-mu.vercel.app)
+4. CLAUDE.md documents deployment model (dev vs prod vs PR previews)
+5. Workflow clear: feature → PR to dev → test → PR to main
+6. Environment variables documented
+7. Same Supabase project used for both environments
+
+##### Implementation Details
+See `docs/story-2.4.0-dev-environment.md`
+
+---
+
+#### Story 2.4.1: Complete Auth Integration ✅ NEXT
+
+As a user,
+I want my journal entries and notes to be private and secure,
+so that only I can access my personal reflections.
+
+##### Acceptance Criteria
+1. Main pages require authentication (redirect to /auth if not logged in)
+2. Notes CRUD functions use authenticated user ID (not PROTOTYPE_USER_ID)
+3. RLS policies enforce `auth.uid() = user_id` for all data access
+4. PROTOTYPE_USER_ID removed entirely from codebase
+5. Multi-user testing confirms data isolation in dev environment
+6. Route protection implemented on all main pages
+7. Loading states shown during auth verification
+
+##### Context
+**Completes auth integration from Story 1.3 (Epic 1)**
+
+Story 1.3 implemented auth UI (forms, context, providers) but never integrated with the data layer. This story completes the integration.
+
+**What Already Exists:**
+- ✅ AuthContext with Supabase Auth
+- ✅ Sign in/sign up/password reset forms
+- ✅ `/auth` page with routing
+- ✅ AuthProvider in root layout
+- ✅ Sidebar displays user email and sign out
+
+**What's Missing (This Story):**
+- ❌ Route protection on main pages
+- ❌ Notes CRUD using authenticated user
+- ❌ RLS policies enforcing auth
+
+##### Implementation Details
+See `docs/story-2.4.1-auth-integration.md`
+
+---
+
+#### Story 2.4.2: Personal Ontology Extraction Foundation
+
+As a reflective journaler,
+I want the system to automatically identify and extract my core Values, Beliefs, and Aims from **all my notes**,
+so that I can build a structured personal ontology that helps me understand my authentic self.
+
+##### Prerequisites
+- Story 2.3.5 (Notes Page UI) ✅ Complete
+- Story 2.4.0 (Dev Environment Setup) ⏸️ Pending
+- Story 2.4.1 (Auth Integration) ⏸️ Pending
+
+##### Acceptance Criteria
+1. "Analyze My Notes" button on Notes page triggers extraction
+2. System processes up to 20 most recent notes
+3. Extracted concepts categorized as Values, Beliefs, or Aims
+4. High-confidence extractions auto-populate ontology cards
+5. Success message shows count of extracted items
+6. Error handling for API failures
+7. Loading spinner during extraction
+
+##### Implementation Details
+See `docs/story-2.4.2-ontology-extraction.md`
+
+---
 
 #### Story 4.1: AI Analysis Pipeline Architecture
 
