@@ -25,6 +25,17 @@ export function RegularNoteCard({ note }: RegularNoteCardProps) {
     return text.substring(0, maxLength) + '...'
   }
 
+  const getOntologyPreview = () => {
+    const items = (note.metadata?.items as Array<{ name: string }>) || []
+    if (items.length === 0) return 'Empty'
+    const names = items.map(item => item.name).join(', ')
+    return names.length > 100 ? names.substring(0, 100) + '...' : names
+  }
+
+  const isOntologyCard = note.noteType === 'ontology-value' ||
+                         note.noteType === 'ontology-belief' ||
+                         note.noteType === 'ontology-aim'
+
   return (
     <Link href={`/notes/${note.id}`} className="block mb-4">
       <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
@@ -33,7 +44,11 @@ export function RegularNoteCard({ note }: RegularNoteCardProps) {
             <div className="flex-1 min-w-0">
               <h4 className="font-medium mb-1 truncate">{note.title}</h4>
               <p className="text-sm text-muted-foreground line-clamp-2">
-                {note.content ? getPreview(note.content) : 'No content'}
+                {isOntologyCard
+                  ? getOntologyPreview()
+                  : note.content
+                    ? getPreview(note.content)
+                    : 'No content'}
               </p>
             </div>
             <time className="text-xs text-muted-foreground whitespace-nowrap">

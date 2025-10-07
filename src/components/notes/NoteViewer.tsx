@@ -8,6 +8,7 @@ import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 import { Note } from '@/types/note'
 import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
 import { Calendar, Edit, Save, X, Trash2 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface NoteViewerProps {
   isOpen: boolean
@@ -24,6 +25,7 @@ export function NoteViewer({
   onNoteUpdated,
   onNoteDeleted
 }: NoteViewerProps) {
+  const { user } = useAuth()
   const [note, setNote] = useState<Note | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState('')
@@ -32,17 +34,28 @@ export function NoteViewer({
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
-    if (noteId && isOpen) {
-      const foundNote = getNoteById(noteId)
-      if (foundNote) {
-        setNote(foundNote)
-        setEditTitle(foundNote.title)
-        setEditContent(foundNote.content || '')
-      } else {
-        setNote(null)
+    if (noteId && isOpen && user) {
+      let isActive = true
+
+      getNoteById(noteId, user.id).then(foundNote => {
+        // Only update state if this effect is still active (noteId hasn't changed)
+        if (isActive) {
+          if (foundNote) {
+            setNote(foundNote)
+            setEditTitle(foundNote.title)
+            setEditContent(foundNote.content || '')
+          } else {
+            setNote(null)
+          }
+        }
+      })
+
+      // Cleanup function to prevent stale updates
+      return () => {
+        isActive = false
       }
     }
-  }, [noteId, isOpen])
+  }, [noteId, isOpen, user])
 
   const handleEdit = () => {
     setIsEditing(true)
@@ -57,14 +70,14 @@ export function NoteViewer({
   }
 
   const handleSave = async () => {
-    if (!note || !editTitle.trim()) return
+    if (!note || !editTitle.trim() || !user) return
 
     setIsSaving(true)
     try {
-      const updatedNote = updateNote(note.id, {
+      const updatedNote = await updateNote(note.id, {
         title: editTitle.trim(),
         content: editContent
-      })
+      }, user.id)
 
       if (updatedNote) {
         setNote(updatedNote)
@@ -79,14 +92,14 @@ export function NoteViewer({
   }
 
   const handleDelete = async () => {
-    if (!note) return
+    if (!note || !user) return
 
     const confirmed = window.confirm(`Are you sure you want to delete "${note.title}"? This action cannot be undone.`)
     if (!confirmed) return
 
     setIsDeleting(true)
     try {
-      const success = deleteNote(note.id)
+      const success = await deleteNote(note.id, user.id)
       if (success) {
         onNoteDeleted?.(note.id)
         onClose()

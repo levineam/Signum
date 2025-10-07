@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# test credentials
+docs/dev-test-credentials.md
+
 # vercel
 .vercel
 
@@ -40,3 +43,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 # BMAD (local only)
+supabase/.temp/

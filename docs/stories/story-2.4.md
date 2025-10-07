@@ -218,13 +218,55 @@ Response: {
 ```
 
 ### Change Log
-- [To be filled during implementation]
+
+**2025-10-03: UX Correction - Source Excerpts with Hyperlinks**
+
+**Model Update:** Changed from `gpt-4-turbo-preview` to `gpt-4o-mini` for cost efficiency (gpt-5-mini not yet available in API).
+
+**Issue Identified:**
+- Initial implementation showed AI reasoning/definitions instead of source excerpts
+- Users couldn't trace values/beliefs/aims back to original journal entries
+- No transparency into why concepts were extracted
+
+**Changes Made:**
+
+1. **Data Model Update** (`src/utils/ontologyPrompts.ts`):
+   - Changed `OntologyItem` interface from `reasoning: string` to `sourceExcerpts` array
+   - Each excerpt includes: `noteId`, `noteTitle`, `excerpt` (actual quote from note)
+   - Updated GPT-4o-mini prompt to return actual quotes instead of AI reasoning
+   - Added validation for excerpt structure in response parser
+
+2. **Storage Update** (`src/components/notes/OntologyAnalysisButton.tsx`):
+   - Changed from storing formatted text in `content` field to structured JSON in `metadata.items`
+   - Each item contains: `name`, `confidence`, `excerpts` array
+   - Enables flexible rendering and future features
+
+3. **New Component** (`src/components/notes/OntologyCardViewer.tsx`):
+   - Renders ontology cards as accessible HTML (no raw markdown)
+   - Uses semantic elements: h3 for headings, ul/li for lists
+   - Italicized excerpts in quotation marks
+   - Next.js Link components for clickable note titles
+   - Empty state with helpful message
+
+4. **Display Updates**:
+   - `src/app/notes/[id]/page.tsx`: Use OntologyCardViewer for all ontology cards (Values, Beliefs, Aims)
+   - `src/components/notes/PinnedNoteCard.tsx`: Check metadata.items for preview display
+   - `src/components/notes/RegularNoteCard.tsx`: Handle ontology cards in preview logic
+
+**Result:**
+- Users see actual quotes from their journal entries
+- Clickable links navigate to source notes
+- Clean, accessible HTML (no markdown visible)
+- No limit on number of excerpts per value/belief/aim
+- Transparent, traceable extraction results
+
+**Screenshot:** `.playwright-mcp/story-2.4-aims-card-complete.png`
 
 ---
 
 ## References
 
-- **Implementation Guide**: `/docs/story-2.4-updated.md`
+- **Implementation Guide**: `/docs/story-2.4.2-ontology-extraction.md`
 - **GPT-5-mini API**: `/docs/openai-gpt5-api.md`
 - **Sample Notes**: `/scripts/seed-ontology-notes.js`
 - **PRD**: `/docs/prd.md` (Story 2.4 section)

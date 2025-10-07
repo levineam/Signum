@@ -7,6 +7,8 @@ import { Note } from '@/types/note'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft } from 'lucide-react'
+import { OntologyCardViewer } from '@/components/notes/OntologyCardViewer'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface AimsContent {
   todos: string
@@ -15,15 +17,23 @@ interface AimsContent {
 
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
+  const { user } = useAuth()
   const [note, setNote] = useState<Note | null>(null)
   const [content, setContent] = useState('')
   const [aimsContent, setAimsContent] = useState<AimsContent>({ todos: '', goals: '' })
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    if (!user) return
+
+    const userId = user.id // Capture user.id for closure
+
     async function loadNote() {
       const resolvedParams = await params
-      const loadedNote = getNoteById(resolvedParams.id)
+
+      // Get note from Supabase
+      const loadedNote = await getNoteById(resolvedParams.id, userId)
+
       if (loadedNote) {
         setNote(loadedNote)
 
@@ -43,10 +53,10 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       setIsLoading(false)
     }
     loadNote()
-  }, [params])
+  }, [params, user])
 
-  const handleSave = () => {
-    if (!note) return
+  const handleSave = async () => {
+    if (!note || !user) return
 
     // Support both old (type) and new (noteType) field names during migration
     const noteType = 'type' in note ? (note as { type: string }).type : note.noteType
@@ -54,7 +64,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       ? JSON.stringify(aimsContent)
       : content
 
-    const updated = updateNote(note.id, { content: newContent })
+    const updated = await updateNote(note.id, { content: newContent }, user.id)
     if (updated) {
       setNote(updated)
     }
@@ -124,47 +134,11 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
 
       {/* Editor Content */}
       <div className="space-y-6">
-        {(noteType === 'aims' || noteType === 'ontology-aim') ? (
-          <>
-            {/* Todos Section */}
-            <div>
-              <h2 className="text-xl font-semibold mb-3">Todos</h2>
-              {aimsContent.todos ? (
-                <div className="min-h-[200px] p-4 rounded-md border bg-muted/30 whitespace-pre-wrap">
-                  {aimsContent.todos}
-                </div>
-              ) : (
-                <div className="min-h-[200px] p-4 rounded-md border bg-muted/30 text-muted-foreground italic">
-                  No todos extracted yet. Keep journaling to populate this automatically.
-                </div>
-              )}
-            </div>
-
-            {/* Goals Section */}
-            <div>
-              <h2 className="text-xl font-semibold mb-3">Goals</h2>
-              {aimsContent.goals ? (
-                <div className="min-h-[200px] p-4 rounded-md border bg-muted/30 whitespace-pre-wrap">
-                  {aimsContent.goals}
-                </div>
-              ) : (
-                <div className="min-h-[200px] p-4 rounded-md border bg-muted/30 text-muted-foreground italic">
-                  No goals extracted yet. Keep journaling to populate this automatically.
-                </div>
-              )}
-            </div>
-          </>
-        ) : isOntologyNote ? (
-          // Read-only display for Values and Beliefs
-          content ? (
-            <div className="min-h-[400px] p-4 rounded-md border bg-muted/30 whitespace-pre-wrap">
-              {content}
-            </div>
-          ) : (
-            <div className="min-h-[400px] p-4 rounded-md border bg-muted/30 text-muted-foreground italic">
-              No {note.title.toLowerCase()} extracted yet. Keep journaling to populate this automatically.
-            </div>
-          )
+        {isOntologyNote ? (
+          // Use OntologyCardViewer for Values, Beliefs, Aims
+          <div className="min-h-[400px] p-6 rounded-md border bg-muted/30">
+            <OntologyCardViewer note={note} />
+          </div>
         ) : (
           // Editable for regular notes
           <Textarea

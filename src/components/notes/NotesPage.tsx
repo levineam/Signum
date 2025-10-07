@@ -6,46 +6,39 @@ import { Note } from '@/types/note'
 import { PinnedNoteCard } from './PinnedNoteCard'
 import { RegularNoteCard } from './RegularNoteCard'
 import { OntologyAnalysisButton } from './OntologyAnalysisButton'
-import { sampleJournalEntries } from '@/data/sampleEntries'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function NotesPage() {
+  const { user } = useAuth()
   const [pinnedNotes, setPinnedNotes] = useState<Note[]>([])
   const [regularNotes, setRegularNotes] = useState<Note[]>([])
 
-  const loadNotes = () => {
-    setPinnedNotes(getPinnedNotes())
+  const loadNotes = async () => {
+    if (!user) return
 
-    // Get regular notes from localStorage
-    const localStorageNotes = getRegularNotes()
+    setPinnedNotes(await getPinnedNotes(user.id))
 
-    // Convert journal entries to Note format
-    const journalNotes: Note[] = sampleJournalEntries.map(entry => ({
-      id: entry.id,
-      userId: '',
-      title: `Journal Entry - ${entry.date}`,
-      content: entry.content,
-      noteType: 'journal-entry' as const,
-      isPinned: false,
-      metadata: {},
-      createdAt: entry.lastModified,
-      updatedAt: entry.lastModified
-    }))
-
-    // Combine and sort by date
-    const allNotes = [...localStorageNotes, ...journalNotes].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
+    // Get all regular notes from Supabase (sorted by createdAt DESC)
+    const allNotes = await getRegularNotes(user.id)
 
     setRegularNotes(allNotes)
   }
 
   useEffect(() => {
-    // Initialize pinned notes if they don't exist
-    initializePinnedNotes()
+    if (!user) {
+      // Clear notes when user signs out to prevent data leakage
+      setPinnedNotes([])
+      setRegularNotes([])
+      return
+    }
 
-    // Load notes
-    loadNotes()
-  }, [])
+    // Initialize pinned notes if they don't exist, then load all notes
+    (async () => {
+      await initializePinnedNotes(user.id)
+      await loadNotes()
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8">

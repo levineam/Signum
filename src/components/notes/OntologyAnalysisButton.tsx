@@ -9,10 +9,9 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Note } from '@/types/note'
-import { getNotes, updateNote } from '@/lib/notes'
+import { getNotes, updateNote, getPinnedNotes } from '@/lib/notes'
 import { ExtractionResult } from '@/utils/ontologyPrompts'
-import { sampleJournalEntries } from '@/data/sampleEntries'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface OntologyAnalysisButtonProps {
   onComplete?: () => void
@@ -21,33 +20,23 @@ interface OntologyAnalysisButtonProps {
 export function OntologyAnalysisButton({
   onComplete
 }: OntologyAnalysisButtonProps) {
+  const { user } = useAuth()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   const handleAnalyze = async () => {
+    if (!user) {
+      toast.error('Please sign in to analyze your ontology')
+      return
+    }
+
     setIsAnalyzing(true)
 
     try {
-      // 1. Get all notes from localStorage
-      const allNotes = getNotes()
+      // 1. Get all notes from Supabase
+      const allNotes = await getNotes(user.id)
 
-      // 2. Convert journal entries to Note format
-      const journalNotes: Note[] = sampleJournalEntries.map(entry => ({
-        id: entry.id,
-        userId: '',
-        title: `Journal Entry - ${entry.date}`,
-        content: entry.content,
-        noteType: 'journal-entry' as const,
-        isPinned: false,
-        metadata: {},
-        createdAt: entry.lastModified,
-        updatedAt: entry.lastModified
-      }))
-
-      // 3. Combine notes and journal entries
-      const allContent = [...allNotes, ...journalNotes]
-
-      // 4. Filter to analyzable notes (exclude ontology notes)
-      const notesToAnalyze = allContent.filter(
+      // 2. Filter to analyzable notes (exclude ontology notes)
+      const notesToAnalyze = allNotes.filter(
         (note) =>
           note.noteType === 'custom' ||
           note.noteType === 'journal-entry' ||
@@ -87,37 +76,53 @@ export function OntologyAnalysisButton({
 
       // 7. Store results by updating the 3 pinned ontology cards
       const extraction: ExtractionResult = result.extraction
-      const currentNotes = getNotes()
 
-      // Update Values card
-      const valuesCard = currentNotes.find(n => n.id === 'pinned-values')
-      if (valuesCard && extraction.values.length > 0) {
-        const valuesList = extraction.values
-          .map(v => `• ${v.text}\n  ${v.reasoning}`)
-          .join('\n\n')
-        updateNote('pinned-values', { content: valuesList })
+      // Fetch actual pinned notes to get their real Supabase UUIDs
+      const pinnedNotes = await getPinnedNotes(user.id)
+      const valuesNote = pinnedNotes.find(n => n.noteType === 'ontology-value')
+      const beliefsNote = pinnedNotes.find(n => n.noteType === 'ontology-belief')
+      const aimsNote = pinnedNotes.find(n => n.noteType === 'ontology-aim')
+
+      if (!valuesNote || !beliefsNote || !aimsNote) {
+        throw new Error('Pinned ontology notes not found. Try refreshing the page.')
       }
 
-      // Update Beliefs card
-      const beliefsCard = currentNotes.find(n => n.id === 'pinned-beliefs')
-      if (beliefsCard && extraction.beliefs.length > 0) {
-        const beliefsList = extraction.beliefs
-          .map(b => `• ${b.text}\n  ${b.reasoning}`)
-          .join('\n\n')
-        updateNote('pinned-beliefs', { content: beliefsList })
-      }
+      // Update Values card - store structured data in metadata
+      // Always update, even if empty, to prevent stale metadata
+      await updateNote(valuesNote.id, {
+        content: '', // Keep empty - data is in metadata
+        metadata: {
+          items: extraction.values.map(v => ({
+            name: v.text,
+            confidence: v.confidence,
+            excerpts: v.sourceExcerpts
+          }))
+        }
+      }, user.id)
 
-      // Update Aims card
-      const aimsCard = currentNotes.find(n => n.id === 'pinned-aims')
-      if (aimsCard && extraction.aims.length > 0) {
-        const aimsList = extraction.aims
-          .map(a => `• ${a.text}\n  ${a.reasoning}`)
-          .join('\n\n')
-        // Aims uses JSON format
-        updateNote('pinned-aims', {
-          content: JSON.stringify({ todos: '', goals: aimsList })
-        })
-      }
+      // Update Beliefs card - always update to prevent stale metadata
+      await updateNote(beliefsNote.id, {
+        content: '',
+        metadata: {
+          items: extraction.beliefs.map(b => ({
+            name: b.text,
+            confidence: b.confidence,
+            excerpts: b.sourceExcerpts
+          }))
+        }
+      }, user.id)
+
+      // Update Aims card - always update to prevent stale metadata
+      await updateNote(aimsNote.id, {
+        content: '',
+        metadata: {
+          items: extraction.aims.map(a => ({
+            name: a.text,
+            confidence: a.confidence,
+            excerpts: a.sourceExcerpts
+          }))
+        }
+      }, user.id)
 
       // 8. Show success message
       const { counts } = result

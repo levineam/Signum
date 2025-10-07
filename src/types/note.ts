@@ -55,6 +55,15 @@ export interface NoteMetadata {
   confidence?: ConfidenceLevel  // AI confidence in extraction
   extractedFrom?: string[]      // Array of source note UUIDs
   aiReasoning?: string          // AI explanation for extraction
+  items?: Array<{               // Structured ontology items with excerpts
+    name: string
+    confidence: ConfidenceLevel
+    excerpts: Array<{
+      noteId: string
+      noteTitle: string
+      excerpt: string
+    }>
+  }>
 
   // General metadata
   tags?: string[]               // User-defined tags

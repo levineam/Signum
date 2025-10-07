@@ -1,8 +1,12 @@
-# Story 2.4: Personal Ontology Extraction Foundation (UPDATED)
+# Story 2.4.2: Personal Ontology Extraction Foundation
 
 **Status:** 🚧 PRIORITIZED - NEXT
-**Updated:** 2025-09-30
-**Prerequisites:** Story 2.3.5 (Notes Page UI) ✅ Complete
+**Updated:** 2025-10-06
+**Prerequisites:**
+- Story 2.3.5 (Notes Page UI) ✅ Complete
+- Story 2.3.6 (Unified Note Data Model) ✅ Complete
+- Story 2.4.0 (Dev Environment Setup) 🚧 In Progress
+- Story 2.4.1 (Auth Integration) ⏸️ Pending
 
 ## User Story
 
@@ -30,7 +34,7 @@ so that I can build a structured personal ontology that helps me understand my a
 
 ---
 
-## MVP Scope (Story 2.4.1)
+## MVP Scope (Story 2.4.2)
 
 ### Goal
 Build the simplest possible working extraction that demonstrates value to users.
@@ -54,12 +58,34 @@ Build the simplest possible working extraction that demonstrates value to users.
 - Error message if API fails
 
 ### Out of Scope for MVP
-- ❌ Suggestion review/approval UI
-- ❌ Incremental processing (analyze only new notes)
-- ❌ Confidence thresholds and filtering
+- ❌ Suggestion review/approval UI (Story 2.4.3)
+- ❌ Incremental processing (analyze only new notes) (Story 2.4.4)
+- ❌ Confidence thresholds and filtering (Story 2.4.5)
 - ❌ Edit/reject functionality
 - ❌ Daily rate limiting (use default OpenAI limits)
 - ❌ Dashboard/analytics view
+
+---
+
+## Environment & Authentication Dependencies
+
+### Sequencing
+
+- Story 2.4.0 provides the persistent `dev` branch deployment with production-like configuration.
+- Story 2.4.1 removes `PROTOTYPE_USER_ID`, enforces Supabase authentication, and verifies RLS policies.
+- Begin ontology extraction work only after both stories are merged so tests run against real user sessions.
+
+### Supabase Expectations
+
+- Notes and ontology items reside in the unified `notes` table introduced in Story 2.3.6.
+- This story reads/writes through authenticated Supabase clients—no fallback to localStorage.
+- Sample data for QA lives under dedicated test accounts created during Story 2.4.0.
+
+### Ready Checklist
+
+- Dev environment URL requires Supabase auth and is reachable.
+- Test accounts contain at least 20 notes spanning journal, reflection, and custom types.
+- Environment variables (`OPENAI_API_KEY`, Supabase keys) configured in both dev and main deployments.
 
 ---
 
@@ -270,12 +296,12 @@ Expected Output:
 
 ## Data Model Updates
 
-### Prerequisite: Supabase Migration
+### Prerequisite: Unified Notes Schema (Story 2.3.6)
 
 ```sql
 -- See /docs/data-model-unification.md for full schema
 
--- Key additions for Story 2.4:
+-- Key additions for Story 2.4.2:
 ALTER TABLE notes ADD COLUMN note_type TEXT NOT NULL DEFAULT 'custom'
   CHECK (note_type IN (
     'journal-entry',
@@ -411,18 +437,18 @@ export interface NoteMetadata {
 
 ## Future Enhancements (Post-MVP)
 
-### Story 2.4.2: Suggestion Review Workflow
+### Story 2.4.3: Suggestion Review Workflow
 - Add approval/reject UI for extractions
 - Show confidence levels and let user filter
 - Edit functionality before acceptance
 - Queue management for pending suggestions
 
-### Story 2.4.3: Incremental Analysis
+### Story 2.4.4: Incremental Analysis
 - Analyze only new notes since last extraction
 - Background processing without user trigger
 - Smart scheduling (after every 5 new notes)
 
-### Story 2.4.4: Analytics & Insights
+### Story 2.4.5: Analytics & Insights
 - Ontology evolution tracking over time
 - Visualization of concept relationships
 - Export functionality for backups
