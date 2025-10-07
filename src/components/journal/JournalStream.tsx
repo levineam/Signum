@@ -38,6 +38,7 @@ function escapeRegExp(text: string): string {
 export function JournalStream() {
   const { user } = useAuth()
   const [entries, setEntries] = useState<JournalEntry[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [showPrompt, setShowPrompt] = useState(false)
@@ -122,10 +123,12 @@ export function JournalStream() {
         })
 
         setEntries(entriesWithLinks)
+        setIsLoading(false)
       } catch (error) {
         console.error('Error loading journal entries:', error)
         // Set safe fallback state - show empty array on error
         setEntries([])
+        setIsLoading(false)
         // Optionally show user-facing error message
         // toast.error('Failed to load journal entries. Please refresh the page.')
       }
@@ -135,6 +138,7 @@ export function JournalStream() {
     loadEntries().catch(error => {
       console.error('Unhandled error in loadEntries:', error)
       setEntries([])
+      setIsLoading(false)
     })
 
     // Initialize prompt display - always get a new prompt on page reload
@@ -367,6 +371,20 @@ export function JournalStream() {
 
       {/* Journal Entries - One per day */}
       <div className="space-y-4">
+        {isLoading ? (
+          <Card className="p-6">
+            <div className="text-center text-muted-foreground">
+              Loading your journal...
+            </div>
+          </Card>
+        ) : entries.length === 0 ? (
+          <Card className="p-6">
+            <div className="text-center text-muted-foreground">
+              <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Your journal is empty. Start writing your first entry above!</p>
+            </div>
+          </Card>
+        ) : null}
         {entries.map((entry) => {
           const isEditingThis = editingEntryId === entry.id
           const isTodayEntry = isToday(entry.date)
