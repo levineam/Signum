@@ -517,16 +517,6 @@ export function JournalStream() {
         })}
       </div>
 
-      {/* Empty State for Real Users */}
-      {entries.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-muted-foreground mb-4">
-            <BookOpen className="h-12 w-12 mx-auto mb-2" />
-            <p>Your journal is empty. Start writing your first entry above!</p>
-          </div>
-        </div>
-      )}
-
       {/* Note Creation Modal */}
       <NoteCreationModal
         isOpen={showNoteModal}
