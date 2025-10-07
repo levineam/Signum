@@ -9,6 +9,7 @@ import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 import { createNote } from '@/lib/notes'
 import { Note } from '@/types/note'
 import { FileText, Save, X } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface NoteCreationModalProps {
   isOpen: boolean
@@ -23,6 +24,7 @@ export function NoteCreationModal({
   initialTitle,
   onNoteCreated
 }: NoteCreationModalProps) {
+  const { user } = useAuth()
   const [title, setTitle] = useState(initialTitle)
   const [content, setContent] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -35,7 +37,7 @@ export function NoteCreationModal({
   }, [isOpen, initialTitle])
 
   const handleSave = async () => {
-    if (!title.trim()) return
+    if (!title.trim() || !user) return
 
     setIsSaving(true)
     try {
@@ -43,7 +45,7 @@ export function NoteCreationModal({
         title: title.trim(),
         content: content.trim(),
         noteType: 'custom' // Notes created from UI are custom notes
-      })
+      }, user.id)
 
       onNoteCreated?.(newNote)
       handleClose()

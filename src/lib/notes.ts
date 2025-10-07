@@ -1,8 +1,8 @@
 /**
  * Notes CRUD operations using Supabase.
- * Story 2.4: Migrated from localStorage to Supabase.
+ * Story 2.4.1: Authenticated data access with user-specific isolation.
  *
- * Uses fixed user ID for prototype phase (unauthenticated access).
+ * All functions require authenticated user ID from Supabase session.
  */
 
 import {
@@ -12,19 +12,15 @@ import {
 } from '@/types/note'
 import * as supabaseNotes from '@/lib/supabase/notes'
 
-// Fixed user ID for prototype phase (unauthenticated access)
-// TODO: Replace with real auth when ready for production
-const PROTOTYPE_USER_ID = '00000000-0000-0000-0000-000000000000'
-
 /**
- * Get all notes (calls Supabase)
+ * Get all notes for authenticated user (calls Supabase)
  */
-export async function getNotes(): Promise<Note[]> {
+export async function getNotes(userId: string): Promise<Note[]> {
   try {
     const [journal, regular, ontology] = await Promise.all([
-      supabaseNotes.getJournalEntries(PROTOTYPE_USER_ID),
-      supabaseNotes.getRegularNotes(PROTOTYPE_USER_ID),
-      supabaseNotes.getOntologyNotes(PROTOTYPE_USER_ID)
+      supabaseNotes.getJournalEntries(userId),
+      supabaseNotes.getRegularNotes(userId),
+      supabaseNotes.getOntologyNotes(userId)
     ])
     return [...journal, ...regular, ...ontology]
   } catch (error) {
@@ -34,16 +30,16 @@ export async function getNotes(): Promise<Note[]> {
 }
 
 /**
- * Create a new note (calls Supabase)
+ * Create a new note for authenticated user (calls Supabase)
  */
-export async function createNote(request: CreateNoteRequest): Promise<Note> {
-  return await supabaseNotes.createNote(request, PROTOTYPE_USER_ID)
+export async function createNote(request: CreateNoteRequest, userId: string): Promise<Note> {
+  return await supabaseNotes.createNote(request, userId)
 }
 
 /**
- * Update an existing note (calls Supabase)
+ * Update an existing note for authenticated user (calls Supabase)
  */
-export async function updateNote(id: string, updates: Partial<Note>): Promise<Note | null> {
+export async function updateNote(id: string, updates: Partial<Note>, userId: string): Promise<Note | null> {
   try {
     const updateRequest: UpdateNoteRequest = {
       id,
@@ -52,7 +48,7 @@ export async function updateNote(id: string, updates: Partial<Note>): Promise<No
       isPinned: updates.isPinned,
       metadata: updates.metadata
     }
-    return await supabaseNotes.updateNote(updateRequest, PROTOTYPE_USER_ID)
+    return await supabaseNotes.updateNote(updateRequest, userId)
   } catch (error) {
     console.error('Error updating note:', error)
     return null
@@ -60,11 +56,11 @@ export async function updateNote(id: string, updates: Partial<Note>): Promise<No
 }
 
 /**
- * Delete a note (calls Supabase)
+ * Delete a note for authenticated user (calls Supabase)
  */
-export async function deleteNote(id: string): Promise<boolean> {
+export async function deleteNote(id: string, userId: string): Promise<boolean> {
   try {
-    await supabaseNotes.deleteNote(id, PROTOTYPE_USER_ID)
+    await supabaseNotes.deleteNote(id, userId)
     return true
   } catch (error) {
     console.error('Error deleting note:', error)
@@ -73,11 +69,11 @@ export async function deleteNote(id: string): Promise<boolean> {
 }
 
 /**
- * Get a single note by ID (calls Supabase)
+ * Get a single note by ID for authenticated user (calls Supabase)
  */
-export async function getNoteById(id: string): Promise<Note | null> {
+export async function getNoteById(id: string, userId: string): Promise<Note | null> {
   try {
-    return await supabaseNotes.getNoteById(id, PROTOTYPE_USER_ID)
+    return await supabaseNotes.getNoteById(id, userId)
   } catch (error) {
     console.error('Error fetching note:', error)
     return null
@@ -85,13 +81,13 @@ export async function getNoteById(id: string): Promise<Note | null> {
 }
 
 /**
- * Initialize pinned ontology notes (Values, Beliefs, Aims)
+ * Initialize pinned ontology notes (Values, Beliefs, Aims) for authenticated user
  * Creates any missing ontology notes individually to recover from partial data
  */
-export async function initializePinnedNotes(): Promise<void> {
+export async function initializePinnedNotes(userId: string): Promise<void> {
   try {
     // Check which ontology notes exist
-    const existingOntology = await supabaseNotes.getOntologyNotes(PROTOTYPE_USER_ID)
+    const existingOntology = await supabaseNotes.getOntologyNotes(userId)
     const existingTypes = new Set(existingOntology.map(note => note.noteType))
 
     // Define required ontology notes
@@ -114,7 +110,7 @@ export async function initializePinnedNotes(): Promise<void> {
           noteType: noteConfig.type,
           isPinned: true,
           metadata: {}
-        })
+        }, userId)
       }
     }
   } catch (error) {
@@ -123,11 +119,11 @@ export async function initializePinnedNotes(): Promise<void> {
 }
 
 /**
- * Get pinned ontology notes (Values, Beliefs, Aims)
+ * Get pinned ontology notes (Values, Beliefs, Aims) for authenticated user
  */
-export async function getPinnedNotes(): Promise<Note[]> {
+export async function getPinnedNotes(userId: string): Promise<Note[]> {
   try {
-    return await supabaseNotes.getOntologyNotes(PROTOTYPE_USER_ID)
+    return await supabaseNotes.getOntologyNotes(userId)
   } catch (error) {
     console.error('Error fetching pinned notes:', error)
     return []
@@ -135,11 +131,11 @@ export async function getPinnedNotes(): Promise<Note[]> {
 }
 
 /**
- * Get regular notes (excluding pinned ontology notes)
+ * Get regular notes (excluding pinned ontology notes) for authenticated user
  */
-export async function getRegularNotes(): Promise<Note[]> {
+export async function getRegularNotes(userId: string): Promise<Note[]> {
   try {
-    return await supabaseNotes.getRegularNotes(PROTOTYPE_USER_ID)
+    return await supabaseNotes.getRegularNotes(userId)
   } catch (error) {
     console.error('Error fetching regular notes:', error)
     return []
@@ -147,15 +143,16 @@ export async function getRegularNotes(): Promise<Note[]> {
 }
 
 /**
- * Store ontology items (for AI extraction - Story 2.4)
+ * Store ontology items (for AI extraction - Story 2.4.2) for authenticated user
  * Handles deduplication by title (case-insensitive)
  */
 export async function storeOntologyItems(
   items: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[],
-  noteType: 'ontology-value' | 'ontology-belief' | 'ontology-aim'
+  noteType: 'ontology-value' | 'ontology-belief' | 'ontology-aim',
+  userId: string
 ): Promise<Note[]> {
   try {
-    const existingNotes = await supabaseNotes.getOntologyNotes(PROTOTYPE_USER_ID)
+    const existingNotes = await supabaseNotes.getOntologyNotes(userId)
 
     // Create map of existing ontology notes by lowercase title
     const existingMap = new Map<string, Note>()
@@ -183,7 +180,7 @@ export async function storeOntologyItems(
             ...item.metadata
           }
         }
-        const updated = await supabaseNotes.updateNote(updateRequest, PROTOTYPE_USER_ID)
+        const updated = await supabaseNotes.updateNote(updateRequest, userId)
         updatedNotes.push(updated)
       } else {
         // Create new note
@@ -194,7 +191,7 @@ export async function storeOntologyItems(
           isPinned: item.isPinned,
           metadata: item.metadata
         }
-        const created = await supabaseNotes.createNote(createRequest, PROTOTYPE_USER_ID)
+        const created = await supabaseNotes.createNote(createRequest, userId)
         createdNotes.push(created)
       }
     }
