@@ -11,6 +11,7 @@ import { Sparkles, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getNotes, updateNote, getPinnedNotes } from '@/lib/notes'
 import { ExtractionResult } from '@/utils/ontologyPrompts'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface OntologyAnalysisButtonProps {
   onComplete?: () => void
@@ -19,14 +20,20 @@ interface OntologyAnalysisButtonProps {
 export function OntologyAnalysisButton({
   onComplete
 }: OntologyAnalysisButtonProps) {
+  const { user } = useAuth()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   const handleAnalyze = async () => {
+    if (!user) {
+      toast.error('Please sign in to analyze your ontology')
+      return
+    }
+
     setIsAnalyzing(true)
 
     try {
       // 1. Get all notes from Supabase
-      const allNotes = await getNotes()
+      const allNotes = await getNotes(user.id)
 
       // 2. Filter to analyzable notes (exclude ontology notes)
       const notesToAnalyze = allNotes.filter(
@@ -71,7 +78,7 @@ export function OntologyAnalysisButton({
       const extraction: ExtractionResult = result.extraction
 
       // Fetch actual pinned notes to get their real Supabase UUIDs
-      const pinnedNotes = await getPinnedNotes()
+      const pinnedNotes = await getPinnedNotes(user.id)
       const valuesNote = pinnedNotes.find(n => n.noteType === 'ontology-value')
       const beliefsNote = pinnedNotes.find(n => n.noteType === 'ontology-belief')
       const aimsNote = pinnedNotes.find(n => n.noteType === 'ontology-aim')
@@ -91,7 +98,7 @@ export function OntologyAnalysisButton({
             excerpts: v.sourceExcerpts
           }))
         }
-      })
+      }, user.id)
 
       // Update Beliefs card - always update to prevent stale metadata
       await updateNote(beliefsNote.id, {
@@ -103,7 +110,7 @@ export function OntologyAnalysisButton({
             excerpts: b.sourceExcerpts
           }))
         }
-      })
+      }, user.id)
 
       // Update Aims card - always update to prevent stale metadata
       await updateNote(aimsNote.id, {
@@ -115,7 +122,7 @@ export function OntologyAnalysisButton({
             excerpts: a.sourceExcerpts
           }))
         }
-      })
+      }, user.id)
 
       // 8. Show success message
       const { counts } = result
