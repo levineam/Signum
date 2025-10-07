@@ -246,64 +246,47 @@ export function JournalStream() {
     })
     console.log('💾 Link stored:', link)
 
-    // Also try to update the editor element first (for immediate visual feedback)
+    // Get current entry content from state (not from DOM)
+    const currentEntry = entries.find(e => e.id === currentEditingEntry)
+    if (!currentEntry) {
+      console.error('❌ Could not find current entry in state')
+      setCreatingLink(false)
+      return
+    }
+
+    // Create link HTML
+    const linkHtml = `<a href="#" class="note-link text-primary hover:text-primary/80 underline cursor-pointer" data-note-id="${note.id}" contenteditable="false">${selectedText}</a>`
+
+    // Replace selected text with link in the entry content
+    const escapedText = escapeRegExp(selectedText)
+    const updatedContent = currentEntry.content.replace(new RegExp(escapedText), linkHtml)
+    console.log('📄 Updated entry content with link')
+
+    // Update the editor element for immediate visual feedback
     const editorElement = document.querySelector(`[data-entry-id="${currentEditingEntry}"] [contenteditable]`) as HTMLElement
-    console.log('🎯 Found editor element:', !!editorElement)
-
     if (editorElement) {
-      const linkCreated = convertTextToLink(editorElement, selectedText, note.id, handleLinkClick)
-      console.log('🔗 Link conversion result:', linkCreated)
+      convertTextToLink(editorElement, selectedText, note.id, handleLinkClick)
+      console.log('🔗 Updated editor element visually')
+    }
 
-      // Now update the entry content with the editor's HTML content
-      setTimeout(async () => {
-        const updatedContent = editorElement.innerHTML
-        console.log('📄 Updated entry content from editor:', updatedContent)
-
-        setEntries(prev => prev.map(entry => {
-          if (entry.id === currentEditingEntry) {
-            return { ...entry, content: updatedContent, lastModified: new Date().toISOString() }
-          }
-          return entry
-        }))
-
-        // Persist the linked content to Supabase
-        if (user) {
-          try {
-            await updateNoteInDb(currentEditingEntry, { content: updatedContent }, user.id)
-            console.log('💾 Persisted link to Supabase')
-          } catch (error) {
-            console.error('Error persisting link to Supabase:', error)
-          }
-        }
-
-        // Reset the flag after updating
-        setCreatingLink(false)
-      }, 100)
-    } else {
-      // Fallback: update entry content directly if no editor element found
-      const linkHtml = `<a href="#" class="note-link text-primary hover:text-primary/80 underline cursor-pointer" data-note-id="${note.id}" contenteditable="false">${selectedText}</a>`
-      let updatedContent = ''
-
+    // Update state and persist to Supabase
+    setTimeout(async () => {
       setEntries(prev => prev.map(entry => {
         if (entry.id === currentEditingEntry) {
-          // Escape regex special characters for safe replacement
-          const escapedText = escapeRegExp(selectedText)
-          updatedContent = entry.content.replace(new RegExp(escapedText), linkHtml)
-          console.log('📄 Updated entry content (fallback):', updatedContent)
           return { ...entry, content: updatedContent, lastModified: new Date().toISOString() }
         }
         return entry
       }))
 
       // Persist the linked content to Supabase
-      if (updatedContent && user) {
+      if (user) {
         updateNoteInDb(currentEditingEntry, { content: updatedContent }, user.id)
-          .then(() => console.log('💾 Persisted link to Supabase (fallback)'))
+          .then(() => console.log('💾 Persisted link to Supabase'))
           .catch(error => console.error('Error persisting link to Supabase:', error))
       }
 
       setCreatingLink(false)
-    }
+    }, 100)
   }
 
   const handleLinkClick = (noteId: string) => {
