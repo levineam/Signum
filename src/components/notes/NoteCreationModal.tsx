@@ -75,20 +75,14 @@ export function NoteCreationModal({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent
-        className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
+        className="max-w-3xl max-h-[85vh] flex flex-col"
         onKeyDown={handleKeyDown}
       >
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Create New Note
-          </DialogTitle>
-          <DialogDescription>
-            Create a new note from your selected text or start writing from scratch.
-          </DialogDescription>
+        <DialogHeader className="flex-shrink-0 pb-4">
+          <DialogTitle className="text-2xl">Create New Note</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 flex flex-col gap-4 min-h-0">
+        <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2">
           <div className="flex-shrink-0 space-y-2">
             <Label htmlFor="note-title">Title</Label>
             <Input
@@ -101,9 +95,8 @@ export function NoteCreationModal({
             />
           </div>
 
-          <div className="flex-1 flex flex-col min-h-0 space-y-2">
-            <Label htmlFor="note-content">Content</Label>
-            <div className="flex-1 min-h-[300px]">
+          <div className="flex-1 flex flex-col min-h-[400px]">
+            <div className="flex-1 border rounded-md">
               <SimpleRichEditor
                 value={content}
                 placeholder="Start writing your note content..."
@@ -113,7 +106,7 @@ export function NoteCreationModal({
           </div>
         </div>
 
-        <DialogFooter className="flex-shrink-0 pt-4">
+        <DialogFooter className="flex-shrink-0 pt-4 border-t mt-4">
           <Button
             variant="outline"
             onClick={handleClose}
@@ -131,9 +124,6 @@ export function NoteCreationModal({
             <Save className="h-4 w-4" />
             {isSaving ? 'Creating...' : 'Create Note'}
           </Button>
-          <div className="text-xs text-muted-foreground ml-2">
-            Ctrl+Enter to save
-          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
