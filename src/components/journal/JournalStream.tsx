@@ -54,13 +54,21 @@ export function JournalStream() {
   useEffect(() => {
     // Load journal entries from Supabase
     async function loadEntries() {
-      if (!user) return // Wait for authentication
+      if (!user) {
+        console.log('[JournalStream] No user, skipping load')
+        return // Wait for authentication
+      }
+
+      console.log('[JournalStream] Starting to load entries for user:', user.id)
 
       try {
         const today = getLocalDateString() // Use local date instead of UTC
+        console.log('[JournalStream] Today\'s date:', today)
 
         // Get all notes from Supabase
+        console.log('[JournalStream] Fetching notes from Supabase...')
         const allNotes = await getNotes(user.id)
+        console.log('[JournalStream] Fetched notes:', allNotes.length)
 
         // Filter to journal entries only
         const journalNotes = allNotes.filter(note => note.noteType === 'journal-entry')
@@ -83,16 +91,19 @@ export function JournalStream() {
 
         // Check if today's entry exists
         const todayEntry = journalEntries.find(e => e.date === today)
+        console.log('[JournalStream] Today entry exists?', !!todayEntry)
 
         let initialEntries: JournalEntry[] = journalEntries
         if (!todayEntry) {
           // Create today's entry if it doesn't exist
+          console.log('[JournalStream] Creating today\'s entry...')
           const newNote = await createNote({
             title: `Journal Entry - ${today}`,
             content: '',
             noteType: 'journal-entry',
             metadata: { journalDate: today }
           }, user.id)
+          console.log('[JournalStream] Created new note:', newNote.id)
 
           const newTodayEntry: JournalEntry = {
             id: newNote.id,
@@ -122,10 +133,12 @@ export function JournalStream() {
           return entry
         })
 
+        console.log('[JournalStream] Setting entries:', entriesWithLinks.length)
         setEntries(entriesWithLinks)
         setIsLoading(false)
+        console.log('[JournalStream] Load complete')
       } catch (error) {
-        console.error('Error loading journal entries:', error)
+        console.error('[JournalStream] Error loading journal entries:', error)
         // Set safe fallback state - show empty array on error
         setEntries([])
         setIsLoading(false)
