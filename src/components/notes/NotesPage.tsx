@@ -6,27 +6,33 @@ import { Note } from '@/types/note'
 import { PinnedNoteCard } from './PinnedNoteCard'
 import { RegularNoteCard } from './RegularNoteCard'
 import { OntologyAnalysisButton } from './OntologyAnalysisButton'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function NotesPage() {
+  const { user } = useAuth()
   const [pinnedNotes, setPinnedNotes] = useState<Note[]>([])
   const [regularNotes, setRegularNotes] = useState<Note[]>([])
 
   const loadNotes = async () => {
-    setPinnedNotes(await getPinnedNotes())
+    if (!user) return
+
+    setPinnedNotes(await getPinnedNotes(user.id))
 
     // Get all regular notes from Supabase (sorted by createdAt DESC)
-    const allNotes = await getRegularNotes()
+    const allNotes = await getRegularNotes(user.id)
 
     setRegularNotes(allNotes)
   }
 
   useEffect(() => {
+    if (!user) return
+
     // Initialize pinned notes if they don't exist, then load all notes
     (async () => {
-      await initializePinnedNotes()
+      await initializePinnedNotes(user.id)
       await loadNotes()
     })()
-  }, [])
+  }, [user])
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8">
