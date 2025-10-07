@@ -96,11 +96,13 @@ export function NoteCreationModal({
           </div>
 
           <div className="flex-1 flex flex-col min-h-[400px]">
-            <SimpleRichEditor
-              value={content}
-              placeholder="Start writing your note content..."
-              onChange={setContent}
-            />
+            <div className="flex-1 overflow-y-auto">
+              <SimpleRichEditor
+                value={content}
+                placeholder="Start writing your note content..."
+                onChange={setContent}
+              />
+            </div>
           </div>
         </div>
 
