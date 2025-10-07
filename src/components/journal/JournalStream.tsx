@@ -58,8 +58,11 @@ export function JournalStream() {
     // Load journal entries from Supabase
     async function loadEntries() {
       if (!user) {
-        console.log('[JournalStream] No user, skipping load')
-        return // Wait for authentication
+        console.log('[JournalStream] No user, clearing entries')
+        // Clear entries and reset loading state when user signs out
+        setEntries([])
+        setIsLoading(false)
+        return
       }
 
       console.log('[JournalStream] Starting to load entries for user:', user.id)
@@ -246,31 +249,34 @@ export function JournalStream() {
     })
     console.log('💾 Link stored:', link)
 
-    // Get current entry content from state (not from DOM)
-    const currentEntry = entries.find(e => e.id === currentEditingEntry)
-    if (!currentEntry) {
-      console.error('❌ Could not find current entry in state')
+    // Find the editor element
+    const editorElement = document.querySelector(`[data-entry-id="${currentEditingEntry}"] [contenteditable]`) as HTMLElement
+
+    if (!editorElement) {
+      console.error('❌ Could not find editor element')
       setCreatingLink(false)
       return
     }
 
-    // Create link HTML
-    const linkHtml = `<a href="#" class="note-link text-primary hover:text-primary/80 underline cursor-pointer" data-note-id="${note.id}" contenteditable="false">${selectedText}</a>`
+    // Convert the selected text to a link in the DOM
+    // This handles finding the exact occurrence that was selected
+    const linkCreated = convertTextToLink(editorElement, selectedText, note.id, handleLinkClick)
 
-    // Replace selected text with link in the entry content
-    const escapedText = escapeRegExp(selectedText)
-    const updatedContent = currentEntry.content.replace(new RegExp(escapedText), linkHtml)
-    console.log('📄 Updated entry content with link')
-
-    // Update the editor element for immediate visual feedback
-    const editorElement = document.querySelector(`[data-entry-id="${currentEditingEntry}"] [contenteditable]`) as HTMLElement
-    if (editorElement) {
-      convertTextToLink(editorElement, selectedText, note.id, handleLinkClick)
-      console.log('🔗 Updated editor element visually')
+    if (!linkCreated) {
+      console.error('❌ Failed to create link in editor')
+      setCreatingLink(false)
+      return
     }
 
-    // Update state and persist to Supabase
-    setTimeout(async () => {
+    console.log('🔗 Created link in editor DOM')
+
+    // Now read the updated HTML from the editor after the link was created
+    // Wait for DOM to settle, then read the actual content
+    setTimeout(() => {
+      const updatedContent = editorElement.innerHTML
+      console.log('📄 Read updated content from editor after link creation')
+
+      // Update state with the content that includes the link at the correct position
       setEntries(prev => prev.map(entry => {
         if (entry.id === currentEditingEntry) {
           return { ...entry, content: updatedContent, lastModified: new Date().toISOString() }
@@ -286,7 +292,7 @@ export function JournalStream() {
       }
 
       setCreatingLink(false)
-    }, 100)
+    }, 50)
   }
 
   const handleLinkClick = (noteId: string) => {

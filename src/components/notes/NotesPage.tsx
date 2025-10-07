@@ -25,7 +25,12 @@ export function NotesPage() {
   }
 
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      // Clear notes when user signs out to prevent data leakage
+      setPinnedNotes([])
+      setRegularNotes([])
+      return
+    }
 
     // Initialize pinned notes if they don't exist, then load all notes
     (async () => {
