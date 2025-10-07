@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Calendar, BookOpen, X, RefreshCw } from 'lucide-react'
 import { getNextPrompt, dismissPromptForSession } from '@/utils/journalPrompts'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
@@ -36,6 +38,7 @@ function escapeRegExp(text: string): string {
 }
 
 export function JournalStream() {
+  const router = useRouter()
   const { user } = useAuth()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -388,7 +391,10 @@ export function JournalStream() {
           <Card className="p-6">
             <div className="text-center">
               <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">Sign in to start journaling</h3>
+              <h3 className="text-lg font-semibold mb-4">Sign in to start journaling</h3>
+              <Button onClick={() => router.push('/auth')}>
+                Sign In
+              </Button>
             </div>
           </Card>
         ) : isLoading ? (
