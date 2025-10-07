@@ -96,17 +96,15 @@ export function NoteCreationModal({
           </div>
 
           <div className="flex-1 flex flex-col min-h-[400px]">
-            <div className="flex-1 border rounded-md">
-              <SimpleRichEditor
-                value={content}
-                placeholder="Start writing your note content..."
-                onChange={setContent}
-              />
-            </div>
+            <SimpleRichEditor
+              value={content}
+              placeholder="Start writing your note content..."
+              onChange={setContent}
+            />
           </div>
         </div>
 
-        <DialogFooter className="flex-shrink-0 pt-4 border-t mt-4">
+        <DialogFooter className="flex-shrink-0 pt-4">
           <Button
             variant="outline"
             onClick={handleClose}
