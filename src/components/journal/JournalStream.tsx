@@ -384,7 +384,17 @@ export function JournalStream() {
 
       {/* Journal Entries - One per day */}
       <div className="space-y-4">
-        {isLoading ? (
+        {!user ? (
+          <Card className="p-6">
+            <div className="text-center">
+              <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">Sign in to start journaling</h3>
+              <p className="text-muted-foreground mb-4">
+                Create an account to save your thoughts and build your personal ontology.
+              </p>
+            </div>
+          </Card>
+        ) : isLoading ? (
           <Card className="p-6">
             <div className="text-center text-muted-foreground">
               Loading your journal...
