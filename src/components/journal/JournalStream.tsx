@@ -11,6 +11,7 @@ import { Note } from '@/types/note'
 import { createLink, getLinksByEntryId } from '@/lib/links'
 import { convertTextToLink, restoreLinksInEditor } from '@/utils/textToLink'
 import { getNotes, createNote, updateNote as updateNoteInDb } from '@/lib/notes'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface JournalEntry {
   id: string
@@ -35,6 +36,7 @@ function escapeRegExp(text: string): string {
 }
 
 export function JournalStream() {
+  const { user } = useAuth()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -51,11 +53,13 @@ export function JournalStream() {
   useEffect(() => {
     // Load journal entries from Supabase
     async function loadEntries() {
+      if (!user) return // Wait for authentication
+
       try {
         const today = getLocalDateString() // Use local date instead of UTC
 
         // Get all notes from Supabase
-        const allNotes = await getNotes()
+        const allNotes = await getNotes(user.id)
 
         // Filter to journal entries only
         const journalNotes = allNotes.filter(note => note.noteType === 'journal-entry')
@@ -87,7 +91,7 @@ export function JournalStream() {
             content: '',
             noteType: 'journal-entry',
             metadata: { journalDate: today }
-          })
+          }, user.id)
 
           const newTodayEntry: JournalEntry = {
             id: newNote.id,
@@ -142,7 +146,7 @@ export function JournalStream() {
     const newPrompt = getNextPrompt()
     setCurrentPrompt(newPrompt)
     setShowPrompt(true)
-  }, [])
+  }, [user])
 
   const handleContentChange = (entryId: string, newContent: string) => {
     // Don't override content changes while we're creating a link
@@ -175,11 +179,11 @@ export function JournalStream() {
       // Save if content is non-empty OR if we're clearing previously non-empty content
       const shouldSave = newContent.trim() !== '' || previousContent.trim() !== ''
 
-      if (shouldSave) {
+      if (shouldSave && user) {
         console.log('Auto-saving entry:', entryId)
         try {
           // Update the note in Supabase
-          await updateNoteInDb(entryId, { content: newContent })
+          await updateNoteInDb(entryId, { content: newContent }, user.id)
         } catch (error) {
           console.error('Error auto-saving journal entry:', error)
         }
@@ -243,11 +247,13 @@ export function JournalStream() {
         }))
 
         // Persist the linked content to Supabase
-        try {
-          await updateNoteInDb(currentEditingEntry, { content: updatedContent })
-          console.log('💾 Persisted link to Supabase')
-        } catch (error) {
-          console.error('Error persisting link to Supabase:', error)
+        if (user) {
+          try {
+            await updateNoteInDb(currentEditingEntry, { content: updatedContent }, user.id)
+            console.log('💾 Persisted link to Supabase')
+          } catch (error) {
+            console.error('Error persisting link to Supabase:', error)
+          }
         }
 
         // Reset the flag after updating
@@ -270,8 +276,8 @@ export function JournalStream() {
       }))
 
       // Persist the linked content to Supabase
-      if (updatedContent) {
-        updateNoteInDb(currentEditingEntry, { content: updatedContent })
+      if (updatedContent && user) {
+        updateNoteInDb(currentEditingEntry, { content: updatedContent }, user.id)
           .then(() => console.log('💾 Persisted link to Supabase (fallback)'))
           .catch(error => console.error('Error persisting link to Supabase:', error))
       }
