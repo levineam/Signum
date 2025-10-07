@@ -32,6 +32,7 @@ export function NotesPage() {
       await initializePinnedNotes(user.id)
       await loadNotes()
     })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   return (

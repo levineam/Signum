@@ -26,11 +26,13 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     if (!user) return
 
+    const userId = user.id // Capture user.id for closure
+
     async function loadNote() {
       const resolvedParams = await params
 
       // Get note from Supabase
-      const loadedNote = await getNoteById(resolvedParams.id, user.id)
+      const loadedNote = await getNoteById(resolvedParams.id, userId)
 
       if (loadedNote) {
         setNote(loadedNote)
