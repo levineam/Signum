@@ -1,21 +1,21 @@
 # Story 2.4.1 Implementation Checkpoint
 
-**Date:** 2025-10-06
+**Date:** 2025-10-07 (Updated)
 **Branch:** `story-2.4.1-auth-integration`
-**Status:** Phase 2 In Progress (33% complete)
+**Status:** Phase 2 COMPLETE ✅ - Ready for Phase 3
 
 ---
 
 ## Progress Summary
 
-### ✅ Completed (2-3 hours)
+### ✅ Completed (6-7 hours)
 
-**Phase 1: Inventory & Cleanup**
+**Phase 1: Inventory & Cleanup** ✅ COMPLETE
 - ✅ Cataloged all `PROTOTYPE_USER_ID` references (17 locations)
 - ✅ Removed constant from `src/lib/notes.ts`
 - ✅ Updated all function signatures to require `userId` parameter
 
-**Phase 2: Authenticated Data Layer (Partial)**
+**Phase 2: Authenticated Data Layer** ✅ COMPLETE
 - ✅ `src/lib/notes.ts` - All 9 functions refactored
   - `getNotes(userId)`
   - `createNote(request, userId)`
@@ -40,18 +40,37 @@
   - Added user to useEffect dependencies
   - Added null checks before all data operations
 
-### ⏸️ Remaining Work
+- ✅ `src/components/notes/NotesPage.tsx`
+  - Added `useAuth()` hook
+  - Updated `initializePinnedNotes()`, `getPinnedNotes()`, `getRegularNotes()` calls
+  - Added user null checks
+  - Fixed ESLint exhaustive-deps warning
 
-**Phase 2: Authenticated Data Layer (Remaining 4-5 hours)**
+- ✅ `src/components/notes/NoteViewer.tsx`
+  - Added `useAuth()` hook
+  - Updated `getNoteById()`, `updateNote()`, `deleteNote()` calls
+  - Added user null checks in all operations
 
-| Component | Est. Effort | Priority | Notes |
-|-----------|-------------|----------|-------|
-| `src/components/notes/NotesPage.tsx` | 1h | High | Main notes listing page |
-| `src/components/notes/NoteViewer.tsx` | 1h | High | Note viewing/editing |
-| `src/app/notes/[id]/page.tsx` | 1h | Medium | Server component - needs session handling |
-| `src/components/notes/OntologyAnalysisButton.tsx` | 1h | Medium | AI extraction trigger |
-| Shared utilities review | 0.5h | Medium | Check `src/lib/supabase/notes.ts` |
-| `scripts/seed-sample-journal-entries.ts` | 0.5h | Low | Update or document for dev use only |
+- ✅ `src/app/notes/[id]/page.tsx`
+  - Added `useAuth()` hook (client component)
+  - Updated `getNoteById()` and `updateNote()` calls
+  - Fixed TypeScript closure issue with user.id
+  - Added user null checks
+
+- ✅ `src/components/notes/OntologyAnalysisButton.tsx`
+  - Added `useAuth()` hook
+  - Updated `getNotes()`, `getPinnedNotes()`, 3x `updateNote()` calls
+  - Added auth check with user-friendly error message
+
+- ✅ Shared utilities review
+  - No PROTOTYPE_USER references found in src/
+  - Documented seed script as DEVELOPMENT ONLY
+
+- ✅ TypeScript compilation
+  - All builds pass successfully
+  - Fixed type errors and ESLint warnings
+
+### ⏸️ Remaining Work (11-14 hours)
 
 **Phase 3: Route Protection (3-4 hours)**
 - Create `middleware.ts` or layout-based auth guard
@@ -141,7 +160,7 @@ export function MyComponent() {
 
 ---
 
-## Files Modified (3 commits)
+## Files Modified (7 commits)
 
 **Commit 1: `6039f73`**
 - `src/lib/notes.ts` - Removed PROTOTYPE_USER_ID, added userId parameters
@@ -150,8 +169,27 @@ export function MyComponent() {
 **Commit 2: `46e1ddb`**
 - `src/components/journal/JournalStream.tsx` - Full auth integration
 
-**Commit 3: (Not yet created)**
-- Implementation plan and checkpoint docs
+**Commit 3: `5d6aba0`**
+- `docs/story-2.4.1-implementation-plan.md` - Added
+- `docs/story-2.4.1-checkpoint.md` - Created
+
+**Commit 4: `a06e24e`**
+- `src/components/notes/NotesPage.tsx` - Auth integration
+- `src/components/notes/NoteViewer.tsx` - Auth integration
+
+**Commit 5: `a114a7d`**
+- `src/app/notes/[id]/page.tsx` - Auth integration
+- `src/components/notes/OntologyAnalysisButton.tsx` - Auth integration
+
+**Commit 6: `470bd4a`**
+- Fixed TypeScript errors in notes/[id]/page.tsx
+- Fixed ESLint warning in NotesPage.tsx
+- Documented seed script as DEVELOPMENT ONLY
+
+**Commit 7: `TBD`**
+- Updated checkpoint with Phase 2 completion
+- Verified no PROTOTYPE_USER references in src/
+- Verified TypeScript compilation passes
 
 ---
 
@@ -201,13 +239,13 @@ export function MyComponent() {
 
 ## Estimated Completion
 
-- **Remaining Phase 2:** 4-5 hours
-- **Phase 3:** 3-4 hours
-- **Phase 4:** 2-3 hours
-- **Phase 5:** 2-3 hours
-- **Phase 6:** 3-4 hours
+- **Phase 2:** ✅ COMPLETE (6-7 hours actual)
+- **Phase 3:** 3-4 hours (Route protection)
+- **Phase 4:** 2-3 hours (RLS policies)
+- **Phase 5:** 2-3 hours (API routes)
+- **Phase 6:** 3-4 hours (Testing & QA)
 
-**Total remaining:** ~15-19 hours (~2-3 days)
+**Total remaining:** ~11-14 hours (~1.5-2 days)
 
 ---
 
