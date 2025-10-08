@@ -14,6 +14,7 @@ import { createLink } from '@/lib/supabase/notes'
 import { convertTextToLink, captureSelectionMetadata } from '@/utils/textToLink'
 import { getNotes, createNote, updateNote as updateNoteInDb } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
+import { toast } from 'sonner'
 
 interface JournalEntry {
   id: string
@@ -48,6 +49,9 @@ export function JournalStream() {
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null)
   const [noteLinkClicked, setNoteLinkClicked] = useState(false)
   const [creatingLink, setCreatingLink] = useState(false)
+
+  // Cache editor element reference before opening modal (Phase 1 bug fix)
+  const cachedEditorRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     // Load journal entries from Supabase
@@ -205,6 +209,15 @@ export function JournalStream() {
   const handleMakeNote = (selectedText: string) => {
     setSelectedText(selectedText)
     setCurrentEditingEntry(editingEntryId)
+
+    // Phase 1 bug fix: Cache editor element BEFORE opening modal
+    // Modal opening causes entry to exit edit mode, losing contenteditable
+    if (editingEntryId) {
+      const editorElement = document.querySelector(`[data-entry-id="${editingEntryId}"] [contenteditable]`) as HTMLElement
+      cachedEditorRef.current = editorElement
+      console.log('💾 Cached editor element:', !!editorElement)
+    }
+
     setShowNoteModal(true)
   }
 
@@ -219,12 +232,29 @@ export function JournalStream() {
     // Set flag to prevent content change interference
     setCreatingLink(true)
 
-    // Find the editor element
-    const editorElement = document.querySelector(`[data-entry-id="${currentEditingEntry}"] [contenteditable]`) as HTMLElement
+    // Phase 1 bug fix: Use cached editor ref and re-enter edit mode if needed
+    let editorElement = cachedEditorRef.current
 
+    // If cached ref is stale, try to find editor and re-enter edit mode
+    if (!editorElement || !document.contains(editorElement)) {
+      console.log('⚠️ Cached editor stale, re-entering edit mode')
+
+      // Re-enter edit mode
+      setEditingEntryId(currentEditingEntry)
+
+      // Wait for edit mode to be active
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Try to find editor again
+      editorElement = document.querySelector(`[data-entry-id="${currentEditingEntry}"] [contenteditable]`) as HTMLElement
+    }
+
+    // Hard fail with toast if editor still missing
     if (!editorElement) {
-      console.error('❌ Could not find editor element')
+      console.error('❌ Could not find editor element after re-entry attempt')
+      toast.error('Failed to create link: editor not found. Please try again.')
       setCreatingLink(false)
+      cachedEditorRef.current = null
       return
     }
 
@@ -273,10 +303,15 @@ export function JournalStream() {
           .catch(error => console.error('Error persisting link to Supabase:', error))
 
         setCreatingLink(false)
+
+        // Clear cached ref after successful link creation
+        cachedEditorRef.current = null
       }, 50)
     } catch (error) {
       console.error('❌ Error creating link:', error)
+      toast.error('Failed to create link. Please try again.')
       setCreatingLink(false)
+      cachedEditorRef.current = null
     }
   }
 
