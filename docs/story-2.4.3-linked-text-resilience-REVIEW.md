@@ -58,17 +58,11 @@ The plan is labeled "Story 2.4.1 scope" but describes itself as Story 2.4.3. **T
 
 ---
 
-#### 3. **Missing Migration from localStorage → Supabase**
+#### 3. **localStorage Migration (RESOLVED)**
 
-~~The plan focuses on the new architecture but doesn't address:~~
+**Conclusion**: No backward compatibility needed - no real users exist yet.
 
-- ~~**What happens to existing localStorage links?** (e.g., dev-test-1 has links in localStorage from the sample journal)~~
-- ~~**Migration path**: One-time script to copy localStorage → Supabase?~~
-- ~~**Backward compatibility**: Support both during transition?~~
-
-**UPDATE**: User confirmed no real users exist, so backward compatibility is unnecessary.
-
-**Recommendation**: ✅ **Delete `src/lib/links.ts` entirely**, no migration needed. Test users can recreate sample data.
+**Recommendation**: ✅ **Delete `src/lib/links.ts` entirely**. Test users can recreate sample data as needed.
 
 ---
 
