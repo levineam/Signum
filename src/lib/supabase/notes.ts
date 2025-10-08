@@ -279,13 +279,14 @@ export async function createLink(
 ): Promise<Link> {
   
 
-  const { data, error } = await supabase
+  const { data, error} = await supabase
     .from('links')
     .insert({
       source_note_id: request.sourceNoteId,
       target_note_id: request.targetNoteId,
       link_type: request.linkType,
-      user_id: userId
+      user_id: userId,
+      metadata: request.metadata || {}
     })
     .select()
     .single()
@@ -370,6 +371,7 @@ function mapDatabaseLinkToLink(dbLink: {
   target_note_id: string
   link_type: string
   user_id: string
+  metadata?: Record<string, unknown>
   created_at: string
 }): Link {
   return {
@@ -378,6 +380,7 @@ function mapDatabaseLinkToLink(dbLink: {
     targetNoteId: dbLink.target_note_id,
     linkType: dbLink.link_type as import('@/types/note').LinkType,
     userId: dbLink.user_id,
+    metadata: dbLink.metadata || {},
     createdAt: dbLink.created_at
   }
 }
@@ -388,6 +391,7 @@ function mapDatabaseLinksToLinks(dbLinks: Array<{
   target_note_id: string
   link_type: string
   user_id: string
+  metadata?: Record<string, unknown>
   created_at: string
 }>): Link[] {
   return dbLinks.map(mapDatabaseLinkToLink)
