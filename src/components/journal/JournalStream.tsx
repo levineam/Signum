@@ -10,8 +10,8 @@ import { getNextPrompt, dismissPromptForSession } from '@/utils/journalPrompts'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
 import { NoteViewer } from '@/components/notes/NoteViewer'
 import { Note } from '@/types/note'
-import { createLink, getLinksByEntryId } from '@/lib/links'
-import { convertTextToLink, restoreLinksInEditor } from '@/utils/textToLink'
+import { createLink } from '@/lib/supabase/notes'
+import { convertTextToLink, captureSelectionMetadata } from '@/utils/textToLink'
 import { getNotes, createNote, updateNote as updateNoteInDb } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -30,11 +30,6 @@ function getLocalDateString(): string {
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
-}
-
-// Helper: Escape regex special characters in a string
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 export function JournalStream() {
@@ -120,27 +115,10 @@ export function JournalStream() {
           initialEntries = [newTodayEntry, ...journalEntries]
         }
 
-        // Process entries to restore HTML links from stored link relationships
-        const entriesWithLinks = initialEntries.map(entry => {
-          const existingLinks = getLinksByEntryId(entry.id)
-          if (existingLinks.length > 0) {
-            let updatedContent = entry.content
-            existingLinks.forEach(link => {
-              const linkHtml = `<a href="#" class="note-link text-primary hover:text-primary/80 underline cursor-pointer" data-note-id="${link.noteId}" contenteditable="false">${link.text}</a>`
-              // Only replace if the text isn't already a link
-              if (!updatedContent.includes(`data-note-id="${link.noteId}"`)) {
-                // Escape regex special characters and replace only first occurrence
-                const escapedText = escapeRegExp(link.text)
-                updatedContent = updatedContent.replace(new RegExp(escapedText), linkHtml)
-              }
-            })
-            return { ...entry, content: updatedContent }
-          }
-          return entry
-        })
-
-        console.log('[JournalStream] Setting entries:', entriesWithLinks.length)
-        setEntries(entriesWithLinks)
+        // Phase 2: Link rehydration will be implemented here
+        // For now, links already in HTML (with data-link-id) will remain functional
+        console.log('[JournalStream] Setting entries:', initialEntries.length)
+        setEntries(initialEntries)
         setIsLoading(false)
         console.log('[JournalStream] Load complete')
       } catch (error) {
@@ -230,9 +208,9 @@ export function JournalStream() {
     setShowNoteModal(true)
   }
 
-  const handleNoteCreated = (note: Note) => {
-    if (!currentEditingEntry || !selectedText) {
-      console.log('❌ Missing currentEditingEntry or selectedText', { currentEditingEntry, selectedText })
+  const handleNoteCreated = async (note: Note) => {
+    if (!currentEditingEntry || !selectedText || !user) {
+      console.log('❌ Missing currentEditingEntry, selectedText, or user', { currentEditingEntry, selectedText, user: !!user })
       return
     }
 
@@ -240,14 +218,6 @@ export function JournalStream() {
 
     // Set flag to prevent content change interference
     setCreatingLink(true)
-
-    // Create the link relationship
-    const link = createLink({
-      text: selectedText,
-      noteId: note.id,
-      entryId: currentEditingEntry
-    })
-    console.log('💾 Link stored:', link)
 
     // Find the editor element
     const editorElement = document.querySelector(`[data-entry-id="${currentEditingEntry}"] [contenteditable]`) as HTMLElement
@@ -258,41 +228,56 @@ export function JournalStream() {
       return
     }
 
-    // Convert the selected text to a link in the DOM
-    // This handles finding the exact occurrence that was selected
-    const linkCreated = convertTextToLink(editorElement, selectedText, note.id, handleLinkClick)
+    try {
+      // Phase 1: Capture metadata BEFORE DOM manipulation
+      const metadata = captureSelectionMetadata(editorElement, selectedText)
+      console.log('📊 Captured selection metadata:', metadata)
 
-    if (!linkCreated) {
-      console.error('❌ Failed to create link in editor')
-      setCreatingLink(false)
-      return
-    }
+      // Phase 1: Create link in Supabase with metadata
+      const link = await createLink({
+        sourceNoteId: currentEditingEntry,
+        targetNoteId: note.id,
+        linkType: 'created_from',
+        metadata: metadata || undefined
+      }, user.id)
+      console.log('💾 Link created in Supabase:', link)
 
-    console.log('🔗 Created link in editor DOM')
+      // Convert the selected text to a link in the DOM with linkId
+      const linkCreated = convertTextToLink(editorElement, selectedText, note.id, link.id, handleLinkClick)
 
-    // Now read the updated HTML from the editor after the link was created
-    // Wait for DOM to settle, then read the actual content
-    setTimeout(() => {
-      const updatedContent = editorElement.innerHTML
-      console.log('📄 Read updated content from editor after link creation')
+      if (!linkCreated) {
+        console.error('❌ Failed to create link in editor')
+        setCreatingLink(false)
+        return
+      }
 
-      // Update state with the content that includes the link at the correct position
-      setEntries(prev => prev.map(entry => {
-        if (entry.id === currentEditingEntry) {
-          return { ...entry, content: updatedContent, lastModified: new Date().toISOString() }
-        }
-        return entry
-      }))
+      console.log('🔗 Created link in editor DOM')
 
-      // Persist the linked content to Supabase
-      if (user) {
+      // Now read the updated HTML from the editor after the link was created
+      // Wait for DOM to settle, then read the actual content
+      setTimeout(() => {
+        const updatedContent = editorElement.innerHTML
+        console.log('📄 Read updated content from editor after link creation')
+
+        // Update state with the content that includes the link at the correct position
+        setEntries(prev => prev.map(entry => {
+          if (entry.id === currentEditingEntry) {
+            return { ...entry, content: updatedContent, lastModified: new Date().toISOString() }
+          }
+          return entry
+        }))
+
+        // Persist the linked content to Supabase
         updateNoteInDb(currentEditingEntry, { content: updatedContent }, user.id)
           .then(() => console.log('💾 Persisted link to Supabase'))
           .catch(error => console.error('Error persisting link to Supabase:', error))
-      }
 
+        setCreatingLink(false)
+      }, 50)
+    } catch (error) {
+      console.error('❌ Error creating link:', error)
       setCreatingLink(false)
-    }, 50)
+    }
   }
 
   const handleLinkClick = (noteId: string) => {
@@ -448,17 +433,8 @@ export function JournalStream() {
                     }}
                     onMakeNote={handleMakeNote}
                     onFocus={() => {
-                      // Restore existing links when editor becomes active
-                      setTimeout(() => {
-                        const editorElement = document.querySelector(`[data-entry-id="${entry.id}"] [contenteditable]`) as HTMLElement
-                        if (editorElement) {
-                          const existingLinks = getLinksByEntryId(entry.id)
-                          restoreLinksInEditor(editorElement, existingLinks.map(link => ({
-                            text: link.text,
-                            noteId: link.noteId
-                          })), handleLinkClick)
-                        }
-                      }, 100)
+                      // Phase 2: Link rehydration from Supabase will be implemented here
+                      // For now, links already in HTML remain functional
                     }}
                     autoFocus
                   />
