@@ -134,6 +134,89 @@ export function convertTextToLink(
   return false
 }
 
+/**
+ * Phase 2: Rehydrate links from Supabase metadata on journal entry load.
+ * Uses exact text matching with metadata context.
+ */
+export function rehydrateLinksFromMetadata(
+  editorElement: HTMLElement,
+  links: Array<{
+    id: string
+    targetNoteId: string
+    metadata?: LinkMetadata
+  }>,
+  onLinkClick: (noteId: string) => void
+): { rehydrated: number; skipped: number } {
+  if (!editorElement || links.length === 0) {
+    return { rehydrated: 0, skipped: 0 }
+  }
+
+  console.log('🔄 Rehydrating links from metadata:', links.length)
+
+  let rehydratedCount = 0
+  let skippedCount = 0
+
+  // First, attach event listeners to any existing links (already in HTML)
+  const existingLinks = editorElement.querySelectorAll('a[data-link-id]')
+  const existingLinkIds = new Set(
+    Array.from(existingLinks).map(link => link.getAttribute('data-link-id'))
+  )
+
+  console.log('📌 Found existing links in HTML:', existingLinkIds.size)
+
+  // Attach click handlers to existing links
+  existingLinks.forEach(link => {
+    const noteId = link.getAttribute('data-note-id')
+    if (noteId) {
+      const handleClick = (e: Event) => {
+        e.preventDefault()
+        e.stopPropagation()
+        e.stopImmediatePropagation()
+        onLinkClick(noteId)
+      }
+      link.removeEventListener('click', handleClick)
+      link.addEventListener('click', handleClick)
+    }
+  })
+
+  // Rehydrate missing links using metadata
+  links.forEach(link => {
+    // Skip if link already exists in HTML
+    if (existingLinkIds.has(link.id)) {
+      console.log(`⏭️ Skipping link ${link.id} (already in HTML)`)
+      skippedCount++
+      return
+    }
+
+    // Skip if no metadata
+    if (!link.metadata?.snippet) {
+      console.warn(`⚠️ Link ${link.id} missing metadata.snippet, cannot rehydrate`)
+      skippedCount++
+      return
+    }
+
+    // Try to find and convert the text using exact match
+    const success = convertTextToLink(
+      editorElement,
+      link.metadata.snippet,
+      link.targetNoteId,
+      link.id,
+      onLinkClick
+    )
+
+    if (success) {
+      console.log(`✅ Rehydrated link ${link.id} for "${link.metadata.snippet}"`)
+      rehydratedCount++
+    } else {
+      console.warn(`❌ Failed to rehydrate link ${link.id} - text not found: "${link.metadata.snippet}"`)
+      skippedCount++
+    }
+  })
+
+  console.log(`📊 Rehydration complete: ${rehydratedCount} rehydrated, ${skippedCount} skipped`)
+  return { rehydrated: rehydratedCount, skipped: skippedCount }
+}
+
 export function restoreLinksInEditor(
   editorElement: HTMLElement,
   links: Array<{ text: string; noteId: string; linkId?: string }>,
