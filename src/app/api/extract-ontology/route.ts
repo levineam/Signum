@@ -86,19 +86,23 @@ export async function POST(request: NextRequest) {
     let responseText = response.output_text
 
     if (!responseText && response.output) {
-      // Iterate through output items to find message content
+      // Concatenate all output_text chunks from message content
+      // GPT-5-mini may split response into multiple chunks
+      const textChunks: string[] = []
+
       for (const item of response.output) {
         if (item.type === 'message' && item.content) {
-          // Find text content in message (type is 'output_text', not 'text')
+          // Collect all text content in message (type is 'output_text', not 'text')
           for (const contentItem of item.content) {
             if (contentItem.type === 'output_text' && 'text' in contentItem) {
-              responseText = contentItem.text
-              break
+              textChunks.push(contentItem.text)
             }
           }
         }
-        if (responseText) break
       }
+
+      // Concatenate all chunks
+      responseText = textChunks.join('')
     }
 
     if (!responseText) {
