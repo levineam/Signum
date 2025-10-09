@@ -81,10 +81,32 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const responseText = response.output_text
+    // Fix: gpt-5-mini returns empty output_text with Responses API
+    // Extract text from response.output instead
+    let responseText = response.output_text
+
+    if (!responseText && response.output) {
+      // Concatenate all output_text chunks from message content
+      // GPT-5-mini may split response into multiple chunks
+      const textChunks: string[] = []
+
+      for (const item of response.output) {
+        if (item.type === 'message' && item.content) {
+          // Collect all text content in message (type is 'output_text', not 'text')
+          for (const contentItem of item.content) {
+            if (contentItem.type === 'output_text' && 'text' in contentItem) {
+              textChunks.push(contentItem.text)
+            }
+          }
+        }
+      }
+
+      // Concatenate all chunks
+      responseText = textChunks.join('')
+    }
 
     if (!responseText) {
-      throw new Error('No response from OpenAI')
+      throw new Error('No response from OpenAI (empty output_text and no message items)')
     }
 
     // 6. Parse extraction result
