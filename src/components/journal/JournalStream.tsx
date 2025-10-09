@@ -10,8 +10,8 @@ import { getNextPrompt, dismissPromptForSession } from '@/utils/journalPrompts'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
 import { NoteViewer } from '@/components/notes/NoteViewer'
 import { Note } from '@/types/note'
-import { createLink } from '@/lib/supabase/notes'
-import { convertTextToLink, captureSelectionMetadata } from '@/utils/textToLink'
+import { createLink, getOutgoingLinks } from '@/lib/supabase/notes'
+import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata } from '@/utils/textToLink'
 import { getNotes, createNote, updateNote as updateNoteInDb } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
@@ -119,12 +119,59 @@ export function JournalStream() {
           initialEntries = [newTodayEntry, ...journalEntries]
         }
 
-        // Phase 2: Link rehydration will be implemented here
-        // For now, links already in HTML (with data-link-id) will remain functional
         console.log('[JournalStream] Setting entries:', initialEntries.length)
         setEntries(initialEntries)
         setIsLoading(false)
         console.log('[JournalStream] Load complete')
+
+        // Phase 2: Link rehydration - run after DOM updates
+        // Use setTimeout to ensure entries are rendered in DOM before rehydration
+        setTimeout(async () => {
+          console.log('[JournalStream] Starting link rehydration...')
+
+          for (const entry of initialEntries) {
+            try {
+              // Fetch outgoing links for this entry
+              const links = await getOutgoingLinks(entry.id, user.id)
+
+              if (links.length === 0) {
+                continue
+              }
+
+              console.log(`[JournalStream] Entry ${entry.id} has ${links.length} links`)
+
+              // Find the editor element for this entry
+              const editorElement = document.querySelector(
+                `[data-entry-id="${entry.id}"] [contenteditable]`
+              ) as HTMLElement
+
+              if (!editorElement) {
+                console.warn(`[JournalStream] Could not find editor for entry ${entry.id}`)
+                continue
+              }
+
+              // Rehydrate links in this entry
+              const result = rehydrateLinksFromMetadata(
+                editorElement,
+                links.map(link => ({
+                  id: link.id,
+                  targetNoteId: link.targetNoteId,
+                  metadata: link.metadata
+                })),
+                handleLinkClick
+              )
+
+              console.log(
+                `[JournalStream] Entry ${entry.id}: ${result.rehydrated} rehydrated, ${result.skipped} skipped`
+              )
+            } catch (error) {
+              console.error(`[JournalStream] Error rehydrating links for entry ${entry.id}:`, error)
+            }
+          }
+
+          console.log('[JournalStream] Link rehydration complete')
+        }, 100)
+
       } catch (error) {
         console.error('[JournalStream] Error loading journal entries:', error)
         // Set safe fallback state - show empty array on error
