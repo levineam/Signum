@@ -804,9 +804,10 @@ During Story 2.4 testing, the hybrid localStorage + sample array approach reveal
 
 ##### Future Enhancements (Post-MVP)
 
-- **Story 2.4.3**: Suggestion review/approval workflow
-- **Story 2.4.4**: Incremental analysis (only new notes)
-- **Story 2.4.5**: Analytics dashboard and evolution tracking
+- **Story 2.4.4**: Incremental analysis (automatic analysis on new journal entries) - NEXT
+- **Story 2.4.5**: Suggestion review/approval workflow for AI-extracted ontology items
+- **Story 2.4.6+**: Advanced link features (dangling link detection, fuzzy matching, recovery UI)
+- **Story 2.4.7**: Analytics dashboard and ontology evolution tracking
 
 #### Story 2.5: Bidirectional Link Database Schema (DEFERRED)
 
