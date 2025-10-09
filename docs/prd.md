@@ -52,12 +52,14 @@ The solution combines two key innovations: gentle background AI that builds pers
 1. ✅ **Story 2.4.0**: Dev Environment Setup (complete)
 2. ✅ **Story 2.4.1**: Complete Auth Integration (complete)
 3. ✅ **Story 2.4.2**: Migrate Links to Supabase (MVP) (complete)
-4. **Story 2.4.3**: AI Personal Ontology Extraction with GPT-5-mini
+4. ✅ **Story 2.4.3**: AI Personal Ontology Extraction with GPT-5-mini (complete)
+5. **Story 2.4.4**: Incremental AI Ontology Analysis (incremental analysis on new journal entries)
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|---------|
+| 2025-10-09 | 3.8 | **Story 2.4.3 completed** (PR #11 merged). AI Personal Ontology Extraction with GPT-5-mini now functional. "Analyze My Notes" button processes up to 20 notes and populates Values, Beliefs, and Aims cards. Fixed critical bug where GPT-5-mini returns empty `output_text` in reasoning mode by extracting from `response.output` message chunks. Fixed P1 bug where only first chunk was read, causing truncated responses - now concatenates all chunks with `join('')`. Uses OpenAI Responses API with `reasoning.effort: 'medium'`. See `docs/story-2.4.3-ontology-extraction.md` for MVP scope. | Claude Code |
 | 2025-10-09 | 3.7 | **Story 2.4.2 (MVP) completed** (PR #8 Phase 1, PR #9 Phase 2 merged). Links now persist to Supabase with metadata and rehydrate on page load using exact text matching. Phase 0: Added `metadata` JSONB column to `links` table. Phase 1: Link creation captures selection metadata (snippet, contextBefore, contextAfter), adds `data-link-id` attributes. Phase 2: Link rehydration on journal entry load fetches from Supabase and restores missing links. Deferred advanced features (dangling link detection, fuzzy matching, recovery UI) to Story 2.4.6+. Total effort: 6 days. | Claude Code |
 | 2025-10-08 | 3.6 | Story 2.4.1 completed (PR #7 merged). Discovered link persistence issue (localStorage) during manual testing and data recovery. Created Story 2.4.2 for link migration to Supabase (MVP scope, 4-6 days). Renumbered existing stories: Ontology Extraction 2.4.2→2.4.3, Incremental Analysis 2.4.3→2.4.4, Analytics 2.4.4→2.4.5. See `docs/story-2.4.2-linked-text-resilience-plan.md` and `docs/story-2.4.2-linked-text-resilience-REVIEW.md` | Claude Code |
 | 2025-10-06 | 3.5 | **COURSE CORRECTION:** PR #3 review revealed P0 security issue (shared PROTOTYPE_USER_ID exposing all user data publicly). Root cause: deployment model mismatch - code assumed "prototype phase" that doesn't exist. Split Story 2.4 into 3 sequential stories: 2.4.0 (Dev Environment Setup), 2.4.1 (Complete Auth Integration), 2.4.2 (Ontology Extraction). Created persistent dev environment. Completed auth integration from partial Story 1.3. See `docs/sprint-change-proposal-2025-10-06.md` | John (PM) |
