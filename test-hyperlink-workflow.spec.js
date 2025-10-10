@@ -35,7 +35,7 @@ test.describe('Story 2.3: Automatic Hyperlink Creation Workflow', () => {
       await page.waitForTimeout(1000);
     } catch (error) {
       // If that doesn't work, try clicking on the general today section
-      console.log('⚠️ Trying alternative click approach...');
+      console.log('⚠️ Trying alternative click approach...', error);
       await todayEntry.click();
       await page.waitForTimeout(1000);
     }
@@ -54,7 +54,7 @@ test.describe('Story 2.3: Automatic Hyperlink Creation Workflow', () => {
       await expect(journalEntry).toBeVisible({ timeout: 5000 });
       console.log('✅ Found editable journal entry');
     } catch (error) {
-      console.log('⚠️ Contenteditable not found, looking for existing content to select...');
+      console.log('⚠️ Contenteditable not found, looking for existing content to select...', error);
 
       // Look for existing content in yesterday's entry that we can select
       const yesterdayEntry = page.locator(':has-text("Yesterday")').locator('..').locator('text=/Had an interesting conversation/');
@@ -82,13 +82,11 @@ test.describe('Story 2.3: Automatic Hyperlink Creation Workflow', () => {
     console.log('Step 3: Selecting text for hyperlink creation...');
 
     let textToSelect = 'test journal entry';
-    let selectionElement = journalEntry;
 
     // If we don't have an editable entry, use existing content from yesterday
     if (await journalEntry.count() === 0) {
       console.log('Using existing content from yesterday\'s entry...');
       textToSelect = 'interesting conversation';
-      selectionElement = page.locator(':has-text("Yesterday")').locator('..');
     }
 
     // Select text using JavaScript
@@ -183,7 +181,7 @@ test.describe('Story 2.3: Automatic Hyperlink Creation Workflow', () => {
       await makeNoteButton.first().click();
       console.log('✅ Make Note button clicked');
     } catch (error) {
-      console.log('❌ Make Note button not found. Looking for alternative buttons...');
+      console.log('❌ Make Note button not found. Looking for alternative buttons...', error);
 
       // Try to find any toolbar or formatting buttons
       const allButtons = await page.locator('button').all();
@@ -280,13 +278,11 @@ test.describe('Story 2.3: Automatic Hyperlink Creation Workflow', () => {
       page.locator('.note-creator, .note-form, .create-note')
     );
 
-    let modalFound = false;
     try {
       await expect(noteModal.first()).toBeVisible({ timeout: 5000 });
-      modalFound = true;
       console.log('✅ Note creation modal appeared');
     } catch (error) {
-      console.log('⚠️ No modal found, looking for inline note creation form...');
+      console.log('⚠️ No modal found, looking for inline note creation form...', error);
     }
 
     // Look for title and content input fields
@@ -324,7 +320,7 @@ test.describe('Story 2.3: Automatic Hyperlink Creation Workflow', () => {
       console.log('✅ Note saved/created');
 
     } catch (error) {
-      console.log('❌ Could not find note creation form fields');
+      console.log('❌ Could not find note creation form fields', error);
       await page.screenshot({ path: 'test-results/05-note-form-not-found.png', fullPage: true });
 
       // The hyperlink creation functionality might not be implemented yet
@@ -470,7 +466,7 @@ test.describe('Story 2.3: Automatic Hyperlink Creation Workflow', () => {
       console.log('Link styles:', linkStyles);
 
     } catch (error) {
-      console.log('❌ Hyperlink not found in journal entry');
+      console.log('❌ Hyperlink not found in journal entry', error);
       await page.screenshot({ path: 'test-results/05-hyperlink-not-found.png', fullPage: true });
 
       // Debug: check for any links on the page
@@ -502,7 +498,7 @@ test.describe('Story 2.3: Automatic Hyperlink Creation Workflow', () => {
       console.log('✅ Note viewer opened');
 
     } catch (error) {
-      console.log('⚠️ Note viewer modal not found, checking if content appeared inline...');
+      console.log('⚠️ Note viewer modal not found, checking if content appeared inline...', error);
       await page.screenshot({ path: 'test-results/06-note-viewer-not-found.png', fullPage: true });
 
       // Check if the note content appears anywhere on the page
@@ -573,7 +569,7 @@ test.describe('Story 2.3: Automatic Hyperlink Creation Workflow', () => {
       }
 
     } catch (error) {
-      console.log('⚠️ Note editing functionality not found or not working');
+      console.log('⚠️ Note editing functionality not found or not working', error);
       await page.screenshot({ path: 'test-results/08-note-editing-failed.png', fullPage: true });
     }
 

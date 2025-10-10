@@ -12,6 +12,148 @@ When a user clicks "Analyze My Notes", the system uses GPT-5-mini to extract Val
 
 ---
 
+## Plain English Walkthrough
+
+Here's what happens when you click "Analyze My Notes", explained step by step:
+
+### Step 1: Gathering Your Writing
+
+First, we fetch all your notes from the database. This includes:
+- Your journal entries (the daily writing you do in the app)
+- Custom notes you've created
+- Reflection notes
+
+**What we skip**: We don't include the three ontology cards themselves (Values, Beliefs, Aims) because we don't want the AI analyzing its own previous work - only your original thoughts.
+
+**Reality check**: We need at least 5 notes to do meaningful analysis. If you have fewer than that, we stop here and ask you to write more first.
+
+### Step 2: Keeping It Manageable
+
+To control costs and keep things fast, we only look at your most recent 20 notes, even if you have more. This is a hard limit - we just take the first 20 and ignore the rest.
+
+### Step 3: Packaging Everything Up
+
+We bundle all your notes into a single package to send to the AI. It looks like this:
+
+```
+[Note 1 - ID: abc123]
+Title: Journal Entry - Oct 15
+Content: I've been thinking about what compassion really means...
+---
+
+[Note 2 - ID: def456]
+Title: Reflection on friendship
+Content: Real connection happens when you just listen...
+---
+
+... (up to 20 notes total)
+```
+
+We keep the note IDs so the AI can cite its sources later.
+
+### Step 4: Writing Instructions for the AI
+
+We send the AI a detailed prompt that says:
+
+**"You're an expert at reading personal journals. Here's what I want you to find:**
+
+1. **Values** - What principles guide this person? (like "Compassion" or "Honesty")
+2. **Beliefs** - What deep truths do they hold? (like "People can change" or "Struggle builds character")
+3. **Aims** - What are they working toward? (like "Be more present" or "Build deeper friendships")
+
+**Rules you must follow:**
+- Only tell me things you're VERY confident about (you see them multiple times or they're stated clearly)
+- Keep your answers SHORT - just 2 to 5 words per item
+- Show your work! For each Value/Belief/Aim you find, give me up to 5 quotes from the actual notes that prove it
+- Tell me which note each quote came from
+- Make sure you can tell the difference between a Value (a principle), a Belief (a truth), and an Aim (a goal)"
+
+### Step 5: The AI Does Its Work
+
+The AI (specifically GPT-5-mini, which is good at this kind of reasoning) reads through all your notes looking for patterns.
+
+It's trying to answer questions like:
+- What words or themes appear repeatedly?
+- What does this person care about?
+- What worldview emerges from their writing?
+- What are they trying to become or achieve?
+
+For each potential Value/Belief/Aim it identifies, it:
+1. Finds the best supporting quotes from your actual writing
+2. Decides how confident it is (high/medium/low)
+3. Categorizes it correctly (Value vs Belief vs Aim)
+
+### Step 6: Getting the Results Back
+
+The AI responds with structured data that looks like:
+
+```
+Values I found:
+- "Compassion" (high confidence)
+  • Proof: "Sometimes the best conversations are..." (from Journal Oct 15)
+  • Proof: "Just being present matters..." (from Reflection on Sarah)
+
+- "Integrity" (high confidence)
+  • Proof: "I need to be honest even when..." (from Morning Pages)
+
+Beliefs I found:
+- "People have inherent wisdom" (high confidence)
+  • Proof: "Everyone has something to teach..." (from Journal Oct 12)
+
+Aims I found:
+- "Balance ambition with presence" (high confidence)
+  • Proof: "I keep pushing for the next milestone..." (from Work Reflection)
+  • Proof: "Need to find a way to pursue goals..." (from Journal Oct 20)
+```
+
+### Step 7: Filtering for Quality
+
+We only keep items the AI is VERY confident about (marked as "high" confidence).
+
+If the AI said it was only "medium" or "low" confidence about something, we throw it out. This is to avoid cluttering your ontology with guesses or weak patterns.
+
+### Step 8: Storing the Results
+
+Now we save everything to your three ontology cards:
+- **Values card** gets the extracted values
+- **Beliefs card** gets the extracted beliefs
+- **Aims card** gets the extracted aims
+
+Each item is stored with:
+- The short phrase ("Compassion")
+- The confidence level ("high")
+- All the supporting excerpts (the quotes and which notes they came from)
+
+**Important**: This REPLACES whatever was there before. It doesn't add to previous results - it's a fresh analysis each time.
+
+### Step 9: Letting You Know It's Done
+
+You see a success message like:
+> "Ontology updated! Analyzed 15 entries. Found 3 values, 2 beliefs, 4 aims"
+
+The three ontology cards refresh to show the new results.
+
+---
+
+## What You Don't Currently See (But Could)
+
+Right now, all you see is:
+- Button click
+- "Analyzing..." spinner
+- Success message
+
+What you DON'T see:
+- Which 20 notes were analyzed
+- What the AI was thinking as it read them
+- Why it chose "Compassion" as a value
+- The actual supporting quotes (they're stored but not displayed)
+- How long each step took
+- Whether any medium/low confidence items were filtered out
+
+This is what we mean by the process being "opaque" - it works, but you can't see inside it.
+
+---
+
 ## Current Process Flow
 
 ### 1. User Initiates Analysis

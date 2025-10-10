@@ -21,7 +21,6 @@ interface Note {
 
 const NOTES_STORAGE_KEY = 'signum-notes'
 
-const now = new Date().toISOString()
 const baseTimestamp = Date.now()
 
 const ontologyTestNotes: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[] = [

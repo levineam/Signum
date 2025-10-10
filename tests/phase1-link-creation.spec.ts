@@ -183,7 +183,7 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
 
   test('should capture correct metadata context', async ({ page }) => {
     // Capture network requests to Supabase
-    const supabaseRequests: any[] = []
+    const supabaseRequests: Array<{ url: string; postData: string | null }> = []
 
     page.on('request', (request) => {
       if (request.url().includes('supabase') && request.method() === 'POST') {
@@ -214,9 +214,6 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
       const editorEl = document.querySelector('[contenteditable="true"]') as HTMLElement
       if (!editorEl) throw new Error('Editor not found')
 
-      const text = editorEl.textContent || ''
-      const startIndex = text.indexOf('stoicism')
-
       const range = document.createRange()
       const selection = window.getSelection()
 
@@ -242,11 +239,11 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
     await page.waitForTimeout(2000)
 
     // Verify metadata was captured via console logs
-    const metadataLog = await page.evaluate(() => {
-      // Access console logs from window if they were stored
-      return (window as any).__lastMetadata
+    const metadataLog = await page.evaluate<unknown>(() => {
+      const globalWindow = window as typeof window & { __lastMetadata?: unknown }
+      return globalWindow.__lastMetadata ?? null
     })
 
-    console.log('✅ Metadata context capture test completed')
+    console.log('✅ Metadata context capture test completed', metadataLog)
   })
 })
