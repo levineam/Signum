@@ -73,7 +73,6 @@ so that I can track how my values, beliefs, and aims evolve without repeatedly t
 1. Only notes with `noteType IN ('journal-entry', 'reflection', 'custom')` and `updated_at > lastAnalyzedAt` are sent to GPT.
 2. For edited notes, send the updated content plus a summary of prior ontology links referencing that note (context for conflict resolution).
 3. Prompt includes a condensed summary of existing ontology items to avoid duplicates.
-4. Batch size capped at 10 notes per incremental run; additional notes queue for the next run.
 
 ### AI Processing & Merge
 1. GPT-5-mini remains the default model with `reasoning.effort: 'medium'`.
@@ -100,7 +99,7 @@ so that I can track how my values, beliefs, and aims evolve without repeatedly t
 ## Implementation Outline
 
 ### Phase 1 — State Tracking
-- Create Supabase migration for `ontology_analysis_state` table with columns: `user_id`, `last_analyzed_at`, `pending_note_ids`, `last_run_summary`.
+- Create Supabase migration for `ontology_analysis_state` table with columns: `user_id`, `last_analyzed_at`, `last_run_summary`.
 - Ensure `notes.updated_at` has an index and is surfaced through data helpers as the canonical "last modified" field (no new column introduced).
 - Update note insert/update flows to write audit entries (`note_activity` table or metadata) capturing `noteId`, `userId`, `timestamp`, `action`.
 - Expose helper in `src/lib/ontology/state.ts` to read/write analysis state.
