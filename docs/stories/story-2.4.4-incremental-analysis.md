@@ -3,10 +3,10 @@
 **Status:** 🚧 PRIORITIZED - NEXT
 **Updated:** 2025-10-10
 **Prerequisites:**
-- Story 2.4.0 (Dev Environment Setup) — finish outstanding work noted as 🚧 PRIORITIZED - NEXT before starting this story.
-- Story 2.4.1 (Auth Integration Hardening) — merge/verify data isolation (story doc also marked 🚧 PRIORITIZED - NEXT).
-- Story 2.4.2 (Links Persist to Supabase) — confirmed complete via PRD changelog (ensures link metadata in Supabase).
-- Story 2.4.3 (Manual Ontology Extraction MVP) — baseline extraction path and API route verified.
+- Story 2.4.0 (Dev Environment Setup) ✅ Complete
+- Story 2.4.1 (Auth Integration Hardening) ✅ Complete
+- Story 2.4.2 (Links Persist to Supabase) ✅ Complete
+- Story 2.4.3 (Manual Ontology Extraction MVP) ✅ Complete
 
 ---
 
@@ -24,6 +24,7 @@ so that I can track how my values, beliefs, and aims evolve without repeatedly t
 - Current flow re-sends all historical notes to GPT-5-mini, making costs scale linearly with total note volume.
 - Incremental analysis lets us process only the delta (new or edited journal entries), reducing token usage by ~80% (per `docs/ontology-analysis-process.md`).
 - Automation unlocks downstream analytics (Story 2.4.5) that depend on timely ontology refreshes.
+- Daily background runs balance freshness with cost control while keeping the manual button as a parity test harness.
 
 ---
 
@@ -46,7 +47,8 @@ so that I can track how my values, beliefs, and aims evolve without repeatedly t
 
 ## Deliverables
 
-- Supabase Edge Function trigger (primary) that launches incremental extraction when thresholds are met, with a documented Next.js scheduled fallback.
+- Supabase Edge Function scheduled via Supabase Cron (primary) that runs once every 24 hours, evaluating all notes updated since the prior analysis; documented Next.js scheduled fallback for recovery.
+- Manual "Analyze My Notes" path invokes the exact same incremental pipeline for parity and testing.
 - Server-controlled feature flag (`ONTOLOGY_INCREMENTAL_ENABLED`) with a read-only client indicator to enable/disable automation quickly.
 - Persistent tracking of `lastAnalyzedAt`, per-user note digests, and hash comparisons stored in Supabase (`ontology_analysis_state` table or metadata column).
 - Documented reliance on Supabase `notes.updated_at` (plus supporting index) as the canonical change detector.
@@ -62,11 +64,10 @@ so that I can track how my values, beliefs, and aims evolve without repeatedly t
 ### Detection & Scheduling
 1. System tracks each user's `lastAnalyzedAt` timestamp (default null for new users).
 2. When a user creates or updates a journal-entry/reflection/custom note, we rely on Supabase `notes.updated_at` (surfaced as `updatedAt` in the generated types) and compare it against `lastAnalyzedAt`.
-3. Incremental analysis triggers when either of these conditions is true:
-   - ≥ 5 new or updated notes since the last analysis, or
-   - ≥ 24 hours have passed with ≥ 1 new note recorded.
-4. Trigger executes without user action (either server-side on note insert/update hook or via scheduled job polling Supabase).
-5. Trigger throttled so that only one run per user executes concurrently (protects GPT usage).
+3. A scheduled job runs at least once every 24 hours (configurable window) and, on each execution, gathers notes where `updated_at > lastAnalyzedAt`.
+4. If the daily job finds no qualifying notes it records a skip event; otherwise it invokes the incremental pipeline and advances `lastAnalyzedAt` on success.
+5. Manual "Analyze My Notes" button calls the same incremental pipeline and respects the same merge logic, tagging the run as `triggeredBy: 'manual'` for observability.
+6. Pipeline execution is throttled so that only one run per user executes concurrently (protects GPT usage).
 
 ### Extraction Input Preparation
 1. Only notes with `noteType IN ('journal-entry', 'reflection', 'custom')` and `updated_at > lastAnalyzedAt` are sent to GPT.
@@ -105,7 +106,8 @@ so that I can track how my values, beliefs, and aims evolve without repeatedly t
 - Expose helper in `src/lib/ontology/state.ts` to read/write analysis state.
 
 ### Phase 2 — Trigger Mechanism
-- Adopt Supabase database trigger → Edge Function (Option A) as the default execution path when `note_activity` inserts.
+- Configure Supabase Cron to invoke the Edge Function once per day (time window configurable) and pass context for batching per user.
+- Use `note_activity` entries to maintain the set of users with pending updates so the daily job can skip idle accounts quickly.
 - Document a Next.js scheduled route (cron) fallback in the runbook for manual recovery or replay scenarios.
 - Implement concurrency lock (e.g., `analysis_locks` table with TTL) to avoid overlapping runs.
 
@@ -146,9 +148,9 @@ so that I can track how my values, beliefs, and aims evolve without repeatedly t
   - State persistence helpers.
 - Integration tests (mock OpenAI) verifying end-to-end incremental run processes only delta notes and merges correctly.
 - Manual QA checklist:
-  1. Create 5 new journal entries quickly → verify auto-run triggers and cards update.
-  2. Edit an existing journal entry to add new content → confirm incremental run re-evaluates that note.
-  3. Pause server flag (`ONTOLOGY_INCREMENTAL_ENABLED`) → ensure no background runs occur; manual button still works.
+  1. Create a new journal entry (plus optional additional notes), invoke the daily Edge Function manually (Supabase dashboard or CLI) to simulate the scheduled run, and verify cards update only with the new content.
+  2. Edit an existing journal entry, rerun the scheduled function manually, and confirm the delta-only payload reprocesses the edited note.
+  3. Pause server flag (`ONTOLOGY_INCREMENTAL_ENABLED`) → ensure the daily job exits early while the manual button still works for forced runs.
   4. Induce OpenAI failure (invalid key) → confirm error surfaces and state not advanced.
 - Capture cost comparison chart (manual vs incremental) for PM review.
 
