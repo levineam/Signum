@@ -66,8 +66,9 @@ RETURNS TABLE (
   updated_at TIMESTAMP WITH TIME ZONE
 ) AS $$
 BEGIN
-  -- SECURITY: Validate that caller is requesting their own state
-  IF auth.uid() != p_user_id THEN
+  -- SECURITY: Allow service-role (auth.uid() IS NULL) or user requesting their own state
+  -- This enables server-side admin operations while preventing cross-user access from clients
+  IF auth.uid() IS NOT NULL AND auth.uid() != p_user_id THEN
     RAISE EXCEPTION 'Unauthorized: Cannot access another user''s analysis state';
   END IF;
 
@@ -104,8 +105,9 @@ RETURNS TABLE (
   updated_at TIMESTAMP WITH TIME ZONE
 ) AS $$
 BEGIN
-  -- SECURITY: Validate that caller is requesting their own notes
-  IF auth.uid() != p_user_id THEN
+  -- SECURITY: Allow service-role (auth.uid() IS NULL) or user requesting their own notes
+  -- This enables server-side admin operations while preventing cross-user access from clients
+  IF auth.uid() IS NOT NULL AND auth.uid() != p_user_id THEN
     RAISE EXCEPTION 'Unauthorized: Cannot access another user''s notes';
   END IF;
 

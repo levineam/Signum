@@ -103,7 +103,30 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const triggeredBy = (body.triggeredBy as 'manual' | 'scheduled') || 'manual'
 
-    // 3. Try to acquire lock (prevent concurrent runs)
+    // 3. Get analysis state BEFORE acquiring lock (SECURITY FIX: Issue P1)
+    // This preserves runCountInWindow for rate limiting before tryAcquireLock overwrites it
+    const state = await getAnalysisState(userId)
+
+    // 4. Rate limiting check (only for manual triggers) - SECURITY FIX: Issue #3
+    if (triggeredBy === 'manual') {
+      const recentRunCount = state ? countRecentRuns(state) : 0
+
+      if (recentRunCount >= RATE_LIMIT_MAX) {
+        // Don't acquire lock for rate-limited requests
+        await recordFailedRun(userId, 'Rate limit exceeded', 0)
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Rate limit exceeded',
+            details: `Maximum ${RATE_LIMIT_MAX} analyses per hour`
+          },
+          { status: 429 }
+        )
+      }
+    }
+
+    // 5. Try to acquire lock (prevent concurrent runs)
     const lockAcquired = await tryAcquireLock(userId)
     if (!lockAcquired) {
       return NextResponse.json(
@@ -119,29 +142,6 @@ export async function POST(request: NextRequest) {
     let notesToAnalyze: Note[] = [] // Declare outside try block for error handler access
 
     try {
-      // 4. Get analysis state
-      const state = await getAnalysisState(userId)
-
-      // 5. Rate limiting check (only for manual triggers) - SECURITY FIX: Issue #3
-      if (triggeredBy === 'manual') {
-        const recentRunCount = state ? countRecentRuns(state) : 0
-
-        if (recentRunCount >= RATE_LIMIT_MAX) {
-          // Don't call releaseLock - that would incorrectly advance lastAnalyzedAt
-          // Just record the failure without updating the analysis timestamp
-          await recordFailedRun(userId, 'Rate limit exceeded', 0)
-
-          return NextResponse.json(
-            {
-              success: false,
-              error: 'Rate limit exceeded',
-              details: `Maximum ${RATE_LIMIT_MAX} analyses per hour`
-            },
-            { status: 429 }
-          )
-        }
-      }
-
       // 6. Get notes for incremental analysis
       const lastAnalyzed = state?.lastAnalyzedAt
         ? new Date(state.lastAnalyzedAt)
