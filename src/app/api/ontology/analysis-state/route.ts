@@ -11,7 +11,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getAnalysisState } from '@/lib/ontology/state'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // 1. Get authenticated user from session
     const cookieStore = await cookies()

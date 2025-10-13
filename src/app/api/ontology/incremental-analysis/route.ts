@@ -45,7 +45,8 @@ function countRecentRuns(state: { lastRunSummary?: AnalysisRunSummary }): number
   if (timeSinceLastRun >= RATE_LIMIT_WINDOW) return 0
 
   // Get run count from metadata (or default to 1 if not tracked yet)
-  return (state.lastRunSummary as any).runCountInWindow || 1
+  const summary = state.lastRunSummary as AnalysisRunSummary & { runCountInWindow?: number }
+  return summary.runCountInWindow || 1
 }
 
 export async function POST(request: NextRequest) {
@@ -191,8 +192,12 @@ export async function POST(request: NextRequest) {
           beliefs: extraction.newBeliefs,
           aims: extraction.newAims
         },
-        timestamp: new Date().toISOString(),
-        ...(runCountInWindow && { runCountInWindow } as any)
+        timestamp: new Date().toISOString()
+      } as AnalysisRunSummary & { runCountInWindow?: number }
+
+      // Add run count tracking
+      if (runCountInWindow) {
+        (runSummary as AnalysisRunSummary & { runCountInWindow: number }).runCountInWindow = runCountInWindow
       }
 
       await updateAnalysisState(userId, new Date(), runSummary)
