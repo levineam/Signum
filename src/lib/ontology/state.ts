@@ -7,6 +7,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import { Note } from '@/types/note'
 
 // ============================================================================
 // Types
@@ -152,7 +153,7 @@ export async function resetAnalysisState(userId: string): Promise<void> {
 export async function getNotesForIncrementalAnalysis(
   userId: string,
   lastAnalyzedAt: Date | null
-): Promise<any[]> {
+): Promise<Note[]> {
   const { data, error } = await supabase.rpc(
     'get_notes_for_incremental_analysis',
     {

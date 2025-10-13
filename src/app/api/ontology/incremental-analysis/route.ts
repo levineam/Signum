@@ -10,6 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { Note } from '@/types/note'
 import {
   getAnalysisState,
   updateAnalysisState,
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let notesToAnalyze: any[] = [] // Declare outside try block for error handler access
+    let notesToAnalyze: Note[] = [] // Declare outside try block for error handler access
 
     try {
       // 4. Get analysis state

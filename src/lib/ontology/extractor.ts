@@ -10,7 +10,6 @@ import OpenAI from 'openai'
 import { Note } from '@/types/note'
 import {
   ExtractionResult,
-  OntologyItem,
   parseExtractionResult
 } from '@/utils/ontologyPrompts'
 import { mergeOntologyItems } from './merge'
@@ -36,7 +35,7 @@ export interface IncrementalExtractionResult {
  * Includes summary of existing ontology to avoid duplicates
  */
 function buildIncrementalPrompt(
-  newNotes: any[],
+  newNotes: Note[],
   existingOntology: {
     values: string[]
     beliefs: string[]
@@ -45,14 +44,9 @@ function buildIncrementalPrompt(
 ): string {
   const notesText = newNotes
     .map((note, index) => {
-      const content =
-        typeof note.content === 'string'
-          ? note.content
-          : note.content?.text || ''
-
       return `[Note ${index + 1} - ID: ${note.id}]
 Title: ${note.title}
-Content: ${content}
+Content: ${note.content}
 ---`
     })
     .join('\n\n')
@@ -168,16 +162,16 @@ async function getExistingOntology(userId: string): Promise<{
     throw error
   }
 
-  const values = ontologyNotes?.filter((n: any) => n.note_type === 'ontology-value') || []
-  const beliefs = ontologyNotes?.filter((n: any) => n.note_type === 'ontology-belief') || []
-  const aims = ontologyNotes?.filter((n: any) => n.note_type === 'ontology-aim') || []
+  const values = ontologyNotes?.filter((n) => n.note_type === 'ontology-value') || []
+  const beliefs = ontologyNotes?.filter((n) => n.note_type === 'ontology-belief') || []
+  const aims = ontologyNotes?.filter((n) => n.note_type === 'ontology-aim') || []
 
   // Extract text summaries from metadata
-  const extractTexts = (notes: any[]) => {
+  const extractTexts = (notes: Note[]) => {
     const texts: string[] = []
     notes.forEach((note) => {
       if (note.metadata?.items) {
-        note.metadata.items.forEach((item: any) => {
+        note.metadata.items.forEach((item) => {
           if (item.name) texts.push(item.name)
         })
       }
@@ -200,7 +194,7 @@ async function getExistingOntology(userId: string): Promise<{
  */
 export async function runIncrementalExtraction(
   userId: string,
-  newNotes: any[]
+  newNotes: Note[]
 ): Promise<IncrementalExtractionResult> {
   if (!openai) {
     throw new Error('OpenAI API key not configured')

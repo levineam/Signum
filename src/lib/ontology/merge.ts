@@ -26,12 +26,6 @@ function normalizeText(text: string): string {
   return text.toLowerCase().trim().replace(/\s+/g, ' ')
 }
 
-/**
- * Check if two ontology items are duplicates based on normalized title
- */
-function isDuplicate(text1: string, text2: string): boolean {
-  return normalizeText(text1) === normalizeText(text2)
-}
 
 /**
  * Reconcile confidence levels - returns higher confidence
