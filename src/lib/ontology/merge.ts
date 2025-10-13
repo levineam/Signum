@@ -6,7 +6,7 @@
  * including deduplication, confidence reconciliation, and metadata aggregation.
  */
 
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { Note } from '@/types/note'
 import { ExtractionResult, OntologyItem } from '@/utils/ontologyPrompts'
 
@@ -153,8 +153,8 @@ export async function mergeOntologyItems(
       }
     }
 
-    // Update the pinned note with merged items
-    const { error } = await supabase
+    // Update the pinned note with merged items (SECURITY FIX: Issue #4)
+    const { error } = await supabaseAdmin
       .from('notes')
       .update({
         metadata: {

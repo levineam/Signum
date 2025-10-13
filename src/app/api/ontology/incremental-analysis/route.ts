@@ -10,6 +10,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { Note } from '@/types/note'
 import {
   getAnalysisState,
@@ -30,6 +32,22 @@ const INCREMENTAL_ENABLED =
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000 // 1 hour
 const RATE_LIMIT_MAX = 6
 
+/**
+ * Count recent runs within the rate limit window (SECURITY FIX: Issue #3)
+ */
+function countRecentRuns(state: { lastRunSummary?: AnalysisRunSummary }): number {
+  if (!state.lastRunSummary?.timestamp) return 0
+
+  const lastRunTime = new Date(state.lastRunSummary.timestamp).getTime()
+  const timeSinceLastRun = Date.now() - lastRunTime
+
+  // If last run was outside the window, count resets to 0
+  if (timeSinceLastRun >= RATE_LIMIT_WINDOW) return 0
+
+  // Get run count from metadata (or default to 1 if not tracked yet)
+  return (state.lastRunSummary as any).runCountInWindow || 1
+}
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
 
@@ -46,19 +64,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 2. Parse request
-    const body = await request.json()
-    const { userId, triggeredBy = 'manual' } = body as {
-      userId: string
-      triggeredBy?: 'manual' | 'scheduled'
-    }
+    // 2. Authenticate user from session (SECURITY FIX: Issue #2)
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
 
-    if (!userId) {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
       return NextResponse.json(
-        { success: false, error: 'userId required' },
-        { status: 400 }
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       )
     }
+
+    // Use authenticated user ID (ignore body userId for security)
+    const userId = user.id
+
+    // Parse optional trigger type
+    const body = await request.json().catch(() => ({}))
+    const triggeredBy = (body.triggeredBy as 'manual' | 'scheduled') || 'manual'
 
     // 3. Try to acquire lock (prevent concurrent runs)
     const lockAcquired = await tryAcquireLock(userId)
@@ -79,31 +121,23 @@ export async function POST(request: NextRequest) {
       // 4. Get analysis state
       const state = await getAnalysisState(userId)
 
-      // 5. Rate limiting check (only for manual triggers)
-      if (triggeredBy === 'manual' && state?.lastRunSummary) {
-        const lastRunTime = state.lastRunSummary.timestamp
-          ? new Date(state.lastRunSummary.timestamp).getTime()
-          : 0
-        const timeSinceLastRun = Date.now() - lastRunTime
+      // 5. Rate limiting check (only for manual triggers) - SECURITY FIX: Issue #3
+      if (triggeredBy === 'manual') {
+        const recentRunCount = state ? countRecentRuns(state) : 0
 
-        if (timeSinceLastRun < RATE_LIMIT_WINDOW) {
-          // Check if user has exceeded rate limit
-          // (simplified - in production, track run count in summary)
-          const recentRunCount = 1 // TODO: Track properly in state
-          if (recentRunCount >= RATE_LIMIT_MAX) {
-            // Don't call releaseLock - that would incorrectly advance lastAnalyzedAt
-            // Just record the failure without updating the analysis timestamp
-            await recordFailedRun(userId, 'Rate limit exceeded', 0)
+        if (recentRunCount >= RATE_LIMIT_MAX) {
+          // Don't call releaseLock - that would incorrectly advance lastAnalyzedAt
+          // Just record the failure without updating the analysis timestamp
+          await recordFailedRun(userId, 'Rate limit exceeded', 0)
 
-            return NextResponse.json(
-              {
-                success: false,
-                error: 'Rate limit exceeded',
-                details: `Maximum ${RATE_LIMIT_MAX} analyses per hour`
-              },
-              { status: 429 }
-            )
-          }
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Rate limit exceeded',
+              details: `Maximum ${RATE_LIMIT_MAX} analyses per hour`
+            },
+            { status: 429 }
+          )
         }
       }
 
@@ -144,7 +178,8 @@ export async function POST(request: NextRequest) {
       const runtime = Date.now() - startTime
       const tokenEstimate = notesToAnalyze.length * 500 // Rough estimate
 
-      // 10. Update analysis state
+      // 10. Update analysis state with rate limit tracking
+      const runCountInWindow = state ? countRecentRuns(state) + 1 : 1
       const runSummary: AnalysisRunSummary = {
         triggeredBy,
         noteCount: notesToAnalyze.length,
@@ -156,7 +191,8 @@ export async function POST(request: NextRequest) {
           beliefs: extraction.newBeliefs,
           aims: extraction.newAims
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        ...(runCountInWindow && { runCountInWindow } as any)
       }
 
       await updateAnalysisState(userId, new Date(), runSummary)

@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button'
 import { Sparkles, Loader2, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
-import { getAnalysisState } from '@/lib/ontology/state'
 
 interface OntologyAnalysisButtonProps {
   onComplete?: () => void
@@ -38,7 +37,14 @@ export function OntologyAnalysisButton({
     if (!user) return
 
     try {
-      const state = await getAnalysisState(user.id)
+      // Fetch analysis state from safe API endpoint
+      const response = await fetch('/api/ontology/analysis-state')
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch analysis state')
+      }
+
+      const { state } = await response.json()
 
       if (state?.lastAnalyzedAt) {
         const lastRun = new Date(state.lastAnalyzedAt)
@@ -78,13 +84,13 @@ export function OntologyAnalysisButton({
 
     try {
       // Call incremental analysis endpoint (same pipeline as scheduled runs)
+      // Note: userId is derived from session on server for security
       const response = await fetch('/api/ontology/incremental-analysis', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          userId: user.id,
           triggeredBy: 'manual'
         })
       })

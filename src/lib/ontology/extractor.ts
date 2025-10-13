@@ -13,7 +13,7 @@ import {
   parseExtractionResult
 } from '@/utils/ontologyPrompts'
 import { mergeOntologyItems } from './merge'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({
@@ -151,7 +151,8 @@ async function getExistingOntology(userId: string): Promise<{
   beliefTexts: string[]
   aimTexts: string[]
 }> {
-  const { data: ontologyNotes, error } = await supabase
+  // SECURITY FIX: Issue #4 - Use admin client to bypass RLS in server context
+  const { data: ontologyNotes, error } = await supabaseAdmin
     .from('notes')
     .select('*')
     .eq('user_id', userId)
