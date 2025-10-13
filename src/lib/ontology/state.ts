@@ -103,16 +103,23 @@ export async function updateAnalysisState(
  *
  * IMPORTANT: This function ONLY updates last_run_summary, NOT last_analyzed_at.
  * This ensures failed runs (rate limits, errors) don't mark notes as analyzed.
+ *
+ * SECURITY FIX: Preserves runCountInWindow to prevent rate limit bypass
  */
 export async function recordFailedRun(
   userId: string,
   error: string,
-  noteCount: number
+  noteCount: number,
+  runCountInWindow?: number
 ): Promise<void> {
-  // Get current state to preserve last_analyzed_at
+  // Get current state to preserve last_analyzed_at and runCountInWindow
   const currentState = await getAnalysisState(userId)
 
-  // Only update the summary, explicitly preserving last_analyzed_at
+  // Preserve or increment run count for rate limiting
+  const preservedRunCount = runCountInWindow ??
+    ((currentState?.lastRunSummary as AnalysisRunSummary & { runCountInWindow?: number })?.runCountInWindow || 1)
+
+  // Only update the summary, explicitly preserving last_analyzed_at and runCountInWindow
   const { error: updateError } = await supabaseAdmin
     .from('ontology_analysis_state')
     .upsert(
@@ -124,7 +131,8 @@ export async function recordFailedRun(
           noteCount,
           status: 'failure',
           error,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          runCountInWindow: preservedRunCount
         }
       },
       {

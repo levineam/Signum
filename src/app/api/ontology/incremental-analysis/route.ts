@@ -113,7 +113,8 @@ export async function POST(request: NextRequest) {
 
       if (recentRunCount >= RATE_LIMIT_MAX) {
         // Don't acquire lock for rate-limited requests
-        await recordFailedRun(userId, 'Rate limit exceeded', 0)
+        // SECURITY FIX: Preserve runCountInWindow to prevent rate limit bypass
+        await recordFailedRun(userId, 'Rate limit exceeded', 0, recentRunCount)
 
         return NextResponse.json(
           {
