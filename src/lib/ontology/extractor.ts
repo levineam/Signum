@@ -7,7 +7,7 @@
  */
 
 import OpenAI from 'openai'
-import { Note } from '@/types/note'
+import { Note, NoteMetadata } from '@/types/note'
 import {
   ExtractionResult,
   parseExtractionResult
@@ -170,7 +170,7 @@ async function getExistingOntology(userId: string): Promise<{
     content: string
     note_type: string
     is_pinned: boolean
-    metadata: any
+    metadata: NoteMetadata
     created_at: string
     updated_at: string
   }): Note => ({
