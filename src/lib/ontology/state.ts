@@ -205,46 +205,43 @@ export async function needsAnalysis(userId: string): Promise<boolean> {
 /**
  * Try to acquire analysis lock for a user
  * Returns true if lock acquired, false if already locked
+ *
+ * SECURITY: Uses atomic UPDATE to prevent race conditions in concurrent requests
  */
 export async function tryAcquireLock(userId: string): Promise<boolean> {
-  // Check if a recent analysis is in progress (within last 10 minutes)
   const tenMinutesAgo = new Date()
   tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 10)
 
-  const { data: state } = await supabaseAdmin
-    .from('ontology_analysis_state')
-    .select('last_run_summary, updated_at')
-    .eq('user_id', userId)
-    .single()
-
-  if (state) {
-    const lastUpdate = new Date(state.updated_at)
-    const summary = state.last_run_summary as AnalysisRunSummary
-
-    // If recent update with no status (indicating in-progress), deny lock
-    if (
-      lastUpdate > tenMinutesAgo &&
-      summary &&
-      !summary.status
-    ) {
-      return false
-    }
-  }
-
-  // Acquire lock by setting status to undefined (in-progress indicator)
-  const { error } = await supabaseAdmin
+  // First ensure a row exists for this user
+  await supabaseAdmin
     .from('ontology_analysis_state')
     .upsert(
       {
         user_id: userId,
-        last_run_summary: { timestamp: new Date().toISOString() }
+        last_run_summary: { status: 'success', timestamp: new Date(0).toISOString() }
       },
       {
-        onConflict: 'user_id'
+        onConflict: 'user_id',
+        ignoreDuplicates: true // Don't overwrite if exists
       }
     )
 
-  return !error
+  // Atomic lock acquisition: only update if not already locked
+  // A row is "locked" if it was updated recently AND has no status (in-progress)
+  const { data, error } = await supabaseAdmin
+    .from('ontology_analysis_state')
+    .update({
+      last_run_summary: { timestamp: new Date().toISOString() }
+    })
+    .eq('user_id', userId)
+    // Only acquire lock if either:
+    // 1. Last update was old (> 10 minutes ago), OR
+    // 2. Last run has a status (success/failure/skipped - not in-progress)
+    .or(`updated_at.lt.${tenMinutesAgo.toISOString()},last_run_summary->>status.not.is.null`)
+    .select()
+
+  // Lock acquired if we successfully updated a row
+  return !error && data && data.length > 0
 }
 
 /**

@@ -66,6 +66,11 @@ RETURNS TABLE (
   updated_at TIMESTAMP WITH TIME ZONE
 ) AS $$
 BEGIN
+  -- SECURITY: Validate that caller is requesting their own state
+  IF auth.uid() != p_user_id THEN
+    RAISE EXCEPTION 'Unauthorized: Cannot access another user''s analysis state';
+  END IF;
+
   -- Insert if not exists, return existing otherwise
   INSERT INTO ontology_analysis_state (user_id, last_analyzed_at, last_run_summary)
   VALUES (p_user_id, NULL, '{}'::jsonb)
@@ -99,6 +104,11 @@ RETURNS TABLE (
   updated_at TIMESTAMP WITH TIME ZONE
 ) AS $$
 BEGIN
+  -- SECURITY: Validate that caller is requesting their own notes
+  IF auth.uid() != p_user_id THEN
+    RAISE EXCEPTION 'Unauthorized: Cannot access another user''s notes';
+  END IF;
+
   RETURN QUERY
   SELECT
     n.id,
