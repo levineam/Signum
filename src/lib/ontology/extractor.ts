@@ -178,7 +178,7 @@ async function getExistingOntology(userId: string): Promise<{
     userId: row.user_id,
     title: row.title,
     content: row.content,
-    noteType: row.note_type,
+    noteType: row.note_type as Note['noteType'],
     isPinned: row.is_pinned,
     metadata: row.metadata,
     createdAt: row.created_at,
