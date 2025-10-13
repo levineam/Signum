@@ -4,9 +4,11 @@
  *
  * Handles tracking when users' ontologies were last analyzed
  * and provides helpers for incremental analysis workflows.
+ *
+ * Uses admin client to bypass RLS for state management operations.
  */
 
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { Note } from '@/types/note'
 
 // ============================================================================
@@ -46,7 +48,7 @@ export interface AnalysisRunSummary {
 export async function getAnalysisState(
   userId: string
 ): Promise<AnalysisState | null> {
-  const { data, error } = await supabase.rpc('get_or_create_analysis_state', {
+  const { data, error } = await supabaseAdmin.rpc('get_or_create_analysis_state', {
     p_user_id: userId
   })
 
@@ -77,7 +79,7 @@ export async function updateAnalysisState(
   lastAnalyzedAt: Date,
   runSummary: AnalysisRunSummary
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('ontology_analysis_state')
     .upsert(
       {
@@ -98,18 +100,25 @@ export async function updateAnalysisState(
 
 /**
  * Record failed analysis run (doesn't update lastAnalyzedAt)
+ *
+ * IMPORTANT: This function ONLY updates last_run_summary, NOT last_analyzed_at.
+ * This ensures failed runs (rate limits, errors) don't mark notes as analyzed.
  */
 export async function recordFailedRun(
   userId: string,
   error: string,
   noteCount: number
 ): Promise<void> {
-  // Only update the summary, not the lastAnalyzedAt
-  const { error: updateError } = await supabase
+  // Get current state to preserve last_analyzed_at
+  const currentState = await getAnalysisState(userId)
+
+  // Only update the summary, explicitly preserving last_analyzed_at
+  const { error: updateError } = await supabaseAdmin
     .from('ontology_analysis_state')
     .upsert(
       {
         user_id: userId,
+        last_analyzed_at: currentState?.lastAnalyzedAt || null, // Preserve existing timestamp
         last_run_summary: {
           triggeredBy: 'manual',
           noteCount,
@@ -133,7 +142,7 @@ export async function recordFailedRun(
  * Reset analysis state for a user (debug/admin function)
  */
 export async function resetAnalysisState(userId: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('ontology_analysis_state')
     .update({
       last_analyzed_at: null,
@@ -154,7 +163,7 @@ export async function getNotesForIncrementalAnalysis(
   userId: string,
   lastAnalyzedAt: Date | null
 ): Promise<Note[]> {
-  const { data, error } = await supabase.rpc(
+  const { data, error } = await supabaseAdmin.rpc(
     'get_notes_for_incremental_analysis',
     {
       p_user_id: userId,
@@ -202,7 +211,7 @@ export async function tryAcquireLock(userId: string): Promise<boolean> {
   const tenMinutesAgo = new Date()
   tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 10)
 
-  const { data: state } = await supabase
+  const { data: state } = await supabaseAdmin
     .from('ontology_analysis_state')
     .select('last_run_summary, updated_at')
     .eq('user_id', userId)
@@ -223,7 +232,7 @@ export async function tryAcquireLock(userId: string): Promise<boolean> {
   }
 
   // Acquire lock by setting status to undefined (in-progress indicator)
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('ontology_analysis_state')
     .upsert(
       {

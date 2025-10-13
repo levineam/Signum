@@ -91,11 +91,9 @@ export async function POST(request: NextRequest) {
           // (simplified - in production, track run count in summary)
           const recentRunCount = 1 // TODO: Track properly in state
           if (recentRunCount >= RATE_LIMIT_MAX) {
-            await releaseLock(userId, {
-              ...state.lastRunSummary,
-              status: 'skipped',
-              error: 'Rate limit exceeded'
-            })
+            // Don't call releaseLock - that would incorrectly advance lastAnalyzedAt
+            // Just record the failure without updating the analysis timestamp
+            await recordFailedRun(userId, 'Rate limit exceeded', 0)
 
             return NextResponse.json(
               {

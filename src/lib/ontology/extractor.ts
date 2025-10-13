@@ -162,9 +162,32 @@ async function getExistingOntology(userId: string): Promise<{
     throw error
   }
 
-  const values = ontologyNotes?.filter((n) => n.note_type === 'ontology-value') || []
-  const beliefs = ontologyNotes?.filter((n) => n.note_type === 'ontology-belief') || []
-  const aims = ontologyNotes?.filter((n) => n.note_type === 'ontology-aim') || []
+  // Convert snake_case to camelCase for TypeScript Note type
+  const convertToNote = (row: {
+    id: string
+    user_id: string
+    title: string
+    content: string
+    note_type: string
+    is_pinned: boolean
+    metadata: any
+    created_at: string
+    updated_at: string
+  }): Note => ({
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    content: row.content,
+    noteType: row.note_type,
+    isPinned: row.is_pinned,
+    metadata: row.metadata,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  })
+
+  const values = ontologyNotes?.filter((n) => n.note_type === 'ontology-value').map(convertToNote) || []
+  const beliefs = ontologyNotes?.filter((n) => n.note_type === 'ontology-belief').map(convertToNote) || []
+  const aims = ontologyNotes?.filter((n) => n.note_type === 'ontology-aim').map(convertToNote) || []
 
   // Extract text summaries from metadata
   const extractTexts = (notes: Note[]) => {
