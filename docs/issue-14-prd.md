@@ -34,7 +34,7 @@ Supabase advisor currently reports three security warnings and 58 performance wa
 ## Proposed Approach
 1. **Security fixes**
    - Enable leaked password protection via Supabase dashboard or management API.
-   - Schedule and execute the database upgrade during a maintenance window; confirm backups and roll-back procedures.
+   - Schedule and execute the database upgrade (for this prototype, align with a monitored working session rather than a formal maintenance window) and take a fresh backup so you can roll back if needed.
    - Modify `public.update_updated_at_column` with explicit `set search_path` (or `set_config`) to remove mutable search path warning.
 2. **RLS policy refactor**
    - For each table and role/action pair, consolidate the permissive policies into a single statement and adopt the `(select auth.*())` pattern.
@@ -53,7 +53,7 @@ Supabase advisor currently reports three security warnings and 58 performance wa
 - Evidence (screenshot/log) of Supabase advisor showing zero security/performance warnings post-remediation.
 
 ## Risks & Mitigations
-- **Database upgrade risks:** Potential downtime; mitigate by scheduling maintenance window and ensuring tested backup strategy.
+- **Database upgrade risks:** Even without external users the upgrade can fail; mitigate by taking a fresh snapshot/backup beforehand and running the upgrade while you can monitor it.
 - **RLS policy consolidation risk:** Behavior regression; mitigate via staging environment validation and targeted integration tests.
 - **Unused index removal risk:** Hidden dependencies; mitigate by analyzing query stats and consulting application team before dropping.
 
@@ -64,5 +64,5 @@ Supabase advisor currently reports three security warnings and 58 performance wa
 
 ## Timeline & Ownership
 - Target completion: within the next sprint.
-- Dependencies: Database admin for upgrade, application team for policy validation.
-- Owner: Assigned engineer (to be determined in GitHub issue) coordinating with DBA/SRE stakeholders.
+- Dependencies: None external; coordinate personally on upgrade prep and validation.
+- Owner: Solo developer (you) handling remediation end to end.
