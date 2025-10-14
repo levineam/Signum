@@ -165,7 +165,25 @@ export async function resetAnalysisState(userId: string): Promise<void> {
 }
 
 /**
+ * Database row shape from get_notes_for_incremental_analysis RPC
+ */
+interface NoteRPCRow {
+  id: string
+  user_id: string
+  title: string
+  content: string
+  note_type: string
+  is_pinned?: boolean
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+/**
  * Get notes that need to be analyzed (new or updated since last analysis)
+ *
+ * IMPORTANT: Maps snake_case database fields to camelCase Note interface
+ * to ensure maxNoteTimestamp calculation works correctly in the route handler.
  */
 export async function getNotesForIncrementalAnalysis(
   userId: string,
@@ -184,7 +202,21 @@ export async function getNotesForIncrementalAnalysis(
     throw error
   }
 
-  return data || []
+  // Map snake_case database fields to camelCase Note interface
+  // This is critical for maxNoteTimestamp calculation in the route handler
+  if (!data) return []
+
+  return (data as NoteRPCRow[]).map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    content: row.content,
+    noteType: row.note_type as Note['noteType'],
+    isPinned: row.is_pinned || false,
+    metadata: row.metadata as Note['metadata'],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }))
 }
 
 /**
