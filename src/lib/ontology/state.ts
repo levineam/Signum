@@ -215,24 +215,21 @@ export async function needsAnalysis(userId: string): Promise<boolean> {
  * Returns true if lock acquired, false if already locked
  *
  * SECURITY: Uses atomic UPDATE to prevent race conditions in concurrent requests
+ * SECURITY FIX: Seeds status for new users to prevent lock acquisition failure
  */
 export async function tryAcquireLock(userId: string): Promise<boolean> {
   const tenMinutesAgo = new Date()
   tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 10)
 
-  // First ensure a row exists for this user
+  // Seed empty summaries with a proper status to fix new user lock acquisition
+  // Only updates rows where last_run_summary is empty {} (no status field)
   await supabaseAdmin
     .from('ontology_analysis_state')
-    .upsert(
-      {
-        user_id: userId,
-        last_run_summary: { status: 'success', timestamp: new Date(0).toISOString() }
-      },
-      {
-        onConflict: 'user_id',
-        ignoreDuplicates: true // Don't overwrite if exists
-      }
-    )
+    .update({
+      last_run_summary: { status: 'success', timestamp: new Date(0).toISOString() }
+    })
+    .eq('user_id', userId)
+    .is('last_run_summary->status', null) // Only if status key doesn't exist
 
   // Atomic lock acquisition: only update if not already locked
   // A row is "locked" if it was updated recently AND has no status (in-progress)
