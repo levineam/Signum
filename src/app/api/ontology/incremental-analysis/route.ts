@@ -161,13 +161,15 @@ export async function POST(request: NextRequest) {
       if (notesToAnalyze.length === 0) {
         const runtime = Date.now() - startTime
 
+        // SECURITY FIX: Include runCountInWindow to prevent rate limit bypass via skipped runs
         await releaseLock(userId, {
           triggeredBy,
           noteCount: 0,
           runtime,
           status: 'skipped',
-          timestamp: new Date().toISOString()
-        })
+          timestamp: new Date().toISOString(),
+          runCountInWindow
+        } as AnalysisRunSummary & { runCountInWindow: number })
 
         return NextResponse.json({
           success: true,
