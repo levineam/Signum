@@ -140,9 +140,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 6. Calculate run count for rate limiting (needed for both success and error cases)
+    // 6. Calculate run count for rate limiting (only for manual triggers)
+    // SECURITY FIX: Only increment for manual runs to prevent scheduled jobs from blocking users
     // SECURITY FIX: Declare outside try block so error handler can preserve count
-    const runCountInWindow = state ? countRecentRuns(state) + 1 : 1
+    const runCountInWindow = triggeredBy === 'manual'
+      ? (state ? countRecentRuns(state) + 1 : 1)
+      : (state ? countRecentRuns(state) : 0)
 
     let notesToAnalyze: Note[] = [] // Declare outside try block for error handler access
 
