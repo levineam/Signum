@@ -65,49 +65,79 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 2. Authenticate user from session (SECURITY FIX: Issue #2)
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          },
-        },
-      }
-    )
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // Use authenticated user ID (ignore body userId for security)
-    const userId = user.id
-
-    // Parse optional trigger type
+    // 2. Parse request body first to check trigger type
     const body = await request.json().catch(() => ({}))
     const triggeredBy = (body.triggeredBy as 'manual' | 'scheduled') || 'manual'
 
-    // 3. Get analysis state BEFORE acquiring lock (SECURITY FIX: Issue P1)
+    // 3. Dual authentication: Session OR Service Role (P1 FIX)
+    let userId: string
+
+    // Check for service-role token first (scheduled runs from Supabase Cron)
+    const authHeader = request.headers.get('Authorization')
+    const isServiceRoleRequest = authHeader?.startsWith('Bearer ')
+
+    if (isServiceRoleRequest && authHeader) {
+      // Scheduled run: Validate service-role token
+      const token = authHeader.substring('Bearer '.length)
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+      if (token !== serviceRoleKey) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid service role token' },
+          { status: 401 }
+        )
+      }
+
+      // For service-role requests, userId MUST be in body
+      if (!body.userId) {
+        return NextResponse.json(
+          { success: false, error: 'userId required for scheduled runs' },
+          { status: 400 }
+        )
+      }
+
+      userId = body.userId
+    } else {
+      // Manual run: Authenticate via session cookies (SECURITY FIX: Issue #2)
+      const cookieStore = await cookies()
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() {
+              return cookieStore.getAll()
+            },
+            setAll(cookiesToSet) {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            },
+          },
+        }
+      )
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+
+      if (authError || !user) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      // Use authenticated user ID (ignore body userId for security)
+      userId = user.id
+    }
+
+    // 4. Get analysis state BEFORE acquiring lock (SECURITY FIX: Issue P1)
     // This preserves runCountInWindow for rate limiting before tryAcquireLock overwrites it
     const state = await getAnalysisState(userId)
 
-    // 4. Rate limiting check (only for manual triggers) - SECURITY FIX: Issue #3
+    // 5. Rate limiting check (only for manual triggers) - SECURITY FIX: Issue #3
     if (triggeredBy === 'manual') {
       const recentRunCount = state ? countRecentRuns(state) : 0
 
@@ -127,7 +157,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 5. Try to acquire lock (prevent concurrent runs)
+    // 6. Try to acquire lock (prevent concurrent runs)
     const lockAcquired = await tryAcquireLock(userId)
     if (!lockAcquired) {
       return NextResponse.json(
@@ -140,7 +170,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 6. Calculate run count for rate limiting (only for manual triggers)
+    // 7. Calculate run count for rate limiting (only for manual triggers)
     // SECURITY FIX: Only increment for manual runs to prevent scheduled jobs from blocking users
     // SECURITY FIX: Declare outside try block so error handler can preserve count
     const runCountInWindow = triggeredBy === 'manual'
@@ -150,7 +180,7 @@ export async function POST(request: NextRequest) {
     let notesToAnalyze: Note[] = [] // Declare outside try block for error handler access
 
     try {
-      // 7. Get notes for incremental analysis
+      // 8. Get notes for incremental analysis
       const lastAnalyzed = state?.lastAnalyzedAt
         ? new Date(state.lastAnalyzedAt)
         : null
@@ -160,7 +190,7 @@ export async function POST(request: NextRequest) {
         lastAnalyzed
       )
 
-      // 8. Check if there are notes to analyze
+      // 9. Check if there are notes to analyze
       if (notesToAnalyze.length === 0) {
         const runtime = Date.now() - startTime
 
@@ -182,14 +212,14 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // 9. Run incremental extraction
+      // 10. Run incremental extraction
       const extraction = await runIncrementalExtraction(userId, notesToAnalyze)
 
-      // 10. Calculate metrics
+      // 11. Calculate metrics
       const runtime = Date.now() - startTime
       const tokenEstimate = notesToAnalyze.length * 500 // Rough estimate
 
-      // 11. Determine the lastAnalyzedAt timestamp
+      // 12. Determine the lastAnalyzedAt timestamp
       // SECURITY FIX: Use max updated_at from analyzed notes to prevent skipping notes created during analysis
       const maxNoteTimestamp = notesToAnalyze.reduce(
         (max, note) => {
@@ -199,7 +229,7 @@ export async function POST(request: NextRequest) {
         new Date(0)
       )
 
-      // 12. Update analysis state with rate limit tracking
+      // 13. Update analysis state with rate limit tracking
       const runSummary: AnalysisRunSummary = {
         triggeredBy,
         noteCount: notesToAnalyze.length,
@@ -221,10 +251,10 @@ export async function POST(request: NextRequest) {
 
       await updateAnalysisState(userId, maxNoteTimestamp, runSummary)
 
-      // 13. Release lock
+      // 14. Release lock
       await releaseLock(userId, runSummary)
 
-      // 14. Return success
+      // 15. Return success
       return NextResponse.json({
         success: true,
         noteCount: notesToAnalyze.length,
