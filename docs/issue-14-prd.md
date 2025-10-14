@@ -55,7 +55,7 @@ Supabase advisor currently reports three security warnings and 58 performance wa
 ## Implementation Status
 - [x] Migration `supabase/migrations/20251015090000_security_performance_remediation.sql` hardens `update_updated_at_column`, consolidates RLS policies, and restructures indexes.
 - [x] Enable Supabase Auth leaked password protection via dashboard (HaveIBeenPwned check enabled).
-- [ ] Schedule and execute Postgres upgrade from `supabase-postgres-17.4.1.075` (prototype window; take fresh snapshot beforehand).
+- [x] Upgraded Postgres to `supabase-postgres-17.6.1.021` (prototype window with fresh snapshot).
 - [ ] Re-run Supabase advisor to confirm security/performance warnings resolved and capture evidence.
 
 ## Risks & Mitigations
