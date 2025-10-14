@@ -140,10 +140,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 6. Calculate run count for rate limiting (needed for both success and error cases)
+    // SECURITY FIX: Declare outside try block so error handler can preserve count
+    const runCountInWindow = state ? countRecentRuns(state) + 1 : 1
+
     let notesToAnalyze: Note[] = [] // Declare outside try block for error handler access
 
     try {
-      // 6. Get notes for incremental analysis
+      // 7. Get notes for incremental analysis
       const lastAnalyzed = state?.lastAnalyzedAt
         ? new Date(state.lastAnalyzedAt)
         : null
@@ -153,7 +157,7 @@ export async function POST(request: NextRequest) {
         lastAnalyzed
       )
 
-      // 7. Check if there are notes to analyze
+      // 8. Check if there are notes to analyze
       if (notesToAnalyze.length === 0) {
         const runtime = Date.now() - startTime
 
@@ -173,14 +177,14 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // 8. Run incremental extraction
+      // 9. Run incremental extraction
       const extraction = await runIncrementalExtraction(userId, notesToAnalyze)
 
-      // 9. Calculate metrics
+      // 10. Calculate metrics
       const runtime = Date.now() - startTime
       const tokenEstimate = notesToAnalyze.length * 500 // Rough estimate
 
-      // 10. Determine the lastAnalyzedAt timestamp
+      // 11. Determine the lastAnalyzedAt timestamp
       // SECURITY FIX: Use max updated_at from analyzed notes to prevent skipping notes created during analysis
       const maxNoteTimestamp = notesToAnalyze.reduce(
         (max, note) => {
@@ -190,8 +194,7 @@ export async function POST(request: NextRequest) {
         new Date(0)
       )
 
-      // 11. Update analysis state with rate limit tracking
-      const runCountInWindow = state ? countRecentRuns(state) + 1 : 1
+      // 12. Update analysis state with rate limit tracking
       const runSummary: AnalysisRunSummary = {
         triggeredBy,
         noteCount: notesToAnalyze.length,
@@ -213,10 +216,10 @@ export async function POST(request: NextRequest) {
 
       await updateAnalysisState(userId, maxNoteTimestamp, runSummary)
 
-      // 12. Release lock
+      // 13. Release lock
       await releaseLock(userId, runSummary)
 
-      // 13. Return success
+      // 14. Return success
       return NextResponse.json({
         success: true,
         noteCount: notesToAnalyze.length,
@@ -235,7 +238,8 @@ export async function POST(request: NextRequest) {
           ? extractionError.message
           : 'Unknown error'
 
-      await recordFailedRun(userId, errorMessage, notesToAnalyze?.length || 0)
+      // SECURITY FIX: Pass runCountInWindow to preserve rate limit counter on failure
+      await recordFailedRun(userId, errorMessage, notesToAnalyze?.length || 0, runCountInWindow)
 
       throw extractionError
     }
