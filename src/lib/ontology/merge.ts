@@ -89,7 +89,8 @@ export async function mergeOntologyItems(
     let mergedCount = 0
 
     // Get the pinned ontology note for this category
-    const pinnedNote = existingNotes.find((n) => n.noteType === noteType)
+    // SECURITY FIX: Filter by isPinned to avoid corrupting individual ontology cards
+    const pinnedNote = existingNotes.find((n) => n.noteType === noteType && n.isPinned)
 
     if (!pinnedNote) {
       throw new Error(`Pinned ${noteType} note not found`)
