@@ -53,7 +53,7 @@ The solution combines two key innovations: gentle background AI that builds pers
 2. ✅ **Story 2.4.1**: Complete Auth Integration (complete)
 3. ✅ **Story 2.4.2**: Migrate Links to Supabase (MVP) (complete)
 4. ✅ **Story 2.4.3**: AI Personal Ontology Extraction with GPT-5-mini (complete)
-5. **Story 2.4.4**: Incremental AI Ontology Analysis (incremental analysis on new journal entries)
+5. **Story 2.4.4**: Incremental AI Ontology Analysis (incremental analysis on new journal entries) — see `docs/stories/story-2.4.4-incremental-analysis.md`
 
 ### Change Log
 
@@ -804,7 +804,7 @@ During Story 2.4 testing, the hybrid localStorage + sample array approach reveal
 
 ##### Future Enhancements (Post-MVP)
 
-- **Story 2.4.4**: Incremental analysis (automatic analysis on new journal entries) - NEXT
+- **Story 2.4.4**: Incremental analysis (automatic analysis on new journal entries) - NEXT (spec: `docs/stories/story-2.4.4-incremental-analysis.md`)
 - **Story 2.4.5**: Suggestion review/approval workflow for AI-extracted ontology items
 - **Story 2.4.6+**: Advanced link features (dangling link detection, fuzzy matching, recovery UI)
 - **Story 2.4.7**: Analytics dashboard and ontology evolution tracking

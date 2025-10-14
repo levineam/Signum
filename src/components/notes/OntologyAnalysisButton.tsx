@@ -2,15 +2,15 @@
 
 /**
  * Ontology Analysis Button Component
- * Story 2.4: AI Personal Ontology Extraction
+ * Story 2.4.4: Incremental AI Ontology Analysis (Updated)
+ *
+ * Now calls the incremental analysis endpoint and shows last run info.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles, Loader2, Clock } from 'lucide-react'
 import { toast } from 'sonner'
-import { getNotes, updateNote, getPinnedNotes } from '@/lib/notes'
-import { ExtractionResult } from '@/utils/ontologyPrompts'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface OntologyAnalysisButtonProps {
@@ -22,6 +22,57 @@ export function OntologyAnalysisButton({
 }: OntologyAnalysisButtonProps) {
   const { user } = useAuth()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [lastRunInfo, setLastRunInfo] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Load last run info on mount
+  useEffect(() => {
+    if (user) {
+      loadLastRunInfo()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
+  const loadLastRunInfo = async () => {
+    if (!user) return
+
+    try {
+      // Fetch analysis state from safe API endpoint
+      const response = await fetch('/api/ontology/analysis-state')
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch analysis state')
+      }
+
+      const { state } = await response.json()
+
+      if (state?.lastAnalyzedAt) {
+        const lastRun = new Date(state.lastAnalyzedAt)
+        const now = new Date()
+        const diffMs = now.getTime() - lastRun.getTime()
+        const diffMins = Math.floor(diffMs / 60000)
+        const diffHours = Math.floor(diffMins / 60)
+        const diffDays = Math.floor(diffHours / 24)
+
+        let timeAgo = ''
+        if (diffDays > 0) {
+          timeAgo = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+        } else if (diffHours > 0) {
+          timeAgo = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+        } else if (diffMins > 0) {
+          timeAgo = `${diffMins} min${diffMins > 1 ? 's' : ''} ago`
+        } else {
+          timeAgo = 'just now'
+        }
+
+        setLastRunInfo(timeAgo)
+      }
+    } catch (error) {
+      console.error('Failed to load last run info:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleAnalyze = async () => {
     if (!user) {
@@ -32,109 +83,59 @@ export function OntologyAnalysisButton({
     setIsAnalyzing(true)
 
     try {
-      // 1. Get all notes from Supabase
-      const allNotes = await getNotes(user.id)
-
-      // 2. Filter to analyzable notes (exclude ontology notes)
-      const notesToAnalyze = allNotes.filter(
-        (note) =>
-          note.noteType === 'custom' ||
-          note.noteType === 'journal-entry' ||
-          note.noteType === 'reflection'
-      )
-
-      // 5. Check minimum threshold
-      if (notesToAnalyze.length < 5) {
-        toast.error('Need at least 5 notes for meaningful extraction', {
-          description: 'Keep journaling to build your ontology!'
-        })
-        setIsAnalyzing(false)
-        return
-      }
-
-      // 6. Call API
-      const response = await fetch('/api/extract-ontology', {
+      // Call incremental analysis endpoint (same pipeline as scheduled runs)
+      // Note: userId is derived from session on server for security
+      const response = await fetch('/api/ontology/incremental-analysis', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          notes: notesToAnalyze
+          triggeredBy: 'manual'
         })
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.details || error.error || 'Extraction failed')
+        throw new Error(error.details || error.error || 'Analysis failed')
       }
 
       const result = await response.json()
 
       if (!result.success) {
-        throw new Error(result.error || 'Extraction failed')
+        throw new Error(result.error || 'Analysis failed')
       }
 
-      // 7. Store results by updating the 3 pinned ontology cards
-      const extraction: ExtractionResult = result.extraction
-
-      // Fetch actual pinned notes to get their real Supabase UUIDs
-      const pinnedNotes = await getPinnedNotes(user.id)
-      const valuesNote = pinnedNotes.find(n => n.noteType === 'ontology-value')
-      const beliefsNote = pinnedNotes.find(n => n.noteType === 'ontology-belief')
-      const aimsNote = pinnedNotes.find(n => n.noteType === 'ontology-aim')
-
-      if (!valuesNote || !beliefsNote || !aimsNote) {
-        throw new Error('Pinned ontology notes not found. Try refreshing the page.')
+      // Check if skipped (no new notes)
+      if (result.skipped) {
+        toast.info('No new notes to analyze', {
+          description: 'Your ontology is already up to date!'
+        })
+        setIsAnalyzing(false)
+        return
       }
 
-      // Update Values card - store structured data in metadata
-      // Always update, even if empty, to prevent stale metadata
-      await updateNote(valuesNote.id, {
-        content: '', // Keep empty - data is in metadata
-        metadata: {
-          items: extraction.values.map(v => ({
-            name: v.text,
-            confidence: v.confidence,
-            excerpts: v.sourceExcerpts
-          }))
-        }
-      }, user.id)
+      // Show success message
+      const { extraction, noteCount } = result
+      const totalNew =
+        (extraction?.newValues || 0) +
+        (extraction?.newBeliefs || 0) +
+        (extraction?.newAims || 0)
 
-      // Update Beliefs card - always update to prevent stale metadata
-      await updateNote(beliefsNote.id, {
-        content: '',
-        metadata: {
-          items: extraction.beliefs.map(b => ({
-            name: b.text,
-            confidence: b.confidence,
-            excerpts: b.sourceExcerpts
-          }))
-        }
-      }, user.id)
-
-      // Update Aims card - always update to prevent stale metadata
-      await updateNote(aimsNote.id, {
-        content: '',
-        metadata: {
-          items: extraction.aims.map(a => ({
-            name: a.text,
-            confidence: a.confidence,
-            excerpts: a.sourceExcerpts
-          }))
-        }
-      }, user.id)
-
-      // 8. Show success message
-      const { counts } = result
       toast.success('Ontology updated!', {
-        description: `Analyzed ${notesToAnalyze.length} entries. Found ${counts.values} values, ${counts.beliefs} beliefs, ${counts.aims} aims`
+        description: `Analyzed ${noteCount} note${noteCount > 1 ? 's' : ''}. ${
+          totalNew > 0 ? `Found ${totalNew} new insight${totalNew > 1 ? 's' : ''}` : 'Refreshed existing items'
+        }`
       })
 
-      // 9. Trigger refresh
+      // Refresh last run info
+      await loadLastRunInfo()
+
+      // Trigger refresh
       onComplete?.()
     } catch (error) {
       console.error('Analysis failed:', error)
-      toast.error('Extraction failed', {
+      toast.error('Analysis failed', {
         description:
           error instanceof Error ? error.message : 'Please try again'
       })
@@ -144,23 +145,32 @@ export function OntologyAnalysisButton({
   }
 
   return (
-    <Button
-      onClick={handleAnalyze}
-      disabled={isAnalyzing}
-      className="gap-2"
-      size="lg"
-    >
-      {isAnalyzing ? (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Analyzing...
-        </>
-      ) : (
-        <>
-          <Sparkles className="h-4 w-4" />
-          Analyze My Notes
-        </>
+    <div className="flex flex-col gap-2">
+      <Button
+        onClick={handleAnalyze}
+        disabled={isAnalyzing}
+        className="gap-2"
+        size="lg"
+      >
+        {isAnalyzing ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Analyzing...
+          </>
+        ) : (
+          <>
+            <Sparkles className="h-4 w-4" />
+            Analyze My Notes
+          </>
+        )}
+      </Button>
+
+      {!isLoading && lastRunInfo && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground justify-center">
+          <Clock className="h-3 w-3" />
+          <span>Last updated {lastRunInfo}</span>
+        </div>
       )}
-    </Button>
+    </div>
   )
 }
