@@ -1,4 +1,5 @@
 # Issue PRD: Resolve Supabase Security and Performance Advisor Findings
+**Status:** Closed (Issue #14)
 
 ## Overview
 Supabase advisor currently reports three security warnings and 58 performance warnings for the `Signum` project database (`project_id: otyvmmgakowcdsxehwox`). The warnings span Postgres configuration, authentication hardening, function safety, indexing, and row-level security design. This PRD defines the work required to address these warnings, reduce operational risk, and restore the database advisor to a clean state.
