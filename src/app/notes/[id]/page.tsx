@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft } from 'lucide-react'
 import { OntologyCardViewer } from '@/components/notes/OntologyCardViewer'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface AimsContent {
   todos: string
@@ -16,17 +17,22 @@ interface AimsContent {
 
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
+  const { user } = useAuth()
   const [note, setNote] = useState<Note | null>(null)
   const [content, setContent] = useState('')
   const [aimsContent, setAimsContent] = useState<AimsContent>({ todos: '', goals: '' })
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    if (!user) return
+
+    const userId = user.id // Capture user.id for closure
+
     async function loadNote() {
       const resolvedParams = await params
 
       // Get note from Supabase
-      const loadedNote = await getNoteById(resolvedParams.id)
+      const loadedNote = await getNoteById(resolvedParams.id, userId)
 
       if (loadedNote) {
         setNote(loadedNote)
@@ -47,10 +53,10 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       setIsLoading(false)
     }
     loadNote()
-  }, [params])
+  }, [params, user])
 
   const handleSave = async () => {
-    if (!note) return
+    if (!note || !user) return
 
     // Support both old (type) and new (noteType) field names during migration
     const noteType = 'type' in note ? (note as { type: string }).type : note.noteType
@@ -58,7 +64,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       ? JSON.stringify(aimsContent)
       : content
 
-    const updated = await updateNote(note.id, { content: newContent })
+    const updated = await updateNote(note.id, { content: newContent }, user.id)
     if (updated) {
       setNote(updated)
     }

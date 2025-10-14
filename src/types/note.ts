@@ -99,6 +99,16 @@ export interface Note {
 // ============================================================================
 
 /**
+ * Link metadata for resilience (Story 2.4.2)
+ */
+export interface LinkMetadata {
+  snippet?: string              // Linked text snippet
+  contextBefore?: string        // Text before link (for fuzzy matching)
+  contextAfter?: string         // Text after link (for fuzzy matching)
+  textContentPos?: number       // Plain-text offset position
+}
+
+/**
  * Bidirectional link between notes.
  */
 export interface Link {
@@ -107,6 +117,7 @@ export interface Link {
   targetNoteId: string          // UUID of target note
   linkType: LinkType            // Relationship type
   userId: string                // Supabase auth user ID
+  metadata: LinkMetadata        // Link context for resilience (Story 2.4.2)
   createdAt: string             // ISO timestamp
 }
 
@@ -143,6 +154,7 @@ export interface CreateLinkRequest {
   sourceNoteId: string
   targetNoteId: string
   linkType: LinkType
+  metadata?: LinkMetadata       // Optional link context (Story 2.4.2)
 }
 
 // ============================================================================

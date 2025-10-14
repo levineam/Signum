@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { JournalStream } from '@/components/journal/JournalStream'
+import { AppHeader } from '@/components/layout/AppHeader'
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState('journal')
@@ -46,7 +47,12 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
       <main className="lg:pl-64">
-        {renderContent()}
+        <div className="flex min-h-screen flex-col">
+          <AppHeader />
+          <div className="flex-1">
+            {renderContent()}
+          </div>
+        </div>
       </main>
     </div>
   )

@@ -49,18 +49,23 @@ The solution combines two key innovations: gentle background AI that builds pers
 - ✅ Responsive UI with shadcn/ui components
 
 **Next Priorities:**
-1. **Story 2.4.0**: Dev Environment Setup
-2. **Story 2.4.1**: Complete Auth Integration
-3. **Story 2.4.2**: AI Personal Ontology Extraction with GPT-5-mini
+1. ✅ **Story 2.4.0**: Dev Environment Setup (complete)
+2. ✅ **Story 2.4.1**: Complete Auth Integration (complete)
+3. ✅ **Story 2.4.2**: Migrate Links to Supabase (MVP) (complete)
+4. ✅ **Story 2.4.3**: AI Personal Ontology Extraction with GPT-5-mini (complete)
+5. **Story 2.4.4**: Incremental AI Ontology Analysis (incremental analysis on new journal entries) — see `docs/stories/story-2.4.4-incremental-analysis.md`
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|---------|
-| 2025-10-06 | 3.5 | **COURSE CORRECTION:** PR #3 review revealed P0 security issue (shared PROTOTYPE_USER_ID exposing all user data publicly). Root cause: deployment model mismatch - code assumed "prototype phase" that doesn't exist. Split Story 2.4 into 3 sequential stories: 2.4.0 (Dev Environment Setup), 2.4.1 (Complete Auth Integration), 2.4.2 (Ontology Extraction). Created persistent dev environment. Completed auth integration from partial Story 1.3. See `docs/sprint-change-proposal-2025-10-06.md` | John (PM) |
+| 2025-10-09 | 3.8 | **Story 2.4.3 completed** (PR #11 merged). AI Personal Ontology Extraction with GPT-5-mini now functional. "Analyze My Notes" button processes up to 20 notes and populates Values, Beliefs, and Aims cards. Fixed critical bug where GPT-5-mini returns empty `output_text` in reasoning mode by extracting from `response.output` message chunks. Fixed P1 bug where only first chunk was read, causing truncated responses - now concatenates all chunks with `join('')`. Uses OpenAI Responses API with `reasoning.effort: 'medium'`. See `docs/stories/completed/story-2.4.3-ontology-extraction.md` for MVP scope. | Claude Code |
+| 2025-10-09 | 3.7 | **Story 2.4.2 (MVP) completed** (PR #8 Phase 1, PR #9 Phase 2 merged). Links now persist to Supabase with metadata and rehydrate on page load using exact text matching. Phase 0: Added `metadata` JSONB column to `links` table. Phase 1: Link creation captures selection metadata (snippet, contextBefore, contextAfter), adds `data-link-id` attributes. Phase 2: Link rehydration on journal entry load fetches from Supabase and restores missing links. Deferred advanced features (dangling link detection, fuzzy matching, recovery UI) to Story 2.4.6+. Total effort: 6 days. | Claude Code |
+| 2025-10-08 | 3.6 | Story 2.4.1 completed (PR #7 merged). Discovered link persistence issue (localStorage) during manual testing and data recovery. Created Story 2.4.2 for link migration to Supabase (MVP scope, 4-6 days). Renumbered existing stories: Ontology Extraction 2.4.2→2.4.3, Incremental Analysis 2.4.3→2.4.4, Analytics 2.4.4→2.4.5. See `docs/stories/completed/story-2.4.2-linked-text-resilience-plan.md` and `docs/stories/completed/story-2.4.2-linked-text-resilience-REVIEW.md` | Claude Code |
+| 2025-10-06 | 3.5 | **COURSE CORRECTION:** PR #3 review revealed P0 security issue (shared PROTOTYPE_USER_ID exposing all user data publicly). Root cause: deployment model mismatch - code assumed "prototype phase" that doesn't exist. Split Story 2.4 into 3 sequential stories: 2.4.0 (Dev Environment Setup), 2.4.1 (Complete Auth Integration), 2.4.2 (Ontology Extraction). Created persistent dev environment. Completed auth integration from partial Story 1.3. See `docs/archive/sprint-change-proposal-2025-10-06.md` | John (PM) |
 | 2025-10-05 | 3.4 | **SCOPE EXPANSION:** Story 2.4 expanded to include Supabase migration. Testing revealed localStorage + sample array architecture caused "Note not found" errors. All notes storage migrated to Supabase within Story 2.4. 7-commit implementation strategy with temporary unauthenticated access for prototype phase. | Claude Code |
-| 2025-10-01 | 3.3 | Story 2.3.6 completed (simplified) - Supabase foundation built without premature migration complexity. Database schema, types, and CRUD operations ready. App continues using localStorage for prototype phase. See `/docs/story-2.3.6.md` | Claude Code |
-| 2025-09-30 | 3.2 | **MAJOR REFACTOR:** Added Story 2.3.6 (Unified Note Data Model & Supabase Migration) as critical prerequisite for AI features. Updated Story 2.4 with GPT-5-mini integration, Supabase storage, and MVP scope. Created comprehensive documentation: `/docs/openai-gpt5-api.md`, `/docs/data-model-unification.md`, `/docs/story-2.4.2-ontology-extraction.md` | John (PM) |
+| 2025-10-01 | 3.3 | Story 2.3.6 completed (simplified) - Supabase foundation built without premature migration complexity. Database schema, types, and CRUD operations ready. App continues using localStorage for prototype phase. See `/docs/stories/completed/story-2.3.6.md` | Claude Code |
+| 2025-09-30 | 3.2 | **MAJOR REFACTOR:** Added Story 2.3.6 (Unified Note Data Model & Supabase Migration) as critical prerequisite for AI features. Updated Story 2.4 with GPT-5-mini integration, Supabase storage, and MVP scope. Created comprehensive documentation: `/docs/openai-gpt5-api.md`, `/docs/data-model-unification.md`, `/docs/stories/completed/story-2.4-original.md` | John (PM) |
 | 2025-09-30 | 3.1 | Story 2.3.5 completed - Notes Page UI Foundation with Personal Ontology cards. Added 20 sample notes designed for ontology extraction testing (see `/scripts/seed-ontology-notes.js`) | Claude Code |
 | 2025-09-28 | 3.0 | **MAJOR MILESTONE:** Consolidated repository structure, deployed to production, established CI/CD pipeline. All foundational features implemented and functional. | Claude Code |
 | 2025-09-27 | 2.5 | Course correction: Prioritizing Personal Ontology (Epic 4) over Epic 2 remaining stories. Story 2.3 (Hyperlink Creation) completed. Expanding sample data to 20 entries for AI testing | John (PM) |
@@ -652,7 +657,7 @@ so that when we're ready to switch from localStorage, we have a clean migration 
 
 ##### Documentation
 
-See **`/docs/story-2.3.6.md`** for complete details on what was built and how to use it.
+See **`/docs/stories/completed/story-2.3.6.md`** for complete details on what was built and how to use it.
 
 ##### Status
 
@@ -671,7 +676,7 @@ so that I can build a structured personal ontology that helps me understand my a
 
 ##### Context & Documentation
 
-- **Complete Implementation Guide**: `/docs/story-2.4.2-ontology-extraction.md`
+- **Complete Implementation Guide**: `/docs/stories/completed/story-2.4-original.md` (original spec, split into 2.4.0-2.4.3)
 - **GPT-5-mini API Documentation**: `/docs/openai-gpt5-api.md`
 - **Data Model Reference**: `/docs/data-model-unification.md`
 - **Supabase Project**: https://supabase.com/dashboard/project/otyvmmgakowcdsxehwox
@@ -693,9 +698,9 @@ This story implements the **simplest possible working extraction** to validate v
 - Server-side note fetching in API route for security
 
 **What's Deferred to Post-MVP:**
-- Suggestion review/approval UI (Story 2.4.2)
-- Incremental processing (Story 2.4.3)
-- Analytics dashboard (Story 2.4.4)
+- Suggestion review/approval UI (Story 2.4.3)
+- Incremental processing (Story 2.4.4)
+- Analytics dashboard (Story 2.4.5)
 
 ##### Acceptance Criteria
 
@@ -744,7 +749,7 @@ This story implements the **simplest possible working extraction** to validate v
 
 ##### Technical Implementation
 
-**See `/docs/story-2.4.2-ontology-extraction.md` for complete details including:**
+**See `/docs/stories/completed/story-2.4-original.md` for complete details including:**
 - Full architecture diagram
 - Component structure
 - API route implementation
@@ -799,9 +804,10 @@ During Story 2.4 testing, the hybrid localStorage + sample array approach reveal
 
 ##### Future Enhancements (Post-MVP)
 
-- **Story 2.4.2**: Suggestion review/approval workflow
-- **Story 2.4.3**: Incremental analysis (only new notes)
-- **Story 2.4.4**: Analytics dashboard and evolution tracking
+- **Story 2.4.4**: Incremental analysis (automatic analysis on new journal entries) - NEXT (spec: `docs/stories/story-2.4.4-incremental-analysis.md`)
+- **Story 2.4.5**: Suggestion review/approval workflow for AI-extracted ontology items
+- **Story 2.4.6+**: Advanced link features (dangling link detection, fuzzy matching, recovery UI)
+- **Story 2.4.7**: Analytics dashboard and ontology evolution tracking
 
 #### Story 2.5: Bidirectional Link Database Schema (DEFERRED)
 
@@ -962,7 +968,7 @@ so that I can test features with real authentication before deploying to product
 7. Same Supabase project used for both environments
 
 ##### Implementation Details
-See `docs/story-2.4.0-dev-environment.md`
+See `docs/stories/completed/story-2.4.0-dev-environment.md`
 
 ---
 
@@ -999,11 +1005,74 @@ Story 1.3 implemented auth UI (forms, context, providers) but never integrated w
 - ❌ RLS policies enforcing auth
 
 ##### Implementation Details
-See `docs/story-2.4.1-auth-integration.md`
+See `docs/stories/completed/story-2.4.1-auth-integration.md`
 
 ---
 
-#### Story 2.4.2: Personal Ontology Extraction Foundation
+#### Story 2.4.2: Migrate Links to Supabase (MVP)
+
+As a user,
+I want my note links to persist across browsers and devices,
+so that my journal connections remain intact regardless of where I access Signum.
+
+##### Prerequisites
+- Story 2.4.1 (Auth Integration) ✅ Complete
+
+##### Problem Statement
+
+Links currently use localStorage (src/lib/links.ts), causing:
+- Links vanish across different browsers/devices
+- Multi-user conflicts (all links stored in same localStorage)
+- Data loss risk (no server backup)
+- No metadata (just {text, noteId, entryId})
+
+##### MVP Scope (4-6 days)
+
+**What's Included:**
+1. Add `metadata` JSONB field to `links` table
+2. Delete `src/lib/links.ts` (no backward compatibility needed - no real users yet)
+3. Update JournalStream to use Supabase link functions from `src/lib/supabase/notes.ts`
+4. Store link metadata: `{ snippet, contextBefore, contextAfter }`
+5. Add `data-link-id` attribute to `<a>` tags (alongside existing `data-note-id`)
+6. Rehydrate links using exact text match on load
+
+**What's Deferred (Future Story 2.4.6+):**
+- Advanced resilience (dangling link detection, recovery UI, fuzzy matching)
+- MutationObserver for link deletion tracking
+- Undo functionality
+- Link recovery panel
+
+##### Acceptance Criteria
+
+**Core Functionality:**
+1. Links persist to Supabase `links` table with metadata
+2. Links survive page refresh and cross-device access
+3. Existing link creation flow works unchanged (user experience identical)
+4. Links rehydrate correctly on journal entry load
+5. No localStorage dependencies for links
+
+**Data Model:**
+1. `links` table has `metadata` JSONB column (default '{}')
+2. Link type includes `metadata` field
+3. `CreateLinkRequest` accepts metadata payload
+
+**Testing:**
+1. Create note from highlighted text → link persists after refresh
+2. Sign out and sign in → links still work
+3. Open journal on different browser → links present
+4. Multi-link entry works correctly
+5. Links survive journal content edits (as long as linked text not deleted)
+6. Multi-user isolation (User A's links not visible to User B)
+
+##### Implementation Plan
+
+See:
+- `docs/stories/completed/story-2.4.2-linked-text-resilience-plan.md` (Phases 0-2 only for MVP)
+- `docs/stories/completed/story-2.4.2-linked-text-resilience-REVIEW.md` (detailed analysis and recommendations)
+
+---
+
+#### Story 2.4.3: Personal Ontology Extraction Foundation
 
 As a reflective journaler,
 I want the system to automatically identify and extract my core Values, Beliefs, and Aims from **all my notes**,
@@ -1011,8 +1080,9 @@ so that I can build a structured personal ontology that helps me understand my a
 
 ##### Prerequisites
 - Story 2.3.5 (Notes Page UI) ✅ Complete
-- Story 2.4.0 (Dev Environment Setup) ⏸️ Pending
-- Story 2.4.1 (Auth Integration) ⏸️ Pending
+- Story 2.4.0 (Dev Environment Setup) ✅ Complete
+- Story 2.4.1 (Auth Integration) ✅ Complete
+- Story 2.4.2 (Link Migration) ✅ Complete
 
 ##### Acceptance Criteria
 1. "Analyze My Notes" button on Notes page triggers extraction
@@ -1024,7 +1094,7 @@ so that I can build a structured personal ontology that helps me understand my a
 7. Loading spinner during extraction
 
 ##### Implementation Details
-See `docs/story-2.4.2-ontology-extraction.md`
+See `docs/stories/completed/story-2.4.3-ontology-extraction.md`
 
 ---
 

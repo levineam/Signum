@@ -2,13 +2,18 @@
  * Seed script: Load sample journal entries into Supabase
  * Story 2.4: Supabase Migration
  *
+ * ⚠️ DEVELOPMENT ONLY - DO NOT USE IN PRODUCTION
+ * This script uses a fixed prototype user ID for local testing.
+ * In production, use authenticated user IDs from Supabase Auth.
+ *
  * Usage: source .env.local && npx tsx scripts/seed-sample-journal-entries.ts
  */
 
 import { sampleJournalEntries } from '../src/data/sampleEntries'
 import { createClient } from '@supabase/supabase-js'
 
-// Fixed user ID for prototype phase
+// Fixed user ID for prototype phase (DEVELOPMENT ONLY)
+// TODO Story 2.4.1: Update this script to accept user_id as parameter
 const PROTOTYPE_USER_ID = '00000000-0000-0000-0000-000000000000'
 
 async function seedSampleJournalEntries() {

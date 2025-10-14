@@ -44,3 +44,6 @@ docs/dev-test-credentials.md
 next-env.d.ts
 # BMAD (local only)
 supabase/.temp/
+# BMAD (local only)
+.bmad-core/
+.bmad-*/
