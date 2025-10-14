@@ -172,10 +172,11 @@ export async function POST(request: NextRequest) {
 
     // 7. Calculate run count for rate limiting (only for manual triggers)
     // SECURITY FIX: Only increment for manual runs to prevent scheduled jobs from blocking users
+    // SECURITY FIX: Scheduled runs do NOT preserve manual run count (would prevent window expiry)
     // SECURITY FIX: Declare outside try block so error handler can preserve count
     const runCountInWindow = triggeredBy === 'manual'
       ? (state ? countRecentRuns(state) + 1 : 1)
-      : (state ? countRecentRuns(state) : 0)
+      : undefined // Scheduled runs omit runCountInWindow entirely
 
     let notesToAnalyze: Note[] = [] // Declare outside try block for error handler access
 
@@ -194,15 +195,18 @@ export async function POST(request: NextRequest) {
       if (notesToAnalyze.length === 0) {
         const runtime = Date.now() - startTime
 
-        // SECURITY FIX: Include runCountInWindow to prevent rate limit bypass via skipped runs
-        await releaseLock(userId, {
+        // SECURITY FIX: Include runCountInWindow for manual runs only (undefined for scheduled)
+        const skipSummary: AnalysisRunSummary & { runCountInWindow?: number } = {
           triggeredBy,
           noteCount: 0,
           runtime,
           status: 'skipped',
-          timestamp: new Date().toISOString(),
-          runCountInWindow
-        } as AnalysisRunSummary & { runCountInWindow: number })
+          timestamp: new Date().toISOString()
+        }
+        if (runCountInWindow !== undefined) {
+          skipSummary.runCountInWindow = runCountInWindow
+        }
+        await releaseLock(userId, skipSummary)
 
         return NextResponse.json({
           success: true,
@@ -230,7 +234,7 @@ export async function POST(request: NextRequest) {
       )
 
       // 13. Update analysis state with rate limit tracking
-      const runSummary: AnalysisRunSummary = {
+      const runSummary: AnalysisRunSummary & { runCountInWindow?: number } = {
         triggeredBy,
         noteCount: notesToAnalyze.length,
         runtime,
@@ -242,11 +246,11 @@ export async function POST(request: NextRequest) {
           aims: extraction.newAims
         },
         timestamp: new Date().toISOString()
-      } as AnalysisRunSummary & { runCountInWindow?: number }
+      }
 
-      // Add run count tracking
-      if (runCountInWindow) {
-        (runSummary as AnalysisRunSummary & { runCountInWindow: number }).runCountInWindow = runCountInWindow
+      // Add run count tracking for manual runs only (scheduled runs omit this field)
+      if (runCountInWindow !== undefined) {
+        runSummary.runCountInWindow = runCountInWindow
       }
 
       await updateAnalysisState(userId, maxNoteTimestamp, runSummary)
