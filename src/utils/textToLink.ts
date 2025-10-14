@@ -20,8 +20,31 @@ export function captureSelectionMetadata(
   // Get the full text content
   const fullText = editorElement.textContent || ''
 
-  // Find the position of the selected text
-  const textIndex = fullText.indexOf(selectedText)
+  // Attempt to determine the exact position of the selection using the current Range
+  let textIndex = -1
+
+  if (typeof window !== 'undefined') {
+    const selection = window.getSelection()
+    if (selection?.rangeCount) {
+      const range = selection.getRangeAt(0)
+
+      if (editorElement.contains(range.commonAncestorContainer)) {
+        try {
+          const preRange = range.cloneRange()
+          preRange.selectNodeContents(editorElement)
+          preRange.setEnd(range.startContainer, range.startOffset)
+          textIndex = preRange.toString().length
+        } catch (error) {
+          console.warn('Failed to compute selection offset, falling back to text search', error)
+        }
+      }
+    }
+  }
+
+  // Fall back to a simple text search if we couldn't compute an exact offset
+  if (textIndex === -1) {
+    textIndex = fullText.indexOf(selectedText)
+  }
 
   if (textIndex === -1) {
     console.warn('Selected text not found in editor content')
