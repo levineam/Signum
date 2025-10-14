@@ -180,7 +180,17 @@ export async function POST(request: NextRequest) {
       const runtime = Date.now() - startTime
       const tokenEstimate = notesToAnalyze.length * 500 // Rough estimate
 
-      // 10. Update analysis state with rate limit tracking
+      // 10. Determine the lastAnalyzedAt timestamp
+      // SECURITY FIX: Use max updated_at from analyzed notes to prevent skipping notes created during analysis
+      const maxNoteTimestamp = notesToAnalyze.reduce(
+        (max, note) => {
+          const noteTime = new Date(note.updatedAt)
+          return noteTime > max ? noteTime : max
+        },
+        new Date(0)
+      )
+
+      // 11. Update analysis state with rate limit tracking
       const runCountInWindow = state ? countRecentRuns(state) + 1 : 1
       const runSummary: AnalysisRunSummary = {
         triggeredBy,
@@ -201,12 +211,12 @@ export async function POST(request: NextRequest) {
         (runSummary as AnalysisRunSummary & { runCountInWindow: number }).runCountInWindow = runCountInWindow
       }
 
-      await updateAnalysisState(userId, new Date(), runSummary)
+      await updateAnalysisState(userId, maxNoteTimestamp, runSummary)
 
-      // 11. Release lock
+      // 12. Release lock
       await releaseLock(userId, runSummary)
 
-      // 12. Return success
+      // 13. Return success
       return NextResponse.json({
         success: true,
         noteCount: notesToAnalyze.length,
