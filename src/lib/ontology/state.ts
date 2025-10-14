@@ -251,10 +251,34 @@ export async function tryAcquireLock(userId: string): Promise<boolean> {
 
 /**
  * Release analysis lock for a user
+ *
+ * IMPORTANT: This function only updates the summary, NOT lastAnalyzedAt.
+ * The caller should have already set lastAnalyzedAt via updateAnalysisState()
+ * before calling this function to release the lock.
  */
 export async function releaseLock(
   userId: string,
   summary: AnalysisRunSummary
 ): Promise<void> {
-  await updateAnalysisState(userId, new Date(), summary)
+  // Get current state to preserve lastAnalyzedAt
+  const currentState = await getAnalysisState(userId)
+
+  // Only update the summary, preserving the lastAnalyzedAt that was set by the caller
+  const { error } = await supabaseAdmin
+    .from('ontology_analysis_state')
+    .upsert(
+      {
+        user_id: userId,
+        last_analyzed_at: currentState?.lastAnalyzedAt || null,
+        last_run_summary: summary
+      },
+      {
+        onConflict: 'user_id'
+      }
+    )
+
+  if (error) {
+    console.error('Failed to release lock:', error)
+    throw error
+  }
 }
