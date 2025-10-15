@@ -123,15 +123,23 @@ ON helper_usage FOR SELECT
 USING (auth.uid() = user_id);
 
 -- INSERT policy: Users can insert only their own helper usage
+-- Also validates that the entry belongs to the user (prevents entry probing)
 CREATE POLICY "Users can insert own helper usage"
 ON helper_usage FOR INSERT
-WITH CHECK (auth.uid() = user_id);
+WITH CHECK (
+  auth.uid() = user_id AND
+  entry_id IN (SELECT id FROM notes WHERE user_id = auth.uid())
+);
 
 -- UPDATE policy: Users can update only their own helper usage
+-- Also validates that the entry belongs to the user (prevents entry reassignment)
 CREATE POLICY "Users can update own helper usage"
 ON helper_usage FOR UPDATE
 USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+WITH CHECK (
+  auth.uid() = user_id AND
+  entry_id IN (SELECT id FROM notes WHERE user_id = auth.uid())
+);
 
 -- DELETE policy: Users can delete only their own helper usage
 CREATE POLICY "Users can delete own helper usage"
