@@ -388,6 +388,14 @@ export function JournalStream() {
 
     console.log('📝 Inserting helper text', { entryId, helperText })
 
+    // Clear any pending auto-save timeout to prevent race condition
+    // If user typed then quickly inserted helper, pending timeout would overwrite helper text
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+      console.log('⏱️ Cleared pending auto-save timeout before helper insertion')
+    }
+
     // Set flag to prevent content change interference (same as link creation)
     setCreatingLink(true)
 
