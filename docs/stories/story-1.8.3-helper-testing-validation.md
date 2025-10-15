@@ -258,16 +258,17 @@ test.describe('CBT Distortions Helper', () => {
 
     // Verify aria-live region has exact text
     const announcement = await page.locator('[role="status"][aria-live="polite"]').textContent()
-    expect(announcement).toBe('Added 2 cognitive distortions to your journal entry')
+    expect(announcement).toBe('Inserted 2 distortion reflections')
   })
 
   test('does not interfere with link rehydration', async ({ page }) => {
     // Create a note link first
     await page.locator('[contenteditable]').fill('Test content')
-    await page.locator('[contenteditable]').selectText({ text: 'Test' })
-    await page.click('[data-testid="make-note-button"]')
-    await page.fill('[data-testid="note-title"]', 'Test Note')
-    await page.click('[data-testid="create-note-button"]')
+    // Select the word "Test" by double-clicking
+    await page.locator('[contenteditable]').dblclick()
+    await page.click('[data-make-note-button]')
+    await page.fill('#note-title', 'Test Note')
+    await page.click('button:has-text("Create Note")')
 
     // Wait for link creation
     await page.waitForTimeout(100)
@@ -335,7 +336,7 @@ test.describe('CBT Distortions Helper', () => {
 ##### Accessibility (6 items)
 - [ ] 14. Keyboard navigation: Tab, Enter, Space, Escape work correctly
 - [ ] 15. Focus management: Focus returns to Explore button after collapse
-- [ ] 16. Screen reader (VoiceOver): Announces "Added {count} cognitive distortions to your journal entry"
+- [ ] 16. Screen reader (VoiceOver): Announces "Inserted {count} distortion reflections"
 - [ ] 17. Screen reader: All checkboxes announce distortion names correctly
 - [ ] 18. Screen reader: Button states announced (enabled/disabled)
 - [ ] 19. Color contrast meets WCAG AA (blue/indigo gradient readable)
@@ -390,7 +391,7 @@ test.describe('CBT Distortions Helper', () => {
    - Explore button: Announces "Explore button"
    - Panel expansion: Announces "CBT Distortions helper expanded. 10 distortions available."
    - Checkbox selection: Announces "Selected {distortion name}"
-   - Continue button: Announces "Added 2 cognitive distortions to your journal entry"
+   - Continue button: Announces "Inserted 2 distortion reflections"
    - Panel collapse: Announces "CBT Distortions helper collapsed"
 
 **Pass Criteria**: All announcements match exact specification from Issue #17, Comment 3
