@@ -205,6 +205,7 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
               className="text-blue-700 hover:text-blue-900 hover:bg-blue-100 dark:text-blue-300 dark:hover:text-blue-100 dark:hover:bg-blue-900/50"
               aria-expanded={isExpanded}
               aria-controls="cbt-distortions-panel"
+              data-testid="cbt-explore-button"
             >
               {isExpanded ? (
                 <>
@@ -224,6 +225,7 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
           {isExpanded && (
             <div
               id="cbt-distortions-panel"
+              data-testid="cbt-helper-panel"
               className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200"
             >
               <p className="text-base text-blue-800 dark:text-blue-200 mb-4">
@@ -243,6 +245,7 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
                       onCheckedChange={() => handleSelect(distortion.id, distortion.name)}
                       aria-label={`Select ${distortion.name}`}
                       className="mt-1"
+                      data-testid={`distortion-${distortion.id}-checkbox`}
                     />
                     <label
                       htmlFor={`distortion-${distortion.id}`}
@@ -269,6 +272,7 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
                   disabled={selectedDistortions.size === 0}
                   className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600"
                   size="sm"
+                  data-testid="cbt-continue-button"
                 >
                   Continue
                   {selectedDistortions.size > 0 && (
@@ -283,6 +287,7 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
                   variant="ghost"
                   size="sm"
                   className="text-blue-700 hover:text-blue-900 hover:bg-blue-100 dark:text-blue-300 dark:hover:text-blue-100 dark:hover:bg-blue-900/50"
+                  data-testid="cbt-clear-button"
                 >
                   Clear
                 </Button>
