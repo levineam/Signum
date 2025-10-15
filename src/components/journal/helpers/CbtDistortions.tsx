@@ -19,7 +19,7 @@ import { useState, useRef } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { CBT_DISTORTIONS, formatMultipleReflections } from '@/data/cbtDistortions'
 import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
@@ -191,15 +191,12 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
       </div>
 
       <Card className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 dark:from-blue-950/30 dark:to-indigo-950/30 dark:border-blue-800">
-        <div className="p-4">
+        <div className="px-4 py-1">
           {/* Header with Explore button */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <span className="font-medium text-blue-900 dark:text-blue-100">
-                CBT Cognitive Distortions
-              </span>
-            </div>
+            <span className="font-medium text-lg text-blue-900 dark:text-blue-100">
+              Have you experienced any distorted thinking today?
+            </span>
             <Button
               ref={exploreButtonRef}
               onClick={handleExpand}
@@ -229,8 +226,8 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
               id="cbt-distortions-panel"
               className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200"
             >
-              <p className="text-sm text-blue-800 dark:text-blue-200 mb-4">
-                Select distortions you experienced today to add reflection prompts to your journal.
+              <p className="text-base text-blue-800 dark:text-blue-200 mb-4">
+                Select one or more and click "Continue" to add them to your journal.
               </p>
 
               {/* Distortion checkboxes */}
@@ -251,13 +248,13 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
                       htmlFor={`distortion-${distortion.id}`}
                       className="flex-1 cursor-pointer"
                     >
-                      <div className="font-medium text-sm text-blue-900 dark:text-blue-100 mb-1">
+                      <div className="font-medium text-base text-blue-900 dark:text-blue-100 mb-1">
                         {distortion.name}
                       </div>
-                      <div className="text-xs text-blue-700/80 dark:text-blue-300/80 mb-1">
+                      <div className="text-sm text-blue-700/80 dark:text-blue-300/80 mb-1">
                         {distortion.description}
                       </div>
-                      <div className="text-xs text-blue-600/60 dark:text-blue-400/60 italic">
+                      <div className="text-sm text-blue-600/60 dark:text-blue-400/60 italic">
                         Example: {distortion.example}
                       </div>
                     </label>

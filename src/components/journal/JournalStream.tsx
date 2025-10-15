@@ -392,6 +392,14 @@ export function JournalStream() {
     setCreatingLink(true)
 
     try {
+      // Ensure entry is in edit mode before inserting
+      if (editingEntryId !== entryId) {
+        console.log('⚠️ Entry not in edit mode, entering edit mode first')
+        setEditingEntryId(entryId)
+        // Wait for edit mode to activate and DOM to update
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+
       // Find the editor element for this entry using DOM query
       const editorElement = document.querySelector(
         `[data-entry-id="${entryId}"] [contenteditable]`
