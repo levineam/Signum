@@ -15,6 +15,7 @@ import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata
 import { getNotes, createNote, updateNote as updateNoteInDb } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
+import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
 
 interface JournalEntry {
   id: string
@@ -380,6 +381,80 @@ export function JournalStream() {
     setViewingNoteId(null)
   }
 
+  const handleHelperInsertion = async (entryId: string, helperText: string) => {
+    if (!user) {
+      return
+    }
+
+    console.log('📝 Inserting helper text', { entryId, helperText })
+
+    // Clear any pending auto-save timeout to prevent race condition
+    // If user typed then quickly inserted helper, pending timeout would overwrite helper text
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+      console.log('⏱️ Cleared pending auto-save timeout before helper insertion')
+    }
+
+    // Set flag to prevent content change interference (same as link creation)
+    setCreatingLink(true)
+
+    try {
+      // Ensure entry is in edit mode before inserting
+      if (editingEntryId !== entryId) {
+        console.log('⚠️ Entry not in edit mode, entering edit mode first')
+        setEditingEntryId(entryId)
+        // Wait for edit mode to activate and DOM to update
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+
+      // Find the editor element for this entry using DOM query
+      const editorElement = document.querySelector(
+        `[data-entry-id="${entryId}"] [contenteditable]`
+      ) as HTMLElement
+
+      if (!editorElement) {
+        console.error('❌ Could not find editor element for entry:', entryId)
+        toast.error('Failed to insert helper text: editor not found')
+        setCreatingLink(false)
+        return
+      }
+
+      // Read current content from DOM
+      const currentContent = editorElement.innerHTML || ''
+
+      // Append helper text to end (plain paragraphs)
+      const updatedContent = currentContent + helperText
+
+      // Update DOM directly
+      editorElement.innerHTML = updatedContent
+
+      // Wait for DOM to settle, then read the actual content
+      setTimeout(() => {
+        const finalContent = editorElement.innerHTML
+
+        // Update state with the content that includes the helper text
+        setEntries(prev => prev.map(entry => {
+          if (entry.id === entryId) {
+            return { ...entry, content: finalContent, lastModified: new Date().toISOString() }
+          }
+          return entry
+        }))
+
+        // Persist to Supabase
+        updateNoteInDb(entryId, { content: finalContent }, user.id)
+          .then(() => console.log('💾 Persisted helper insertion to Supabase'))
+          .catch(error => console.error('Error persisting helper insertion:', error))
+
+        setCreatingLink(false)
+      }, 50)
+    } catch (error) {
+      console.error('❌ Error inserting helper text:', error)
+      toast.error('Failed to insert helper text. Please try again.')
+      setCreatingLink(false)
+    }
+  }
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00') // Ensure consistent date parsing
     const today = new Date()
@@ -492,6 +567,15 @@ export function JournalStream() {
                   </span>
                 )}
               </div>
+
+              {/* CBT Distortions Helper (only on today's entry) */}
+              {isTodayEntry && user && (
+                <CbtDistortions
+                  entryId={entry.id}
+                  userId={user.id}
+                  onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                />
+              )}
 
               <div
                 onClick={() => setEditingEntryId(entry.id)}
