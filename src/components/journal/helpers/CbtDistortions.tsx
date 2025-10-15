@@ -227,7 +227,7 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
               className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200"
             >
               <p className="text-base text-blue-800 dark:text-blue-200 mb-4">
-                Select one or more and click "Continue" to add them to your journal.
+                Select one or more and click &quot;Continue&quot; to add them to your journal.
               </p>
 
               {/* Distortion checkboxes */}
