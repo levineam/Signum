@@ -130,7 +130,8 @@ WITH CHECK (auth.uid() = user_id);
 -- UPDATE policy: Users can update only their own helper usage
 CREATE POLICY "Users can update own helper usage"
 ON helper_usage FOR UPDATE
-USING (auth.uid() = user_id);
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
 -- DELETE policy: Users can delete only their own helper usage
 CREATE POLICY "Users can delete own helper usage"
@@ -154,7 +155,8 @@ WITH CHECK (auth.uid() = user_id);
 -- UPDATE policy: Users can update only their own preferences
 CREATE POLICY "Users can update own preferences"
 ON user_preferences FOR UPDATE
-USING (auth.uid() = user_id);
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
 -- DELETE policy: Users can delete only their own preferences
 CREATE POLICY "Users can delete own preferences"
