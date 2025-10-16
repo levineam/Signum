@@ -80,9 +80,10 @@ export const CBT_DISTORTIONS: CbtDistortion[] = [
 /**
  * Helper function to format distortion reflection text
  * Returns plain paragraph format for journal insertion
+ * Each distortion: text paragraph followed by empty paragraph (no leading empty paragraph)
  */
 export function formatDistortionReflection(distortion: CbtDistortion): string {
-  return `<p><br></p><p>Today I experienced ${distortion.name}. Here's what happened: </p><p><br></p>`
+  return `<p>Today I experienced ${distortion.name}. Here's what happened: </p><p><br></p>`
 }
 
 /**
