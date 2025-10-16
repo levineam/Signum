@@ -423,8 +423,8 @@ export function JournalStream() {
       // Read current content from DOM
       const currentContent = editorElement.innerHTML || ''
 
-      // Append helper text to end (plain paragraphs)
-      const updatedContent = currentContent + helperText
+      // Prepend helper text to top (plain paragraphs)
+      const updatedContent = helperText + currentContent
 
       // Update DOM directly
       editorElement.innerHTML = updatedContent
