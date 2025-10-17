@@ -199,7 +199,7 @@ export function JournalStream() {
     const newPrompt = getNextPrompt()
     setCurrentPrompt(newPrompt)
     setShowPrompt(true)
-  }, [user])
+  }, [user?.id])
 
   const handleContentChange = (entryId: string, newContent: string) => {
     // Don't override content changes while we're creating a link
