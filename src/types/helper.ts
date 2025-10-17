@@ -12,10 +12,10 @@
 /**
  * Helper type discriminator.
  * Matches CHECK constraint in helper_usage table (Story 1.8.1, Codex fix #2).
+ * Issue #18: Removed 'gentle-prompt' - only in-entry helpers remain.
  */
 export type HelperType =
-  | 'cbt-distortions'  // CBT Cognitive Distortions helper
-  | 'gentle-prompt'    // Gentle prompting helper
+  | 'cbt-distortions'     // CBT Cognitive Distortions helper
 
 // ============================================================================
 // Helper Event Types (Discriminated Union)
@@ -192,13 +192,6 @@ export function isCBTDistortionsHelper(helperType: HelperType): boolean {
 }
 
 /**
- * Type guard to check if a helper type is gentle prompt.
- */
-export function isGentlePromptHelper(helperType: HelperType): boolean {
-  return helperType === 'gentle-prompt'
-}
-
-/**
  * Type guard to check if an event is a helper opened event.
  */
 export function isHelperOpenedEvent(event: HelperEvent): event is HelperOpenedEvent {
@@ -239,16 +232,16 @@ export function isHelperDismissedEvent(event: HelperEvent): event is HelperDismi
 
 /**
  * All available helper types (for UI dropdowns, validation, etc.)
+ * Issue #18: Removed gentle-prompt - only in-entry helpers.
  */
 export const HELPER_TYPES: HelperType[] = [
-  'cbt-distortions',
-  'gentle-prompt'
+  'cbt-distortions'
 ]
 
 /**
  * Human-readable labels for helper types.
+ * Issue #18: Simplified to only in-entry helpers.
  */
 export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
-  'cbt-distortions': 'CBT Cognitive Distortions',
-  'gentle-prompt': 'Gentle Prompting'
+  'cbt-distortions': 'CBT Cognitive Distortions'
 }
