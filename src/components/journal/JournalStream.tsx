@@ -11,7 +11,7 @@ import { NoteViewer } from '@/components/notes/NoteViewer'
 import { Note } from '@/types/note'
 import { createLink, getOutgoingLinks } from '@/lib/supabase/notes'
 import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata } from '@/utils/textToLink'
-import { getNotes, createNote, updateNote as updateNoteInDb } from '@/lib/notes'
+import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
@@ -73,8 +73,28 @@ export function JournalStream() {
         const allNotes = await getNotes(user.id)
         console.log('[JournalStream] Fetched notes:', allNotes.length)
 
-        // Filter to journal entries only
-        const journalNotes = allNotes.filter(note => note.noteType === 'journal-entry')
+        // Clean up empty journal entries older than 24 hours (Issue #10)
+        const now = new Date()
+        const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+        const emptyJournalEntries = allNotes.filter(note =>
+          note.noteType === 'journal-entry' &&
+          note.content.trim() === '' &&
+          new Date(note.createdAt) < oneDayAgo
+        )
+
+        if (emptyJournalEntries.length > 0) {
+          console.log(`[JournalStream] Cleaning up ${emptyJournalEntries.length} empty journal entries older than 24 hours`)
+          await Promise.all(
+            emptyJournalEntries.map(note => deleteNote(note.id, user.id))
+          )
+        }
+
+        // Filter to journal entries only (excluding the ones we just deleted)
+        const journalNotes = allNotes.filter(note =>
+          note.noteType === 'journal-entry' &&
+          !emptyJournalEntries.some(empty => empty.id === note.id)
+        )
 
         // Convert Note format to JournalEntry format
         const journalEntries: JournalEntry[] = journalNotes.map(note => {
