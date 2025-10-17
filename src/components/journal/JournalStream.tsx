@@ -483,11 +483,8 @@ export function JournalStream() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Journal</h1>
-        <p className="text-muted-foreground">Your thoughts, reflections, and daily insights</p>
-      </div>
+      {/* Accessible heading for screen readers and tests - visually hidden */}
+      <h1 className="sr-only">Journal</h1>
 
       {/* Gentle Prompt Element */}
       {showPrompt && currentPrompt && (
