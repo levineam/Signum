@@ -47,7 +47,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
         <div className="p-6 h-full flex flex-col">
           {/* Header */}
           <div className="mb-8">
-            <Logo size={48} />
+            <Logo size={32} />
           </div>
 
           {/* Navigation */}
