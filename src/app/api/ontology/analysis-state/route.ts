@@ -6,7 +6,7 @@
  * Does NOT expose admin client to browser.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getAnalysisState } from '@/lib/ontology/state'

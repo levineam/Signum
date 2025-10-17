@@ -186,7 +186,8 @@ export function JournalStream() {
       setEntries([])
       setIsLoading(false)
     })
-  }, [user?.id])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]) // Only re-run when user ID changes (login/logout), not on user object updates
 
   const handleContentChange = (entryId: string, newContent: string) => {
     // Don't override content changes while we're creating a link
