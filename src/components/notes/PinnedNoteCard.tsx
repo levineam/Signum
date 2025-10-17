@@ -9,13 +9,29 @@ interface PinnedNoteCardProps {
 }
 
 export function PinnedNoteCard({ note }: PinnedNoteCardProps) {
-  const getPreviewText = () => {
+  const MAX_PREVIEW_ITEMS = 5
+
+  const renderPreview = () => {
     // Check if this is an ontology card with metadata.items
     const items = (note.metadata?.items as Array<{ name: string }>) || []
     if (items.length > 0) {
-      const itemCount = items.length
-      const preview = items.map(item => item.name).join(', ')
-      return preview.length > 60 ? `${itemCount} items` : preview
+      const displayItems = items.slice(0, MAX_PREVIEW_ITEMS)
+      const remaining = items.length - displayItems.length
+
+      return (
+        <div className="space-y-1.5">
+          {displayItems.map((item, idx) => (
+            <div key={idx} className="text-sm text-muted-foreground truncate">
+              • {item.name}
+            </div>
+          ))}
+          {remaining > 0 && (
+            <div className="text-sm text-muted-foreground/70 italic">
+              ... and {remaining} more
+            </div>
+          )}
+        </div>
+      )
     }
 
     // For aims notes with JSON content, parse and count
@@ -26,7 +42,11 @@ export function PinnedNoteCard({ note }: PinnedNoteCardProps) {
         const todoLength = (parsed.todos || '').length
         const goalLength = (parsed.goals || '').length
         if (todoLength + goalLength > 0) {
-          return `${todoLength + goalLength} characters`
+          return (
+            <p className="text-sm text-muted-foreground">
+              {todoLength + goalLength} characters
+            </p>
+          )
         }
       } catch {
         // Fall through to content check
@@ -34,7 +54,11 @@ export function PinnedNoteCard({ note }: PinnedNoteCardProps) {
     }
 
     // Default: check content length
-    return note.content.length > 0 ? `${note.content.length} characters` : 'Empty'
+    return (
+      <p className="text-sm text-muted-foreground">
+        {note.content.length > 0 ? `${note.content.length} characters` : 'Empty'}
+      </p>
+    )
   }
 
   return (
@@ -42,9 +66,7 @@ export function PinnedNoteCard({ note }: PinnedNoteCardProps) {
       <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold mb-2">{getNoteDisplayTitle(note)}</h3>
-          <p className="text-sm text-muted-foreground">
-            {getPreviewText()}
-          </p>
+          {renderPreview()}
         </CardContent>
       </Card>
     </Link>
