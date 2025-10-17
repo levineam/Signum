@@ -14,7 +14,7 @@
  * Designed to wrap helper content (e.g., CBT Distortions, Reflection Prompts).
  */
 
-import { useState, useRef, ReactNode } from 'react'
+import { useState, useRef, ReactNode, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, ChevronUp, X } from 'lucide-react'
@@ -38,6 +38,9 @@ export interface HelperContainerProps {
 
   /** Callback when helper is expanded/collapsed */
   onExpandChange?: (isExpanded: boolean) => void
+
+  /** Ref callback to expose collapse function to parent */
+  collapseRef?: React.MutableRefObject<(() => void) | null>
 
   /** Visual theme variant */
   variant?: 'default' | 'blue' | 'green' | 'purple'
@@ -90,6 +93,7 @@ export function HelperContainer({
   children,
   onDismiss,
   onExpandChange,
+  collapseRef,
   variant = 'default',
   className = '',
   testId,
@@ -101,6 +105,25 @@ export function HelperContainer({
   const exploreButtonRef = useRef<HTMLButtonElement>(null)
 
   const theme = THEME_COLORS[variant]
+
+  // Expose collapse function to parent via ref
+  useEffect(() => {
+    if (collapseRef) {
+      collapseRef.current = () => {
+        setIsExpanded(false)
+        announce(`${helperType} helper collapsed`)
+        // Return focus to Explore button
+        setTimeout(() => {
+          exploreButtonRef.current?.focus()
+        }, 100)
+      }
+    }
+    return () => {
+      if (collapseRef) {
+        collapseRef.current = null
+      }
+    }
+  }, [collapseRef, helperType])
 
   // Helper function to announce to screen readers
   const announce = (message: string) => {

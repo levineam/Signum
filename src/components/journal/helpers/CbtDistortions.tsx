@@ -34,6 +34,9 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
   const [selectedDistortions, setSelectedDistortions] = useState<Set<string>>(new Set())
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
 
+  // Ref to access HelperContainer's collapse function
+  const collapseHelperRef = useRef<(() => void) | null>(null)
+
   // Track events for usage logging
   const eventsRef = useRef<HelperEvent[]>([])
 
@@ -150,6 +153,11 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
     // Reset state
     setSelectedDistortions(new Set())
     eventsRef.current = []
+
+    // Collapse the helper after insertion
+    if (collapseHelperRef.current) {
+      collapseHelperRef.current()
+    }
   }
 
   return (
@@ -170,6 +178,7 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
         descriptionText="Select one or more and click &quot;Continue&quot; to add them to your journal."
         variant="blue"
         onExpandChange={handleExpandChange}
+        collapseRef={collapseHelperRef}
         showDismiss={false}
         defaultExpanded={false}
         testId="cbt-helper"
