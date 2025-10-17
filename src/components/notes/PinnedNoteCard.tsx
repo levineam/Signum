@@ -1,6 +1,6 @@
 'use client'
 
-import { Note } from '@/types/note'
+import { Note, getNoteDisplayTitle } from '@/types/note'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 
@@ -41,7 +41,7 @@ export function PinnedNoteCard({ note }: PinnedNoteCardProps) {
     <Link href={`/notes/${note.id}`}>
       <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
         <CardContent className="p-6">
-          <h3 className="text-lg font-semibold mb-2">{note.title}</h3>
+          <h3 className="text-lg font-semibold mb-2">{getNoteDisplayTitle(note)}</h3>
           <p className="text-sm text-muted-foreground">
             {getPreviewText()}
           </p>

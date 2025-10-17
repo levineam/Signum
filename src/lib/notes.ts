@@ -98,7 +98,7 @@ export async function initializePinnedNotes(userId: string): Promise<void> {
     }> = [
       { type: 'ontology-value', title: 'Values', content: '' },
       { type: 'ontology-belief', title: 'Beliefs', content: '' },
-      { type: 'ontology-aim', title: 'Aims', content: JSON.stringify({ todos: '', goals: '' }) }
+      { type: 'ontology-aim', title: 'Goals', content: JSON.stringify({ todos: '', goals: '' }) }
     ]
 
     // Create missing notes individually

@@ -218,3 +218,36 @@ export const LEGACY_TYPE_MAPPING: Record<LegacyNoteType, NoteType> = {
   aims: 'ontology-aim',
   regular: 'custom'
 }
+
+// ============================================================================
+// Display Name Mapping (Story 2.3.7)
+// ============================================================================
+
+/**
+ * Display labels for ontology note types.
+ * Maps database note_type values to user-facing labels.
+ */
+export const NOTE_TYPE_LABELS: Record<string, string> = {
+  'ontology-value': 'Values',
+  'ontology-belief': 'Beliefs',
+  'ontology-aim': 'Goals'
+}
+
+/**
+ * Get the display title for a note, applying label mapping for ontology notes.
+ * This ensures "Aims" always renders as "Goals" in the UI.
+ *
+ * @param note - The note to get display title for
+ * @returns Display-friendly title
+ */
+export function getNoteDisplayTitle(note: Note): string {
+  // For ontology notes, check if they're using legacy "Aims" title
+  if (note.noteType === 'ontology-aim' && note.title === 'Aims') {
+    return 'Goals'
+  }
+  // Use label mapping if note type matches
+  if (note.noteType in NOTE_TYPE_LABELS) {
+    return NOTE_TYPE_LABELS[note.noteType]
+  }
+  return note.title
+}
