@@ -78,8 +78,8 @@ test.describe('Hyperlink Creation from Selected Text', () => {
     // Wait for modal to close
     await page.waitForSelector('[role="dialog"]', { state: 'hidden', timeout: 5000 });
 
-    // Step 8: Exit editing mode by clicking outside
-    await page.locator('h1:has-text("Journal")').click();
+    // Step 8: Exit editing mode by clicking outside (click on page container)
+    await page.locator('.max-w-4xl').first().click();
 
     // Wait a bit for the view to update
     await page.waitForTimeout(500);
@@ -245,8 +245,8 @@ test.describe('Hyperlink Creation from Selected Text', () => {
     await saveButton.click();
     await page.waitForSelector('[role="dialog"]', { state: 'hidden' });
 
-    // Step 5: Exit editing mode
-    await page.locator('h1:has-text("Journal")').click();
+    // Step 5: Exit editing mode (click on page container)
+    await page.locator('.max-w-4xl').first().click();
 
     // Wait a bit for the view to update
     await page.waitForTimeout(500);

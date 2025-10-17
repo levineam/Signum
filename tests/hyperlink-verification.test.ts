@@ -87,8 +87,8 @@ test.describe('Hyperlink Verification', () => {
       await page.waitForSelector('[role="dialog"]', { state: 'hidden' });
     }
 
-    // Step 4: Exit editing mode by clicking outside
-    await page.locator('h1:has-text("Journal")').click();
+    // Step 4: Exit editing mode by clicking outside (click on page container)
+    await page.locator('.max-w-4xl').first().click();
     await page.waitForTimeout(500);
 
     // Step 5: Verify hyperlink exists in read-only mode
