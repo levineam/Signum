@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Calendar, BookOpen, X, RefreshCw } from 'lucide-react'
-import { getNextPrompt, dismissPromptForSession } from '@/utils/journalPrompts'
+import { Calendar, BookOpen } from 'lucide-react'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
 import { NoteViewer } from '@/components/notes/NoteViewer'
 import { Note } from '@/types/note'
@@ -16,6 +15,7 @@ import { getNotes, createNote, updateNote as updateNoteInDb } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
+import { ReflectionPromptHelper } from '@/components/journal/helpers/ReflectionPromptHelper'
 
 interface JournalEntry {
   id: string
@@ -41,8 +41,6 @@ export function JournalStream() {
   const [isLoading, setIsLoading] = useState(true)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const [showPrompt, setShowPrompt] = useState(false)
-  const [currentPrompt, setCurrentPrompt] = useState<string>('')
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [currentEditingEntry, setCurrentEditingEntry] = useState<string | null>(null)
@@ -189,16 +187,6 @@ export function JournalStream() {
       setEntries([])
       setIsLoading(false)
     })
-
-    // Initialize prompt display - always get a new prompt on page reload
-    // Clear any previous dismissal since we want new prompt on each page load
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('prompt-dismissed')
-    }
-
-    const newPrompt = getNextPrompt()
-    setCurrentPrompt(newPrompt)
-    setShowPrompt(true)
   }, [user?.id])
 
   const handleContentChange = (entryId: string, newContent: string) => {
@@ -242,16 +230,6 @@ export function JournalStream() {
         }
       }
     }, 2000)
-  }
-
-  const handlePromptDismiss = () => {
-    setShowPrompt(false)
-    dismissPromptForSession()
-  }
-
-  const handlePromptRefresh = () => {
-    const newPrompt = getNextPrompt()
-    setCurrentPrompt(newPrompt)
   }
 
   const handleMakeNote = (selectedText: string) => {
@@ -486,31 +464,12 @@ export function JournalStream() {
       {/* Accessible heading for screen readers and tests - visually hidden */}
       <h1 className="sr-only">Journal</h1>
 
-      {/* Gentle Prompt Element */}
-      {showPrompt && currentPrompt && (
-        <Card className="p-6 mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
-          <div className="relative">
-            <p className="text-lg leading-relaxed text-amber-900 italic pr-20">
-              {currentPrompt}
-            </p>
-            <div className="absolute top-0 right-0 flex gap-1">
-              <button
-                onClick={handlePromptRefresh}
-                className="p-1 rounded-md hover:bg-amber-100 transition-colors"
-                aria-label="Get new prompt"
-              >
-                <RefreshCw className="h-5 w-5 text-amber-600 hover:text-amber-800" />
-              </button>
-              <button
-                onClick={handlePromptDismiss}
-                className="p-1 rounded-md hover:bg-amber-100 transition-colors"
-                aria-label="Dismiss prompt"
-              >
-                <X className="h-5 w-5 text-amber-600 hover:text-amber-800" />
-              </button>
-            </div>
-          </div>
-        </Card>
+      {/* Reflection Prompt Helper (Issue #18: Replaces Gentle Prompt) */}
+      {user && entries.length > 0 && entries[0] && (
+        <ReflectionPromptHelper
+          userId={user.id}
+          entryId={entries[0].id}
+        />
       )}
 
       {/* Journal Entries - One per day */}
