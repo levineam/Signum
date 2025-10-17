@@ -1,4 +1,24 @@
-<svg width="200" height="280" viewBox="0 0 200 280" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Minimalist S Logo - Black variant -->
-  <path d="M 30 0 L 200 0 L 200 90 L 120 90 L 120 190 L 200 190 L 200 280 L 30 280 L 30 190 L 110 190 L 110 90 L 30 90 Z" fill="#1a1a1a"/>
+<svg width="400" height="600" viewBox="0 0 400 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Minimalist S Logo - Black variant - Angular zigzag S shape -->
+  <path d="M 120 70
+           Q 120 50, 140 50
+           L 360 50
+           L 360 170
+           L 200 170
+           L 200 340
+           Q 200 360, 220 360
+           L 360 360
+           Q 380 360, 380 380
+           L 380 530
+           Q 380 550, 360 550
+           L 140 550
+           L 140 430
+           L 300 430
+           L 300 260
+           Q 300 240, 280 240
+           L 140 240
+           Q 120 240, 120 220
+           L 120 70
+           Z"
+           fill="#1a1a1a"/>
 </svg>
