@@ -15,7 +15,6 @@ import { getNotes, createNote, updateNote as updateNoteInDb } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
-import { ReflectionPromptHelper } from '@/components/journal/helpers/ReflectionPromptHelper'
 
 interface JournalEntry {
   id: string
@@ -463,14 +462,6 @@ export function JournalStream() {
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* Accessible heading for screen readers and tests - visually hidden */}
       <h1 className="sr-only">Journal</h1>
-
-      {/* Reflection Prompt Helper (Issue #18: Replaces Gentle Prompt) */}
-      {user && entries.length > 0 && entries[0] && (
-        <ReflectionPromptHelper
-          userId={user.id}
-          entryId={entries[0].id}
-        />
-      )}
 
       {/* Journal Entries - One per day */}
       <div className="space-y-4">

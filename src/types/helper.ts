@@ -12,12 +12,10 @@
 /**
  * Helper type discriminator.
  * Matches CHECK constraint in helper_usage table (Story 1.8.1, Codex fix #2).
- * Issue #18: Added 'reflection-prompt' (replaces 'gentle-prompt').
+ * Issue #18: Removed 'gentle-prompt' - only in-entry helpers remain.
  */
 export type HelperType =
   | 'cbt-distortions'     // CBT Cognitive Distortions helper
-  | 'gentle-prompt'       // Legacy: Gentle prompting helper (deprecated, use 'reflection-prompt')
-  | 'reflection-prompt'   // Reflection Prompt helper (Issue #18)
 
 // ============================================================================
 // Helper Event Types (Discriminated Union)
@@ -194,21 +192,6 @@ export function isCBTDistortionsHelper(helperType: HelperType): boolean {
 }
 
 /**
- * Type guard to check if a helper type is gentle prompt (legacy).
- */
-export function isGentlePromptHelper(helperType: HelperType): boolean {
-  return helperType === 'gentle-prompt'
-}
-
-/**
- * Type guard to check if a helper type is reflection prompt.
- * Issue #18: New type guard for unified helper framework.
- */
-export function isReflectionPromptHelper(helperType: HelperType): boolean {
-  return helperType === 'reflection-prompt'
-}
-
-/**
  * Type guard to check if an event is a helper opened event.
  */
 export function isHelperOpenedEvent(event: HelperEvent): event is HelperOpenedEvent {
@@ -249,20 +232,16 @@ export function isHelperDismissedEvent(event: HelperEvent): event is HelperDismi
 
 /**
  * All available helper types (for UI dropdowns, validation, etc.)
- * Issue #18: Added 'reflection-prompt'.
+ * Issue #18: Removed gentle-prompt - only in-entry helpers.
  */
 export const HELPER_TYPES: HelperType[] = [
-  'cbt-distortions',
-  'reflection-prompt',
-  'gentle-prompt'  // Legacy, kept for backward compatibility
+  'cbt-distortions'
 ]
 
 /**
  * Human-readable labels for helper types.
- * Issue #18: Added 'Reflection Prompt' label.
+ * Issue #18: Simplified to only in-entry helpers.
  */
 export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
-  'cbt-distortions': 'CBT Cognitive Distortions',
-  'reflection-prompt': 'Reflection Prompt',
-  'gentle-prompt': 'Gentle Prompting (Legacy)'
+  'cbt-distortions': 'CBT Cognitive Distortions'
 }
