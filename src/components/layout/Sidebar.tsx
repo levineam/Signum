@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { Logo } from '@/components/branding/Logo'
 import { Menu, X, BookOpen, StickyNote, MessageCircle, FileText, Users, Coins, ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -131,53 +132,77 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="space-y-2 flex-1">
-            {sections.map((section) => {
-              const Icon = section.icon
-              const isActive = activeSection === section.id
+          <TooltipProvider delayDuration={300}>
+            <nav className="space-y-2 flex-1">
+              {sections.map((section) => {
+                const Icon = section.icon
+                const isActive = activeSection === section.id
 
-              return (
-                <Button
-                  key={section.id}
-                  variant={isActive ? "secondary" : "ghost"}
-                  className={`
-                    w-full transition-all duration-300
-                    ${
-                      manuallyCollapsed !== null
-                        ? (isCollapsed ? 'justify-center px-2' : 'justify-start')
-                        : 'md:justify-center md:px-2 xl:justify-start xl:px-4'
-                    }
-                    ${
-                      isActive
-                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                        : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
-                    }
-                  `}
-                  onClick={() => onSectionChange(section.id)}
-                  aria-label={section.label}
-                >
-                  <Icon className={`
-                    h-4 w-4
-                    ${
-                      manuallyCollapsed !== null
-                        ? (isCollapsed ? '' : 'mr-3')
-                        : 'xl:mr-3'
-                    }
-                  `} />
-                  <span className={`
-                    transition-opacity duration-300
-                    ${
-                      manuallyCollapsed !== null
-                        ? (isCollapsed ? 'hidden opacity-0 w-0' : 'opacity-100')
-                        : 'md:hidden md:opacity-0 md:w-0 xl:block xl:opacity-100 xl:w-auto'
-                    }
-                  `}>
-                    {section.label}
-                  </span>
-                </Button>
-              )
-            })}
-          </nav>
+                const button = (
+                  <Button
+                    key={section.id}
+                    variant={isActive ? "secondary" : "ghost"}
+                    className={`
+                      w-full transition-all duration-300
+                      ${
+                        manuallyCollapsed !== null
+                          ? (isCollapsed ? 'justify-center px-2' : 'justify-start')
+                          : 'md:justify-center md:px-2 xl:justify-start xl:px-4'
+                      }
+                      ${
+                        isActive
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                      }
+                    `}
+                    onClick={() => onSectionChange(section.id)}
+                    aria-label={section.label}
+                  >
+                    <Icon className={`
+                      h-4 w-4
+                      ${
+                        manuallyCollapsed !== null
+                          ? (isCollapsed ? '' : 'mr-3')
+                          : 'xl:mr-3'
+                      }
+                    `} />
+                    <span className={`
+                      transition-opacity duration-300
+                      ${
+                        manuallyCollapsed !== null
+                          ? (isCollapsed ? 'hidden opacity-0 w-0' : 'opacity-100')
+                          : 'md:hidden md:opacity-0 md:w-0 xl:block xl:opacity-100 xl:w-auto'
+                      }
+                    `}>
+                      {section.label}
+                    </span>
+                  </Button>
+                )
+
+                // Wrap button in tooltip if in icon-only mode
+                return (
+                  <Tooltip key={section.id}>
+                    <TooltipTrigger asChild>
+                      {button}
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="right"
+                      sideOffset={8}
+                      className={`
+                        ${
+                          manuallyCollapsed !== null
+                            ? (isCollapsed ? '' : 'hidden')
+                            : 'xl:hidden'
+                        }
+                      `}
+                    >
+                      {section.label}
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              })}
+            </nav>
+          </TooltipProvider>
 
           {/* User Status - Hidden when collapsed or on tablet */}
           {(manuallyCollapsed !== null ? !isCollapsed : true) && (
