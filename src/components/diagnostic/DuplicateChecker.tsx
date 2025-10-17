@@ -35,9 +35,17 @@ export function DuplicateChecker() {
     try {
       const response = await fetch('/api/journal/cleanup-duplicates')
       const data = await response.json()
+
+      if (!response.ok) {
+        console.error('API error:', data)
+        setReport(null)
+        return
+      }
+
       setReport(data)
     } catch (error) {
       console.error('Error checking duplicates:', error)
+      setReport(null)
     } finally {
       setLoading(false)
     }
@@ -119,7 +127,7 @@ export function DuplicateChecker() {
                 <strong>Dates with Duplicates:</strong> {report.duplicateDates}
               </p>
 
-              {report.duplicates.length > 0 && (
+              {report.duplicates && report.duplicates.length > 0 && (
                 <div className="mt-4">
                   <p className="font-medium mb-2">Duplicate Entries:</p>
                   <div className="space-y-3">

@@ -6,10 +6,12 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { JournalStream } from '@/components/journal/JournalStream'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { DuplicateChecker } from '@/components/diagnostic/DuplicateChecker'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState('journal')
   const router = useRouter()
+  const { user } = useAuth()
 
   useEffect(() => {
     const handleNavigateToNotes = () => {
@@ -32,7 +34,7 @@ export default function Home() {
       case 'journal':
         return (
           <>
-            <DuplicateChecker />
+            {user && <DuplicateChecker />}
             <JournalStream />
           </>
         )
