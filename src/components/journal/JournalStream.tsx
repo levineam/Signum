@@ -483,6 +483,9 @@ export function JournalStream() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
+      {/* Accessible heading for screen readers and tests - visually hidden */}
+      <h1 className="sr-only">Journal</h1>
+
       {/* Gentle Prompt Element */}
       {showPrompt && currentPrompt && (
         <Card className="p-6 mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
