@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { Logo } from '@/components/branding/Logo'
-import { Menu, X, BookOpen, StickyNote, MessageCircle, FileText, Users, Coins } from 'lucide-react'
+import { Menu, X, BookOpen, StickyNote, MessageCircle, FileText, Users, Coins, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface SidebarProps {
   activeSection: string
@@ -12,8 +13,32 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  // Manual collapse state with localStorage persistence
+  const [manuallyCollapsed, setManuallyCollapsed] = useState<boolean | null>(null)
+  // Mobile drawer state
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const { user, signOut } = useAuth()
+
+  // Load manual collapse preference from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebar-collapsed')
+    if (saved !== null) {
+      setManuallyCollapsed(saved === 'true')
+    } else {
+      setManuallyCollapsed(null) // Let responsive behavior handle it
+    }
+  }, [])
+
+  // Save manual preference to localStorage
+  const toggleManualCollapse = () => {
+    const newState = manuallyCollapsed === null ? true : !manuallyCollapsed
+    setManuallyCollapsed(newState)
+    localStorage.setItem('sidebar-collapsed', String(newState))
+  }
+
+  // Determine if sidebar should be collapsed based on manual preference
+  // If no manual preference, let Tailwind responsive classes handle it
+  const isCollapsed = manuallyCollapsed ?? false
 
   const sections = [
     { id: 'journal', label: 'Journal', icon: BookOpen },
@@ -26,28 +51,206 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile/Collapsed Toggle */}
-      <div className={`fixed top-4 left-4 z-50 ${isCollapsed ? '' : 'lg:hidden'}`}>
+      {/* Mobile Hamburger Button - Only visible on mobile (<768px) */}
+      <div className="fixed top-4 left-4 z-50 md:hidden">
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
           className="bg-background/80 backdrop-blur-sm"
         >
-          {isCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
+          <Menu className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Sidebar */}
+      {/* Manual Toggle Button - Desktop/Tablet only (>=768px) */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={toggleManualCollapse}
+        className={`
+          hidden md:flex
+          fixed top-4 z-50
+          transition-all duration-300 ease-in-out
+          ${
+            manuallyCollapsed !== null
+              ? (isCollapsed ? 'left-[72px]' : 'left-[248px]')
+              : 'md:left-[72px] xl:left-[248px]'
+          }
+        `}
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {
+          manuallyCollapsed !== null
+            ? (isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />)
+            : <><ChevronRight className="h-4 w-4 xl:hidden" /><ChevronLeft className="h-4 w-4 hidden xl:block" /></>
+        }
+      </Button>
+
+      {/* Sidebar - Desktop/Tablet (>=768px): Always visible, width changes */}
       <div className={`
-        fixed left-0 top-0 h-dvh bg-sidebar border-r border-sidebar-border z-40 transition-transform duration-300
-        ${isCollapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0'}
+        hidden md:flex
+        fixed left-0 top-0 h-dvh bg-sidebar border-r border-sidebar-border z-40
+        flex-col
+        transition-all duration-300 ease-in-out
+        ${
+          // Manual override takes precedence
+          manuallyCollapsed !== null
+            ? (isCollapsed ? 'w-20' : 'w-64')
+            // No manual override: responsive behavior
+            : 'md:w-20 xl:w-64'
+        }
+      `}>
+        {/* Responsive behavior:
+          - Desktop (>=1280px xl:): Default to w-64 (full), unless manually collapsed -> w-20
+          - Tablet (768px-1279px md:): Default to w-20 (icon-only), unless manually expanded -> w-64
+          - Manual toggle overrides automatic responsive behavior
+        */}
+        <div className={`
+          h-full flex flex-col
+          transition-all duration-300 ease-in-out
+          ${
+            manuallyCollapsed !== null
+              ? (isCollapsed ? 'p-4' : 'p-6')
+              : 'md:p-4 xl:p-6'
+          }
+        `}>
+          {/* Header */}
+          <div className={`
+            mb-8 flex
+            ${
+              manuallyCollapsed !== null
+                ? (isCollapsed ? 'justify-center' : 'justify-start')
+                : 'md:justify-center xl:justify-start'
+            }
+          `}>
+            <Logo size={
+              manuallyCollapsed !== null
+                ? (isCollapsed ? 28 : 32)
+                : 32 // Keep consistent size, responsive handled by breakpoints
+            } className={manuallyCollapsed === null ? 'md:w-7 md:h-7 xl:w-8 xl:h-8' : ''} />
+          </div>
+
+          {/* Navigation */}
+          <TooltipProvider delayDuration={300}>
+            <nav className="space-y-2 flex-1">
+              {sections.map((section) => {
+                const Icon = section.icon
+                const isActive = activeSection === section.id
+
+                const button = (
+                  <Button
+                    key={section.id}
+                    variant={isActive ? "secondary" : "ghost"}
+                    className={`
+                      w-full transition-all duration-300
+                      ${
+                        manuallyCollapsed !== null
+                          ? (isCollapsed ? 'justify-center px-2' : 'justify-start')
+                          : 'md:justify-center md:px-2 xl:justify-start xl:px-4'
+                      }
+                      ${
+                        isActive
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                      }
+                    `}
+                    onClick={() => onSectionChange(section.id)}
+                    aria-label={section.label}
+                  >
+                    <Icon className={`
+                      h-4 w-4
+                      ${
+                        manuallyCollapsed !== null
+                          ? (isCollapsed ? '' : 'mr-3')
+                          : 'xl:mr-3'
+                      }
+                    `} />
+                    <span className={`
+                      transition-opacity duration-300
+                      ${
+                        manuallyCollapsed !== null
+                          ? (isCollapsed ? 'hidden opacity-0 w-0' : 'opacity-100')
+                          : 'md:hidden md:opacity-0 md:w-0 xl:block xl:opacity-100 xl:w-auto'
+                      }
+                    `}>
+                      {section.label}
+                    </span>
+                  </Button>
+                )
+
+                // Wrap button in tooltip if in icon-only mode
+                return (
+                  <Tooltip key={section.id}>
+                    <TooltipTrigger asChild>
+                      {button}
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="right"
+                      sideOffset={8}
+                      className={`
+                        ${
+                          manuallyCollapsed !== null
+                            ? (isCollapsed ? '' : 'hidden')
+                            : 'xl:hidden'
+                        }
+                      `}
+                    >
+                      {section.label}
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              })}
+            </nav>
+          </TooltipProvider>
+
+          {/* User Status - Hidden when collapsed or on tablet */}
+          {(manuallyCollapsed !== null ? !isCollapsed : true) && (
+            <div className={`
+              border-t border-sidebar-border pt-4 mt-auto
+              ${manuallyCollapsed === null ? 'md:hidden xl:block' : ''}
+            `}>
+              {user ? (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-sidebar-foreground">Signed in as:</p>
+                    <p className="text-sm text-sidebar-foreground/60 truncate">{user.email}</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={signOut} className="w-full">
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Button variant="outline" size="sm" asChild className="w-full">
+                    <a href="/auth">Sign Up</a>
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile Drawer - Only on mobile (<768px) */}
+      <div className={`
+        md:hidden
+        fixed left-0 top-0 h-dvh bg-sidebar border-r border-sidebar-border z-40
         w-64
+        transition-transform duration-300 ease-in-out
+        ${mobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="p-6 h-full flex flex-col">
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-8 flex justify-between items-center">
             <Logo size={32} />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileDrawerOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Navigation */}
@@ -65,7 +268,10 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                       ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                       : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
                   }`}
-                  onClick={() => onSectionChange(section.id)}
+                  onClick={() => {
+                    onSectionChange(section.id)
+                    setMobileDrawerOpen(false)
+                  }}
                 >
                   <Icon className="h-4 w-4 mr-3" />
                   {section.label}
@@ -97,11 +303,11 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
         </div>
       </div>
 
-      {/* Overlay for mobile */}
-      {!isCollapsed && (
+      {/* Mobile Overlay - Only visible when drawer is open */}
+      {mobileDrawerOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-          onClick={() => setIsCollapsed(true)}
+          className="md:hidden fixed inset-0 bg-black/50 z-30"
+          onClick={() => setMobileDrawerOpen(false)}
         />
       )}
     </>
