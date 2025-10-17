@@ -32,19 +32,7 @@ export function NotesPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Notes</h1>
-        <p className="text-muted-foreground">
-          Your reflections and custom notes
-        </p>
-      </div>
-
-      {/* All Notes Section */}
       <section>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-          All Notes
-        </h2>
         {regularNotes.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <p>No notes yet. Create notes from your journal entries.</p>
