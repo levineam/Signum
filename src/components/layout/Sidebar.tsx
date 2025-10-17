@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
+import { Logo } from '@/components/branding/Logo'
 import { Menu, X, BookOpen, StickyNote, MessageCircle, FileText, Users, Coins } from 'lucide-react'
 
 interface SidebarProps {
@@ -46,7 +47,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
         <div className="p-6 h-full flex flex-col">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-sidebar-foreground">Signum</h1>
+            <Logo size={48} />
           </div>
 
           {/* Navigation */}
