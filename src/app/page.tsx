@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { JournalStream } from '@/components/journal/JournalStream'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { DuplicateChecker } from '@/components/diagnostic/DuplicateChecker'
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState('journal')
@@ -29,7 +30,12 @@ export default function Home() {
   const renderContent = () => {
     switch (activeSection) {
       case 'journal':
-        return <JournalStream />
+        return (
+          <>
+            <DuplicateChecker />
+            <JournalStream />
+          </>
+        )
       case 'feedback':
         return <div className="p-6 text-center text-muted-foreground">Feedback feature coming soon...</div>
       case 'articles':
