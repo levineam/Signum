@@ -23,6 +23,8 @@ export default function Home() {
     setActiveSection(section)
     if (section === 'notes') {
       router.push('/notes')
+    } else if (section === 'ontology') {
+      router.push('/ontology')
     }
   }
 

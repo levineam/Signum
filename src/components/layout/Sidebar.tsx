@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { Logo } from '@/components/branding/Logo'
-import { Menu, X, BookOpen, StickyNote, MessageCircle, FileText, Users, Coins, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Menu, X, BookOpen, StickyNote, Target, MessageCircle, FileText, Users, Coins, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface SidebarProps {
   activeSection: string
@@ -43,6 +43,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const sections = [
     { id: 'journal', label: 'Journal', icon: BookOpen },
     { id: 'notes', label: 'Notes', icon: StickyNote },
+    { id: 'ontology', label: 'Ontology', icon: Target },
     { id: 'feedback', label: 'Feedback', icon: MessageCircle },
     { id: 'articles', label: 'Articles', icon: FileText },
     { id: 'meets', label: 'Meets', icon: Users },

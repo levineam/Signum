@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getNoteById, updateNote } from '@/lib/notes'
-import { Note } from '@/types/note'
+import { Note, getNoteDisplayTitle } from '@/types/note'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft } from 'lucide-react'
@@ -71,7 +71,16 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   }
 
   const handleBack = () => {
-    router.push('/notes')
+    // Return to Ontology page for ontology notes, Notes page for others
+    const noteType = 'type' in note! ? (note as { type: string }).type : note!.noteType
+    const isOntology = noteType === 'values' || noteType === 'beliefs' || noteType === 'aims' ||
+      noteType === 'ontology-value' || noteType === 'ontology-belief' || noteType === 'ontology-aim'
+
+    if (isOntology) {
+      router.push('/ontology')
+    } else {
+      router.push('/notes')
+    }
   }
 
   if (isLoading) {
@@ -86,7 +95,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     return (
       <div className="max-w-3xl mx-auto p-6">
         <div className="mb-6">
-          <Button variant="ghost" onClick={handleBack} className="gap-2">
+          <Button variant="ghost" onClick={() => router.push('/notes')} className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             Back to Notes
           </Button>
@@ -104,6 +113,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const noteType = 'type' in note ? (note as { type: string }).type : note.noteType
   const isOntologyNote = noteType === 'values' || noteType === 'beliefs' || noteType === 'aims' ||
     noteType === 'ontology-value' || noteType === 'ontology-belief' || noteType === 'ontology-aim'
+  const backButtonLabel = isOntologyNote ? 'Back to Ontology' : 'Back to Notes'
 
   return (
     <div className="max-w-3xl mx-auto p-6">
@@ -111,7 +121,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       <div className="mb-6 flex items-center justify-between">
         <Button variant="ghost" onClick={handleBack} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
-          Back to Notes
+          {backButtonLabel}
         </Button>
         {!isOntologyNote && (
           <Button onClick={handleSave} size="sm">
@@ -121,7 +131,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       </div>
 
       {/* Note Title */}
-      <h1 className="text-3xl font-bold mb-6">{note.title}</h1>
+      <h1 className="text-3xl font-bold mb-6">{getNoteDisplayTitle(note)}</h1>
 
       {/* Ontology note description */}
       {isOntologyNote && (
