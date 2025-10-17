@@ -181,7 +181,7 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
         collapseRef={collapseHelperRef}
         showDismiss={false}
         defaultExpanded={false}
-        testId="cbt-helper"
+        testId="cbt"
       >
         {/* Distortion checkboxes */}
         <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">

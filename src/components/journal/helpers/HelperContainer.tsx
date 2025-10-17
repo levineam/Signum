@@ -233,7 +233,7 @@ export function HelperContainer({
           {isExpanded && (
             <div
               id={`${helperType}-panel`}
-              data-testid={testId ? `${testId}-panel` : undefined}
+              data-testid={testId ? `${testId}-helper-panel` : undefined}
               className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200"
             >
               {descriptionText && (
