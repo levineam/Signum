@@ -475,7 +475,7 @@ export function JournalStream() {
   }
 
   const isToday = (dateStr: string) => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDateString()
     return dateStr === today
   }
 
