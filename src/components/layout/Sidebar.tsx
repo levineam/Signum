@@ -60,7 +60,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
           className="bg-background/80 backdrop-blur-sm"
         >
-          <Menu className="h-4 w-4" />
+          <Menu className="h-5 w-5" />
         </Button>
       </div>
 
@@ -83,8 +83,8 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
       >
         {
           manuallyCollapsed !== null
-            ? (isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />)
-            : <><ChevronRight className="h-4 w-4 xl:hidden" /><ChevronLeft className="h-4 w-4 hidden xl:block" /></>
+            ? (isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />)
+            : <><ChevronRight className="h-5 w-5 xl:hidden" /><ChevronLeft className="h-5 w-5 hidden xl:block" /></>
         }
       </Button>
 
@@ -160,7 +160,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                     aria-label={section.label}
                   >
                     <Icon className={`
-                      h-4 w-4
+                      h-5 w-5
                       ${
                         manuallyCollapsed !== null
                           ? (isCollapsed ? '' : 'mr-3')
@@ -168,6 +168,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                       }
                     `} />
                     <span className={`
+                      text-lg
                       transition-opacity duration-300
                       ${
                         manuallyCollapsed !== null
@@ -214,8 +215,8 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               {user ? (
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm font-medium text-sidebar-foreground">Signed in as:</p>
-                    <p className="text-sm text-sidebar-foreground/60 truncate">{user.email}</p>
+                    <p className="text-base font-medium text-sidebar-foreground">Signed in as:</p>
+                    <p className="text-base text-sidebar-foreground/60 truncate">{user.email}</p>
                   </div>
                   <Button variant="outline" size="sm" onClick={signOut} className="w-full">
                     Sign Out
@@ -250,7 +251,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               size="sm"
               onClick={() => setMobileDrawerOpen(false)}
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </Button>
           </div>
 
@@ -274,8 +275,8 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                     setMobileDrawerOpen(false)
                   }}
                 >
-                  <Icon className="h-4 w-4 mr-3" />
-                  {section.label}
+                  <Icon className="h-5 w-5 mr-3" />
+                  <span className="text-lg">{section.label}</span>
                 </Button>
               )
             })}
@@ -286,8 +287,8 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
             {user ? (
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm font-medium text-sidebar-foreground">Signed in as:</p>
-                  <p className="text-sm text-sidebar-foreground/60 truncate">{user.email}</p>
+                  <p className="text-base font-medium text-sidebar-foreground">Signed in as:</p>
+                  <p className="text-base text-sidebar-foreground/60 truncate">{user.email}</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={signOut} className="w-full">
                   Sign Out
