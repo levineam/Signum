@@ -92,20 +92,9 @@ export function OntologyPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Ontology</h1>
-        <p className="text-muted-foreground">
-          Your personal beliefs, values, and goals
-        </p>
-      </div>
-
       {/* Ontology Cards Section */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Personal Ontology
-          </h2>
+        <div className="flex items-center justify-end mb-4">
           <OntologyAnalysisButton onComplete={loadNotes} />
         </div>
 
