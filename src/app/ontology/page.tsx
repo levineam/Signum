@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { OntologyPage } from '@/components/ontology/OntologyPage'
@@ -28,7 +28,9 @@ export default function OntologyRoute() {
         <div className="flex min-h-screen flex-col">
           <AppHeader />
           <div className="flex-1">
-            <OntologyPage />
+            <Suspense fallback={<div className="max-w-5xl mx-auto p-6">Loading...</div>}>
+              <OntologyPage />
+            </Suspense>
           </div>
         </div>
       </main>
