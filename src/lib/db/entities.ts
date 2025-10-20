@@ -93,7 +93,8 @@ export async function upsertEntity(
 }
 
 /**
- * Increment the centrality (mention count) for an entity
+ * Increment the centrality (mention count) for an entity atomically
+ * Uses RPC to prevent race conditions with concurrent updates
  */
 export async function incrementMentionCount(
   entityId: string,
@@ -101,31 +102,15 @@ export async function incrementMentionCount(
 ): Promise<void> {
   const supabase = getSupabase();
 
-  // First, get current centrality value
-  const { data: entity, error: fetchError } = await supabase
-    .from('entities')
-    .select('centrality')
-    .eq('id', entityId)
-    .eq('user_id', userId)
-    .single();
+  // Use RPC for atomic increment to avoid race conditions
+  const { error } = await supabase.rpc('increment_entity_centrality', {
+    p_entity_id: entityId,
+    p_user_id: userId
+  });
 
-  if (fetchError) {
-    console.error('Error fetching entity for increment:', fetchError);
-    throw fetchError;
-  }
-
-  // Increment and update
-  const { error: updateError } = await supabase
-    .from('entities')
-    .update({
-      centrality: (entity.centrality || 0) + 1
-    })
-    .eq('id', entityId)
-    .eq('user_id', userId);
-
-  if (updateError) {
-    console.error('Error incrementing mention count:', updateError);
-    throw updateError;
+  if (error) {
+    console.error('Error incrementing mention count:', error);
+    throw error;
   }
 }
 

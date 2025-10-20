@@ -38,36 +38,44 @@ export async function incrementTermCount(
   amount: number = 1
 ): Promise<void> {
   const supabase = getSupabase();
-  const { data: existing, error: fetchError } = await supabase
+
+  // Use upsert with onConflict to handle race conditions atomically
+  // This ensures concurrent increments don't overwrite each other
+  const { data: existing } = await supabase
     .from('term_frequencies')
-    .select('*')
+    .select('count_alltime, count_this_week')
     .eq('user_id', userId)
     .eq('term', term)
-    .single();
+    .maybeSingle();
 
-  if (!fetchError && existing) {
-    const { error: updateError } = await supabase
-      .from('term_frequencies')
-      .update({
-        count_alltime: existing.count_alltime + amount,
-        count_this_week: existing.count_this_week + amount,
-        last_updated: new Date().toISOString()
-      })
-      .eq('id', existing.id);
-    if (updateError) {
-      console.error('Error updating term frequency:', updateError);
-      throw updateError;
+  if (existing) {
+    // Update existing record atomically using raw SQL via RPC
+    const { error } = await supabase.rpc('increment_term_frequency', {
+      p_user_id: userId,
+      p_term: term,
+      p_amount: amount
+    });
+
+    if (error) {
+      console.error('Error incrementing term frequency:', error);
+      throw error;
     }
   } else {
+    // Insert new record - use upsert to handle race on first insert
     const { error: insertError } = await supabase
       .from('term_frequencies')
-      .insert({
+      .upsert({
         user_id: userId,
         term,
         count_alltime: amount,
         count_this_week: amount,
-        count_last_week: 0
+        count_last_week: 0,
+        last_updated: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,term',
+        ignoreDuplicates: false
       });
+
     if (insertError) {
       console.error('Error creating term frequency:', insertError);
       throw insertError;
