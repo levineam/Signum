@@ -33,16 +33,14 @@ export interface TermFrequency {
 }
 
 export async function incrementTermCount(
-  userId: string,
   term: string,
   amount: number = 1
 ): Promise<void> {
   const supabase = getSupabase();
 
   // Use RPC for atomic increment that handles both insert and update
-  // This prevents race conditions on both first creation and subsequent increments
+  // The function uses auth.uid() internally for security
   const { error } = await supabase.rpc('increment_term_frequency', {
-    p_user_id: userId,
     p_term: term,
     p_amount: amount
   });

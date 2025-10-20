@@ -95,17 +95,16 @@ export async function upsertEntity(
 /**
  * Increment the centrality (mention count) for an entity atomically
  * Uses RPC to prevent race conditions with concurrent updates
+ * The function uses auth.uid() internally for security
  */
 export async function incrementMentionCount(
-  entityId: string,
-  userId: string
+  entityId: string
 ): Promise<void> {
   const supabase = getSupabase();
 
   // Use RPC for atomic increment to avoid race conditions
   const { error } = await supabase.rpc('increment_entity_centrality', {
-    p_entity_id: entityId,
-    p_user_id: userId
+    p_entity_id: entityId
   });
 
   if (error) {
