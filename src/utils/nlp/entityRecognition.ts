@@ -1,5 +1,5 @@
 export interface Entity {
-  type: 'person' | 'project' | 'value' | 'organization' | 'domain';
+  type: 'person' | 'project' | 'value' | 'domain' | 'note';
   name: string;
 }
 
@@ -43,9 +43,9 @@ export function recognizeEntities(
         name: match
       });
     } else {
-      // Multi-word or org indicators - likely organization
+      // Multi-word or org indicators - map to 'project' type per DB schema
       entities.push({
-        type: 'organization',
+        type: 'project',
         name: match
       });
     }

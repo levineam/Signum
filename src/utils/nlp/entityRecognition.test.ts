@@ -14,14 +14,15 @@ describe('recognizeEntities', () => {
     expect(names).toContain('Sarah');
   });
 
-  it('should extract organizations', () => {
+  it('should map organizations to project type', () => {
     const text = 'Google announced a new AI model yesterday.';
     const entities = recognizeEntities(text);
 
-    const orgEntities = entities.filter(e => e.type === 'organization');
-    expect(orgEntities.length).toBeGreaterThan(0);
+    // Organizations are mapped to 'project' type per DB schema
+    const projectEntities = entities.filter(e => e.type === 'project');
+    expect(projectEntities.length).toBeGreaterThan(0);
 
-    const names = orgEntities.map(e => e.name);
+    const names = projectEntities.map(e => e.name);
     expect(names).toContain('Google');
   });
 
@@ -62,10 +63,11 @@ describe('recognizeEntities', () => {
     const text = 'Project Moonshot with Mom and Google Inc.';
     const entities = recognizeEntities(text);
 
-    // Should detect person (Mom), organization (Google Inc), and project (Project Moonshot)
+    // Should detect person (Mom) and projects (Google Inc, Project Moonshot)
     expect(entities.length).toBeGreaterThan(0);
 
     const types = entities.map(e => e.type);
     expect(types).toContain('person');
+    expect(types).toContain('project');
   });
 });
