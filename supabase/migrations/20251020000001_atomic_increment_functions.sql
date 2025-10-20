@@ -15,12 +15,15 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
-  UPDATE term_frequencies
-  SET
-    count_alltime = count_alltime + p_amount,
-    count_this_week = count_this_week + p_amount,
-    last_updated = now()
-  WHERE user_id = p_user_id AND term = p_term;
+  -- Use INSERT ... ON CONFLICT to handle both first insert and updates atomically
+  -- This prevents race conditions on both initial creation and subsequent increments
+  INSERT INTO term_frequencies (user_id, term, count_alltime, count_this_week, count_last_week, last_updated)
+  VALUES (p_user_id, p_term, p_amount, p_amount, 0, now())
+  ON CONFLICT (user_id, term)
+  DO UPDATE SET
+    count_alltime = term_frequencies.count_alltime + p_amount,
+    count_this_week = term_frequencies.count_this_week + p_amount,
+    last_updated = now();
 END;
 $$;
 
