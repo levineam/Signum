@@ -6,7 +6,6 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import type { WikiLink } from './obsidian-parser';
 
 export interface NoteMapping {
   title: string;
