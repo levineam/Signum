@@ -44,7 +44,7 @@ export class LinkResolver {
     };
 
     // Fetch all imported notes
-    const { data: notes, error } = await supabase
+    const { data: notes, error } = await this.supabase
       .from('notes')
       .select('id, title, content, metadata')
       .in('id', noteIds)
@@ -86,7 +86,7 @@ export class LinkResolver {
 
       if (updatedContent !== note.content) {
         // Update note with resolved links
-        const { error: updateError } = await supabase
+        const { error: updateError } = await this.supabase
           .from('notes')
           .update({ content: updatedContent })
           .eq('id', note.id);
@@ -199,7 +199,7 @@ export class LinkResolver {
 
     if (linksToCreate.length > 0) {
       // Batch insert links
-      const { error } = await supabase.from('links').insert(linksToCreate);
+      const { error } = await this.supabase.from('links').insert(linksToCreate);
 
       if (error) {
         console.error('Error creating link relationships:', error);
@@ -222,8 +222,3 @@ export class LinkResolver {
     return text.replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
   }
 }
-
-/**
- * Singleton instance
- */
-export const linkResolver = new LinkResolver();

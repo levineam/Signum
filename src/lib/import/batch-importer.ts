@@ -166,7 +166,7 @@ export class BatchImporter {
 
     // Batch insert
     if (notesToInsert.length > 0) {
-      const { data, error } = await supabase
+      const { data, error } = await this.supabase
         .from('notes')
         .insert(notesToInsert)
         .select('id');
@@ -195,7 +195,7 @@ export class BatchImporter {
   private async getExistingNoteTitles(
     userId: string
   ): Promise<Map<string, string>> {
-    const { data: notes, error } = await supabase
+    const { data: notes, error } = await this.supabase
       .from('notes')
       .select('title')
       .eq('user_id', userId);
@@ -217,7 +217,7 @@ export class BatchImporter {
   async rollbackImport(userId: string, noteIds: string[]): Promise<void> {
     if (noteIds.length === 0) return;
 
-    const { error } = await supabase
+    const { error } = await this.supabase
       .from('notes')
       .delete()
       .in('id', noteIds)
@@ -228,8 +228,3 @@ export class BatchImporter {
     }
   }
 }
-
-/**
- * Singleton instance
- */
-export const batchImporter = new BatchImporter();
