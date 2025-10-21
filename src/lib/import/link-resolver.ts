@@ -106,6 +106,8 @@ export class LinkResolver {
         if (!updateError) {
           result.updatedNotes.push(note.id);
           result.resolvedCount += resolved;
+          // Update the note object with resolved content for link relationship creation
+          note.content = updatedContent;
         } else {
           console.error(`Error updating note ${note.id}:`, updateError);
         }
@@ -115,6 +117,7 @@ export class LinkResolver {
     }
 
     // Create link relationships in links table
+    // Notes array now contains updated content with resolved <a> tags
     await this.createLinkRelationships(userId, notes, titleMap);
 
     return result;

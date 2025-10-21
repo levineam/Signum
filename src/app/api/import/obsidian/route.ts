@@ -148,6 +148,27 @@ export async function POST(request: NextRequest) {
 
     console.log(`[${importId}] Imported ${importResult.noteIds.length} notes`);
 
+    // Check if batch import failed
+    if (!importResult.success || importResult.errors.length > 0) {
+      console.error(`[${importId}] Batch import failed, rolling back ${importResult.noteIds.length} notes`);
+      await batchImporter.rollbackImport(user.id, importResult.noteIds);
+
+      return NextResponse.json(
+        {
+          success: false,
+          summary: {
+            notesImported: 0,
+            linksResolved: 0,
+            brokenLinks: [],
+            skippedFiles: importResult.skippedFiles,
+            errors: importResult.errors,
+          },
+          importId,
+        },
+        { status: 500 }
+      );
+    }
+
     // Phase 3: Resolve WikiLinks
     let linkResolutionResult;
     if (importResult.noteIds.length > 0) {
@@ -160,11 +181,23 @@ export async function POST(request: NextRequest) {
         console.log(`[${importId}] Resolved ${linkResolutionResult.resolvedCount} links, ${linkResolutionResult.brokenLinks.length} broken`);
       } catch (error) {
         console.error(`[${importId}] Link resolution error:`, error);
-        linkResolutionResult = {
-          resolvedCount: 0,
-          brokenLinks: [],
-          updatedNotes: [],
-        };
+        // Roll back on link resolution failure
+        await batchImporter.rollbackImport(user.id, importResult.noteIds);
+
+        return NextResponse.json(
+          {
+            success: false,
+            summary: {
+              notesImported: 0,
+              linksResolved: 0,
+              brokenLinks: [],
+              skippedFiles: importResult.skippedFiles,
+              errors: [`Link resolution failed: ${error instanceof Error ? error.message : 'Unknown error'}`],
+            },
+            importId,
+          },
+          { status: 500 }
+        );
       }
     } else {
       linkResolutionResult = {
