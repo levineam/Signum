@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
   try {
     // Check environment variables at runtime
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!supabaseUrl || !supabaseAnonKey) {
       return NextResponse.json(
         { error: 'Server configuration error: Missing Supabase credentials' },
         { status: 500 }
@@ -60,8 +60,9 @@ export async function POST(req: NextRequest) {
 
     const token = authHeader.substring(7);
 
-    // Create authenticated Supabase client
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    // Create authenticated Supabase client using anon key + user JWT
+    // This respects RLS policies with the user's session
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
           Authorization: `Bearer ${token}`
