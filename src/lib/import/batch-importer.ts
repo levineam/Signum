@@ -146,14 +146,14 @@ export class BatchImporter {
 
       // Preserve timestamps from frontmatter if option enabled
       if (options.preserveTimestamps && parsedNote.frontmatter) {
-        if (parsedNote.frontmatter.created) {
+        if (parsedNote.frontmatter.created && typeof parsedNote.frontmatter.created === 'string') {
           noteData.created_at = new Date(
-            parsedNote.frontmatter.created
+            parsedNote.frontmatter.created as string
           ).toISOString();
         }
-        if (parsedNote.frontmatter.modified) {
+        if (parsedNote.frontmatter.modified && typeof parsedNote.frontmatter.modified === 'string') {
           noteData.updated_at = new Date(
-            parsedNote.frontmatter.modified
+            parsedNote.frontmatter.modified as string
           ).toISOString();
         }
       }
