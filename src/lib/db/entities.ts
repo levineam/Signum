@@ -3,23 +3,7 @@
  * Story 1.1: Core NLP Infrastructure & Database Schema
  */
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
-// Lazy-initialize Supabase client to avoid build-time env var errors
-let supabaseInstance: SupabaseClient | null = null;
-
-function getSupabase(): SupabaseClient {
-  if (!supabaseInstance) {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Missing Supabase environment variables');
-    }
-    supabaseInstance = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-  }
-  return supabaseInstance;
-}
+import { supabase } from '@/lib/supabase';
 
 export interface Entity {
   id: string;
@@ -41,7 +25,6 @@ export async function upsertEntity(
   type: Entity['type'],
   name: string
 ): Promise<Entity> {
-  const supabase = getSupabase();
 
   // Check if entity already exists
   const { data: existing, error: fetchError } = await supabase
@@ -100,7 +83,6 @@ export async function upsertEntity(
 export async function incrementMentionCount(
   entityId: string
 ): Promise<void> {
-  const supabase = getSupabase();
 
   // Use RPC for atomic increment to avoid race conditions
   const { error } = await supabase.rpc('increment_entity_centrality', {
@@ -122,7 +104,6 @@ export async function updateSentiment(
   userId: string,
   sentiment: number
 ): Promise<void> {
-  const supabase = getSupabase();
 
   const { error } = await supabase
     .from('entities')
@@ -145,7 +126,6 @@ export async function getEntitiesByType(
   userId: string,
   type: Entity['type']
 ): Promise<Entity[]> {
-  const supabase = getSupabase();
 
   const { data, error } = await supabase
     .from('entities')
@@ -170,7 +150,6 @@ export async function getTopEntitiesByCentrality(
   type: Entity['type'],
   limit: number
 ): Promise<Entity[]> {
-  const supabase = getSupabase();
 
   const { data, error } = await supabase
     .from('entities')

@@ -3,23 +3,7 @@
  * Story 1.1: Core NLP Infrastructure & Database Schema
  */
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
-// Lazy-initialize Supabase client to avoid build-time env var errors
-let supabaseInstance: SupabaseClient | null = null;
-
-function getSupabase(): SupabaseClient {
-  if (!supabaseInstance) {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Missing Supabase environment variables');
-    }
-    supabaseInstance = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-  }
-  return supabaseInstance;
-}
+import { supabase } from '@/lib/supabase';
 
 export interface Task {
   id: string;
@@ -51,7 +35,6 @@ export async function createTask(
   dueAt?: Date,
   metadata?: Record<string, unknown>
 ): Promise<Task> {
-  const supabase = getSupabase();
   const { data, error } = await supabase
     .from('tasks')
     .insert({
@@ -78,7 +61,6 @@ export async function getTasksByUser(
   userId: string,
   status?: 'pending' | 'completed' | 'cancelled'
 ): Promise<Task[]> {
-  const supabase = getSupabase();
   let query = supabase
     .from('tasks')
     .select('*')
@@ -103,7 +85,6 @@ export async function getTasksByUser(
  * Get tasks due today for a user
  */
 export async function getTasksDueToday(userId: string): Promise<Task[]> {
-  const supabase = getSupabase();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
@@ -130,7 +111,6 @@ export async function getTasksDueToday(userId: string): Promise<Task[]> {
  * Get overdue tasks for a user
  */
 export async function getTasksOverdue(userId: string): Promise<Task[]> {
-  const supabase = getSupabase();
   const now = new Date();
 
   const { data, error } = await supabase
@@ -156,7 +136,6 @@ export async function getTasksUpcoming(
   userId: string,
   days: number
 ): Promise<Task[]> {
-  const supabase = getSupabase();
   const now = new Date();
   const future = new Date();
   future.setDate(future.getDate() + days);
@@ -185,7 +164,6 @@ export async function markTaskComplete(
   taskId: string,
   userId: string
 ): Promise<void> {
-  const supabase = getSupabase();
   const { error } = await supabase
     .from('tasks')
     .update({
@@ -209,7 +187,6 @@ export async function snoozeTask(
   userId: string,
   newDueAt: Date
 ): Promise<void> {
-  const supabase = getSupabase();
   // Get current snooze count
   const { data: task, error: fetchError } = await supabase
     .from('tasks')
@@ -243,7 +220,6 @@ export async function snoozeTask(
  * Delete a task
  */
 export async function deleteTask(taskId: string, userId: string): Promise<void> {
-  const supabase = getSupabase();
   const { error } = await supabase
     .from('tasks')
     .delete()

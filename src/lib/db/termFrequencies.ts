@@ -3,23 +3,7 @@
  * Story 1.1: Core NLP Infrastructure & Database Schema
  */
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
-// Lazy-initialize Supabase client to avoid build-time env var errors
-let supabaseInstance: SupabaseClient | null = null;
-
-function getSupabase(): SupabaseClient {
-  if (!supabaseInstance) {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Missing Supabase environment variables');
-    }
-    supabaseInstance = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-  }
-  return supabaseInstance;
-}
+import { supabase } from '@/lib/supabase';
 
 export interface TermFrequency {
   id: string;
@@ -36,8 +20,6 @@ export async function incrementTermCount(
   term: string,
   amount: number = 1
 ): Promise<void> {
-  const supabase = getSupabase();
-
   // Use RPC for atomic increment that handles both insert and update
   // The function uses auth.uid() internally for security
   const { error } = await supabase.rpc('increment_term_frequency', {
@@ -55,7 +37,6 @@ export async function getTopTerms(
   userId: string,
   limit: number
 ): Promise<TermFrequency[]> {
-  const supabase = getSupabase();
   const { data, error } = await supabase
     .from('term_frequencies')
     .select('*')
@@ -73,7 +54,6 @@ export async function getWeeklyDelta(
   userId: string,
   limit: number
 ): Promise<TermFrequency[]> {
-  const supabase = getSupabase();
   const { data, error } = await supabase
     .from('term_frequencies')
     .select('*')
@@ -94,7 +74,6 @@ export async function getWeeklyDelta(
 }
 
 export async function weeklyRollover(userId: string): Promise<void> {
-  const supabase = getSupabase();
   const { data: terms, error: fetchError } = await supabase
     .from('term_frequencies')
     .select('id, count_this_week')
