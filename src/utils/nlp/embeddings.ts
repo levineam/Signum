@@ -1,9 +1,8 @@
 import OpenAI from 'openai';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 import { getContentHash } from './caching';
 
 let openaiInstance: OpenAI | null = null;
-let supabaseInstance: SupabaseClient | null = null;
 
 function getOpenAI(): OpenAI {
   if (!openaiInstance) {
@@ -17,31 +16,16 @@ function getOpenAI(): OpenAI {
   return openaiInstance;
 }
 
-function getSupabase(): SupabaseClient {
-  if (!supabaseInstance) {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Missing Supabase environment variables');
-    }
-    supabaseInstance = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-  }
-  return supabaseInstance;
-}
-
 export async function getEmbedding(
-  text: string,
-  userId: string
+  text: string
 ): Promise<number[] | null> {
   try {
     const contentHash = getContentHash(text);
-    const supabase = getSupabase();
 
+    // Check cache - RLS automatically filters by auth.uid()
     const { data: cached, error: cacheError } = await supabase
       .from('paragraph_embeddings')
       .select('embedding')
-      .eq('user_id', userId)
       .eq('content_hash', contentHash)
       .single();
 
@@ -49,6 +33,7 @@ export async function getEmbedding(
       return cached.embedding as number[];
     }
 
+    // Generate new embedding via OpenAI
     const openai = getOpenAI();
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
@@ -58,10 +43,16 @@ export async function getEmbedding(
 
     const embedding = response.data[0].embedding;
 
+    // Cache the embedding - RLS automatically sets user_id from auth.uid()
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     await supabase
       .from('paragraph_embeddings')
       .insert({
-        user_id: userId,
+        user_id: user.id,
         content_hash: contentHash,
         embedding
       })
