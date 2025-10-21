@@ -43,7 +43,7 @@ export class LinkResolver {
       updatedNotes: [],
     };
 
-    // Fetch all imported notes
+    // Fetch imported notes (to update their content)
     const { data: notes, error } = await this.supabase
       .from('notes')
       .select('id, title, content, metadata')
@@ -55,9 +55,21 @@ export class LinkResolver {
       return result;
     }
 
-    // Build title -> noteId mapping
+    // Fetch ALL user notes to build comprehensive title map
+    // This allows WikiLinks to resolve to existing notes, not just imported ones
+    const { data: allNotes, error: allNotesError } = await this.supabase
+      .from('notes')
+      .select('id, title, metadata')
+      .eq('user_id', userId);
+
+    if (allNotesError || !allNotes) {
+      console.error('Error fetching all notes for title mapping:', allNotesError);
+      return result;
+    }
+
+    // Build title -> noteId mapping from entire user vault
     const titleMap = new Map<string, string>();
-    notes.forEach((note) => {
+    allNotes.forEach((note) => {
       // Store both exact title and lowercase version for case-insensitive matching
       titleMap.set(note.title, note.id);
       titleMap.set(note.title.toLowerCase(), note.id);
