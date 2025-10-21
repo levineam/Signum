@@ -19,60 +19,38 @@ export interface Entity {
 /**
  * Upsert an entity (create or update last_seen timestamp)
  * Used when an entity is mentioned in a paragraph
+ * Uses upsert with unique constraint to prevent duplicate creation
  */
 export async function upsertEntity(
   userId: string,
   type: Entity['type'],
   name: string
 ): Promise<Entity> {
+  const now = new Date().toISOString();
 
-  // Check if entity already exists
-  const { data: existing, error: fetchError } = await supabase
+  // Use upsert with onConflict to handle concurrent requests atomically
+  // The unique constraint on (user_id, type, name) prevents duplicates
+  const { data: upserted, error: upsertError } = await supabase
     .from('entities')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('type', type)
-    .eq('name', name)
-    .single();
-
-  if (!fetchError && existing) {
-    // Entity exists - update last_seen
-    const { data: updated, error: updateError } = await supabase
-      .from('entities')
-      .update({
-        last_seen: new Date().toISOString()
-      })
-      .eq('id', existing.id)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error('Error updating entity:', updateError);
-      throw updateError;
-    }
-
-    return updated;
-  }
-
-  // Entity doesn't exist - create new
-  const { data: created, error: createError } = await supabase
-    .from('entities')
-    .insert({
+    .upsert({
       user_id: userId,
       type,
       name,
-      first_seen: new Date().toISOString(),
-      last_seen: new Date().toISOString()
+      first_seen: now,
+      last_seen: now
+    }, {
+      onConflict: 'user_id,type,name',
+      ignoreDuplicates: false
     })
     .select()
     .single();
 
-  if (createError) {
-    console.error('Error creating entity:', createError);
-    throw createError;
+  if (upsertError) {
+    console.error('Error upserting entity:', upsertError);
+    throw upsertError;
   }
 
-  return created;
+  return upserted;
 }
 
 /**

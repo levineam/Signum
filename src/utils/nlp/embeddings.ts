@@ -43,21 +43,35 @@ export async function getEmbedding(
 
     const embedding = response.data[0].embedding;
 
-    // Cache the embedding - RLS automatically sets user_id from auth.uid()
+    // Cache the embedding using upsert to handle concurrent requests
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       throw new Error('User not authenticated');
     }
 
-    await supabase
+    // Use upsert with onConflict to handle race conditions gracefully
+    const { data: inserted, error: insertError } = await supabase
       .from('paragraph_embeddings')
-      .insert({
+      .upsert({
         user_id: user.id,
         content_hash: contentHash,
         embedding
+      }, {
+        onConflict: 'user_id,content_hash',
+        ignoreDuplicates: false
       })
       .select()
       .single();
+
+    // If upsert encountered a conflict, return the existing cached embedding
+    if (insertError || !inserted) {
+      const { data: refetched } = await supabase
+        .from('paragraph_embeddings')
+        .select('embedding')
+        .eq('content_hash', contentHash)
+        .single();
+      return refetched?.embedding as number[] || embedding;
+    }
 
     return embedding;
   } catch (error) {
