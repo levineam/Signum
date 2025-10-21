@@ -2,7 +2,9 @@
 
 ## Overview
 
-This project uses the BMAD Method framework for AI-assisted development. BMAD files are stored in `.claude/commands/BMad/` but agents expect them in `.bmad-core/`.
+This project uses the BMAD Method framework for AI-assisted development workflows in **Conductor workspaces**. This setup is primarily for development use within Conductor's multi-workspace environment.
+
+BMAD files are stored in `.claude/commands/BMad/` but agents expect them in `.bmad-core/`.
 
 ## The Missing Files Issue
 
@@ -71,14 +73,16 @@ All should exist and be accessible.
 └── agents/             # Agent personas
 ```
 
-## For New Clones/Workspaces
+## For New Conductor Workspaces
 
-Add this to your setup checklist:
+When creating new Conductor workspaces (via `git worktree` or fresh clones):
 
-1. Clone repository
+1. Clone repository or create worktree
 2. Run `npm install`
 3. **Run `./scripts/setup-bmad-symlinks.sh`** ← Important!
 4. Continue with normal setup
+
+**Note:** This BMAD setup is specifically for development workflows within Conductor. If you're cloning this repo for other purposes, you can safely ignore the BMAD setup.
 
 ## Troubleshooting
 
