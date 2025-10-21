@@ -82,20 +82,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate total size (100MB max)
-    const totalSize = body.files.reduce((sum, file) => sum + file.size, 0);
-    const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB
-
-    if (totalSize > MAX_TOTAL_SIZE) {
-      return NextResponse.json(
-        { error: 'Total vault size exceeds 100MB limit' },
-        { status: 400 }
-      );
-    }
-
     const importId = `import-${Date.now()}-${user.id.slice(0, 8)}`;
 
     console.log(`[${importId}] Starting import of ${body.files.length} files for user ${user.id}`);
+
+    // Validate total size server-side (100MB max)
+    // SECURITY: Compute actual size from content, don't trust client-provided size
+    const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB
+    let totalSize = 0;
+
+    for (const file of body.files) {
+      const actualSize = Buffer.byteLength(file.content, 'utf8');
+      totalSize += actualSize;
+
+      if (totalSize > MAX_TOTAL_SIZE) {
+        return NextResponse.json(
+          { error: 'Total vault size exceeds 100MB limit' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Phase 1: Parse all files
     const parsedNotes = [];
@@ -103,10 +109,13 @@ export async function POST(request: NextRequest) {
 
     for (const file of body.files) {
       try {
+        // Compute actual file size server-side
+        const actualSize = Buffer.byteLength(file.content, 'utf8');
+
         // Validate file
         const validation = obsidianParser.validateFile(
           file.fileName,
-          file.size,
+          actualSize,
           file.content
         );
 
