@@ -5,7 +5,7 @@
  * Manages transactions, deduplication, and progress tracking
  */
 
-import { supabase } from '@/lib/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ParsedNote } from './obsidian-parser';
 
 export interface ImportOptions {
@@ -36,6 +36,8 @@ export interface ImportResult {
 
 export class BatchImporter {
   private readonly BATCH_SIZE = 50;
+
+  constructor(private supabase: SupabaseClient) {}
 
   /**
    * Import multiple notes in batches

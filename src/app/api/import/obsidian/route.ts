@@ -8,8 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { obsidianParser } from '@/lib/import/obsidian-parser';
-import { batchImporter } from '@/lib/import/batch-importer';
-import { linkResolver } from '@/lib/import/link-resolver';
+import { BatchImporter } from '@/lib/import/batch-importer';
+import { LinkResolver } from '@/lib/import/link-resolver';
 
 export const maxDuration = 60; // Allow up to 60 seconds for large imports
 
@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
     console.log(`[${importId}] Parsed ${parsedNotes.length} notes, ${parseErrors.length} errors`);
 
     // Phase 2: Import notes to database
+    const batchImporter = new BatchImporter(supabase);
     const importResult = await batchImporter.importNotes(
       parsedNotes,
       {
@@ -151,6 +152,7 @@ export async function POST(request: NextRequest) {
     let linkResolutionResult;
     if (importResult.noteIds.length > 0) {
       try {
+        const linkResolver = new LinkResolver(supabase);
         linkResolutionResult = await linkResolver.resolveLinks(
           user.id,
           importResult.noteIds
