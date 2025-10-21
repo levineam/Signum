@@ -9,7 +9,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { detectTask } from '@/utils/nlp/taskDetection';
-import { createTask } from '@/lib/db/tasks';
 
 export async function POST(req: NextRequest) {
   try {
@@ -87,17 +86,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ task: null });
     }
 
-    // Create task in database
-    const task = await createTask(
-      userId,
-      detectedTask.title,
-      detectedTask.dueAt || undefined,
-      {
-        source_entry_id: entryId,
-        rrule: detectedTask.rrule,
-        extracted_from_text: paragraphText
-      }
-    );
+    // Create task in database using the authenticated supabase client
+    const { data: task, error: taskError } = await supabase
+      .from('tasks')
+      .insert({
+        user_id: userId,
+        title: detectedTask.title,
+        due_at: detectedTask.dueAt?.toISOString() || null,
+        metadata: {
+          source_entry_id: entryId,
+          rrule: detectedTask.rrule,
+          extracted_from_text: paragraphText
+        }
+      })
+      .select()
+      .single();
+
+    if (taskError || !task) {
+      console.error('Error creating task:', taskError);
+      return NextResponse.json(
+        { error: 'Failed to create task' },
+        { status: 500 }
+      );
+    }
 
     // Create reminder if due date exists
     if (detectedTask.dueAt) {

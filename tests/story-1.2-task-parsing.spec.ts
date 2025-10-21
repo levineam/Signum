@@ -7,6 +7,49 @@ import { test, expect } from '@playwright/test';
 
 const PREVIEW_URL = 'https://signum-git-story-12-task-parsing-levineams-projects.vercel.app';
 
+// Test credentials from /docs/dev-test-credentials.md
+const TEST_USER = {
+  email: 'dev-test-1@signum.dev',
+  password: 'DevTest2025!User1'
+};
+
+// Helper to authenticate and get session
+async function getAuthenticatedSession(page: any) {
+  await page.goto(`${PREVIEW_URL}/auth`);
+  await page.waitForLoadState('networkidle');
+
+  // Fill in login form
+  const emailInput = page.locator('input[type="email"]').first();
+  const passwordInput = page.locator('input[type="password"]').first();
+
+  await emailInput.fill(TEST_USER.email);
+  await passwordInput.fill(TEST_USER.password);
+
+  // Submit form
+  await page.locator('button[type="submit"]').first().click();
+  await page.waitForLoadState('networkidle');
+
+  // Wait a bit for auth to settle
+  await page.waitForTimeout(2000);
+
+  // Get session from localStorage
+  const session = await page.evaluate(() => {
+    const authData = localStorage.getItem('sb-otyvmmgakowcdsxehwox-auth-token');
+    if (!authData) return null;
+    try {
+      const parsed = JSON.parse(authData);
+      return {
+        access_token: parsed.access_token,
+        user_id: parsed.user?.id
+      };
+    } catch {
+      return null;
+    }
+  });
+
+  return session;
+}
+
 test.describe('Story 1.2: Task Parsing API', () => {
   // Test without authentication to verify error handling
   test('should require authentication', async ({ request }) => {
@@ -202,6 +245,180 @@ test.describe('Story 1.2: UI Integration Check', () => {
   });
 });
 
+test.describe('Story 1.2: Authenticated Task Parsing', () => {
+  test('should create task with authentication - simple task with date', async ({ page, request }) => {
+    // Authenticate and get session
+    const session = await getAuthenticatedSession(page);
+
+    if (!session || !session.access_token) {
+      console.log('⚠️  Authentication failed - skipping authenticated tests');
+      console.log('   Make sure dev-test-1@signum.dev account exists in Supabase');
+      test.skip();
+      return;
+    }
+
+    console.log('✅ Successfully authenticated as', TEST_USER.email);
+    console.log('   User ID:', session.user_id);
+
+    // Test creating a task with a simple date
+    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      data: {
+        paragraphText: 'I need to call Mom tomorrow at 3pm',
+        userId: session.user_id,
+        entryId: 'test-entry-' + Date.now()
+      }
+    });
+
+    const body = await response.json();
+
+    if (response.status() !== 200) {
+      console.log('❌ Task creation failed:', response.status(), body);
+    }
+
+    expect(response.status()).toBe(200);
+
+    console.log('Task created:', body);
+
+    expect(body.task).toBeTruthy();
+    expect(body.task.title).toContain('call Mom');
+    expect(body.task.dueAt).toBeTruthy();
+    expect(body.task.id).toBeTruthy();
+  });
+
+  test('should create task with recurring pattern', async ({ page, request }) => {
+    const session = await getAuthenticatedSession(page);
+
+    if (!session || !session.access_token) {
+      test.skip();
+      return;
+    }
+
+    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      data: {
+        paragraphText: 'Reminder: team standup every Monday at 9am',
+        userId: session.user_id,
+        entryId: 'test-entry-' + Date.now()
+      }
+    });
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    console.log('Recurring task created:', body);
+
+    expect(body.task).toBeTruthy();
+    expect(body.task.title).toContain('team standup');
+    expect(body.task.dueAt).toBeTruthy();
+    expect(body.task.rrule).toBeTruthy();
+    expect(body.task.rrule).toContain('FREQ=WEEKLY');
+  });
+
+  test('should return null for non-task text', async ({ page, request }) => {
+    const session = await getAuthenticatedSession(page);
+
+    if (!session || !session.access_token) {
+      test.skip();
+      return;
+    }
+
+    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      data: {
+        paragraphText: 'I love coding and learning new things',
+        userId: session.user_id,
+        entryId: 'test-entry-' + Date.now()
+      }
+    });
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    console.log('Non-task response:', body);
+
+    expect(body.task).toBeNull();
+  });
+
+  test('should create task without date', async ({ page, request }) => {
+    const session = await getAuthenticatedSession(page);
+
+    if (!session || !session.access_token) {
+      test.skip();
+      return;
+    }
+
+    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      data: {
+        paragraphText: 'Todo: review the documentation',
+        userId: session.user_id,
+        entryId: 'test-entry-' + Date.now()
+      }
+    });
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    console.log('Task without date:', body);
+
+    expect(body.task).toBeTruthy();
+    expect(body.task.title).toContain('review the documentation');
+    expect(body.task.dueAt).toBeNull();
+    expect(body.task.rrule).toBeNull();
+  });
+
+  test('should handle complex date patterns', async ({ page, request }) => {
+    const session = await getAuthenticatedSession(page);
+
+    if (!session || !session.access_token) {
+      test.skip();
+      return;
+    }
+
+    const testCases = [
+      { text: 'Remind me to submit report in 10 days', expectedTitle: 'submit report' },
+      { text: 'I should call the dentist next Friday', expectedTitle: 'call the dentist' },
+      { text: 'Need to renew passport by December 1st', expectedTitle: 'renew passport' },
+    ];
+
+    for (const testCase of testCases) {
+      const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        data: {
+          paragraphText: testCase.text,
+          userId: session.user_id,
+          entryId: 'test-entry-' + Date.now()
+        }
+      });
+
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+
+      console.log(`Test case: "${testCase.text}"`, body);
+
+      expect(body.task).toBeTruthy();
+      expect(body.task.title).toContain(testCase.expectedTitle);
+      expect(body.task.dueAt).toBeTruthy();
+    }
+  });
+});
+
 test.describe('Story 1.2: Manual Testing Guide', () => {
   test('should document manual test steps', async () => {
     console.log(`
@@ -209,40 +426,20 @@ test.describe('Story 1.2: Manual Testing Guide', () => {
 MANUAL TESTING GUIDE FOR STORY 1.2
 ================================================================================
 
-To fully test Story 1.2, you'll need to:
+✅ AUTOMATED TESTS NOW INCLUDE AUTHENTICATED API CALLS!
 
-1. **Get an authenticated user token:**
-   - Go to ${PREVIEW_URL}
-   - Sign up or log in
-   - Open browser DevTools → Application → Local Storage
-   - Find the Supabase auth token
+The automated tests authenticate using dev-test-1@signum.dev and verify:
+- Task creation with dates
+- Recurring task patterns (with RRULE)
+- Non-task text handling
+- Tasks without dates
+- Complex date patterns
 
-2. **Test the API with curl:**
-
-   curl -X POST ${PREVIEW_URL}/api/tasks/parse \\
-     -H "Content-Type: application/json" \\
-     -H "Authorization: Bearer [YOUR_TOKEN]" \\
-     -d '{
-       "paragraphText": "I need to call Mom tomorrow at 3pm",
-       "userId": "[YOUR_USER_ID]",
-       "entryId": "[TEST_ENTRY_ID]"
-     }'
-
-3. **Test various task patterns:**
-   - "Remind me to finish report in 10 days"
-   - "Todo: review PR #42 by next Friday"
-   - "I should exercise daily"
-   - "Team meeting every Monday at 9am"
-
-4. **Verify in Supabase:**
-   - Check 'tasks' table for created tasks
-   - Check 'reminders' table for tasks with due dates
-   - Verify 'source_entry_id' links correctly
-
-5. **Test error cases:**
-   - Invalid token → 401
-   - Missing paragraphText → 400
-   - Non-task text → { task: null }
+To verify in Supabase Dashboard:
+1. Go to Supabase project dashboard
+2. Check 'tasks' table for created test tasks
+3. Check 'reminders' table for tasks with due dates
+4. Verify RLS policies (tasks belong to correct user)
 
 ================================================================================
     `);
