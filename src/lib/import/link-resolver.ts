@@ -164,15 +164,15 @@ export class LinkResolver {
    */
   private async createLinkRelationships(
     userId: string,
-    notes: any[],
-    titleMap: Map<string, string>
+    notes: Array<{ id: string; content: string }>,
+    _titleMap: Map<string, string>
   ): Promise<void> {
     const linksToCreate: Array<{
       source_note_id: string;
       target_note_id: string;
       link_type: string;
       user_id: string;
-      metadata: Record<string, any>;
+      metadata: Record<string, unknown>;
     }> = [];
 
     for (const note of notes) {

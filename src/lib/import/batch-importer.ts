@@ -121,7 +121,7 @@ export class BatchImporter {
       }
 
       // Build note object
-      const noteData: any = {
+      const noteData: Record<string, unknown> = {
         user_id: options.userId,
         title: parsedNote.title,
         content: parsedNote.content,
@@ -173,7 +173,7 @@ export class BatchImporter {
         errors.push(`Batch insert error: ${error.message}`);
         progress.failed += notesToInsert.length;
       } else if (data) {
-        noteIds.push(...data.map((note: any) => note.id));
+        noteIds.push(...data.map((note: { id: string }) => note.id));
         progress.succeeded += data.length;
       }
     }
@@ -201,7 +201,7 @@ export class BatchImporter {
     const titleMap = new Map<string, string>();
 
     if (!error && notes) {
-      notes.forEach((note: any) => {
+      notes.forEach((note: { title: string }) => {
         titleMap.set(note.title.toLowerCase(), note.title);
       });
     }

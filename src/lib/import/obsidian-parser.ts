@@ -10,12 +10,11 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkHtml from 'remark-html';
 import remarkFrontmatter from 'remark-frontmatter';
-import remarkWikiLink from 'remark-wiki-link';
 
 export interface ParsedNote {
   title: string;
   content: string; // HTML format for Signum
-  frontmatter: Record<string, any>;
+  frontmatter: Record<string, unknown>;
   wikiLinks: WikiLink[];
   tags: string[];
   fileName: string;
@@ -69,7 +68,7 @@ export class ObsidianParser {
    */
   private extractTitle(
     fileName: string,
-    frontmatter: Record<string, any>
+    frontmatter: Record<string, unknown>
   ): string {
     // Priority: frontmatter title > frontmatter alias > filename
     if (frontmatter.title && typeof frontmatter.title === 'string') {
@@ -123,7 +122,7 @@ export class ObsidianParser {
    */
   private extractTags(
     content: string,
-    frontmatter: Record<string, any>
+    frontmatter: Record<string, unknown>
   ): string[] {
     const tags = new Set<string>();
 

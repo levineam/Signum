@@ -7,7 +7,6 @@
  * Displays file count, total size, and allows deselection
  */
 
-import { useState, useMemo } from 'react';
 import { FileText, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -52,7 +51,6 @@ export function ImportPreview({
   };
 
   const allSelected = files.every((f) => f.selected);
-  const someSelected = files.some((f) => f.selected) && !allSelected;
 
   return (
     <div className="flex flex-col gap-6">
