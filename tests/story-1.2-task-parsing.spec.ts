@@ -1,21 +1,41 @@
 /**
  * E2E tests for Story 1.2: Natural Language Task Parsing
- * Tests the /api/tasks/parse endpoint on Vercel preview deployment
+ * Tests the /api/tasks/parse endpoint
+ *
+ * NOTE: These are integration tests that require a running server.
+ * Set TEST_URL environment variable to test against a specific deployment.
+ * If not set, tests will be skipped with a warning.
+ *
+ * Example:
+ *   TEST_URL=http://localhost:3000 npx playwright test
+ *   TEST_URL=https://your-preview.vercel.app npx playwright test
  */
 
 import { test, expect } from '@playwright/test';
 
-const PREVIEW_URL = 'https://signum-git-story-12-task-parsing-levineams-projects.vercel.app';
+// Use environment variable or skip tests
+const TEST_URL = process.env.TEST_URL || process.env.PLAYWRIGHT_BASE_URL;
 
 // Test credentials from /docs/dev-test-credentials.md
 const TEST_USER = {
-  email: 'dev-test-1@signum.dev',
-  password: 'DevTest2025!User1'
+  email: process.env.TEST_USER_EMAIL || 'dev-test-1@signum.dev',
+  password: process.env.TEST_USER_PASSWORD || 'DevTest2025!User1'
 };
+
+// Skip all tests if no test URL is provided
+const skipTests = !TEST_URL;
+if (skipTests) {
+  console.warn('⚠️  Skipping Story 1.2 E2E tests: TEST_URL not set');
+  console.warn('   Set TEST_URL=http://localhost:3000 to run tests locally');
+  console.warn('   Set TEST_URL=https://preview.vercel.app to test against preview');
+}
 
 // Helper to authenticate and get session
 async function getAuthenticatedSession(page: any) {
-  await page.goto(`${PREVIEW_URL}/auth`);
+  if (!TEST_URL) {
+    throw new Error('TEST_URL is not set');
+  }
+  await page.goto(`${TEST_URL}/auth`);
   await page.waitForLoadState('networkidle');
 
   // Fill in login form
@@ -51,9 +71,11 @@ async function getAuthenticatedSession(page: any) {
 }
 
 test.describe('Story 1.2: Task Parsing API', () => {
+  test.skip(skipTests, 'Skipping because TEST_URL is not set');
+
   // Test without authentication to verify error handling
   test('should require authentication', async ({ request }) => {
-    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+    const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
       data: {
         paragraphText: 'I need to call Mom tomorrow',
         userId: 'test-user-id',
@@ -67,7 +89,7 @@ test.describe('Story 1.2: Task Parsing API', () => {
   });
 
   test('should validate input - missing paragraphText', async ({ request }) => {
-    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+    const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
       headers: {
         'Authorization': 'Bearer fake-token'
       },
@@ -84,7 +106,7 @@ test.describe('Story 1.2: Task Parsing API', () => {
 
   test('should validate input - paragraphText too long', async ({ request }) => {
     const longText = 'a'.repeat(1001);
-    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+    const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
       headers: {
         'Authorization': 'Bearer fake-token'
       },
@@ -101,7 +123,7 @@ test.describe('Story 1.2: Task Parsing API', () => {
   });
 
   test('should validate input - missing userId', async ({ request }) => {
-    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+    const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
       headers: {
         'Authorization': 'Bearer fake-token'
       },
@@ -118,12 +140,14 @@ test.describe('Story 1.2: Task Parsing API', () => {
 });
 
 test.describe('Story 1.2: Date Parser (Unit-level via API)', () => {
+  test.skip(skipTests, 'Skipping because TEST_URL is not set');
+
   // These tests verify the date parser logic by checking API responses
   // Even without valid auth, we can test the parsing logic exists
 
   test('should handle non-task text gracefully', async ({ request }) => {
     // Test that the API doesn't crash on non-task text
-    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+    const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
       headers: {
         'Authorization': 'Bearer fake-token'
       },
@@ -147,7 +171,7 @@ test.describe('Story 1.2: Date Parser (Unit-level via API)', () => {
     ];
 
     for (const text of edgeCases) {
-      const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+      const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
         headers: {
           'Authorization': 'Bearer fake-token'
         },
@@ -165,9 +189,11 @@ test.describe('Story 1.2: Date Parser (Unit-level via API)', () => {
 });
 
 test.describe('Story 1.2: Health Check', () => {
+  test.skip(skipTests, 'Skipping because TEST_URL is not set');
+
   test('should verify API endpoint exists', async ({ request }) => {
     // A simple ping to verify the route is deployed
-    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+    const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
       data: {} // Invalid data, but should at least get a response
     });
 
@@ -177,7 +203,7 @@ test.describe('Story 1.2: Health Check', () => {
   });
 
   test('should have proper CORS headers', async ({ request }) => {
-    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+    const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
       data: {
         paragraphText: 'test',
         userId: 'test',
@@ -191,8 +217,10 @@ test.describe('Story 1.2: Health Check', () => {
 });
 
 test.describe('Story 1.2: UI Integration Check', () => {
+  test.skip(skipTests, 'Skipping because TEST_URL is not set');
+
   test('should load the app without errors', async ({ page }) => {
-    await page.goto(PREVIEW_URL);
+    await page.goto(TEST_URL);
     await page.waitForLoadState('networkidle');
 
     // Check for console errors
@@ -226,7 +254,7 @@ test.describe('Story 1.2: UI Integration Check', () => {
   });
 
   test('should have dependencies loaded correctly', async ({ page }) => {
-    await page.goto(PREVIEW_URL);
+    await page.goto(TEST_URL);
     await page.waitForLoadState('networkidle');
 
     // Check that chrono-node and rrule are available in the bundle
@@ -246,6 +274,8 @@ test.describe('Story 1.2: UI Integration Check', () => {
 });
 
 test.describe('Story 1.2: Authenticated Task Parsing', () => {
+  test.skip(skipTests, 'Skipping because TEST_URL is not set');
+
   test('should create task with authentication - simple task with date', async ({ page, request }) => {
     // Authenticate and get session
     const session = await getAuthenticatedSession(page);
@@ -261,7 +291,7 @@ test.describe('Story 1.2: Authenticated Task Parsing', () => {
     console.log('   User ID:', session.user_id);
 
     // Test creating a task with a simple date
-    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+    const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`
@@ -297,7 +327,7 @@ test.describe('Story 1.2: Authenticated Task Parsing', () => {
       return;
     }
 
-    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+    const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`
@@ -329,7 +359,7 @@ test.describe('Story 1.2: Authenticated Task Parsing', () => {
       return;
     }
 
-    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+    const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`
@@ -357,7 +387,7 @@ test.describe('Story 1.2: Authenticated Task Parsing', () => {
       return;
     }
 
-    const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+    const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`
@@ -395,7 +425,7 @@ test.describe('Story 1.2: Authenticated Task Parsing', () => {
     ];
 
     for (const testCase of testCases) {
-      const response = await request.post(`${PREVIEW_URL}/api/tasks/parse`, {
+      const response = await request.post(`${TEST_URL}/api/tasks/parse`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
@@ -420,6 +450,8 @@ test.describe('Story 1.2: Authenticated Task Parsing', () => {
 });
 
 test.describe('Story 1.2: Manual Testing Guide', () => {
+  test.skip(skipTests, 'Skipping because TEST_URL is not set');
+
   test('should document manual test steps', async () => {
     console.log(`
 ================================================================================

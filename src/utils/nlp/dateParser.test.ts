@@ -3,7 +3,7 @@
  * Story 1.2: Natural Language Task/Reminder Parsing
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { parseDate } from './dateParser';
 
 describe('dateParser', () => {
@@ -12,6 +12,13 @@ describe('dateParser', () => {
   beforeEach(() => {
     // Use fixed date for consistent testing
     now = new Date('2025-01-15T10:00:00Z');
+    // Freeze system time so parseDate uses the same fixed date
+    vi.setSystemTime(now);
+  });
+
+  afterEach(() => {
+    // Restore real time after each test
+    vi.useRealTimers();
   });
 
   describe('Relative dates', () => {
