@@ -74,6 +74,32 @@ export function ObsidianImportWizard() {
 
     const selectedFiles = files.filter((f) => f.selected);
 
+    // Check payload size before sending (Vercel limit: 4.5MB for Hobby, 6MB for Pro)
+    const payload = JSON.stringify({
+      files: selectedFiles.map((f) => ({
+        fileName: f.fileName,
+        relativePath: f.relativePath,
+        content: f.content,
+        size: f.size,
+      })),
+      options: {
+        preserveTimestamps: true,
+        importTags: true,
+        skipBrokenLinks: false,
+      },
+    });
+
+    const payloadSizeMB = new Blob([payload]).size / (1024 * 1024);
+    const VERCEL_LIMIT_MB = 4.5; // Conservative limit for Vercel Hobby plan
+
+    if (payloadSizeMB > VERCEL_LIMIT_MB) {
+      toast.error(
+        `Import too large (${payloadSizeMB.toFixed(2)}MB). Vercel limit is ${VERCEL_LIMIT_MB}MB. Please import fewer files at once or use smaller files.`
+      );
+      setStep('preview');
+      return;
+    }
+
     setImportProgress({
       total: selectedFiles.length,
       processed: 0,
@@ -87,24 +113,26 @@ export function ObsidianImportWizard() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          files: selectedFiles.map((f) => ({
-            fileName: f.fileName,
-            relativePath: f.relativePath, // Preserve folder structure for WikiLink resolution
-            content: f.content,
-            size: f.size,
-          })),
-          options: {
-            preserveTimestamps: true,
-            importTags: true,
-            skipBrokenLinks: false,
-          },
-        }),
+        body: payload,
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Import failed');
+        const errorText = await response.text();
+        let errorMessage = 'Import failed';
+
+        // Handle 413 specifically
+        if (response.status === 413) {
+          errorMessage = `Request too large (${payloadSizeMB.toFixed(2)}MB). Please import fewer files at once.`;
+        } else {
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.error || errorMessage;
+          } catch {
+            errorMessage = errorText || errorMessage;
+          }
+        }
+
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();

@@ -13,6 +13,11 @@ import { LinkResolver } from '@/lib/import/link-resolver';
 
 export const maxDuration = 60; // Allow up to 60 seconds for large imports
 
+// Vercel has a 4.5MB limit for Hobby, 6MB for Pro
+// We need to warn users about this in the UI
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export interface ImportRequest {
   files: Array<{
     fileName: string;
