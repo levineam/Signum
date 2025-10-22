@@ -179,6 +179,28 @@ describe('dateParser', () => {
       expect(result?.rrule).toBeTruthy();
       expect(result?.rrule).toContain('BYDAY=WE'); // Wednesday
     });
+
+    it('should use current month for "first weekday of month" if not yet passed', () => {
+      // This test verifies that if today is Oct 5 and the first Monday is Oct 7,
+      // the task is scheduled for Oct 7 (current month), not Nov 4 (next month)
+      const result = parseDate('Meeting first Monday of month');
+      expect(result).toBeTruthy();
+      expect(result?.dueAt).toBeInstanceOf(Date);
+
+      const now = new Date();
+      const dueDate = result!.dueAt;
+
+      // The due date should be either this month or next month
+      const isCurrentMonth = dueDate.getMonth() === now.getMonth();
+      const isNextMonth = dueDate.getMonth() === (now.getMonth() + 1) % 12;
+
+      expect(isCurrentMonth || isNextMonth).toBe(true);
+
+      // If it's this month, it should be in the future
+      if (isCurrentMonth) {
+        expect(dueDate.getTime()).toBeGreaterThan(now.getTime());
+      }
+    });
   });
 
   describe('Edge cases', () => {

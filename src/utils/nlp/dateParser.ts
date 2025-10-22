@@ -172,17 +172,32 @@ function getNextWeekday(dayIndex: number): Date {
 }
 
 /**
- * Get first occurrence of weekday in next month
+ * Get first occurrence of weekday in current or next month
+ * Returns current month's first weekday if it hasn't passed yet,
+ * otherwise returns next month's first weekday
  */
 function getFirstWeekdayOfNextMonth(dayIndex: number): Date {
   const now = new Date();
-  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  // Find first occurrence of target day in next month
-  const firstDay = (nextMonth.getDay() + 6) % 7;
+  // Try current month first
+  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const firstDay = (currentMonth.getDay() + 6) % 7;
   const daysUntil = (dayIndex - firstDay + 7) % 7;
 
-  nextMonth.setDate(1 + daysUntil);
+  currentMonth.setDate(1 + daysUntil);
+  currentMonth.setHours(9, 0, 0, 0);
+
+  // If the first weekday of current month hasn't passed, return it
+  if (currentMonth > now) {
+    return currentMonth;
+  }
+
+  // Otherwise, get first weekday of next month
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const nextFirstDay = (nextMonth.getDay() + 6) % 7;
+  const nextDaysUntil = (dayIndex - nextFirstDay + 7) % 7;
+
+  nextMonth.setDate(1 + nextDaysUntil);
   nextMonth.setHours(9, 0, 0, 0);
 
   return nextMonth;
