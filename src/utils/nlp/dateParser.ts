@@ -19,16 +19,23 @@ export interface ParsedDate {
 /**
  * Parse natural language date/time from text
  * Returns null if no date detected or confidence is too low
+ *
+ * @param text - The text to parse for dates
+ * @param timezoneOffsetMinutes - User's timezone offset in minutes (from Date.getTimezoneOffset())
+ *                                Positive values are west of UTC, negative values are east of UTC
  */
-export function parseDate(text: string): ParsedDate | null {
+export function parseDate(text: string, timezoneOffsetMinutes?: number): ParsedDate | null {
   // Check for recurring patterns first (chrono doesn't handle these)
-  const recurringPattern = detectRecurringPattern(text);
+  const recurringPattern = detectRecurringPattern(text, timezoneOffsetMinutes);
   if (recurringPattern) {
     return recurringPattern;
   }
 
+  // Create a reference date in the user's timezone
+  const referenceDate = getReferenceDate(timezoneOffsetMinutes);
+
   // Use chrono for one-off dates
-  const results = chrono.parse(text, new Date(), { forwardDate: true });
+  const results = chrono.parse(text, referenceDate, { forwardDate: true });
 
   // No results or low confidence
   if (!results || results.length === 0) {
@@ -43,14 +50,33 @@ export function parseDate(text: string): ParsedDate | null {
 }
 
 /**
+ * Get a reference date in the user's timezone
+ * If no timezone offset is provided, use server time
+ */
+function getReferenceDate(timezoneOffsetMinutes?: number): Date {
+  if (timezoneOffsetMinutes === undefined) {
+    return new Date();
+  }
+
+  // Create a date adjusted for the user's timezone
+  // getTimezoneOffset() returns positive values for west of UTC
+  const now = new Date();
+  const serverOffset = now.getTimezoneOffset();
+  const offsetDiff = serverOffset - timezoneOffsetMinutes;
+
+  return new Date(now.getTime() + offsetDiff * 60 * 1000);
+}
+
+/**
  * Detect recurring patterns and generate RRULE
  */
-function detectRecurringPattern(text: string): ParsedDate | null {
+function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): ParsedDate | null {
   const lowerText = text.toLowerCase();
 
   // Daily pattern
   if (lowerText.includes('daily') || lowerText.includes('every day')) {
-    const tomorrow = new Date();
+    const referenceDate = getReferenceDate(timezoneOffsetMinutes);
+    const tomorrow = new Date(referenceDate);
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(9, 0, 0, 0); // Default to 9am
 
@@ -68,7 +94,8 @@ function detectRecurringPattern(text: string): ParsedDate | null {
   if (weeklyMatch) {
     const dayName = weeklyMatch[1];
     const dayIndex = getDayIndex(dayName);
-    const nextDate = getNextWeekday(dayIndex);
+    const referenceDate = getReferenceDate(timezoneOffsetMinutes);
+    const nextDate = getNextWeekday(dayIndex, referenceDate);
 
     return {
       dueAt: nextDate,
@@ -84,7 +111,8 @@ function detectRecurringPattern(text: string): ParsedDate | null {
   const weeklyIntervalMatch = lowerText.match(/every\s+(\d+)?\s*weeks?/);
   if (weeklyIntervalMatch) {
     const interval = weeklyIntervalMatch[1] ? parseInt(weeklyIntervalMatch[1]) : 1;
-    const nextWeek = new Date();
+    const referenceDate = getReferenceDate(timezoneOffsetMinutes);
+    const nextWeek = new Date(referenceDate);
     nextWeek.setDate(nextWeek.getDate() + 7 * interval);
     nextWeek.setHours(9, 0, 0, 0);
 
@@ -103,7 +131,8 @@ function detectRecurringPattern(text: string): ParsedDate | null {
   if (firstWeekdayMatch) {
     const dayName = firstWeekdayMatch[1];
     const dayIndex = getDayIndex(dayName);
-    const nextDate = getFirstWeekdayOfNextMonth(dayIndex);
+    const referenceDate = getReferenceDate(timezoneOffsetMinutes);
+    const nextDate = getFirstWeekdayOfNextMonth(dayIndex, referenceDate);
 
     // Map dayIndex to RRule weekday constants
     const weekdayMap = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU];
@@ -123,7 +152,8 @@ function detectRecurringPattern(text: string): ParsedDate | null {
   const monthlyMatch = lowerText.match(/every\s+(\d+)?\s*months?/);
   if (monthlyMatch) {
     const interval = monthlyMatch[1] ? parseInt(monthlyMatch[1]) : 1;
-    const nextMonth = new Date();
+    const referenceDate = getReferenceDate(timezoneOffsetMinutes);
+    const nextMonth = new Date(referenceDate);
     nextMonth.setMonth(nextMonth.getMonth() + interval);
     nextMonth.setHours(9, 0, 0, 0);
 
@@ -159,12 +189,11 @@ function getDayIndex(dayName: string): number {
 /**
  * Get next occurrence of a weekday
  */
-function getNextWeekday(dayIndex: number): Date {
-  const now = new Date();
-  const currentDay = (now.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
+function getNextWeekday(dayIndex: number, referenceDate: Date = new Date()): Date {
+  const currentDay = (referenceDate.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
   const daysUntil = (dayIndex - currentDay + 7) % 7 || 7; // If today, use next week
 
-  const nextDate = new Date();
+  const nextDate = new Date(referenceDate);
   nextDate.setDate(nextDate.getDate() + daysUntil);
   nextDate.setHours(9, 0, 0, 0);
 
@@ -176,8 +205,8 @@ function getNextWeekday(dayIndex: number): Date {
  * Returns current month's first weekday if it hasn't passed yet,
  * otherwise returns next month's first weekday
  */
-function getFirstWeekdayOfNextMonth(dayIndex: number): Date {
-  const now = new Date();
+function getFirstWeekdayOfNextMonth(dayIndex: number, referenceDate: Date = new Date()): Date {
+  const now = referenceDate;
 
   // Try current month first
   const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);

@@ -79,7 +79,8 @@ test.describe('Story 1.2: Task Parsing API', () => {
       data: {
         paragraphText: 'I need to call Mom tomorrow',
         userId: 'test-user-id',
-        entryId: 'test-entry-id'
+        entryId: 'test-entry-id',
+        timezoneOffset: 0 // UTC for testing
       }
     });
 
@@ -95,7 +96,8 @@ test.describe('Story 1.2: Task Parsing API', () => {
       },
       data: {
         userId: 'test-user-id',
-        entryId: 'test-entry-id'
+        entryId: 'test-entry-id',
+        timezoneOffset: 0 // UTC for testing
       }
     });
 
@@ -113,7 +115,8 @@ test.describe('Story 1.2: Task Parsing API', () => {
       data: {
         paragraphText: longText,
         userId: 'test-user-id',
-        entryId: 'test-entry-id'
+        entryId: 'test-entry-id',
+        timezoneOffset: 0 // UTC for testing
       }
     });
 
@@ -129,7 +132,8 @@ test.describe('Story 1.2: Task Parsing API', () => {
       },
       data: {
         paragraphText: 'I need to call Mom tomorrow',
-        entryId: 'test-entry-id'
+        entryId: 'test-entry-id',
+        timezoneOffset: 0 // UTC for testing
       }
     });
 
@@ -154,7 +158,8 @@ test.describe('Story 1.2: Date Parser (Unit-level via API)', () => {
       data: {
         paragraphText: 'I love coding',
         userId: 'test-user-id',
-        entryId: 'test-entry-id'
+        entryId: 'test-entry-id',
+        timezoneOffset: 0 // UTC for testing
       }
     });
 
@@ -178,7 +183,8 @@ test.describe('Story 1.2: Date Parser (Unit-level via API)', () => {
         data: {
           paragraphText: text,
           userId: 'test-user-id',
-          entryId: 'test-entry-id'
+          entryId: 'test-entry-id',
+          timezoneOffset: 0 // UTC for testing
         }
       });
 
@@ -207,7 +213,8 @@ test.describe('Story 1.2: Health Check', () => {
       data: {
         paragraphText: 'test',
         userId: 'test',
-        entryId: 'test'
+        entryId: 'test',
+        timezoneOffset: 0 // UTC for testing
       }
     });
 
@@ -299,7 +306,8 @@ test.describe('Story 1.2: Authenticated Task Parsing', () => {
       data: {
         paragraphText: 'I need to call Mom tomorrow at 3pm',
         userId: session.user_id,
-        entryId: 'test-entry-' + Date.now()
+        entryId: 'test-entry-' + Date.now(),
+        timezoneOffset: new Date().getTimezoneOffset() // Use tester's timezone
       }
     });
 
@@ -335,7 +343,8 @@ test.describe('Story 1.2: Authenticated Task Parsing', () => {
       data: {
         paragraphText: 'Reminder: team standup every Monday at 9am',
         userId: session.user_id,
-        entryId: 'test-entry-' + Date.now()
+        entryId: 'test-entry-' + Date.now(),
+        timezoneOffset: new Date().getTimezoneOffset() // Use tester's timezone
       }
     });
 
@@ -367,7 +376,8 @@ test.describe('Story 1.2: Authenticated Task Parsing', () => {
       data: {
         paragraphText: 'I love coding and learning new things',
         userId: session.user_id,
-        entryId: 'test-entry-' + Date.now()
+        entryId: 'test-entry-' + Date.now(),
+        timezoneOffset: new Date().getTimezoneOffset() // Use tester's timezone
       }
     });
 
@@ -395,7 +405,8 @@ test.describe('Story 1.2: Authenticated Task Parsing', () => {
       data: {
         paragraphText: 'Todo: review the documentation',
         userId: session.user_id,
-        entryId: 'test-entry-' + Date.now()
+        entryId: 'test-entry-' + Date.now(),
+        timezoneOffset: new Date().getTimezoneOffset() // Use tester's timezone
       }
     });
 
@@ -433,7 +444,8 @@ test.describe('Story 1.2: Authenticated Task Parsing', () => {
         data: {
           paragraphText: testCase.text,
           userId: session.user_id,
-          entryId: 'test-entry-' + Date.now()
+          entryId: 'test-entry-' + Date.now(),
+          timezoneOffset: new Date().getTimezoneOffset() // Use tester's timezone
         }
       });
 

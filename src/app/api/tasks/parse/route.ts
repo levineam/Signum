@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     // Parse request body
     const body = await req.json();
-    const { paragraphText, userId, entryId } = body;
+    const { paragraphText, userId, entryId, timezoneOffset } = body;
 
     // Validate inputs
     if (!paragraphText || typeof paragraphText !== 'string') {
@@ -45,6 +45,13 @@ export async function POST(req: NextRequest) {
     if (!userId || typeof userId !== 'string') {
       return NextResponse.json(
         { error: 'userId is required and must be a string' },
+        { status: 400 }
+      );
+    }
+
+    if (timezoneOffset !== undefined && typeof timezoneOffset !== 'number') {
+      return NextResponse.json(
+        { error: 'timezoneOffset must be a number (minutes)' },
         { status: 400 }
       );
     }
@@ -79,8 +86,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Detect task in paragraph
-    const detectedTask = detectTask(paragraphText);
+    // Detect task in paragraph (pass timezone offset to respect user's local time)
+    const detectedTask = detectTask(paragraphText, timezoneOffset);
 
     // No task detected
     if (!detectedTask) {

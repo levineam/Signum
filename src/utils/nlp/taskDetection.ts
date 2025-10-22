@@ -36,8 +36,11 @@ const TASK_KEYWORDS = [
 /**
  * Detect if paragraph contains a task and extract details
  * Returns null if no task detected
+ *
+ * @param paragraphText - The text to analyze for task keywords
+ * @param timezoneOffsetMinutes - User's timezone offset in minutes (from Date.getTimezoneOffset())
  */
-export function detectTask(paragraphText: string): DetectedTask | null {
+export function detectTask(paragraphText: string, timezoneOffsetMinutes?: number): DetectedTask | null {
   if (!paragraphText || paragraphText.trim().length < 3) {
     return null;
   }
@@ -56,8 +59,8 @@ export function detectTask(paragraphText: string): DetectedTask | null {
     return null;
   }
 
-  // Parse date from paragraph
-  const parsedDate = parseDate(paragraphText);
+  // Parse date from paragraph (with timezone awareness)
+  const parsedDate = parseDate(paragraphText, timezoneOffsetMinutes);
 
   return {
     title,
