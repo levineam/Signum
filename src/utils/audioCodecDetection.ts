@@ -75,7 +75,7 @@ function calculateMaxDuration(bitrateKbps: number): number {
  */
 export function detectBestCodec(): CodecInfo {
   // Server-side: return default (will be re-detected on client)
-  if (typeof window === 'undefined' || !window.MediaRecorder) {
+  if (typeof window === 'undefined') {
     return {
       codec: 'none',
       mimeType: '',
@@ -86,7 +86,36 @@ export function detectBestCodec(): CodecInfo {
     };
   }
 
-  // Try each codec in priority order
+  // Check if Web Audio API is available for WAV fallback
+  const hasWebAudio = !!(
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  );
+
+  // If MediaRecorder is unavailable but Web Audio API exists, return WAV fallback immediately
+  if (!window.MediaRecorder) {
+    if (hasWebAudio) {
+      const wavCodec = CODECS_TO_TEST.find((c) => c.codec === 'wav')!;
+      console.log(
+        `[audioCodecDetection] MediaRecorder unavailable, using Web Audio API fallback: ${wavCodec.displayName}`
+      );
+      return {
+        ...wavCodec,
+        maxDurationSeconds: calculateMaxDuration(wavCodec.estimatedBitrate),
+      };
+    }
+    // Neither MediaRecorder nor Web Audio API available
+    return {
+      codec: 'none',
+      mimeType: '',
+      displayName: 'Not supported',
+      estimatedBitrate: 0,
+      maxDurationSeconds: 0,
+      isNativeRecording: false,
+    };
+  }
+
+  // Try each codec in priority order (MediaRecorder is available)
   for (const codecConfig of CODECS_TO_TEST) {
     // WAV is always "supported" as fallback (via Web Audio API)
     if (codecConfig.codec === 'wav') {
