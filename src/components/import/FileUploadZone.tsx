@@ -13,7 +13,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export interface UploadedFile {
-  fileName: string;
+  fileName: string; // Base filename (e.g., "note.md")
+  relativePath?: string; // Full relative path from vault root (e.g., "daily/note.md")
   content: string;
   size: number;
   selected: boolean;
@@ -51,8 +52,13 @@ export function FileUploadZone({
         try {
           const content = await file.text();
 
+          // Preserve relative path for folder uploads (webkitRelativePath)
+          // This is critical for resolving WikiLinks with folder structure (e.g., [[daily/2024-01-01]])
+          const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
+
           uploadedFiles.push({
             fileName: file.name,
+            relativePath,
             content,
             size: file.size,
             selected: true, // All files selected by default

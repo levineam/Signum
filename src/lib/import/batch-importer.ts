@@ -133,6 +133,7 @@ export class BatchImporter {
           importedFrom: 'obsidian',
           importDate: new Date().toISOString(),
           originalFileName: parsedNote.fileName,
+          relativePath: parsedNote.relativePath, // Preserve folder structure for WikiLink resolution
           frontmatter: parsedNote.frontmatter,
           wikiLinks: parsedNote.wikiLinks.map((link) => ({
             target: link.target,

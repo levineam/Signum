@@ -81,6 +81,15 @@ export class LinkResolver {
         titleMap.set(fileTitle, note.id);
         titleMap.set(fileTitle.toLowerCase(), note.id);
       }
+
+      // CRITICAL: Map relative path for folder-structured WikiLinks
+      // This resolves links like [[daily/2024-01-01]] when folders are used
+      const relativePath = note.metadata?.relativePath;
+      if (relativePath) {
+        const pathWithoutExt = relativePath.replace(/\.md$/i, '');
+        titleMap.set(pathWithoutExt, note.id);
+        titleMap.set(pathWithoutExt.toLowerCase(), note.id);
+      }
     });
 
     // Process each note's content

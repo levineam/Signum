@@ -20,6 +20,7 @@ export interface ParsedNote {
   wikiLinks: WikiLink[];
   tags: string[];
   fileName: string;
+  relativePath?: string; // Full path from vault root (e.g., "daily/note.md")
   originalContent: string; // Raw markdown for reference
 }
 
@@ -37,7 +38,8 @@ export class ObsidianParser {
    */
   async parseFile(
     fileName: string,
-    content: string
+    content: string,
+    relativePath?: string
   ): Promise<ParsedNote> {
     // Extract frontmatter
     const { data: frontmatter, content: markdownContent } = matter(content);
@@ -61,6 +63,7 @@ export class ObsidianParser {
       wikiLinks,
       tags,
       fileName,
+      relativePath,
       originalContent: content,
     };
   }

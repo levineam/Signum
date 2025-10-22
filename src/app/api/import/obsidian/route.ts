@@ -16,6 +16,7 @@ export const maxDuration = 60; // Allow up to 60 seconds for large imports
 export interface ImportRequest {
   files: Array<{
     fileName: string;
+    relativePath?: string; // Full path from vault root (e.g., "daily/note.md")
     content: string;
     size: number;
   }>;
@@ -127,10 +128,11 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Parse file
+        // Parse file with relative path for folder structure preservation
         const parsed = await obsidianParser.parseFile(
           file.fileName,
-          file.content
+          file.content,
+          file.relativePath
         );
 
         parsedNotes.push(parsed);
