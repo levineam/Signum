@@ -212,7 +212,22 @@
     }
 
     function detectBestCodec() {
+      // Check if Web Audio API is available for WAV fallback
+      const hasWebAudio = !!(window.AudioContext || window.webkitAudioContext);
+
+      // If MediaRecorder is unavailable but Web Audio API exists, return WAV fallback immediately
       if (!window.MediaRecorder) {
+        if (hasWebAudio) {
+          const wavCodec = CODECS_TO_TEST.find((c) => c.codec === 'wav');
+          console.log(
+            `[audioCodecDetection] MediaRecorder unavailable, using Web Audio API fallback: ${wavCodec.displayName}`
+          );
+          return {
+            ...wavCodec,
+            maxDurationSeconds: calculateMaxDuration(wavCodec.estimatedBitrate),
+          };
+        }
+        // Neither MediaRecorder nor Web Audio API available
         return {
           codec: 'none',
           mimeType: '',
@@ -223,7 +238,9 @@
         };
       }
 
+      // Try each codec in priority order (MediaRecorder is available)
       for (const codecConfig of CODECS_TO_TEST) {
+        // WAV is always "supported" as fallback (via Web Audio API)
         if (codecConfig.codec === 'wav') {
           return {
             ...codecConfig,
@@ -231,7 +248,12 @@
           };
         }
 
-        if (MediaRecorder.isTypeSupported(codecConfig.mimeType)) {
+        // Test MediaRecorder support for native codecs
+        // Guard against older Safari/embedded browsers that lack isTypeSupported
+        if (
+          typeof MediaRecorder.isTypeSupported === 'function' &&
+          MediaRecorder.isTypeSupported(codecConfig.mimeType)
+        ) {
           const maxDuration = calculateMaxDuration(codecConfig.estimatedBitrate);
           console.log(
             `[audioCodecDetection] Selected codec: ${codecConfig.displayName} ` +
@@ -244,6 +266,7 @@
         }
       }
 
+      // Fallback to WAV (should never reach here due to WAV fallback above)
       const wavCodec = CODECS_TO_TEST.find((c) => c.codec === 'wav');
       return {
         ...wavCodec,
