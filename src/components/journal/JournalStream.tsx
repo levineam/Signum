@@ -35,7 +35,7 @@ function getLocalDateString(): string {
 
 export function JournalStream() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
@@ -233,6 +233,9 @@ export function JournalStream() {
         : entry
     ))
 
+    // Detect tasks from paragraphs (Story 1.2)
+    detectTasksInContent(newContent, entryId)
+
     // Auto-save after 2 seconds of no typing (longer delay to reduce noise)
     saveTimeoutRef.current = setTimeout(async () => {
       const previousContent = currentEntry?.content || ''
@@ -250,6 +253,62 @@ export function JournalStream() {
         }
       }
     }, 2000)
+  }
+
+  // Task detection from journal paragraphs (Story 1.2)
+  const processedParagraphs = useRef<Set<string>>(new Set())
+
+  const detectTasksInContent = async (content: string, entryId: string) => {
+    if (!user || !session?.access_token) return
+
+    // Extract paragraphs from HTML content
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = content
+
+    // Get all <p> tags
+    const paragraphs = Array.from(tempDiv.querySelectorAll('p'))
+
+    for (const para of paragraphs) {
+      const paragraphText = para.textContent?.trim() || ''
+
+      // Skip empty paragraphs or already processed ones
+      const paraHash = `${entryId}-${paragraphText}`
+      if (!paragraphText || processedParagraphs.current.has(paraHash)) {
+        continue
+      }
+
+      // Mark as processed to avoid duplicate API calls
+      processedParagraphs.current.add(paraHash)
+
+      // Call task parsing API
+      try {
+        const response = await fetch('/api/tasks/parse', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            paragraphText,
+            userId: user.id,
+            entryId
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.task) {
+            console.log('✅ Task created from paragraph:', data.task)
+            toast.success(`Task created: ${data.task.title}`)
+          }
+        } else {
+          const error = await response.json()
+          console.error('[Task Detection] API error:', error)
+        }
+      } catch (error) {
+        console.error('[Task Detection] Failed to parse task:', error)
+      }
+    }
   }
 
   const handleMakeNote = (selectedText: string) => {
