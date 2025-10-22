@@ -80,7 +80,8 @@ test.describe('Story 1.2: Task Parsing API', () => {
         paragraphText: 'I need to call Mom tomorrow',
         userId: 'test-user-id',
         entryId: 'test-entry-id',
-        timezoneOffset: 0 // UTC for testing
+        timezoneOffset: 0, // UTC for testing
+        timezone: 'UTC' // IANA timezone ID
       }
     });
 
@@ -307,7 +308,8 @@ test.describe('Story 1.2: Authenticated Task Parsing', () => {
         paragraphText: 'I need to call Mom tomorrow at 3pm',
         userId: session.user_id,
         entryId: 'test-entry-' + Date.now(),
-        timezoneOffset: new Date().getTimezoneOffset() // Use tester's timezone
+        timezoneOffset: new Date().getTimezoneOffset(), // Use tester's timezone
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone // IANA timezone ID
       }
     });
 

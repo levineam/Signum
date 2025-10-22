@@ -307,7 +307,7 @@ export function JournalStream() {
       // Mark as processed to avoid duplicate API calls
       processedParagraphs.current.add(paraHash)
 
-      // Call task parsing API (with user's timezone offset)
+      // Call task parsing API (with user's timezone info for DST handling)
       try {
         const response = await fetch('/api/tasks/parse', {
           method: 'POST',
@@ -319,7 +319,8 @@ export function JournalStream() {
             paragraphText,
             userId: user.id,
             entryId,
-            timezoneOffset: new Date().getTimezoneOffset() // Send user's timezone offset
+            timezoneOffset: new Date().getTimezoneOffset(), // Offset in minutes
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone // IANA timezone ID for DST
           })
         })
 

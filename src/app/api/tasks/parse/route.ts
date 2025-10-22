@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     // Parse request body
     const body = await req.json();
-    const { paragraphText, userId, entryId, timezoneOffset } = body;
+    const { paragraphText, userId, entryId, timezoneOffset, timezone } = body;
 
     // Validate inputs
     if (!paragraphText || typeof paragraphText !== 'string') {
@@ -52,6 +52,13 @@ export async function POST(req: NextRequest) {
     if (timezoneOffset !== undefined && typeof timezoneOffset !== 'number') {
       return NextResponse.json(
         { error: 'timezoneOffset must be a number (minutes)' },
+        { status: 400 }
+      );
+    }
+
+    if (timezone !== undefined && typeof timezone !== 'string') {
+      return NextResponse.json(
+        { error: 'timezone must be a string (e.g., "America/New_York")' },
         { status: 400 }
       );
     }
@@ -94,7 +101,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ task: null });
     }
 
+    // Check if a task already exists for this paragraph to prevent duplicates on reload
+    // Query tasks where metadata contains the exact paragraph text and entry ID
+    const { data: existingTasks } = await supabase
+      .from('tasks')
+      .select('id, title, due_at, status, metadata')
+      .eq('user_id', userId)
+      .contains('metadata', {
+        source_entry_id: entryId,
+        extracted_from_text: paragraphText
+      })
+      .limit(1);
+
+    // If task already exists, return it instead of creating a duplicate
+    if (existingTasks && existingTasks.length > 0) {
+      const existingTask = existingTasks[0];
+      console.log('[Task Parse API] Task already exists for this paragraph, skipping creation:', existingTask.id);
+      return NextResponse.json({
+        task: {
+          id: existingTask.id,
+          title: existingTask.title,
+          dueAt: existingTask.due_at,
+          rrule: existingTask.metadata?.rrule || null,
+          status: existingTask.status,
+          alreadyExisted: true
+        }
+      });
+    }
+
     // Create task in database using the authenticated supabase client
+    // Store both timezone ID and offset for proper DST handling in future occurrences
     const { data: task, error: taskError } = await supabase
       .from('tasks')
       .insert({
@@ -104,7 +140,9 @@ export async function POST(req: NextRequest) {
         metadata: {
           source_entry_id: entryId,
           rrule: detectedTask.rrule,
-          extracted_from_text: paragraphText
+          extracted_from_text: paragraphText,
+          timezone_offset_at_creation: timezoneOffset, // Offset in minutes
+          timezone: timezone || null // IANA timezone ID (e.g., "America/New_York") for DST handling
         }
       })
       .select()
