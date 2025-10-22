@@ -90,7 +90,6 @@ export function ObsidianImportWizard() {
         body: JSON.stringify({
           files: selectedFiles.map((f) => ({
             fileName: f.fileName,
-            relativePath: f.relativePath, // Preserve folder structure for WikiLink resolution
             content: f.content,
             size: f.size,
           })),
