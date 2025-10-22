@@ -169,23 +169,31 @@ export class LinkResolver {
         const decodedTarget = this.decodeHtml(target);
         const decodedDisplayText = this.decodeHtml(displayText);
 
+        // Strip block/heading anchors (#...) before resolving
+        // WikiLinks like [[Note#Heading]] or [[Note#^block]] should resolve to "Note"
+        const anchorIndex = decodedTarget.indexOf('#');
+        const noteTitle = anchorIndex !== -1 ? decodedTarget.substring(0, anchorIndex) : decodedTarget;
+        const anchor = anchorIndex !== -1 ? decodedTarget.substring(anchorIndex) : '';
+
         // Try exact match first, then case-insensitive
         const targetNoteId =
-          titleMap.get(decodedTarget) || titleMap.get(decodedTarget.toLowerCase());
+          titleMap.get(noteTitle) || titleMap.get(noteTitle.toLowerCase());
 
         if (targetNoteId) {
           // Resolved: Convert to proper link
+          // Note: We preserve the anchor in a data attribute but it's not used for navigation yet
           resolvedCount++;
-          return `<a href="#" class="note-link" data-note-id="${targetNoteId}">${this.escapeHtml(decodedDisplayText)}</a>`;
+          const anchorAttr = anchor ? ` data-anchor="${this.escapeHtml(anchor)}"` : '';
+          return `<a href="#" class="note-link" data-note-id="${targetNoteId}"${anchorAttr}>${this.escapeHtml(decodedDisplayText)}</a>`;
         } else {
           // Broken link: Keep as styled span
           brokenLinks.push({
             sourceNoteId: noteId,
             sourceTitle: noteTitle,
-            targetTitle: decodedTarget,
-            wikiLink: `[[${decodedTarget}]]`,
+            targetTitle: noteTitle, // Use stripped title for broken link tracking
+            wikiLink: `[[${decodedTarget}]]`, // Keep full link for reference
           });
-          return `<span class="broken-link" data-target="${this.escapeHtml(decodedTarget)}" title="Note not found: ${this.escapeHtml(decodedTarget)}">${this.escapeHtml(decodedDisplayText)}</span>`;
+          return `<span class="broken-link" data-target="${this.escapeHtml(decodedTarget)}" title="Note not found: ${this.escapeHtml(noteTitle)}">${this.escapeHtml(decodedDisplayText)}</span>`;
         }
       }
     );
