@@ -161,6 +161,23 @@ describe('dateParser', () => {
       expect(result?.dueAt).toBeInstanceOf(Date);
       expect(result?.rrule).toBeTruthy();
       expect(result?.rrule).toContain('FREQ=MONTHLY');
+      expect(result?.rrule).toContain('BYDAY=MO'); // Monday
+    });
+
+    it('should parse "first Friday of month" with correct weekday in RRULE', () => {
+      const result = parseDate('Team party first Friday of month');
+      expect(result).toBeTruthy();
+      expect(result?.dueAt).toBeInstanceOf(Date);
+      expect(result?.rrule).toBeTruthy();
+      expect(result?.rrule).toContain('FREQ=MONTHLY');
+      expect(result?.rrule).toContain('BYDAY=FR'); // Friday, not Monday
+    });
+
+    it('should parse "first Wednesday of month" with correct weekday in RRULE', () => {
+      const result = parseDate('Monthly review first Wednesday of month');
+      expect(result).toBeTruthy();
+      expect(result?.rrule).toBeTruthy();
+      expect(result?.rrule).toContain('BYDAY=WE'); // Wednesday
     });
   });
 

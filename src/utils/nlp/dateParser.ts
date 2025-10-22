@@ -105,11 +105,15 @@ function detectRecurringPattern(text: string): ParsedDate | null {
     const dayIndex = getDayIndex(dayName);
     const nextDate = getFirstWeekdayOfNextMonth(dayIndex);
 
+    // Map dayIndex to RRule weekday constants
+    const weekdayMap = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU];
+    const rruleWeekday = weekdayMap[dayIndex];
+
     return {
       dueAt: nextDate,
       rrule: new RRule({
         freq: Frequency.MONTHLY,
-        byweekday: [RRule.MO.nth(1)], // First Monday (adjust based on dayIndex)
+        byweekday: [rruleWeekday.nth(1)], // First occurrence of detected weekday
         dtstart: nextDate
       }).toString()
     };
