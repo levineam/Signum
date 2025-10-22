@@ -56,9 +56,12 @@ export class LinkResolver {
         .in('id', chunk)
         .eq('user_id', userId);
 
-      if (error || !chunkNotes) {
-        console.error('Error fetching notes chunk for link resolution:', error);
-        return result;
+      if (error) {
+        throw new Error(`Failed to fetch notes chunk for link resolution: ${error.message}`);
+      }
+
+      if (!chunkNotes) {
+        throw new Error('No notes returned from database during link resolution');
       }
 
       notes.push(...chunkNotes);
@@ -71,9 +74,12 @@ export class LinkResolver {
       .select('id, title, metadata')
       .eq('user_id', userId);
 
-    if (allNotesError || !allNotes) {
-      console.error('Error fetching all notes for title mapping:', allNotesError);
-      return result;
+    if (allNotesError) {
+      throw new Error(`Failed to fetch all notes for title mapping: ${allNotesError.message}`);
+    }
+
+    if (!allNotes) {
+      throw new Error('No notes returned when building title map for link resolution');
     }
 
     // Build title -> noteId mapping from entire user vault
