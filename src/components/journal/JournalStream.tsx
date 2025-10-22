@@ -40,6 +40,7 @@ export function JournalStream() {
   const [isLoading, setIsLoading] = useState(true)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const taskDetectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [currentEditingEntry, setCurrentEditingEntry] = useState<string | null>(null)
@@ -231,9 +232,12 @@ export function JournalStream() {
       return // No change, don't trigger saves
     }
 
-    // Clear existing timeout
+    // Clear existing timeouts
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
+    }
+    if (taskDetectionTimeoutRef.current) {
+      clearTimeout(taskDetectionTimeoutRef.current)
     }
 
     // Update content immediately for responsive UI
@@ -243,8 +247,11 @@ export function JournalStream() {
         : entry
     ))
 
-    // Detect tasks from paragraphs (Story 1.2)
-    detectTasksInContent(newContent, entryId)
+    // Debounce task detection to avoid duplicate tasks while typing (Story 1.2)
+    // Wait 3 seconds after user stops typing before detecting tasks
+    taskDetectionTimeoutRef.current = setTimeout(() => {
+      detectTasksInContent(newContent, entryId)
+    }, 3000)
 
     // Auto-save after 2 seconds of no typing (longer delay to reduce noise)
     saveTimeoutRef.current = setTimeout(async () => {
