@@ -184,7 +184,7 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
         testId="cbt"
       >
         {/* Distortion checkboxes */}
-        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+        <div className="space-y-3 pr-2">
           {CBT_DISTORTIONS.map((distortion) => (
             <div
               key={distortion.id}

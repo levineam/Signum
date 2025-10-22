@@ -73,13 +73,23 @@ export function JournalStream() {
         const allNotes = await getNotes(user.id)
         console.log('[JournalStream] Fetched notes:', allNotes.length)
 
-        // Clean up empty journal entries older than 24 hours (Issue #10)
+        // Clean up empty journal entries older than 24 hours (Issue #10, #67)
         const now = new Date()
         const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
+        // Helper function to check if content is truly empty (handles HTML markup)
+        const isContentEmpty = (html: string): boolean => {
+          if (!html || html.trim() === '') return true
+          // Create a temporary element to parse HTML and extract text
+          const tempDiv = document.createElement('div')
+          tempDiv.innerHTML = html
+          const text = tempDiv.textContent || tempDiv.innerText || ''
+          return text.trim() === ''
+        }
+
         const emptyJournalEntries = allNotes.filter(note =>
           note.noteType === 'journal-entry' &&
-          note.content.trim() === '' &&
+          isContentEmpty(note.content) &&
           new Date(note.createdAt) < oneDayAgo
         )
 
