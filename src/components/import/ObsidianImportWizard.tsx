@@ -73,32 +73,8 @@ export function ObsidianImportWizard() {
     setStep('importing');
 
     const selectedFiles = files.filter((f) => f.selected);
-
-    // Check payload size before sending (Vercel limit: 4.5MB for Hobby, 6MB for Pro)
-    const payload = JSON.stringify({
-      files: selectedFiles.map((f) => ({
-        fileName: f.fileName,
-        relativePath: f.relativePath,
-        content: f.content,
-        size: f.size,
-      })),
-      options: {
-        preserveTimestamps: true,
-        importTags: true,
-        skipBrokenLinks: false,
-      },
-    });
-
-    const payloadSizeMB = new Blob([payload]).size / (1024 * 1024);
-    const VERCEL_LIMIT_MB = 4.5; // Conservative limit for Vercel Hobby plan
-
-    if (payloadSizeMB > VERCEL_LIMIT_MB) {
-      toast.error(
-        `Import too large (${payloadSizeMB.toFixed(2)}MB). Vercel limit is ${VERCEL_LIMIT_MB}MB. Please import fewer files at once or use smaller files.`
-      );
-      setStep('preview');
-      return;
-    }
+    const VERCEL_LIMIT_MB = 4.0; // Conservative limit (Vercel allows 4.5MB, we use 4MB to be safe)
+    const VERCEL_LIMIT_BYTES = VERCEL_LIMIT_MB * 1024 * 1024;
 
     setImportProgress({
       total: selectedFiles.length,
@@ -108,57 +84,126 @@ export function ObsidianImportWizard() {
     });
 
     try {
-      const response = await fetch('/api/import/obsidian', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: payload,
-      });
+      // Group files into chunks that fit within Vercel's payload limit
+      const chunks: UploadedFile[][] = [];
+      let currentChunk: UploadedFile[] = [];
+      let currentChunkSize = 0;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = 'Import failed';
+      for (const file of selectedFiles) {
+        const filePayload = JSON.stringify({
+          fileName: file.fileName,
+          relativePath: file.relativePath,
+          content: file.content,
+          size: file.size,
+        });
+        const fileSize = new Blob([filePayload]).size;
 
-        // Handle 413 specifically
-        if (response.status === 413) {
-          errorMessage = `Request too large (${payloadSizeMB.toFixed(2)}MB). Please import fewer files at once.`;
-        } else {
-          try {
-            const errorJson = JSON.parse(errorText);
-            errorMessage = errorJson.error || errorMessage;
-          } catch {
-            errorMessage = errorText || errorMessage;
-          }
+        // If adding this file would exceed the limit, start a new chunk
+        if (currentChunk.length > 0 && currentChunkSize + fileSize > VERCEL_LIMIT_BYTES) {
+          chunks.push([...currentChunk]);
+          currentChunk = [];
+          currentChunkSize = 0;
         }
 
-        throw new Error(errorMessage);
+        currentChunk.push(file);
+        currentChunkSize += fileSize;
       }
 
-      const result = await response.json();
+      // Don't forget the last chunk
+      if (currentChunk.length > 0) {
+        chunks.push(currentChunk);
+      }
+
+      console.log(`Importing ${selectedFiles.length} files in ${chunks.length} chunk(s)`);
+
+      // Import each chunk sequentially
+      let totalImported = 0;
+      let totalLinksResolved = 0;
+      const allBrokenLinks: Array<{
+        sourceTitle: string;
+        targetTitle: string;
+        wikiLink: string;
+      }> = [];
+      const allSkippedFiles: Array<{ fileName: string; reason: string }> = [];
+      const allErrors: string[] = [];
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+
+        setImportProgress((prev) => ({
+          ...prev,
+          currentFile: `Processing batch ${i + 1}/${chunks.length} (${chunk.length} files)`,
+        }));
+
+        const payload = JSON.stringify({
+          files: chunk.map((f) => ({
+            fileName: f.fileName,
+            relativePath: f.relativePath,
+            content: f.content,
+            size: f.size,
+          })),
+          options: {
+            preserveTimestamps: true,
+            importTags: true,
+            skipBrokenLinks: false,
+          },
+        });
+
+        const response = await fetch('/api/import/obsidian', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: payload,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorMessage = 'Import failed';
+
+          if (response.status === 413) {
+            errorMessage = `Batch ${i + 1} too large. This should not happen - please report this bug.`;
+          } else {
+            try {
+              const errorJson = JSON.parse(errorText);
+              errorMessage = errorJson.error || errorMessage;
+            } catch {
+              errorMessage = errorText || errorMessage;
+            }
+          }
+
+          throw new Error(errorMessage);
+        }
+
+        const result = await response.json();
+
+        // Accumulate results from all chunks
+        totalImported += result.summary.notesImported;
+        totalLinksResolved += result.summary.linksResolved;
+        allBrokenLinks.push(...result.summary.brokenLinks);
+        allSkippedFiles.push(...result.summary.skippedFiles);
+        allErrors.push(...result.summary.errors);
+
+        setImportProgress((prev) => ({
+          ...prev,
+          processed: prev.processed + chunk.length,
+          succeeded: prev.succeeded + result.summary.notesImported,
+        }));
+      }
 
       setImportSummary({
-        notesImported: result.summary.notesImported,
-        linksResolved: result.summary.linksResolved,
-        brokenLinks: result.summary.brokenLinks,
-        skippedFiles: result.summary.skippedFiles,
-        errors: result.summary.errors,
-      });
-
-      setImportProgress({
-        total: selectedFiles.length,
-        processed: selectedFiles.length,
-        succeeded: result.summary.notesImported,
-        failed:
-          selectedFiles.length -
-          result.summary.notesImported -
-          result.summary.skippedFiles.length,
+        notesImported: totalImported,
+        linksResolved: totalLinksResolved,
+        brokenLinks: allBrokenLinks,
+        skippedFiles: allSkippedFiles,
+        errors: allErrors,
       });
 
       setStep('summary');
-
       toast.success(
-        `Successfully imported ${result.summary.notesImported} notes!`
+        chunks.length > 1
+          ? `Successfully imported ${totalImported} notes in ${chunks.length} batches!`
+          : `Successfully imported ${totalImported} notes!`
       );
     } catch (error) {
       console.error('Import error:', error);
@@ -172,7 +217,6 @@ export function ObsidianImportWizard() {
       });
 
       setStep('summary');
-
       toast.error('Import failed. Please try again.');
     }
   };
