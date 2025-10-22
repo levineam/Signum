@@ -267,6 +267,59 @@ describe('dateParser', () => {
     });
   });
 
+  describe('Recurring patterns with explicit times', () => {
+    it('should parse "every Monday at 4pm" with explicit time', () => {
+      const result = parseDate('Reminder: team meeting every Monday at 4pm');
+      expect(result).toBeTruthy();
+      expect(result?.dueAt).toBeInstanceOf(Date);
+      expect(result?.rrule).toBeTruthy();
+
+      // Should use 4pm (16:00) instead of default 9am
+      const hour = result!.dueAt.getHours();
+      expect(hour).toBe(16);
+    });
+
+    it('should parse "daily at 8am" with explicit time', () => {
+      const result = parseDate('Take medicine daily at 8am');
+      expect(result).toBeTruthy();
+      expect(result?.rrule).toBeTruthy();
+
+      // Should use 8am instead of default 9am
+      const hour = result!.dueAt.getHours();
+      expect(hour).toBe(8);
+    });
+
+    it('should parse "every week at 2:30pm" with explicit time', () => {
+      const result = parseDate('Therapy every week at 2:30pm');
+      expect(result).toBeTruthy();
+      expect(result?.rrule).toBeTruthy();
+
+      // Should use 2:30pm (14:30)
+      const date = result!.dueAt;
+      expect(date.getHours()).toBe(14);
+      expect(date.getMinutes()).toBe(30);
+    });
+
+    it('should fall back to 9am when no time is specified', () => {
+      const result = parseDate('Standup every Monday');
+      expect(result).toBeTruthy();
+
+      // Should default to 9am
+      const hour = result!.dueAt.getHours();
+      expect(hour).toBe(9);
+    });
+
+    it('should parse "first Monday of month at 10am" with explicit time', () => {
+      const result = parseDate('All-hands first Monday of month at 10am');
+      expect(result).toBeTruthy();
+      expect(result?.rrule).toBeTruthy();
+
+      // Should use 10am instead of default 9am
+      const hour = result!.dueAt.getHours();
+      expect(hour).toBe(10);
+    });
+  });
+
   describe('Timezone adjustment', () => {
     it('should adjust parsed dates to user timezone (EST example)', () => {
       // Simulate user in EST (UTC-5, offset = 300 minutes)

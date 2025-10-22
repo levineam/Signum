@@ -86,6 +86,30 @@ function adjustDateToUserTimezone(date: Date, timezoneOffsetMinutes?: number): D
 }
 
 /**
+ * Extract time of day from text using chrono
+ * Returns { hour, minute } if found, otherwise null
+ */
+function extractTimeFromText(text: string, timezoneOffsetMinutes?: number): { hour: number; minute: number } | null {
+  const referenceDate = getReferenceDate(timezoneOffsetMinutes);
+  const results = chrono.parse(text, referenceDate, { forwardDate: true });
+
+  if (!results || results.length === 0) {
+    return null;
+  }
+
+  const result = results[0];
+
+  // Check if the parsed result includes a time component
+  if (result.start.get('hour') !== null && result.start.get('hour') !== undefined) {
+    const hour = result.start.get('hour') || 0;
+    const minute = result.start.get('minute') || 0;
+    return { hour, minute };
+  }
+
+  return null;
+}
+
+/**
  * Detect recurring patterns and generate RRULE
  */
 function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): ParsedDate | null {
@@ -96,7 +120,14 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
     const referenceDate = getReferenceDate(timezoneOffsetMinutes);
     const tomorrow = new Date(referenceDate);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(9, 0, 0, 0); // Default to 9am
+
+    // Try to extract explicit time from text, otherwise default to 9am
+    const timeInfo = extractTimeFromText(text, timezoneOffsetMinutes);
+    if (timeInfo) {
+      tomorrow.setHours(timeInfo.hour, timeInfo.minute, 0, 0);
+    } else {
+      tomorrow.setHours(9, 0, 0, 0); // Default to 9am
+    }
 
     // Adjust to user's timezone
     const adjustedDate = adjustDateToUserTimezone(tomorrow, timezoneOffsetMinutes);
@@ -116,7 +147,10 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
     const dayName = weeklyMatch[1];
     const dayIndex = getDayIndex(dayName);
     const referenceDate = getReferenceDate(timezoneOffsetMinutes);
-    const nextDate = getNextWeekday(dayIndex, referenceDate);
+
+    // Try to extract explicit time from text, otherwise default to 9am
+    const timeInfo = extractTimeFromText(text, timezoneOffsetMinutes);
+    const nextDate = getNextWeekday(dayIndex, referenceDate, timeInfo);
 
     // Adjust to user's timezone
     const adjustedDate = adjustDateToUserTimezone(nextDate, timezoneOffsetMinutes);
@@ -138,7 +172,14 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
     const referenceDate = getReferenceDate(timezoneOffsetMinutes);
     const nextWeek = new Date(referenceDate);
     nextWeek.setDate(nextWeek.getDate() + 7 * interval);
-    nextWeek.setHours(9, 0, 0, 0);
+
+    // Try to extract explicit time from text, otherwise default to 9am
+    const timeInfo = extractTimeFromText(text, timezoneOffsetMinutes);
+    if (timeInfo) {
+      nextWeek.setHours(timeInfo.hour, timeInfo.minute, 0, 0);
+    } else {
+      nextWeek.setHours(9, 0, 0, 0);
+    }
 
     // Adjust to user's timezone
     const adjustedDate = adjustDateToUserTimezone(nextWeek, timezoneOffsetMinutes);
@@ -159,7 +200,10 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
     const dayName = firstWeekdayMatch[1];
     const dayIndex = getDayIndex(dayName);
     const referenceDate = getReferenceDate(timezoneOffsetMinutes);
-    const nextDate = getFirstWeekdayOfNextMonth(dayIndex, referenceDate);
+
+    // Try to extract explicit time from text, otherwise default to 9am
+    const timeInfo = extractTimeFromText(text, timezoneOffsetMinutes);
+    const nextDate = getFirstWeekdayOfNextMonth(dayIndex, referenceDate, timeInfo);
 
     // Adjust to user's timezone
     const adjustedDate = adjustDateToUserTimezone(nextDate, timezoneOffsetMinutes);
@@ -185,7 +229,14 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
     const referenceDate = getReferenceDate(timezoneOffsetMinutes);
     const nextMonth = new Date(referenceDate);
     nextMonth.setMonth(nextMonth.getMonth() + interval);
-    nextMonth.setHours(9, 0, 0, 0);
+
+    // Try to extract explicit time from text, otherwise default to 9am
+    const timeInfo = extractTimeFromText(text, timezoneOffsetMinutes);
+    if (timeInfo) {
+      nextMonth.setHours(timeInfo.hour, timeInfo.minute, 0, 0);
+    } else {
+      nextMonth.setHours(9, 0, 0, 0);
+    }
 
     // Adjust to user's timezone
     const adjustedDate = adjustDateToUserTimezone(nextMonth, timezoneOffsetMinutes);
@@ -222,13 +273,23 @@ function getDayIndex(dayName: string): number {
 /**
  * Get next occurrence of a weekday
  */
-function getNextWeekday(dayIndex: number, referenceDate: Date = new Date()): Date {
+function getNextWeekday(
+  dayIndex: number,
+  referenceDate: Date = new Date(),
+  timeInfo?: { hour: number; minute: number } | null
+): Date {
   const currentDay = (referenceDate.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
   const daysUntil = (dayIndex - currentDay + 7) % 7 || 7; // If today, use next week
 
   const nextDate = new Date(referenceDate);
   nextDate.setDate(nextDate.getDate() + daysUntil);
-  nextDate.setHours(9, 0, 0, 0);
+
+  // Use provided time or default to 9am
+  if (timeInfo) {
+    nextDate.setHours(timeInfo.hour, timeInfo.minute, 0, 0);
+  } else {
+    nextDate.setHours(9, 0, 0, 0);
+  }
 
   return nextDate;
 }
@@ -238,7 +299,11 @@ function getNextWeekday(dayIndex: number, referenceDate: Date = new Date()): Dat
  * Returns current month's first weekday if it hasn't passed yet,
  * otherwise returns next month's first weekday
  */
-function getFirstWeekdayOfNextMonth(dayIndex: number, referenceDate: Date = new Date()): Date {
+function getFirstWeekdayOfNextMonth(
+  dayIndex: number,
+  referenceDate: Date = new Date(),
+  timeInfo?: { hour: number; minute: number } | null
+): Date {
   const now = referenceDate;
 
   // Try current month first
@@ -247,7 +312,13 @@ function getFirstWeekdayOfNextMonth(dayIndex: number, referenceDate: Date = new 
   const daysUntil = (dayIndex - firstDay + 7) % 7;
 
   currentMonth.setDate(1 + daysUntil);
-  currentMonth.setHours(9, 0, 0, 0);
+
+  // Use provided time or default to 9am
+  if (timeInfo) {
+    currentMonth.setHours(timeInfo.hour, timeInfo.minute, 0, 0);
+  } else {
+    currentMonth.setHours(9, 0, 0, 0);
+  }
 
   // If the first weekday of current month hasn't passed, return it
   if (currentMonth > now) {
@@ -260,7 +331,13 @@ function getFirstWeekdayOfNextMonth(dayIndex: number, referenceDate: Date = new 
   const nextDaysUntil = (dayIndex - nextFirstDay + 7) % 7;
 
   nextMonth.setDate(1 + nextDaysUntil);
-  nextMonth.setHours(9, 0, 0, 0);
+
+  // Use provided time or default to 9am
+  if (timeInfo) {
+    nextMonth.setHours(timeInfo.hour, timeInfo.minute, 0, 0);
+  } else {
+    nextMonth.setHours(9, 0, 0, 0);
+  }
 
   return nextMonth;
 }
