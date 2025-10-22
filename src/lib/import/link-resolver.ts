@@ -146,23 +146,28 @@ export class LinkResolver {
     updatedContent = updatedContent.replace(
       wikiLinkRegex,
       (match, target, displayText) => {
+        // Decode HTML entities from the data-target attribute
+        // The parser escaped special characters like & → &amp;
+        const decodedTarget = this.decodeHtml(target);
+        const decodedDisplayText = this.decodeHtml(displayText);
+
         // Try exact match first, then case-insensitive
         const targetNoteId =
-          titleMap.get(target) || titleMap.get(target.toLowerCase());
+          titleMap.get(decodedTarget) || titleMap.get(decodedTarget.toLowerCase());
 
         if (targetNoteId) {
           // Resolved: Convert to proper link
           resolvedCount++;
-          return `<a href="#" class="note-link" data-note-id="${targetNoteId}">${this.escapeHtml(displayText)}</a>`;
+          return `<a href="#" class="note-link" data-note-id="${targetNoteId}">${this.escapeHtml(decodedDisplayText)}</a>`;
         } else {
           // Broken link: Keep as styled span
           brokenLinks.push({
             sourceNoteId: noteId,
             sourceTitle: noteTitle,
-            targetTitle: target,
-            wikiLink: `[[${target}]]`,
+            targetTitle: decodedTarget,
+            wikiLink: `[[${decodedTarget}]]`,
           });
-          return `<span class="broken-link" data-target="${this.escapeHtml(target)}" title="Note not found: ${this.escapeHtml(target)}">${this.escapeHtml(displayText)}</span>`;
+          return `<span class="broken-link" data-target="${this.escapeHtml(decodedTarget)}" title="Note not found: ${this.escapeHtml(decodedTarget)}">${this.escapeHtml(decodedDisplayText)}</span>`;
         }
       }
     );
@@ -220,6 +225,21 @@ export class LinkResolver {
         console.error('Error creating link relationships:', error);
       }
     }
+  }
+
+  /**
+   * Decode HTML entities
+   */
+  private decodeHtml(text: string): string {
+    const htmlEntities: Record<string, string> = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+    };
+
+    return text.replace(/&(?:amp|lt|gt|quot|#39);/g, (entity) => htmlEntities[entity] || entity);
   }
 
   /**

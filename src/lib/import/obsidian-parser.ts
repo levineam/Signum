@@ -8,7 +8,9 @@
 import matter from 'gray-matter';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
-import remarkHtml from 'remark-html';
+import remarkRehype from 'remark-rehype';
+import rehypeSanitize from 'rehype-sanitize';
+import rehypeStringify from 'rehype-stringify';
 import remarkFrontmatter from 'remark-frontmatter';
 
 export interface ParsedNote {
@@ -171,11 +173,14 @@ export class ObsidianParser {
     }
 
     // Convert markdown to HTML
-    // SECURITY: Enable sanitization to prevent XSS from untrusted markdown
+    // SECURITY: Use rehype-sanitize to prevent XSS attacks
+    // This strips dangerous protocols (javascript:, data:) and unsafe HTML
     const file = await unified()
       .use(remarkParse)
       .use(remarkFrontmatter)
-      .use(remarkHtml) // Default sanitization enabled for security
+      .use(remarkRehype) // Convert to rehype (HTML AST)
+      .use(rehypeSanitize) // Sanitize HTML with safe defaults
+      .use(rehypeStringify) // Convert back to HTML string
       .process(processedMarkdown);
 
     let html = String(file);
