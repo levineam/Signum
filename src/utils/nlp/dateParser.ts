@@ -46,7 +46,11 @@ export function parseDate(text: string, timezoneOffsetMinutes?: number): ParsedD
   const result = results[0];
   const date = result.start.date();
 
-  return { dueAt: date };
+  // Adjust the parsed date to the user's timezone
+  // Chrono parses "8am" as 8am in the server's timezone, but we want 8am in the user's timezone
+  const adjustedDate = adjustDateToUserTimezone(date, timezoneOffsetMinutes);
+
+  return { dueAt: adjustedDate };
 }
 
 /**
@@ -68,6 +72,20 @@ function getReferenceDate(timezoneOffsetMinutes?: number): Date {
 }
 
 /**
+ * Adjust a date from server timezone to user timezone
+ * This ensures that "8am" in the user's timezone is stored correctly as UTC
+ */
+function adjustDateToUserTimezone(date: Date, timezoneOffsetMinutes?: number): Date {
+  if (timezoneOffsetMinutes === undefined) {
+    return date;
+  }
+
+  const serverOffset = new Date().getTimezoneOffset();
+  const offsetDiff = serverOffset - timezoneOffsetMinutes;
+  return new Date(date.getTime() - offsetDiff * 60 * 1000);
+}
+
+/**
  * Detect recurring patterns and generate RRULE
  */
 function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): ParsedDate | null {
@@ -80,11 +98,14 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(9, 0, 0, 0); // Default to 9am
 
+    // Adjust to user's timezone
+    const adjustedDate = adjustDateToUserTimezone(tomorrow, timezoneOffsetMinutes);
+
     return {
-      dueAt: tomorrow,
+      dueAt: adjustedDate,
       rrule: new RRule({
         freq: Frequency.DAILY,
-        dtstart: tomorrow
+        dtstart: adjustedDate
       }).toString()
     };
   }
@@ -97,12 +118,15 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
     const referenceDate = getReferenceDate(timezoneOffsetMinutes);
     const nextDate = getNextWeekday(dayIndex, referenceDate);
 
+    // Adjust to user's timezone
+    const adjustedDate = adjustDateToUserTimezone(nextDate, timezoneOffsetMinutes);
+
     return {
-      dueAt: nextDate,
+      dueAt: adjustedDate,
       rrule: new RRule({
         freq: Frequency.WEEKLY,
         byweekday: [dayIndex],
-        dtstart: nextDate
+        dtstart: adjustedDate
       }).toString()
     };
   }
@@ -116,12 +140,15 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
     nextWeek.setDate(nextWeek.getDate() + 7 * interval);
     nextWeek.setHours(9, 0, 0, 0);
 
+    // Adjust to user's timezone
+    const adjustedDate = adjustDateToUserTimezone(nextWeek, timezoneOffsetMinutes);
+
     return {
-      dueAt: nextWeek,
+      dueAt: adjustedDate,
       rrule: new RRule({
         freq: Frequency.WEEKLY,
         interval,
-        dtstart: nextWeek
+        dtstart: adjustedDate
       }).toString()
     };
   }
@@ -134,16 +161,19 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
     const referenceDate = getReferenceDate(timezoneOffsetMinutes);
     const nextDate = getFirstWeekdayOfNextMonth(dayIndex, referenceDate);
 
+    // Adjust to user's timezone
+    const adjustedDate = adjustDateToUserTimezone(nextDate, timezoneOffsetMinutes);
+
     // Map dayIndex to RRule weekday constants
     const weekdayMap = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU];
     const rruleWeekday = weekdayMap[dayIndex];
 
     return {
-      dueAt: nextDate,
+      dueAt: adjustedDate,
       rrule: new RRule({
         freq: Frequency.MONTHLY,
         byweekday: [rruleWeekday.nth(1)], // First occurrence of detected weekday
-        dtstart: nextDate
+        dtstart: adjustedDate
       }).toString()
     };
   }
@@ -157,12 +187,15 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
     nextMonth.setMonth(nextMonth.getMonth() + interval);
     nextMonth.setHours(9, 0, 0, 0);
 
+    // Adjust to user's timezone
+    const adjustedDate = adjustDateToUserTimezone(nextMonth, timezoneOffsetMinutes);
+
     return {
-      dueAt: nextMonth,
+      dueAt: adjustedDate,
       rrule: new RRule({
         freq: Frequency.MONTHLY,
         interval,
-        dtstart: nextMonth
+        dtstart: adjustedDate
       }).toString()
     };
   }

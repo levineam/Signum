@@ -266,4 +266,48 @@ describe('dateParser', () => {
       expect(result?.dueAt).toBeInstanceOf(Date);
     });
   });
+
+  describe('Timezone adjustment', () => {
+    it('should adjust parsed dates to user timezone (EST example)', () => {
+      // Simulate user in EST (UTC-5, offset = 300 minutes)
+      // Server is in UTC (offset = 0)
+      const estOffset = 300; // EST is UTC-5
+
+      const result = parseDate('tomorrow at 8am', estOffset);
+      expect(result).toBeTruthy();
+
+      // The date should be adjusted so that when the user sees "8am" in their timezone,
+      // it's stored as the correct UTC timestamp
+      const date = result!.dueAt;
+
+      // Get the hour in UTC
+      const utcHour = date.getUTCHours();
+
+      // For EST (UTC-5), 8am EST = 13:00 UTC
+      // So the stored UTC hour should be 13 (8 + 5)
+      expect(utcHour).toBe(13);
+    });
+
+    it('should adjust recurring dates to user timezone', () => {
+      // Simulate user in PST (UTC-8, offset = 480 minutes)
+      const pstOffset = 480;
+
+      const result = parseDate('every Monday', pstOffset);
+      expect(result).toBeTruthy();
+      expect(result?.rrule).toBeTruthy();
+
+      // The default time is 9am, so in PST that should be 17:00 UTC
+      const date = result!.dueAt;
+      const utcHour = date.getUTCHours();
+
+      // 9am PST = 17:00 UTC (9 + 8)
+      expect(utcHour).toBe(17);
+    });
+
+    it('should work without timezone offset (backward compatibility)', () => {
+      const result = parseDate('tomorrow at 3pm');
+      expect(result).toBeTruthy();
+      expect(result?.dueAt).toBeInstanceOf(Date);
+    });
+  });
 });
