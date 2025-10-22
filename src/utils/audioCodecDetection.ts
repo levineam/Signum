@@ -129,14 +129,23 @@ export function isVoiceTranscriptionSupported(): boolean {
 
   // Check for MediaRecorder (or Web Audio API for WAV fallback)
   const hasMediaRecorder = !!window.MediaRecorder;
-  const hasWebAudio = !!(window.AudioContext || (window as any).webkitAudioContext);
+  const hasWebAudio = !!(
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  );
 
-  // Check for getUserMedia
+  // Check for getUserMedia (including legacy prefixed versions)
+  const nav = navigator as unknown as {
+    getUserMedia?: typeof navigator.mediaDevices.getUserMedia;
+    webkitGetUserMedia?: typeof navigator.mediaDevices.getUserMedia;
+    mozGetUserMedia?: typeof navigator.mediaDevices.getUserMedia;
+  };
+
   const hasGetUserMedia = !!(
     navigator.mediaDevices?.getUserMedia ||
-    (navigator as any).getUserMedia ||
-    (navigator as any).webkitGetUserMedia ||
-    (navigator as any).mozGetUserMedia
+    nav.getUserMedia ||
+    nav.webkitGetUserMedia ||
+    nav.mozGetUserMedia
   );
 
   return (hasMediaRecorder || hasWebAudio) && hasGetUserMedia;
