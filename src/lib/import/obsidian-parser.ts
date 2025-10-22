@@ -171,10 +171,11 @@ export class ObsidianParser {
     }
 
     // Convert markdown to HTML
+    // SECURITY: Enable sanitization to prevent XSS from untrusted markdown
     const file = await unified()
       .use(remarkParse)
       .use(remarkFrontmatter)
-      .use(remarkHtml, { sanitize: false }) // Don't sanitize - we trust user content
+      .use(remarkHtml) // Default sanitization enabled for security
       .process(processedMarkdown);
 
     let html = String(file);

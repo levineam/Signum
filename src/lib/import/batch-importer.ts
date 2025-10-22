@@ -149,14 +149,18 @@ export class BatchImporter {
       // Preserve timestamps from frontmatter if option enabled
       if (options.preserveTimestamps && parsedNote.frontmatter) {
         if (parsedNote.frontmatter.created && typeof parsedNote.frontmatter.created === 'string') {
-          noteData.created_at = new Date(
-            parsedNote.frontmatter.created as string
-          ).toISOString();
+          const createdDate = new Date(parsedNote.frontmatter.created as string);
+          // Validate date before calling toISOString to prevent crashes
+          if (!isNaN(createdDate.getTime())) {
+            noteData.created_at = createdDate.toISOString();
+          }
         }
         if (parsedNote.frontmatter.modified && typeof parsedNote.frontmatter.modified === 'string') {
-          noteData.updated_at = new Date(
-            parsedNote.frontmatter.modified as string
-          ).toISOString();
+          const modifiedDate = new Date(parsedNote.frontmatter.modified as string);
+          // Validate date before calling toISOString to prevent crashes
+          if (!isNaN(modifiedDate.getTime())) {
+            noteData.updated_at = modifiedDate.toISOString();
+          }
         }
       }
 
