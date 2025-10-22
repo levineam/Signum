@@ -126,7 +126,11 @@ export function detectBestCodec(): CodecInfo {
     }
 
     // Test MediaRecorder support for native codecs
-    if (MediaRecorder.isTypeSupported(codecConfig.mimeType)) {
+    // Guard against older Safari/embedded browsers that lack isTypeSupported
+    if (
+      typeof MediaRecorder.isTypeSupported === 'function' &&
+      MediaRecorder.isTypeSupported(codecConfig.mimeType)
+    ) {
       const maxDuration = calculateMaxDuration(codecConfig.estimatedBitrate);
 
       console.log(
