@@ -10,7 +10,7 @@ This project uses PR-based deployment with auto-deploy to Vercel. You MUST follo
 2. **Make changes & test locally**: `npm run build`, verify functionality
 3. **Commit & push**: `git add [files] && git commit` with `Co-Authored-By: Claude <noreply@anthropic.com>`, then `git push`
 4. **Create PR** (first time): `gh pr create` with description, test plan, screenshots
-5. **🚨 ALWAYS request Codex review after push**: `gh pr comment [PR#] --body '<CHORUS_TAG>codex</CHORUS_TAG> review'`
+5. **🚨 ALWAYS request Codex review after push**: `echo '<CHORUS_TAG>codex</CHORUS_TAG> review' | gh pr comment [PR#] --body-file -`
 6. **Test on Vercel Preview**: Test thoroughly on preview URL
 7. **User merges**: User reviews, approves, and merges (NOT Claude)
 
@@ -41,7 +41,7 @@ Feature → `dev` (test) → `main` (production). Both `dev` and `main` are prot
 ❌ NEVER merge PRs yourself
 ❌ NEVER skip PR process or local testing
 ❌ NEVER push without immediately requesting Codex review
-✅ ALWAYS run `gh pr comment [PR#] --body '<CHORUS_TAG>codex</CHORUS_TAG> review'` after EVERY push
+✅ ALWAYS run `echo '<CHORUS_TAG>codex</CHORUS_TAG> review' | gh pr comment [PR#] --body-file -` after EVERY push
 ✅ ALWAYS verify new AI models/APIs with Context7 MCP first
 
 ---
