@@ -265,8 +265,16 @@ export function JournalStream() {
     const tempDiv = document.createElement('div')
     tempDiv.innerHTML = content
 
-    // Get all <p> tags
-    const paragraphs = Array.from(tempDiv.querySelectorAll('p'))
+    // Get all block-level elements (p, div, or split by br)
+    // ContentEditable creates different structures in different browsers
+    const blockElements = Array.from(tempDiv.querySelectorAll('p, div'))
+
+    // If no block elements, treat whole content as one paragraph
+    const paragraphs = blockElements.length > 0
+      ? blockElements
+      : [tempDiv]
+
+    console.log(`[Task Detection] Checking ${paragraphs.length} paragraphs in entry ${entryId}`)
 
     for (const para of paragraphs) {
       const paragraphText = para.textContent?.trim() || ''
@@ -276,6 +284,8 @@ export function JournalStream() {
       if (!paragraphText || processedParagraphs.current.has(paraHash)) {
         continue
       }
+
+      console.log('[Task Detection] Processing paragraph:', paragraphText)
 
       // Mark as processed to avoid duplicate API calls
       processedParagraphs.current.add(paraHash)
@@ -300,6 +310,8 @@ export function JournalStream() {
           if (data.task) {
             console.log('✅ Task created from paragraph:', data.task)
             toast.success(`Task created: ${data.task.title}`)
+          } else {
+            console.log('[Task Detection] No task detected in:', paragraphText.substring(0, 50))
           }
         } else {
           const error = await response.json()
