@@ -8,12 +8,13 @@ This project uses PR-based deployment with auto-deploy to Vercel. You MUST follo
 
 1. **Create feature branch**: `git checkout -b story-X.X-description`
 2. **Make changes & test locally**: `npm run build`, verify functionality
-3. **Commit**: `git add [files] && git commit` with `Co-Authored-By: Claude <noreply@anthropic.com>`
-4. **Push**: `git push -u origin [branch-name]`
-5. **Create PR**: `gh pr create` with description, test plan, screenshots
-6. **Request Codex review**: Comment on PR with `<CHORUS_TAG>codex</CHORUS_TAG> review`
-7. **Test on Vercel Preview**: Test thoroughly on preview URL
-8. **User merges**: User reviews, approves, and merges (NOT Claude)
+3. **Commit & push**: `git add [files] && git commit` with `Co-Authored-By: Claude <noreply@anthropic.com>`, then `git push`
+4. **Create PR** (first time): `gh pr create` with description, test plan, screenshots
+5. **Request Codex review**: `gh pr comment [PR#] --body "<CHORUS_TAG>codex</CHORUS_TAG> review"` - **REQUIRED after EVERY commit/push**
+6. **Test on Vercel Preview**: Test thoroughly on preview URL
+7. **User merges**: User reviews, approves, and merges (NOT Claude)
+
+**For additional commits to existing PR**: Repeat steps 2-3, then **ALWAYS** step 5 (request Codex review again)
 
 ## Testing on Vercel Preview
 
