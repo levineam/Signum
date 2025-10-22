@@ -43,16 +43,25 @@ export class LinkResolver {
       updatedNotes: [],
     };
 
-    // Fetch imported notes (to update their content)
-    const { data: notes, error } = await this.supabase
-      .from('notes')
-      .select('id, title, content, metadata')
-      .in('id', noteIds)
-      .eq('user_id', userId);
+    // Fetch imported notes in chunks to avoid URI length limits
+    // PostgREST rejects queries with very long .in() clauses (414 URI Too Long)
+    const CHUNK_SIZE = 100; // Safe chunk size for UUID arrays
+    const notes = [];
 
-    if (error || !notes) {
-      console.error('Error fetching notes for link resolution:', error);
-      return result;
+    for (let i = 0; i < noteIds.length; i += CHUNK_SIZE) {
+      const chunk = noteIds.slice(i, i + CHUNK_SIZE);
+      const { data: chunkNotes, error } = await this.supabase
+        .from('notes')
+        .select('id, title, content, metadata')
+        .in('id', chunk)
+        .eq('user_id', userId);
+
+      if (error || !chunkNotes) {
+        console.error('Error fetching notes chunk for link resolution:', error);
+        return result;
+      }
+
+      notes.push(...chunkNotes);
     }
 
     // Fetch ALL user notes to build comprehensive title map
