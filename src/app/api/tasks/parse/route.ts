@@ -101,42 +101,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ task: null });
     }
 
-    // Check if a task already exists for this paragraph to prevent duplicates on reload
-    // Query tasks where metadata contains the exact paragraph text and entry ID
-    const { data: existingTasks } = await supabase
-      .from('tasks')
-      .select('id, title, due_at, status, metadata')
-      .eq('user_id', userId)
-      .contains('metadata', {
-        source_entry_id: entryId,
-        extracted_from_text: paragraphText
-      })
-      .limit(1);
+    // Generate a deterministic deduplication key from user, entry, and paragraph
+    // This ensures atomicity at the database level via unique constraint
+    const crypto = await import('crypto');
+    const dedupeKey = crypto
+      .createHash('sha256')
+      .update(`${userId}:${entryId}:${paragraphText}`)
+      .digest('hex');
 
-    // If task already exists, return it instead of creating a duplicate
-    if (existingTasks && existingTasks.length > 0) {
-      const existingTask = existingTasks[0];
-      console.log('[Task Parse API] Task already exists for this paragraph, skipping creation:', existingTask.id);
-      return NextResponse.json({
-        task: {
-          id: existingTask.id,
-          title: existingTask.title,
-          dueAt: existingTask.due_at,
-          rrule: existingTask.metadata?.rrule || null,
-          status: existingTask.status,
-          alreadyExisted: true
-        }
-      });
-    }
-
-    // Create task in database using the authenticated supabase client
-    // Store both timezone ID and offset for proper DST handling in future occurrences
+    // Attempt to create task with deduplication_key
+    // If a duplicate exists (same user + entry + paragraph), the unique constraint will prevent insertion
     const { data: task, error: taskError } = await supabase
       .from('tasks')
       .insert({
         user_id: userId,
         title: detectedTask.title,
         due_at: detectedTask.dueAt?.toISOString() || null,
+        deduplication_key: dedupeKey,
         metadata: {
           source_entry_id: entryId,
           rrule: detectedTask.rrule,
@@ -148,8 +129,38 @@ export async function POST(req: NextRequest) {
       .select()
       .single();
 
-    if (taskError || !task) {
+    // If insertion failed due to unique constraint violation, fetch and return existing task
+    if (taskError) {
+      if (taskError.code === '23505') { // PostgreSQL unique violation error code
+        console.log('[Task Parse API] Task already exists (duplicate key), fetching existing task');
+        const { data: existingTask } = await supabase
+          .from('tasks')
+          .select('id, title, due_at, status, metadata')
+          .eq('deduplication_key', dedupeKey)
+          .single();
+
+        if (existingTask) {
+          return NextResponse.json({
+            task: {
+              id: existingTask.id,
+              title: existingTask.title,
+              dueAt: existingTask.due_at,
+              rrule: existingTask.metadata?.rrule || null,
+              status: existingTask.status,
+              alreadyExisted: true
+            }
+          });
+        }
+      }
+
       console.error('Error creating task:', taskError);
+      return NextResponse.json(
+        { error: 'Failed to create task' },
+        { status: 500 }
+      );
+    }
+
+    if (!task) {
       return NextResponse.json(
         { error: 'Failed to create task' },
         { status: 500 }
