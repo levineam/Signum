@@ -39,8 +39,13 @@ const TASK_KEYWORDS = [
  *
  * @param paragraphText - The text to analyze for task keywords
  * @param timezoneOffsetMinutes - User's timezone offset in minutes (from Date.getTimezoneOffset())
+ * @param timezone - IANA timezone ID for DST-aware date parsing
  */
-export function detectTask(paragraphText: string, timezoneOffsetMinutes?: number): DetectedTask | null {
+export function detectTask(
+  paragraphText: string,
+  timezoneOffsetMinutes?: number,
+  timezone?: string
+): DetectedTask | null {
   if (!paragraphText || paragraphText.trim().length < 3) {
     return null;
   }
@@ -59,8 +64,8 @@ export function detectTask(paragraphText: string, timezoneOffsetMinutes?: number
     return null;
   }
 
-  // Parse date from paragraph (with timezone awareness)
-  const parsedDate = parseDate(paragraphText, timezoneOffsetMinutes);
+  // Parse date from paragraph (with DST-aware timezone handling)
+  const parsedDate = parseDate(paragraphText, timezoneOffsetMinutes, timezone);
 
   return {
     title,

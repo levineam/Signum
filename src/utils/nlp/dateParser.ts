@@ -23,10 +23,15 @@ export interface ParsedDate {
  * @param text - The text to parse for dates
  * @param timezoneOffsetMinutes - User's timezone offset in minutes (from Date.getTimezoneOffset())
  *                                Positive values are west of UTC, negative values are east of UTC
+ * @param timezone - IANA timezone ID (e.g., "America/New_York") for accurate DST handling
  */
-export function parseDate(text: string, timezoneOffsetMinutes?: number): ParsedDate | null {
+export function parseDate(
+  text: string,
+  timezoneOffsetMinutes?: number,
+  timezone?: string
+): ParsedDate | null {
   // Check for recurring patterns first (chrono doesn't handle these)
-  const recurringPattern = detectRecurringPattern(text, timezoneOffsetMinutes);
+  const recurringPattern = detectRecurringPattern(text, timezoneOffsetMinutes, timezone);
   if (recurringPattern) {
     return recurringPattern;
   }
@@ -48,7 +53,7 @@ export function parseDate(text: string, timezoneOffsetMinutes?: number): ParsedD
 
   // Adjust the parsed date to the user's timezone
   // Chrono parses "8am" as 8am in the server's timezone, but we want 8am in the user's timezone
-  const adjustedDate = adjustDateToUserTimezone(date, timezoneOffsetMinutes);
+  const adjustedDate = adjustDateToUserTimezone(date, timezoneOffsetMinutes, timezone);
 
   return { dueAt: adjustedDate };
 }
@@ -74,15 +79,76 @@ function getReferenceDate(timezoneOffsetMinutes?: number): Date {
 /**
  * Adjust a date from server timezone to user timezone
  * This ensures that "8am" in the user's timezone is stored correctly as UTC
+ *
+ * @param date - The date to adjust
+ * @param timezoneOffsetMinutes - Current timezone offset (fallback if timezone ID not provided)
+ * @param timezone - IANA timezone ID for accurate DST-aware offset calculation
  */
-function adjustDateToUserTimezone(date: Date, timezoneOffsetMinutes?: number): Date {
+function adjustDateToUserTimezone(
+  date: Date,
+  timezoneOffsetMinutes?: number,
+  timezone?: string
+): Date {
   if (timezoneOffsetMinutes === undefined) {
     return date;
   }
 
+  // If we have a timezone ID, calculate the offset FOR THE TARGET DATE
+  // This handles DST transitions correctly (e.g., parsing "December 1" in July)
+  let targetOffset = timezoneOffsetMinutes;
+  if (timezone) {
+    try {
+      // Get the offset at the target date using Intl API
+      targetOffset = getTimezoneOffsetForDate(date, timezone);
+    } catch (err) {
+      // Fall back to current offset if timezone is invalid
+      console.warn('[dateParser] Invalid timezone, using current offset:', timezone, err);
+    }
+  }
+
   const serverOffset = new Date().getTimezoneOffset();
-  const offsetDiff = serverOffset - timezoneOffsetMinutes;
+  const offsetDiff = serverOffset - targetOffset;
   return new Date(date.getTime() - offsetDiff * 60 * 1000);
+}
+
+/**
+ * Get timezone offset in minutes for a specific date in a specific timezone
+ * Uses Intl.DateTimeFormat to handle DST transitions correctly
+ *
+ * @param date - The target date
+ * @param timezone - IANA timezone ID (e.g., "America/New_York")
+ * @returns Offset in minutes (positive = west of UTC)
+ */
+function getTimezoneOffsetForDate(date: Date, timezone: string): number {
+  // Format the date in the target timezone and in UTC
+  const targetFormatter = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZone: timezone,
+  });
+
+  const utcFormatter = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZone: 'UTC',
+  });
+
+  // Parse formatted strings to get time in milliseconds
+  const targetTime = new Date(targetFormatter.format(date)).getTime();
+  const utcTime = new Date(utcFormatter.format(date)).getTime();
+
+  // Calculate offset in minutes
+  return (targetTime - utcTime) / (1000 * 60);
 }
 
 /**
@@ -112,7 +178,11 @@ function extractTimeFromText(text: string, timezoneOffsetMinutes?: number): { ho
 /**
  * Detect recurring patterns and generate RRULE
  */
-function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): ParsedDate | null {
+function detectRecurringPattern(
+  text: string,
+  timezoneOffsetMinutes?: number,
+  timezone?: string
+): ParsedDate | null {
   const lowerText = text.toLowerCase();
 
   // Daily pattern
@@ -129,8 +199,8 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
       tomorrow.setHours(9, 0, 0, 0); // Default to 9am
     }
 
-    // Adjust to user's timezone
-    const adjustedDate = adjustDateToUserTimezone(tomorrow, timezoneOffsetMinutes);
+    // Adjust to user's timezone (with DST-aware offset calculation)
+    const adjustedDate = adjustDateToUserTimezone(tomorrow, timezoneOffsetMinutes, timezone);
 
     return {
       dueAt: adjustedDate,
@@ -152,8 +222,8 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
     const timeInfo = extractTimeFromText(text, timezoneOffsetMinutes);
     const nextDate = getNextWeekday(dayIndex, referenceDate, timeInfo);
 
-    // Adjust to user's timezone
-    const adjustedDate = adjustDateToUserTimezone(nextDate, timezoneOffsetMinutes);
+    // Adjust to user's timezone (with DST-aware offset calculation)
+    const adjustedDate = adjustDateToUserTimezone(nextDate, timezoneOffsetMinutes, timezone);
 
     return {
       dueAt: adjustedDate,
@@ -181,8 +251,8 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
       nextWeek.setHours(9, 0, 0, 0);
     }
 
-    // Adjust to user's timezone
-    const adjustedDate = adjustDateToUserTimezone(nextWeek, timezoneOffsetMinutes);
+    // Adjust to user's timezone (with DST-aware offset calculation)
+    const adjustedDate = adjustDateToUserTimezone(nextWeek, timezoneOffsetMinutes, timezone);
 
     return {
       dueAt: adjustedDate,
@@ -205,8 +275,8 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
     const timeInfo = extractTimeFromText(text, timezoneOffsetMinutes);
     const nextDate = getFirstWeekdayOfNextMonth(dayIndex, referenceDate, timeInfo);
 
-    // Adjust to user's timezone
-    const adjustedDate = adjustDateToUserTimezone(nextDate, timezoneOffsetMinutes);
+    // Adjust to user's timezone (with DST-aware offset calculation)
+    const adjustedDate = adjustDateToUserTimezone(nextDate, timezoneOffsetMinutes, timezone);
 
     // Map dayIndex to RRule weekday constants
     const weekdayMap = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU];
@@ -238,8 +308,8 @@ function detectRecurringPattern(text: string, timezoneOffsetMinutes?: number): P
       nextMonth.setHours(9, 0, 0, 0);
     }
 
-    // Adjust to user's timezone
-    const adjustedDate = adjustDateToUserTimezone(nextMonth, timezoneOffsetMinutes);
+    // Adjust to user's timezone (with DST-aware offset calculation)
+    const adjustedDate = adjustDateToUserTimezone(nextMonth, timezoneOffsetMinutes, timezone);
 
     return {
       dueAt: adjustedDate,

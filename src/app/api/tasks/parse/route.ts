@@ -93,8 +93,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Detect task in paragraph (pass timezone offset to respect user's local time)
-    const detectedTask = detectTask(paragraphText, timezoneOffset);
+    // Detect task in paragraph (pass timezone info for DST-aware date parsing)
+    const detectedTask = detectTask(paragraphText, timezoneOffset, timezone);
 
     // No task detected
     if (!detectedTask) {
