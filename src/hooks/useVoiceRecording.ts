@@ -36,6 +36,7 @@ export function useVoiceRecording({
   const startTimeRef = useRef<number>(0)
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const codecInfoRef = useRef<CodecInfo | null>(null)
+  const hasErroredRef = useRef<boolean>(false)
 
   // Clean up on unmount
   useEffect(() => {
@@ -85,6 +86,9 @@ export function useVoiceRecording({
 
   const startRecording = useCallback(async () => {
     let stream: MediaStream | null = null
+
+    // Reset error flag for new recording attempt
+    hasErroredRef.current = false
 
     try {
       // Detect best codec
@@ -141,6 +145,15 @@ export function useVoiceRecording({
           timerIntervalRef.current = null
         }
 
+        // IMPORTANT: Skip completion logic if an error occurred
+        // MediaRecorder fires 'stop' after 'error', so we need to avoid
+        // overwriting the error state with 'processing'
+        if (hasErroredRef.current) {
+          console.log('[useVoiceRecording] Skipping completion handler due to prior error')
+          hasErroredRef.current = false // Reset for next recording
+          return
+        }
+
         // Create audio blob
         const audioBlob = new Blob(audioChunksRef.current, { type: codec.mimeType })
         audioChunksRef.current = []
@@ -161,6 +174,10 @@ export function useVoiceRecording({
       mediaRecorder.onerror = (event) => {
         const error = `Recording error: ${(event as ErrorEvent).error?.message || 'Unknown error'}`
         console.error('[useVoiceRecording]', error)
+
+        // Set error flag to prevent onstop from running completion logic
+        // MediaRecorder fires 'stop' after 'error', so we need to skip completion
+        hasErroredRef.current = true
 
         // Clean up resources on error (prevent privacy/resource leak)
         // Stop microphone stream
