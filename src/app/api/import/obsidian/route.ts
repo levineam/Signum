@@ -86,6 +86,15 @@ export async function POST(request: NextRequest) {
         const { data, error } = await supabase.auth.getUser(token);
         user = data.user;
         authError = error;
+
+        // CRITICAL: Set the session on the Supabase client so BatchImporter/LinkResolver
+        // can authenticate their DB operations under RLS
+        if (!error && data.user) {
+          await supabase.auth.setSession({
+            access_token: token,
+            refresh_token: '', // Not needed for server-side operations
+          });
+        }
       }
     }
 
