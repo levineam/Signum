@@ -84,6 +84,8 @@ export function useVoiceRecording({
   }, [stopRecording])
 
   const startRecording = useCallback(async () => {
+    let stream: MediaStream | null = null
+
     try {
       // Detect best codec
       const codec = detectBestCodec()
@@ -98,7 +100,7 @@ export function useVoiceRecording({
       console.log(`[useVoiceRecording] Using codec: ${codec.displayName} (${codec.mimeType})`)
 
       // Request microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1, // Mono
           sampleRate: 16000, // 16 kHz
@@ -131,7 +133,7 @@ export function useVoiceRecording({
       // Handle recording stop
       mediaRecorder.onstop = () => {
         // Stop all tracks
-        stream.getTracks().forEach((track) => track.stop())
+        stream?.getTracks().forEach((track) => track.stop())
 
         // Clear timer
         if (timerIntervalRef.current) {
@@ -179,6 +181,13 @@ export function useVoiceRecording({
     } catch (err) {
       const error = err instanceof Error ? err.message : 'Failed to start recording'
       console.error('[useVoiceRecording] Start recording error:', err)
+
+      // IMPORTANT: Stop microphone stream if it was obtained but recording failed
+      // This prevents resource/privacy leak (microphone stays active)
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop())
+        console.log('[useVoiceRecording] Stopped microphone stream after error')
+      }
 
       // Handle specific permission errors
       if (error.includes('Permission denied') || error.includes('NotAllowedError')) {
