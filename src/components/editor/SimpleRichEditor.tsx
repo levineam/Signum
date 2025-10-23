@@ -385,7 +385,7 @@ export function SimpleRichEditor({
         )}
 
         {/* Voice Transcription Button */}
-        <div className="flex items-center border-l pl-2 ml-2">
+        <div className="flex items-center border-l pl-2 ml-2" data-voice-button>
           <VoiceRecordButton onTranscriptionComplete={handleTranscription} />
         </div>
       </div>
