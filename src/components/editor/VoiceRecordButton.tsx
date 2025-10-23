@@ -41,17 +41,41 @@ export function VoiceRecordButton({
     onRecordingComplete: async (audioBlob) => {
       console.log(`[VoiceRecordButton] Recording complete: ${audioBlob.size} bytes`)
 
-      // TODO: Phase 6 will send audioBlob to /api/transcribe
-      // For now, simulate processing with placeholder text
-      setTimeout(() => {
-        onTranscriptionComplete?.('Placeholder transcription text')
+      try {
+        // Send audio to transcription API
+        console.log('[VoiceRecordButton] Sending to /api/transcribe...')
+        const response = await fetch('/api/transcribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': audioBlob.type,
+          },
+          body: audioBlob,
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || `Transcription failed: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log('[VoiceRecordButton] Transcription successful:', {
+          textLength: data.text.length,
+          metadata: data.metadata,
+        })
+
+        // Insert transcribed text into editor
+        onTranscriptionComplete?.(data.text)
         resetState()
-      }, 2000)
+      } catch (error) {
+        console.error('[VoiceRecordButton] Transcription error:', error)
+        // Fall back to showing error message to user
+        // For now, just reset - Phase 7 will add proper error toast
+        resetState()
+      }
     },
     onError: (error) => {
       console.error('[VoiceRecordButton] Recording error:', error)
-      // TODO: Phase 6 will show error toast
-      // For now, just reset after a delay
+      // Reset after error - Phase 7 will add error toast
       setTimeout(() => {
         resetState()
       }, 3000)
