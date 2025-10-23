@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Mic, Square, Loader2 } from 'lucide-react'
+import { Mic, Square, Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -9,9 +9,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { detectBestCodec, isVoiceTranscriptionSupported } from '@/utils/audioCodecDetection'
-
-export type RecordingState = 'idle' | 'recording' | 'processing'
+import { detectBestCodec, isVoiceTranscriptionSupported, isApproachingLimit } from '@/utils/audioCodecDetection'
+import { useVoiceRecording } from '@/hooks/useVoiceRecording'
+import { RecordingIndicator } from '@/components/editor/RecordingIndicator'
 
 interface VoiceRecordButtonProps {
   onTranscriptionComplete?: (text: string) => void
@@ -22,7 +22,6 @@ export function VoiceRecordButton({
   onTranscriptionComplete,
   disabled = false
 }: VoiceRecordButtonProps) {
-  const [recordingState, setRecordingState] = useState<RecordingState>('idle')
   const [isSupported, setIsSupported] = useState<boolean>(true)
   const [codecInfo, setCodecInfo] = useState<string>('')
 
@@ -37,21 +36,33 @@ export function VoiceRecordButton({
     }
   }, [])
 
-  const handleClick = () => {
-    if (recordingState === 'idle') {
-      // Start recording
-      setRecordingState('recording')
-      // TODO: Implement actual recording logic in Phase 3
-    } else if (recordingState === 'recording') {
-      // Stop recording
-      setRecordingState('processing')
-      // TODO: Implement transcription API call in Phase 6
+  // Handle audio recording
+  const { status, startRecording, stopRecording, resetState } = useVoiceRecording({
+    onRecordingComplete: async (audioBlob) => {
+      console.log(`[VoiceRecordButton] Recording complete: ${audioBlob.size} bytes`)
 
-      // Placeholder: simulate processing
+      // TODO: Phase 6 will send audioBlob to /api/transcribe
+      // For now, simulate processing with placeholder text
       setTimeout(() => {
-        setRecordingState('idle')
         onTranscriptionComplete?.('Placeholder transcription text')
+        resetState()
       }, 2000)
+    },
+    onError: (error) => {
+      console.error('[VoiceRecordButton] Recording error:', error)
+      // TODO: Phase 6 will show error toast
+      // For now, just reset after a delay
+      setTimeout(() => {
+        resetState()
+      }, 3000)
+    },
+  })
+
+  const handleClick = () => {
+    if (status.state === 'idle') {
+      startRecording()
+    } else if (status.state === 'recording') {
+      stopRecording()
     }
   }
 
@@ -59,49 +70,75 @@ export function VoiceRecordButton({
     if (!isSupported) {
       return 'Voice transcription not supported on this browser'
     }
-    if (recordingState === 'idle') {
+    if (status.state === 'error') {
+      return status.errorMessage || 'Recording error'
+    }
+    if (status.state === 'idle') {
       return `Transcribe${codecInfo ? ` (${codecInfo})` : ''}`
     }
-    if (recordingState === 'recording') {
+    if (status.state === 'recording') {
       return 'Stop recording'
     }
     return 'Processing audio...'
   }
 
   const getButtonIcon = () => {
-    if (recordingState === 'processing') {
+    if (status.state === 'processing') {
       return <Loader2 className="h-4 w-4 animate-spin" />
     }
-    if (recordingState === 'recording') {
+    if (status.state === 'error') {
+      return <AlertCircle className="h-4 w-4" />
+    }
+    if (status.state === 'recording') {
       return <Square className="h-3 w-3 fill-current" />
     }
     return <Mic className="h-4 w-4" />
   }
 
-  const isButtonDisabled = disabled || !isSupported || recordingState === 'processing'
+  const getButtonVariant = () => {
+    if (status.state === 'error') return 'destructive'
+    if (status.state === 'recording') return 'destructive'
+    return 'ghost'
+  }
+
+  const isButtonDisabled = disabled || !isSupported || status.state === 'processing'
+  const showRecordingIndicator = status.state === 'recording'
+  const isNearLimit = isApproachingLimit(status.estimatedSizeBytes)
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            size="sm"
-            variant={recordingState === 'recording' ? 'destructive' : 'ghost'}
-            onClick={handleClick}
-            disabled={isButtonDisabled}
-            className={`h-8 w-8 p-0 ${recordingState === 'recording' ? 'animate-pulse' : ''}`}
-            type="button"
-            aria-label={getTooltipText()}
-            aria-pressed={recordingState === 'recording'}
-            aria-busy={recordingState === 'processing'}
-          >
-            {getButtonIcon()}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p className="text-xs">{getTooltipText()}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <div className="flex items-center gap-2">
+      {/* Recording indicator (shown during recording) */}
+      {showRecordingIndicator && (
+        <RecordingIndicator
+          durationSeconds={status.durationSeconds}
+          estimatedSizeBytes={status.estimatedSizeBytes}
+          isApproachingLimit={isNearLimit}
+        />
+      )}
+
+      {/* Microphone button */}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant={getButtonVariant()}
+              onClick={handleClick}
+              disabled={isButtonDisabled}
+              className={`h-8 w-8 p-0 ${status.state === 'recording' ? 'animate-pulse' : ''}`}
+              type="button"
+              aria-label={getTooltipText()}
+              aria-pressed={status.state === 'recording'}
+              aria-busy={status.state === 'processing'}
+            >
+              {getButtonIcon()}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-xs">{getTooltipText()}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
   )
 }
