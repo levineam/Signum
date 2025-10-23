@@ -154,12 +154,14 @@ export function SimpleRichEditor({
           selection.removeAllRanges()
           selection.addRange(range)
         } else {
-          // Append to end
-          editorRef.current.innerHTML += text
+          // Append to end as text node (prevents XSS from transcription service)
+          const textNode = document.createTextNode(text)
+          editorRef.current.appendChild(textNode)
         }
       } else {
-        // Append to end
-        editorRef.current.innerHTML += text
+        // Append to end as text node (prevents XSS from transcription service)
+        const textNode = document.createTextNode(text)
+        editorRef.current.appendChild(textNode)
       }
 
       // Trigger onChange
