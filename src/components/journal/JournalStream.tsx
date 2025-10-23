@@ -286,12 +286,19 @@ export function JournalStream() {
     // ContentEditable creates different structures in different browsers
     const blockElements = Array.from(tempDiv.querySelectorAll('p, div'))
 
-    // If no block elements, treat whole content as one paragraph
-    const paragraphs = blockElements.length > 0
-      ? blockElements
+    // Filter out container elements that have other block-level children
+    // to avoid processing the same paragraph twice (e.g., <div><p>Task</p></div>)
+    const leafParagraphs = blockElements.filter(el => {
+      const hasBlockChildren = el.querySelector('p, div') !== null
+      return !hasBlockChildren
+    })
+
+    // If no leaf paragraphs, treat whole content as one paragraph
+    const paragraphs = leafParagraphs.length > 0
+      ? leafParagraphs
       : [tempDiv]
 
-    console.log(`[Task Detection] Checking ${paragraphs.length} paragraphs in entry ${entryId}`)
+    console.log(`[Task Detection] Checking ${paragraphs.length} leaf paragraphs in entry ${entryId}`)
 
     for (const para of paragraphs) {
       const paragraphText = para.textContent?.trim() || ''
