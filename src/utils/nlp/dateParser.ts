@@ -148,7 +148,8 @@ function getTimezoneOffsetForDate(date: Date, timezone: string): number {
   const utcTime = new Date(utcFormatter.format(date)).getTime();
 
   // Calculate offset in minutes
-  return (targetTime - utcTime) / (1000 * 60);
+  // Negate to match Date.getTimezoneOffset() convention: positive = west of UTC
+  return (utcTime - targetTime) / (1000 * 60);
 }
 
 /**
