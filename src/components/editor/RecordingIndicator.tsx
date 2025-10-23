@@ -6,21 +6,21 @@ import { AlertCircle } from 'lucide-react'
 
 interface RecordingIndicatorProps {
   durationSeconds: number
-  estimatedSizeBytes: number
+  actualSizeBytes: number
   maxSizeBytes?: number
   isApproachingLimit?: boolean
 }
 
 export function RecordingIndicator({
   durationSeconds,
-  estimatedSizeBytes,
+  actualSizeBytes,
   maxSizeBytes = 4.5 * 1024 * 1024, // 4.5 MB default
   isApproachingLimit = false,
 }: RecordingIndicatorProps) {
-  const sizeText = formatFileSize(estimatedSizeBytes)
+  const sizeText = formatFileSize(actualSizeBytes)
   const maxSizeText = formatFileSize(maxSizeBytes)
   const timeText = formatDuration(durationSeconds)
-  const percentage = Math.min((estimatedSizeBytes / maxSizeBytes) * 100, 100)
+  const percentage = Math.min((actualSizeBytes / maxSizeBytes) * 100, 100)
 
   return (
     <div

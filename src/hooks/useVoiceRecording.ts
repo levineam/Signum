@@ -13,6 +13,7 @@ export interface RecordingStatus {
   state: RecordingState
   durationSeconds: number
   estimatedSizeBytes: number
+  actualSizeBytes: number
   errorMessage?: string
 }
 
@@ -29,10 +30,12 @@ export function useVoiceRecording({
     state: 'idle',
     durationSeconds: 0,
     estimatedSizeBytes: 0,
+    actualSizeBytes: 0,
   })
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+  const actualSizeBytesRef = useRef<number>(0)
   const startTimeRef = useRef<number>(0)
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const codecInfoRef = useRef<CodecInfo | null>(null)
@@ -61,20 +64,24 @@ export function useVoiceRecording({
 
     const durationSeconds = (Date.now() - startTimeRef.current) / 1000
     const estimatedSizeBytes = estimateFileSize(codecInfoRef.current, durationSeconds)
+    const actualSizeBytes = actualSizeBytesRef.current
 
     setStatus((prev) => ({
       ...prev,
       durationSeconds,
       estimatedSizeBytes,
+      actualSizeBytes,
     }))
 
-    // Check if approaching or exceeded limit
-    if (hasExceededLimit(estimatedSizeBytes)) {
+    // IMPORTANT: Use actualSizeBytes (not estimated) to prevent exceeding serverless limit
+    // Safari's AAC and other browsers may record at higher bitrates than estimated
+    if (hasExceededLimit(actualSizeBytes)) {
       // Hard stop at 4.5 MB
+      console.warn(`[useVoiceRecording] Exceeded size limit: ${actualSizeBytes} bytes`)
       stopRecording()
-    } else if (isApproachingLimit(estimatedSizeBytes)) {
+    } else if (isApproachingLimit(actualSizeBytes)) {
       // Show warning at 90%
-      console.warn('[useVoiceRecording] Approaching file size limit (90%)')
+      console.warn(`[useVoiceRecording] Approaching size limit (90%): ${actualSizeBytes} bytes`)
       // TODO: Phase 5 will add UI warning prompt
     }
 
@@ -95,7 +102,7 @@ export function useVoiceRecording({
       const codec = detectBestCodec()
       if (codec.codec === 'none') {
         const error = 'Voice recording not supported on this browser'
-        setStatus({ state: 'error', durationSeconds: 0, estimatedSizeBytes: 0, errorMessage: error })
+        setStatus({ state: 'error', durationSeconds: 0, estimatedSizeBytes: 0, actualSizeBytes: 0, errorMessage: error })
         onError?.(error)
         return
       }
@@ -126,11 +133,13 @@ export function useVoiceRecording({
       const mediaRecorder = new MediaRecorder(stream, options)
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
+      actualSizeBytesRef.current = 0
 
-      // Handle data available
+      // Handle data available - track actual bytes as they arrive
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data)
+          actualSizeBytesRef.current += event.data.size
         }
       }
 
@@ -189,7 +198,7 @@ export function useVoiceRecording({
           timerIntervalRef.current = null
         }
 
-        setStatus({ state: 'error', durationSeconds: 0, estimatedSizeBytes: 0, errorMessage: error })
+        setStatus({ state: 'error', durationSeconds: 0, estimatedSizeBytes: 0, actualSizeBytes: 0, errorMessage: error })
         onError?.(error)
       }
 
@@ -202,6 +211,7 @@ export function useVoiceRecording({
         state: 'recording',
         durationSeconds: 0,
         estimatedSizeBytes: 0,
+        actualSizeBytes: 0,
       })
 
       // Start timer for duration and size updates
@@ -223,6 +233,7 @@ export function useVoiceRecording({
           state: 'error',
           durationSeconds: 0,
           estimatedSizeBytes: 0,
+          actualSizeBytes: 0,
           errorMessage: 'Microphone access required for transcription',
         })
       } else {
@@ -230,6 +241,7 @@ export function useVoiceRecording({
           state: 'error',
           durationSeconds: 0,
           estimatedSizeBytes: 0,
+          actualSizeBytes: 0,
           errorMessage: 'Unable to access microphone. Please check browser permissions.',
         })
       }
@@ -243,6 +255,7 @@ export function useVoiceRecording({
       state: 'idle',
       durationSeconds: 0,
       estimatedSizeBytes: 0,
+      actualSizeBytes: 0,
     })
   }, [])
 

@@ -127,7 +127,7 @@ export function VoiceRecordButton({
 
   const isButtonDisabled = disabled || !isSupported || status.state === 'processing'
   const showRecordingIndicator = status.state === 'recording'
-  const isNearLimit = isApproachingLimit(status.estimatedSizeBytes)
+  const isNearLimit = isApproachingLimit(status.actualSizeBytes)
 
   return (
     <div className="flex items-center gap-2">
@@ -135,7 +135,7 @@ export function VoiceRecordButton({
       {showRecordingIndicator && (
         <RecordingIndicator
           durationSeconds={status.durationSeconds}
-          estimatedSizeBytes={status.estimatedSizeBytes}
+          actualSizeBytes={status.actualSizeBytes}
           isApproachingLimit={isNearLimit}
         />
       )}
