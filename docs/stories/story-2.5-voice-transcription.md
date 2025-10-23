@@ -519,19 +519,23 @@ test('Voice transcription adds text to journal entry', async ({ page }) => {
 - [ ] Error handling: permission denied, MediaRecorder failures
 - [ ] Sample rate: 16 kHz mono; bitrate: ~24 kbps (OPUS)
 
-### Phase 4: Waveform Visualization (2-3 days)
+### Phase 4: Waveform Visualization (**FUTURE FEATURE - SKIPPED**)
 - [ ] Web Audio API integration with `AnalyserNode`
 - [ ] Real-time waveform rendering (Canvas)
 - [ ] Animation synced to speech
 - [ ] Recording overlay UI component (`@/components/editor/RecordingOverlay.tsx`)
 - [ ] Stop button UX (multiple methods: click mic, Escape, dedicated Stop button)
 
-### Phase 5: Silence Detection (2-3 days)
+**Status:** Deferred to future iteration. Phase 3 RecordingIndicator provides sufficient visual feedback.
+
+### Phase 5: Silence Detection (**FUTURE FEATURE - SKIPPED**)
 - [ ] Audio volume analysis using Web Audio API
 - [ ] Silence timer logic (2-second default, configurable)
 - [ ] "Keep Talking / Process" prompt UI
 - [ ] Auto-processing on timeout
 - [ ] Throttled screen reader announcements (max 1/second)
+
+**Status:** Deferred to future iteration. Manual stop button provides sufficient control.
 
 ### Phase 6: Backend API with Rate Limiting (4-5 days) — QA-Critical
 - [ ] Create `/api/transcribe/route.ts`
