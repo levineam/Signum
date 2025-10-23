@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Codec Detection Test - Story 2.5</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f9fafb;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; color: #111; }
+    .subtitle { color: #666; margin-bottom: 2rem; }
+    .card {
+      background: white;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .card h2 { font-size: 1.25rem; margin-bottom: 1rem; color: #111; }
+    .status { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+    .status-dot {
+      width: 1rem;
+      height: 1rem;
+      border-radius: 50%;
+    }
+    .status-dot.green { background: #10b981; }
+    .status-dot.red { background: #ef4444; }
+    .error-msg { color: #ef4444; margin-top: 1rem; font-size: 0.875rem; }
+    .info-grid { display: grid; gap: 0.75rem; }
+    .info-row {
+      display: flex;
+      justify-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .label { font-weight: 500; color: #666; }
+    .value { font-family: monospace; color: #111; }
+    .warning {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-size: 0.875rem;
+    }
+    .highlight { font-size: 2rem; font-weight: bold; color: #2563eb; }
+    .instructions {
+      background: #dbeafe;
+      border: 1px solid #93c5fd;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin-top: 2rem;
+    }
+    .instructions h3 { color: #1e40af; margin-bottom: 0.5rem; }
+    .instructions ul { margin-left: 1.5rem; color: #1e3a8a; }
+    .instructions li { margin: 0.25rem 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Audio Codec Detection Test</h1>
+    <p class="subtitle">Story 2.5, Phase 1 - Codec detection utility validation</p>
+
+    <!-- Browser Support -->
+    <div class="card">
+      <h2>Browser Support</h2>
+      <div class="status">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Checking...</span>
+      </div>
+      <div id="error-msg" class="error-msg" style="display:none;"></div>
+    </div>
+
+    <!-- Codec Info -->
+    <div class="card" id="codec-card" style="display:none;">
+      <h2>Selected Codec</h2>
+      <div class="info-grid">
+        <div class="info-row">
+          <span class="label">Codec:</span>
+          <span class="value" id="codec-type"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">Display Name:</span>
+          <span class="value" id="codec-name"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">MIME Type:</span>
+          <span class="value" id="codec-mime"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">Estimated Bitrate:</span>
+          <span class="value" id="codec-bitrate"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">Native Recording:</span>
+          <span class="value" id="codec-native"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Duration Limits -->
+    <div class="card" id="duration-card" style="display:none;">
+      <h2>Duration Limits</h2>
+      <p style="color: #666; margin-bottom: 1rem;">
+        Maximum recording duration to stay under 4.5 MB serverless limit:
+      </p>
+      <p class="highlight" id="max-duration"></p>
+      <div id="wav-warning" class="warning" style="display:none;">
+        ⚠️ <strong>Watchout:</strong> WAV fallback has shorter max duration (~2.5 minutes) due to larger file size. Ensure countdown/warnings are prominent.
+      </div>
+    </div>
+
+    <!-- File Size Estimates -->
+    <div class="card" id="filesize-card" style="display:none;">
+      <h2>Estimated File Sizes</h2>
+      <div class="info-grid">
+        <div class="info-row">
+          <span class="label">30 seconds:</span>
+          <span class="value" id="size-30s"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">2 minutes:</span>
+          <span class="value" id="size-2m"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">Max duration:</span>
+          <span class="value" id="size-max"></span>
+        </div>
+      </div>
+      <p style="font-size: 0.875rem; color: #666; margin-top: 1rem;">
+        Note: Actual file sizes may vary based on audio content and browser-specific encoding.
+      </p>
+    </div>
+
+    <!-- Browser Info -->
+    <div class="card" id="browser-card" style="display:none;">
+      <h2>Browser Information</h2>
+      <div class="info-grid">
+        <div class="info-row">
+          <span class="label">User Agent:</span>
+          <span class="value" id="user-agent" style="font-size: 0.75rem; word-break: break-all;"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">MediaRecorder API:</span>
+          <span class="value" id="has-mediarecorder"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">Web Audio API:</span>
+          <span class="value" id="has-webaudio"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">getUserMedia:</span>
+          <span class="value" id="has-getusermedia"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Testing Instructions -->
+    <div class="instructions">
+      <h3>Testing Instructions</h3>
+      <ul>
+        <li>Test this page on Chrome, Firefox, Safari (macOS), and mobile browsers</li>
+        <li>Verify codec selection matches expected browser capabilities</li>
+        <li>Check browser console for codec selection logs</li>
+        <li>Confirm max duration is reasonable for selected codec</li>
+        <li>Note any codec-specific watchouts (especially WAV on Safari)</li>
+      </ul>
+      <p style="font-size: 0.75rem; color: #1e40af; margin-top: 1rem;">
+        See: docs/stories/story-2.5-voice-transcription.md (AC8, Phase 1)
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Inline codec detection logic (from audioCodecDetection.ts)
+    const CODECS_TO_TEST = [
+      {
+        codec: 'webm-opus',
+        mimeType: 'audio/webm;codecs=opus',
+        displayName: 'WebM (Opus)',
+        estimatedBitrate: 24,
+        isNativeRecording: true,
+      },
+      {
+        codec: 'mp4',
+        mimeType: 'audio/mp4',
+        displayName: 'MP4 (AAC)',
+        estimatedBitrate: 32,
+        isNativeRecording: true,
+      },
+      {
+        codec: 'wav',
+        mimeType: 'audio/wav',
+        displayName: 'WAV (PCM)',
+        estimatedBitrate: 256,
+        isNativeRecording: false,
+      },
+    ];
+
+    const MAX_FILE_SIZE_BYTES = 4.5 * 1024 * 1024;
+
+    function calculateMaxDuration(bitrateKbps) {
+      const bytesPerSecond = (bitrateKbps * 1000) / 8;
+      const maxSeconds = Math.floor(MAX_FILE_SIZE_BYTES / bytesPerSecond);
+      return Math.min(maxSeconds, 300);
+    }
+
+    function detectBestCodec() {
+      // Check if Web Audio API is available for WAV fallback
+      const hasWebAudio = !!(window.AudioContext || window.webkitAudioContext);
+
+      // If MediaRecorder is unavailable but Web Audio API exists, return WAV fallback immediately
+      if (!window.MediaRecorder) {
+        if (hasWebAudio) {
+          const wavCodec = CODECS_TO_TEST.find((c) => c.codec === 'wav');
+          console.log(
+            `[audioCodecDetection] MediaRecorder unavailable, using Web Audio API fallback: ${wavCodec.displayName}`
+          );
+          return {
+            ...wavCodec,
+            maxDurationSeconds: calculateMaxDuration(wavCodec.estimatedBitrate),
+          };
+        }
+        // Neither MediaRecorder nor Web Audio API available
+        return {
+          codec: 'none',
+          mimeType: '',
+          displayName: 'Not supported',
+          estimatedBitrate: 0,
+          maxDurationSeconds: 0,
+          isNativeRecording: false,
+        };
+      }
+
+      // Try each codec in priority order (MediaRecorder is available)
+      for (const codecConfig of CODECS_TO_TEST) {
+        // WAV is always "supported" as fallback (via Web Audio API)
+        if (codecConfig.codec === 'wav') {
+          return {
+            ...codecConfig,
+            maxDurationSeconds: calculateMaxDuration(codecConfig.estimatedBitrate),
+          };
+        }
+
+        // Test MediaRecorder support for native codecs
+        // Guard against older Safari/embedded browsers that lack isTypeSupported
+        if (
+          typeof MediaRecorder.isTypeSupported === 'function' &&
+          MediaRecorder.isTypeSupported(codecConfig.mimeType)
+        ) {
+          const maxDuration = calculateMaxDuration(codecConfig.estimatedBitrate);
+          console.log(
+            `[audioCodecDetection] Selected codec: ${codecConfig.displayName} ` +
+            `(${codecConfig.mimeType}), max duration: ${Math.floor(maxDuration / 60)}m ${maxDuration % 60}s`
+          );
+          return {
+            ...codecConfig,
+            maxDurationSeconds: maxDuration,
+          };
+        }
+      }
+
+      // Fallback to WAV (should never reach here due to WAV fallback above)
+      const wavCodec = CODECS_TO_TEST.find((c) => c.codec === 'wav');
+      return {
+        ...wavCodec,
+        maxDurationSeconds: calculateMaxDuration(wavCodec.estimatedBitrate),
+      };
+    }
+
+    function isVoiceTranscriptionSupported() {
+      const hasMediaRecorder = !!window.MediaRecorder;
+      const hasWebAudio = !!(window.AudioContext || window.webkitAudioContext);
+      const hasGetUserMedia = !!(
+        navigator.mediaDevices?.getUserMedia ||
+        navigator.getUserMedia ||
+        navigator.webkitGetUserMedia ||
+        navigator.mozGetUserMedia
+      );
+      return (hasMediaRecorder || hasWebAudio) && hasGetUserMedia;
+    }
+
+    function getUnsupportedMessage() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        return 'Your browser does not support microphone access. Please use a modern browser like Chrome, Firefox, or Safari.';
+      }
+      if (!window.MediaRecorder && !window.AudioContext) {
+        return 'Voice transcription is not supported on this browser. Please try Chrome, Firefox, Safari 14.1+, or Edge.';
+      }
+      return 'Voice transcription is not available in your current browser.';
+    }
+
+    function formatDuration(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function formatFileSize(bytes) {
+      const mb = bytes / (1024 * 1024);
+      return `${mb.toFixed(1)} MB`;
+    }
+
+    function estimateFileSize(codec, durationSeconds) {
+      const bytesPerSecond = (codec.estimatedBitrate * 1000) / 8;
+      return Math.floor(bytesPerSecond * durationSeconds);
+    }
+
+    // Run detection on load
+    const isSupported = isVoiceTranscriptionSupported();
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const errorMsg = document.getElementById('error-msg');
+
+    if (!isSupported) {
+      statusDot.classList.add('red');
+      statusText.textContent = '✗ Voice transcription not supported';
+      errorMsg.textContent = getUnsupportedMessage();
+      errorMsg.style.display = 'block';
+    } else {
+      statusDot.classList.add('green');
+      statusText.textContent = '✓ Voice transcription supported';
+
+      const codec = detectBestCodec();
+
+      // Show codec info
+      document.getElementById('codec-card').style.display = 'block';
+      document.getElementById('codec-type').textContent = codec.codec;
+      document.getElementById('codec-name').textContent = codec.displayName;
+      document.getElementById('codec-mime').textContent = codec.mimeType;
+      document.getElementById('codec-bitrate').textContent = `${codec.estimatedBitrate} kbps (mono, 16 kHz)`;
+      document.getElementById('codec-native').textContent = codec.isNativeRecording
+        ? '✓ MediaRecorder API'
+        : '✗ Requires Web Audio API fallback';
+
+      // Show duration limits
+      document.getElementById('duration-card').style.display = 'block';
+      document.getElementById('max-duration').textContent =
+        `${formatDuration(codec.maxDurationSeconds)} (${codec.maxDurationSeconds} seconds)`;
+
+      if (codec.codec === 'wav') {
+        document.getElementById('wav-warning').style.display = 'block';
+      }
+
+      // Show file size estimates
+      document.getElementById('filesize-card').style.display = 'block';
+      document.getElementById('size-30s').textContent = formatFileSize(estimateFileSize(codec, 30));
+      document.getElementById('size-2m').textContent = formatFileSize(estimateFileSize(codec, 120));
+      document.getElementById('size-max').textContent = formatFileSize(estimateFileSize(codec, codec.maxDurationSeconds));
+    }
+
+    // Show browser info
+    document.getElementById('browser-card').style.display = 'block';
+    document.getElementById('user-agent').textContent = navigator.userAgent;
+    document.getElementById('has-mediarecorder').textContent = window.MediaRecorder ? '✓ Available' : '✗ Not available';
+    document.getElementById('has-webaudio').textContent = (window.AudioContext || window.webkitAudioContext) ? '✓ Available' : '✗ Not available';
+    document.getElementById('has-getusermedia').textContent = navigator.mediaDevices?.getUserMedia ? '✓ Available' : '✗ Not available';
+  </script>
+</body>
+</html>
