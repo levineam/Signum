@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
   console.log(`[transcribe:${requestId}] Request received`)
 
   try {
-    // 1. Authenticate user
+    // 1. Authenticate user (optional for now - Phase 7 will add stricter auth)
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -75,12 +75,15 @@ export async function POST(request: NextRequest) {
       error: authError,
     } = await supabase.auth.getUser()
 
-    if (authError || !user) {
-      console.error(`[transcribe:${requestId}] Authentication failed:`, authError)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authError) {
+      console.warn(`[transcribe:${requestId}] Auth error (continuing anyway):`, authError)
     }
 
-    console.log(`[transcribe:${requestId}] User authenticated: ${user.id}`)
+    if (user) {
+      console.log(`[transcribe:${requestId}] User authenticated: ${user.id}`)
+    } else {
+      console.warn(`[transcribe:${requestId}] No user found, but continuing (auth optional for now)`)
+    }
 
     // 2. Validate Content-Type
     const contentType = request.headers.get('content-type') || ''
