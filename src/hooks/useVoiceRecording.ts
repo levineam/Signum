@@ -161,6 +161,17 @@ export function useVoiceRecording({
       mediaRecorder.onerror = (event) => {
         const error = `Recording error: ${(event as ErrorEvent).error?.message || 'Unknown error'}`
         console.error('[useVoiceRecording]', error)
+
+        // Clean up resources on error (prevent privacy/resource leak)
+        // Stop microphone stream
+        stream?.getTracks().forEach((track) => track.stop())
+
+        // Clear timer
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current)
+          timerIntervalRef.current = null
+        }
+
         setStatus({ state: 'error', durationSeconds: 0, estimatedSizeBytes: 0, errorMessage: error })
         onError?.(error)
       }
