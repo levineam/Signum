@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { obsidianParser } from '@/lib/import/obsidian-parser';
 import { BatchImporter } from '@/lib/import/batch-importer';
 import { LinkResolver } from '@/lib/import/link-resolver';
@@ -51,16 +52,20 @@ export interface ImportResponse {
 export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
+    const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value;
+          getAll() {
+            return cookieStore.getAll();
           },
-          set() {},
-          remove() {},
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          },
         },
       }
     );
