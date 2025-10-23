@@ -153,12 +153,12 @@ export async function POST(request: NextRequest) {
     console.log(`[transcribe:${requestId}] Whisper API completed in ${whisperLatency}ms`)
     console.log(`[transcribe:${requestId}] Raw transcription length: ${transcription.length} chars`)
 
-    // 8. Clean up transcription with GPT-4 (intent-based)
-    console.log(`[transcribe:${requestId}] Calling GPT-4 for intent cleanup...`)
+    // 8. Clean up transcription with GPT-5 Mini (intent-based)
+    console.log(`[transcribe:${requestId}] Calling GPT-5 Mini for intent cleanup...`)
     const gptStartTime = Date.now()
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       messages: [
         {
           role: 'system',
@@ -183,7 +183,7 @@ Output ONLY the cleaned text, nothing else.`,
     const gptLatency = Date.now() - gptStartTime
     const cleanedText = completion.choices[0]?.message?.content?.trim() || transcription
 
-    console.log(`[transcribe:${requestId}] GPT-4 completed in ${gptLatency}ms`)
+    console.log(`[transcribe:${requestId}] GPT-5 Mini completed in ${gptLatency}ms`)
     console.log(`[transcribe:${requestId}] Cleaned text length: ${cleanedText.length} chars`)
 
     // 9. Log final metrics
