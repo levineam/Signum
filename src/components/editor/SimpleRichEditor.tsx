@@ -3,6 +3,7 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Quote, AlignLeft, AlignCenter, AlignRight, FileText } from 'lucide-react'
+import { VoiceRecordButton } from '@/components/editor/VoiceRecordButton'
 
 interface SimpleRichEditorProps {
   value?: string
@@ -13,6 +14,7 @@ interface SimpleRichEditorProps {
   onBlur?: (e: React.FocusEvent) => void
   autoFocus?: boolean
   onMakeNote?: (selectedText: string) => void
+  onTranscription?: (text: string) => void
 }
 
 export function SimpleRichEditor({
@@ -23,7 +25,8 @@ export function SimpleRichEditor({
   onFocus,
   onBlur,
   autoFocus = false,
-  onMakeNote
+  onMakeNote,
+  onTranscription
 }: SimpleRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const [selectedText, setSelectedText] = useState('')
@@ -131,6 +134,44 @@ export function SimpleRichEditor({
       setSelectedText('')
     }
   }, [])
+
+  const handleTranscription = useCallback((text: string) => {
+    if (editorRef.current && onChange) {
+      // Insert transcribed text at cursor position or append to end
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0)
+        const isWithinEditor = editorRef.current.contains(range.commonAncestorContainer)
+
+        if (isWithinEditor) {
+          // Insert at cursor
+          const textNode = document.createTextNode(text)
+          range.insertNode(textNode)
+
+          // Move cursor after inserted text
+          range.setStartAfter(textNode)
+          range.setEndAfter(textNode)
+          selection.removeAllRanges()
+          selection.addRange(range)
+        } else {
+          // Append to end as text node (prevents XSS from transcription service)
+          const textNode = document.createTextNode(text)
+          editorRef.current.appendChild(textNode)
+        }
+      } else {
+        // Append to end as text node (prevents XSS from transcription service)
+        const textNode = document.createTextNode(text)
+        editorRef.current.appendChild(textNode)
+      }
+
+      // Trigger onChange
+      const content = editorRef.current.innerHTML || ''
+      onChange(content)
+
+      // Call parent callback if provided
+      onTranscription?.(text)
+    }
+  }, [onChange, onTranscription])
 
   // Set initial content when value changes
   React.useEffect(() => {
@@ -344,6 +385,11 @@ export function SimpleRichEditor({
             </Button>
           </div>
         )}
+
+        {/* Voice Transcription Button */}
+        <div className="flex items-center border-l pl-2 ml-2" data-voice-button>
+          <VoiceRecordButton onTranscriptionComplete={handleTranscription} />
+        </div>
       </div>
 
       {/* Editor */}

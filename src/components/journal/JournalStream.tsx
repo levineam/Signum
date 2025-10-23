@@ -573,6 +573,10 @@ export function JournalStream() {
                       if (relatedTarget && relatedTarget.closest('a[data-note-id]')) {
                         return
                       }
+                      // Don't exit edit mode if the user clicked on the voice button
+                      if (relatedTarget && relatedTarget.closest('[data-voice-button]')) {
+                        return
+                      }
                       setEditingEntryId(null)
                     }}
                     onMakeNote={handleMakeNote}
