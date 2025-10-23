@@ -120,8 +120,8 @@ function adjustDateToUserTimezone(
  * @returns Offset in minutes (positive = west of UTC)
  */
 function getTimezoneOffsetForDate(date: Date, timezone: string): number {
-  // Format the date in the target timezone and in UTC
-  const targetFormatter = new Intl.DateTimeFormat('en-US', {
+  // Use formatToParts to get structured date/time components in the target timezone
+  const formatter = new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -132,24 +132,25 @@ function getTimezoneOffsetForDate(date: Date, timezone: string): number {
     timeZone: timezone,
   });
 
-  const utcFormatter = new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: 'UTC',
-  });
+  const parts = formatter.formatToParts(date);
+  const partsMap = Object.fromEntries(
+    parts.filter(p => p.type !== 'literal').map(p => [p.type, p.value])
+  );
 
-  // Parse formatted strings to get time in milliseconds
-  const targetTime = new Date(targetFormatter.format(date)).getTime();
-  const utcTime = new Date(utcFormatter.format(date)).getTime();
+  // Construct a UTC date from the formatted parts
+  // This represents the same wall-clock time in UTC as it would be in the target timezone
+  const utcDate = Date.UTC(
+    parseInt(partsMap.year),
+    parseInt(partsMap.month) - 1, // month is 0-indexed in Date.UTC
+    parseInt(partsMap.day),
+    parseInt(partsMap.hour),
+    parseInt(partsMap.minute),
+    parseInt(partsMap.second)
+  );
 
-  // Calculate offset in minutes
-  // Negate to match Date.getTimezoneOffset() convention: positive = west of UTC
-  return (utcTime - targetTime) / (1000 * 60);
+  // The offset is the difference between the original UTC timestamp and the constructed UTC time
+  // Positive = west of UTC (matches Date.getTimezoneOffset() convention)
+  return (date.getTime() - utcDate) / (1000 * 60);
 }
 
 /**
