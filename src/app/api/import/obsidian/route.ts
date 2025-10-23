@@ -70,10 +70,24 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // Try to get user from cookies first
+    let user = null;
+    let authError = null;
+
+    const cookieAuth = await supabase.auth.getUser();
+    user = cookieAuth.data.user;
+    authError = cookieAuth.error;
+
+    // Fallback: Check Authorization header (for Vercel previews where cookies don't work)
+    if (authError || !user) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const { data, error } = await supabase.auth.getUser(token);
+        user = data.user;
+        authError = error;
+      }
+    }
 
     if (authError || !user) {
       return NextResponse.json(
