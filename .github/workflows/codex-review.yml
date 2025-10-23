@@ -23,27 +23,8 @@ jobs:
               core.setFailed('No pull_request in payload.');
               return;
             }
-
             const body = '@codex review';
 
-            // Get the latest commit timestamp
-            const commits = await github.rest.pulls.listCommits({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pr.number,
-              per_page: 1,
-              page: 1,
-            });
-
-            if (!commits.data.length) {
-              core.info('No commits found in PR.');
-              return;
-            }
-
-            const latestCommitDate = new Date(commits.data[commits.data.length - 1].commit.committer.date);
-            core.info(`Latest commit date: ${latestCommitDate.toISOString()}`);
-
-            // Get existing comments
             const existing = await github.paginate(
               github.rest.issues.listComments,
               {
@@ -53,23 +34,23 @@ jobs:
               }
             );
 
-            // Check if bot already commented AFTER the latest commit
-            const alreadyRequested = existing.some((comment) => {
+            const botComments = existing.filter((comment) => {
               const isBot = comment.user?.type === 'Bot' && comment.user?.login === 'github-actions[bot]';
               const matchesBody = comment.body?.trim() === body;
-              const commentDate = new Date(comment.created_at);
-              const isAfterLatestCommit = commentDate > latestCommitDate;
-
-              if (isBot && matchesBody) {
-                core.info(`Found bot comment at ${commentDate.toISOString()}, after latest commit: ${isAfterLatestCommit}`);
-              }
-
-              return isBot && matchesBody && isAfterLatestCommit;
+              return isBot && matchesBody;
             });
 
-            if (alreadyRequested) {
-              core.info('Codex review already requested after latest commit; skipping duplicate comment.');
-              return;
+            for (const comment of botComments) {
+              try {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: comment.id,
+                });
+                core.info(`Deleted prior Codex request comment (${comment.id}).`);
+              } catch (error) {
+                core.warning(`Failed to delete prior Codex request comment (${comment.id}): ${error.message}`);
+              }
             }
 
             await github.rest.issues.createComment({
