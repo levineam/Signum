@@ -154,6 +154,7 @@ export function ObsidianImportWizard() {
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include', // Required for cookies (auth session)
           body: payload,
         });
 
