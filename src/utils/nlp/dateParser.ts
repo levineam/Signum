@@ -204,12 +204,19 @@ function detectRecurringPattern(
     // Adjust to user's timezone (with DST-aware offset calculation)
     const adjustedDate = adjustDateToUserTimezone(tomorrow, timezoneOffsetMinutes, timezone);
 
+    // Include tzid in RRULE to prevent DST drift
+    // When timezone is provided, rrule will handle DST transitions correctly
+    const rruleOptions: any = {
+      freq: Frequency.DAILY,
+      dtstart: adjustedDate
+    };
+    if (timezone) {
+      rruleOptions.tzid = timezone;
+    }
+
     return {
       dueAt: adjustedDate,
-      rrule: new RRule({
-        freq: Frequency.DAILY,
-        dtstart: adjustedDate
-      }).toString()
+      rrule: new RRule(rruleOptions).toString()
     };
   }
 
@@ -227,13 +234,19 @@ function detectRecurringPattern(
     // Adjust to user's timezone (with DST-aware offset calculation)
     const adjustedDate = adjustDateToUserTimezone(nextDate, timezoneOffsetMinutes, timezone);
 
+    // Include tzid in RRULE to prevent DST drift
+    const rruleOptions: any = {
+      freq: Frequency.WEEKLY,
+      byweekday: [dayIndex],
+      dtstart: adjustedDate
+    };
+    if (timezone) {
+      rruleOptions.tzid = timezone;
+    }
+
     return {
       dueAt: adjustedDate,
-      rrule: new RRule({
-        freq: Frequency.WEEKLY,
-        byweekday: [dayIndex],
-        dtstart: adjustedDate
-      }).toString()
+      rrule: new RRule(rruleOptions).toString()
     };
   }
 
@@ -256,13 +269,19 @@ function detectRecurringPattern(
     // Adjust to user's timezone (with DST-aware offset calculation)
     const adjustedDate = adjustDateToUserTimezone(nextWeek, timezoneOffsetMinutes, timezone);
 
+    // Include tzid in RRULE to prevent DST drift
+    const rruleOptions: any = {
+      freq: Frequency.WEEKLY,
+      interval,
+      dtstart: adjustedDate
+    };
+    if (timezone) {
+      rruleOptions.tzid = timezone;
+    }
+
     return {
       dueAt: adjustedDate,
-      rrule: new RRule({
-        freq: Frequency.WEEKLY,
-        interval,
-        dtstart: adjustedDate
-      }).toString()
+      rrule: new RRule(rruleOptions).toString()
     };
   }
 
@@ -284,13 +303,19 @@ function detectRecurringPattern(
     const weekdayMap = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU];
     const rruleWeekday = weekdayMap[dayIndex];
 
+    // Include tzid in RRULE to prevent DST drift
+    const rruleOptions: any = {
+      freq: Frequency.MONTHLY,
+      byweekday: [rruleWeekday.nth(1)], // First occurrence of detected weekday
+      dtstart: adjustedDate
+    };
+    if (timezone) {
+      rruleOptions.tzid = timezone;
+    }
+
     return {
       dueAt: adjustedDate,
-      rrule: new RRule({
-        freq: Frequency.MONTHLY,
-        byweekday: [rruleWeekday.nth(1)], // First occurrence of detected weekday
-        dtstart: adjustedDate
-      }).toString()
+      rrule: new RRule(rruleOptions).toString()
     };
   }
 
@@ -313,13 +338,19 @@ function detectRecurringPattern(
     // Adjust to user's timezone (with DST-aware offset calculation)
     const adjustedDate = adjustDateToUserTimezone(nextMonth, timezoneOffsetMinutes, timezone);
 
+    // Include tzid in RRULE to prevent DST drift
+    const rruleOptions: any = {
+      freq: Frequency.MONTHLY,
+      interval,
+      dtstart: adjustedDate
+    };
+    if (timezone) {
+      rruleOptions.tzid = timezone;
+    }
+
     return {
       dueAt: adjustedDate,
-      rrule: new RRule({
-        freq: Frequency.MONTHLY,
-        interval,
-        dtstart: adjustedDate
-      }).toString()
+      rrule: new RRule(rruleOptions).toString()
     };
   }
 
