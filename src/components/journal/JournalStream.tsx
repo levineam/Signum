@@ -834,12 +834,15 @@ export function JournalStream() {
               </div>
 
               {/* Task Cards - Display parsed tasks inline */}
-              {entryTasks.get(entry.id)?.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  dueAt={task.dueAt}
-                  rrule={task.rrule}
-                  status={task.status}
+              {(() => {
+                const tasks = entryTasks.get(entry.id);
+                console.log(`[TaskCard Render] Entry ${entry.id} has ${tasks?.length || 0} tasks`, tasks);
+                return tasks?.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    dueAt={task.dueAt}
+                    rrule={task.rrule}
+                    status={task.status}
                   onAccept={async () => {
                     // Accept task - update status
                     setEntryTasks(prev => {
@@ -883,7 +886,8 @@ export function JournalStream() {
                     toast.info('Task editing coming soon!')
                   }}
                 />
-              ))}
+              ));
+              })()}
             </Card>
           )
         })}
