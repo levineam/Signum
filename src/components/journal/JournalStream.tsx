@@ -170,6 +170,10 @@ export function JournalStream() {
                 )
 
                 // Merge task details with metadata, filtering out orphaned tasks
+                // IMPORTANT: This filter prevents "ghost" UI elements when:
+                // 1. Tasks are deleted from DB but metadata still references them
+                // 2. Database cleanup removes tasks but note.metadata.tasks[] isn't updated
+                // Without this filter, UI would display "Pending" TaskCards for non-existent tasks
                 for (const [entryId, entryTaskList] of tasksMap.entries()) {
                   tasksMap.set(entryId, entryTaskList
                     .map(t => {
@@ -181,7 +185,7 @@ export function JournalStream() {
                         exists: !!details // Mark whether task exists in DB
                       }
                     })
-                    .filter(t => t.exists) // Remove orphaned tasks
+                    .filter(t => t.exists) // Remove orphaned tasks that don't exist in DB
                   )
                 }
               }
