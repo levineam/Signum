@@ -43,7 +43,10 @@ export function VoiceRecordButton({
 
       try {
         // Send audio to transcription API
-        console.log('[VoiceRecordButton] Sending to /api/transcribe...')
+        console.log('[VoiceRecordButton] Sending to /api/transcribe...', {
+          size: audioBlob.size,
+          type: audioBlob.type,
+        })
         const response = await fetch('/api/transcribe', {
           method: 'POST',
           headers: {
@@ -52,8 +55,11 @@ export function VoiceRecordButton({
           body: audioBlob,
         })
 
+        console.log('[VoiceRecordButton] Response status:', response.status)
+
         if (!response.ok) {
           const errorData = await response.json()
+          console.error('[VoiceRecordButton] API error response:', errorData)
           throw new Error(errorData.error || `Transcription failed: ${response.status}`)
         }
 
