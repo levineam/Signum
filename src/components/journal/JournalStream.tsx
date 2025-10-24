@@ -837,7 +837,6 @@ export function JournalStream() {
               {entryTasks.get(entry.id)?.map((task) => (
                 <TaskCard
                   key={task.id}
-                  taskId={task.id}
                   dueAt={task.dueAt}
                   rrule={task.rrule}
                   status={task.status}
