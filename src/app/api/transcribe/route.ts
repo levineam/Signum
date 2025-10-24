@@ -176,7 +176,7 @@ Output ONLY the cleaned text, nothing else.`,
           content: transcription,
         },
       ],
-      temperature: 0.3, // Low temperature for consistency
+      // Note: GPT-5 Mini only supports default temperature (1), custom values not allowed
       max_completion_tokens: 500, // GPT-5 uses max_completion_tokens instead of max_tokens
     })
 
