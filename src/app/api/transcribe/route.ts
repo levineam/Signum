@@ -177,7 +177,7 @@ Output ONLY the cleaned text, nothing else.`,
         },
       ],
       temperature: 0.3, // Low temperature for consistency
-      max_tokens: 500, // Cap token usage (adjust based on average journal entry length)
+      max_completion_tokens: 500, // GPT-5 uses max_completion_tokens instead of max_tokens
     })
 
     const gptLatency = Date.now() - gptStartTime
