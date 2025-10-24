@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
     const cookieStore = await cookies();
-    const supabase = createServerClient(
+    let supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -87,13 +87,31 @@ export async function POST(request: NextRequest) {
         user = data.user;
         authError = error;
 
-        // CRITICAL: Set the session on the Supabase client so BatchImporter/LinkResolver
-        // can authenticate their DB operations under RLS
+        // CRITICAL: Create a new client with the bearer token in global headers
+        // so BatchImporter/LinkResolver can authenticate their DB operations under RLS.
+        // We can't use setSession() because it requires a refresh_token.
         if (!error && data.user) {
-          await supabase.auth.setSession({
-            access_token: token,
-            refresh_token: '', // Not needed for server-side operations
-          });
+          supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+              cookies: {
+                getAll() {
+                  return cookieStore.getAll();
+                },
+                setAll(cookiesToSet) {
+                  cookiesToSet.forEach(({ name, value, options }) =>
+                    cookieStore.set(name, value, options)
+                  );
+                },
+              },
+              global: {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              },
+            }
+          );
         }
       }
     }
