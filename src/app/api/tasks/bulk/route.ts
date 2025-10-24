@@ -49,9 +49,9 @@ export async function POST(request: NextRequest) {
     // Fetch tasks by IDs (RLS will ensure user owns them)
     const { data: tasks, error: fetchError } = await supabase
       .from('tasks')
-      .select('id, dueAt, rrule')
+      .select('id, due_at, rrule')
       .in('id', taskIds)
-      .eq('userId', user.id);
+      .eq('user_id', user.id);
 
     if (fetchError) {
       console.error('[POST /api/tasks/bulk] Database error:', fetchError);
@@ -61,7 +61,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ tasks: tasks || [] });
+    // Transform snake_case to camelCase for frontend
+    const transformedTasks = (tasks || []).map(task => ({
+      id: task.id,
+      dueAt: task.due_at,
+      rrule: task.rrule
+    }));
+
+    return NextResponse.json({ tasks: transformedTasks });
   } catch (error) {
     console.error('[POST /api/tasks/bulk] Error:', error);
     return NextResponse.json(
