@@ -234,8 +234,29 @@ export function SimpleRichEditor({
 
   return (
     <div className="relative min-h-[120px] w-full border rounded-md overflow-hidden">
+      {/* Editor */}
+      <div className="relative">
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning={true}
+          onInput={handleInput}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          onPaste={handlePaste}
+          className="min-h-[120px] w-full resize-none border-0 bg-transparent p-4 text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed"
+          style={{ whiteSpace: 'pre-wrap' }}
+        />
+        {/* Placeholder */}
+        {(!value && !initialValue) && (
+          <div className="absolute left-4 top-4 text-muted-foreground pointer-events-none select-none text-base">
+            {placeholder}
+          </div>
+        )}
+      </div>
+
       {/* Formatting Toolbar */}
-      <div className="flex items-center gap-1 p-2 border-b bg-muted/50 flex-wrap">
+      <div className="flex items-center gap-1 p-2 border-t bg-muted/50 flex-wrap">
         {/* Text Formatting */}
         <div className="flex items-center gap-1 border-r pr-2 mr-2">
           <Button
@@ -390,27 +411,6 @@ export function SimpleRichEditor({
         <div className="flex items-center border-l pl-2 ml-2" data-voice-button>
           <VoiceRecordButton onTranscriptionComplete={handleTranscription} />
         </div>
-      </div>
-
-      {/* Editor */}
-      <div className="relative">
-        <div
-          ref={editorRef}
-          contentEditable
-          suppressContentEditableWarning={true}
-          onInput={handleInput}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          onPaste={handlePaste}
-          className="min-h-[120px] w-full resize-none border-0 bg-transparent p-4 text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed"
-          style={{ whiteSpace: 'pre-wrap' }}
-        />
-        {/* Placeholder */}
-        {(!value && !initialValue) && (
-          <div className="absolute left-4 top-4 text-muted-foreground pointer-events-none select-none text-base">
-            {placeholder}
-          </div>
-        )}
       </div>
 
     </div>
