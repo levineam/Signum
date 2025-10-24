@@ -59,8 +59,9 @@ test.describe('Story 1.2.1: TaskCard Display', () => {
   test('should display TaskCard after creating task in journal', async ({ page }) => {
     await authenticateUser(page);
 
-    // Find the journal editor (today's entry)
+    // Wait for the journal editor to be visible (today's entry)
     const editor = page.locator('[contenteditable="true"]').first();
+    await editor.waitFor({ state: 'visible', timeout: 30000 });
     await editor.click();
 
     // Type a task with a date
