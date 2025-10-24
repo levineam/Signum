@@ -114,7 +114,7 @@ export function useVoiceRecording({
       stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1, // Mono
-          sampleRate: 16000, // 16 kHz
+          sampleRate: { ideal: 16000 }, // Prefer 16 kHz (Whisper optimized) but don't fail if unavailable
           echoCancellation: true,
           noiseSuppression: true,
         },
