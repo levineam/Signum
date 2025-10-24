@@ -35,11 +35,12 @@ function getLocalDateString(): string {
 
 export function JournalStream() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const taskDetectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [currentEditingEntry, setCurrentEditingEntry] = useState<string | null>(null)
@@ -231,10 +232,23 @@ export function JournalStream() {
       return // No change, don't trigger saves
     }
 
-    // Clear existing timeout
+    // Clear existing timeouts
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
     }
+    if (taskDetectionTimeoutRef.current) {
+      clearTimeout(taskDetectionTimeoutRef.current)
+    }
+
+    // Clear processed paragraphs cache for this entry when content changes
+    // This allows re-detection of tasks if user edits/adds content
+    const keysToRemove: string[] = []
+    processedParagraphs.current.forEach(key => {
+      if (key.startsWith(`${entryId}-`)) {
+        keysToRemove.push(key)
+      }
+    })
+    keysToRemove.forEach(key => processedParagraphs.current.delete(key))
 
     // Update content immediately for responsive UI
     setEntries(prev => prev.map(entry =>
@@ -242,6 +256,12 @@ export function JournalStream() {
         ? { ...entry, content: newContent, lastModified: new Date().toISOString() }
         : entry
     ))
+
+    // Debounce task detection to avoid duplicate tasks while typing (Story 1.2)
+    // Wait 3 seconds after user stops typing before detecting tasks
+    taskDetectionTimeoutRef.current = setTimeout(() => {
+      detectTasksInContent(newContent, entryId)
+    }, 3000)
 
     // Auto-save after 2 seconds of no typing (longer delay to reduce noise)
     saveTimeoutRef.current = setTimeout(async () => {
@@ -260,6 +280,83 @@ export function JournalStream() {
         }
       }
     }, 2000)
+  }
+
+  // Task detection from journal paragraphs (Story 1.2)
+  const processedParagraphs = useRef<Set<string>>(new Set())
+
+  const detectTasksInContent = async (content: string, entryId: string) => {
+    if (!user || !session?.access_token) return
+
+    // Extract paragraphs from HTML content
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = content
+
+    // Get all block-level elements (p, div, or split by br)
+    // ContentEditable creates different structures in different browsers
+    const blockElements = Array.from(tempDiv.querySelectorAll('p, div'))
+
+    // Filter out container elements that have other block-level children
+    // to avoid processing the same paragraph twice (e.g., <div><p>Task</p></div>)
+    const leafParagraphs = blockElements.filter(el => {
+      const hasBlockChildren = el.querySelector('p, div') !== null
+      return !hasBlockChildren
+    })
+
+    // If no leaf paragraphs, treat whole content as one paragraph
+    const paragraphs = leafParagraphs.length > 0
+      ? leafParagraphs
+      : [tempDiv]
+
+    console.log(`[Task Detection] Checking ${paragraphs.length} leaf paragraphs in entry ${entryId}`)
+
+    for (const para of paragraphs) {
+      const paragraphText = para.textContent?.trim() || ''
+
+      // Skip empty paragraphs or already processed ones
+      const paraHash = `${entryId}-${paragraphText}`
+      if (!paragraphText || processedParagraphs.current.has(paraHash)) {
+        continue
+      }
+
+      console.log('[Task Detection] Processing paragraph:', paragraphText)
+
+      // Mark as processed to avoid duplicate API calls
+      processedParagraphs.current.add(paraHash)
+
+      // Call task parsing API (with user's timezone info for DST handling)
+      try {
+        const response = await fetch('/api/tasks/parse', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            paragraphText,
+            userId: user.id,
+            entryId,
+            timezoneOffset: new Date().getTimezoneOffset(), // Offset in minutes
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone // IANA timezone ID for DST
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.task) {
+            console.log('✅ Task created from paragraph:', data.task)
+            toast.success(`Task created: ${data.task.title}`)
+          } else {
+            console.log('[Task Detection] No task detected in:', paragraphText.substring(0, 50))
+          }
+        } else {
+          const error = await response.json()
+          console.error('[Task Detection] API error:', error)
+        }
+      } catch (error) {
+        console.error('[Task Detection] Failed to parse task:', error)
+      }
+    }
   }
 
   const handleMakeNote = (selectedText: string) => {

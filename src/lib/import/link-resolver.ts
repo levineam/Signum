@@ -142,7 +142,7 @@ export class LinkResolver {
 
     // Create link relationships in links table
     // Notes array now contains updated content with resolved <a> tags
-    await this.createLinkRelationships(userId, notes, titleMap);
+    await this.createLinkRelationships(userId, notes);
 
     return result;
   }
@@ -216,8 +216,7 @@ export class LinkResolver {
    */
   private async createLinkRelationships(
     userId: string,
-    notes: Array<{ id: string; content: string }>,
-    _titleMap: Map<string, string>
+    notes: Array<{ id: string; content: string }>
   ): Promise<void> {
     const linksToCreate: Array<{
       source_note_id: string;
