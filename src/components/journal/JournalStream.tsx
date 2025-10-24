@@ -169,16 +169,20 @@ export function JournalStream() {
                   tasks.map((t: { id: string; dueAt: string | null; rrule: string | null }) => [t.id, t])
                 )
 
-                // Merge task details with metadata
+                // Merge task details with metadata, filtering out orphaned tasks
                 for (const [entryId, entryTaskList] of tasksMap.entries()) {
-                  tasksMap.set(entryId, entryTaskList.map(t => {
-                    const details = taskDetailsMap.get(t.id) as { id: string; dueAt: string | null; rrule: string | null } | undefined
-                    return {
-                      ...t,
-                      dueAt: details?.dueAt ?? null,
-                      rrule: details?.rrule ?? null
-                    }
-                  }))
+                  tasksMap.set(entryId, entryTaskList
+                    .map(t => {
+                      const details = taskDetailsMap.get(t.id) as { id: string; dueAt: string | null; rrule: string | null } | undefined
+                      return {
+                        ...t,
+                        dueAt: details?.dueAt ?? null,
+                        rrule: details?.rrule ?? null,
+                        exists: !!details // Mark whether task exists in DB
+                      }
+                    })
+                    .filter(t => t.exists) // Remove orphaned tasks
+                  )
                 }
               }
             } catch (error) {
