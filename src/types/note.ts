@@ -46,6 +46,11 @@ export interface NoteMetadata {
   // For journal entries (note_type: 'journal-entry')
   journalDate?: string          // YYYY-MM-DD format
   prompt?: string               // ACT-inspired prompt shown to user
+  tasks?: Array<{               // Story 1.2.1: Parsed tasks with paragraph mapping
+    id: string                  // Task ID from tasks table
+    paragraphHash: string       // Hash of paragraph text (entryId-text)
+    status: 'pending' | 'accepted' | 'rejected'
+  }>
 
   // For reflections (note_type: 'reflection')
   sourceNoteId?: string         // UUID of source journal entry

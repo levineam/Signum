@@ -15,6 +15,7 @@ import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
+import { TaskCard } from '@/components/tasks/TaskCard'
 
 interface JournalEntry {
   id: string
@@ -22,6 +23,14 @@ interface JournalEntry {
   content: string
   lastModified: string
   isSample?: boolean
+}
+
+interface ParsedTask {
+  id: string
+  paragraphHash: string
+  dueAt: string | null
+  rrule: string | null
+  status: 'pending' | 'accepted' | 'rejected'
 }
 
 // Helper: Get today's date in local timezone as YYYY-MM-DD
@@ -48,6 +57,7 @@ export function JournalStream() {
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null)
   const [noteLinkClicked, setNoteLinkClicked] = useState(false)
   const [creatingLink, setCreatingLink] = useState(false)
+  const [entryTasks, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
 
   // Cache editor element reference before opening modal (Phase 1 bug fix)
   const cachedEditorRef = useRef<HTMLElement | null>(null)
@@ -107,12 +117,25 @@ export function JournalStream() {
           !emptyJournalEntries.some(empty => empty.id === note.id)
         )
 
-        // Convert Note format to JournalEntry format
+        // Convert Note format to JournalEntry format and restore tasks
+        const tasksMap = new Map<string, ParsedTask[]>()
         const journalEntries: JournalEntry[] = journalNotes.map(note => {
           // Safely handle metadata (can be null for legacy notes)
           const meta = note.metadata || {}
           const journalDate = (meta as { journalDate?: string }).journalDate
           const isSample = (meta as { isSample?: boolean }).isSample
+          const tasks = (meta as { tasks?: Array<{ id: string; paragraphHash: string; status: 'pending' | 'accepted' | 'rejected' }> }).tasks
+
+          // Restore tasks for this entry
+          if (tasks && tasks.length > 0) {
+            tasksMap.set(note.id, tasks.map(t => ({
+              id: t.id,
+              paragraphHash: t.paragraphHash,
+              dueAt: null, // Will be fetched from tasks table if needed
+              rrule: null,
+              status: t.status
+            })))
+          }
 
           return {
             id: note.id,
@@ -122,6 +145,49 @@ export function JournalStream() {
             isSample: Boolean(isSample)
           }
         })
+
+        // Restore tasks from metadata and fetch full details
+        if (tasksMap.size > 0 && session?.access_token) {
+          // Collect all task IDs
+          const allTaskIds = Array.from(tasksMap.values()).flat().map(t => t.id)
+
+          if (allTaskIds.length > 0) {
+            try {
+              // Fetch full task details (dueAt, rrule)
+              const response = await fetch('/api/tasks/bulk', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ taskIds: allTaskIds })
+              })
+
+              if (response.ok) {
+                const { tasks } = await response.json()
+                const taskDetailsMap = new Map(
+                  tasks.map((t: { id: string; dueAt: string | null; rrule: string | null }) => [t.id, t])
+                )
+
+                // Merge task details with metadata
+                for (const [entryId, entryTaskList] of tasksMap.entries()) {
+                  tasksMap.set(entryId, entryTaskList.map(t => {
+                    const details = taskDetailsMap.get(t.id) as { id: string; dueAt: string | null; rrule: string | null } | undefined
+                    return {
+                      ...t,
+                      dueAt: details?.dueAt ?? null,
+                      rrule: details?.rrule ?? null
+                    }
+                  }))
+                }
+              }
+            } catch (error) {
+              console.error('Failed to fetch task details:', error)
+            }
+          }
+        }
+
+        setEntryTasks(tasksMap)
 
         // Check if today's entry exists
         const todayEntry = journalEntries.find(e => e.date === today)
@@ -219,6 +285,38 @@ export function JournalStream() {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]) // Only re-run when user ID changes (login/logout), not on user object updates
+
+  // Save task metadata to note when tasks change (Story 1.2.1)
+  useEffect(() => {
+    if (!user) return
+
+    const saveTaskMetadata = async () => {
+      for (const [entryId, tasks] of entryTasks.entries()) {
+        try {
+          // Update note metadata with current tasks
+          await updateNoteInDb(
+            entryId,
+            {
+              metadata: {
+                tasks: tasks.map(t => ({
+                  id: t.id,
+                  paragraphHash: t.paragraphHash,
+                  status: t.status
+                }))
+              }
+            },
+            user.id
+          )
+        } catch (error) {
+          console.error(`Failed to save task metadata for entry ${entryId}:`, error)
+        }
+      }
+    }
+
+    // Debounce to avoid excessive saves
+    const timeout = setTimeout(saveTaskMetadata, 500)
+    return () => clearTimeout(timeout)
+  }, [entryTasks, user])
 
   const handleContentChange = (entryId: string, newContent: string) => {
     // Don't override content changes while we're creating a link
@@ -346,6 +444,22 @@ export function JournalStream() {
           if (data.task) {
             console.log('✅ Task created from paragraph:', data.task)
             toast.success(`Task created: ${data.task.title}`)
+
+            // Store task for inline display
+            const parsedTask: ParsedTask = {
+              id: data.task.id,
+              paragraphHash: paraHash,
+              dueAt: data.task.dueAt,
+              rrule: data.task.rrule,
+              status: 'pending'
+            }
+
+            setEntryTasks(prev => {
+              const updated = new Map(prev)
+              const existing = updated.get(entryId) || []
+              updated.set(entryId, [...existing, parsedTask])
+              return updated
+            })
           } else {
             console.log('[Task Detection] No task detected in:', paragraphText.substring(0, 50))
           }
@@ -718,6 +832,59 @@ export function JournalStream() {
                   </div>
                 )}
               </div>
+
+              {/* Task Cards - Display parsed tasks inline */}
+              {entryTasks.get(entry.id)?.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  taskId={task.id}
+                  dueAt={task.dueAt}
+                  rrule={task.rrule}
+                  status={task.status}
+                  onAccept={async () => {
+                    // Accept task - update status
+                    setEntryTasks(prev => {
+                      const updated = new Map(prev)
+                      const tasks = updated.get(entry.id) || []
+                      updated.set(entry.id, tasks.map(t =>
+                        t.id === task.id ? { ...t, status: 'accepted' as const } : t
+                      ))
+                      return updated
+                    })
+                    toast.success('Task accepted')
+                  }}
+                  onReject={async () => {
+                    // Reject task - remove from list and delete from database
+                    try {
+                      const response = await fetch(`/api/tasks/${task.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                          'Authorization': `Bearer ${session?.access_token}`
+                        }
+                      })
+
+                      if (response.ok) {
+                        setEntryTasks(prev => {
+                          const updated = new Map(prev)
+                          const tasks = updated.get(entry.id) || []
+                          updated.set(entry.id, tasks.filter(t => t.id !== task.id))
+                          return updated
+                        })
+                        toast.success('Task rejected and deleted')
+                      } else {
+                        toast.error('Failed to delete task')
+                      }
+                    } catch (error) {
+                      console.error('Failed to delete task:', error)
+                      toast.error('Failed to delete task')
+                    }
+                  }}
+                  onEdit={() => {
+                    // TODO: Implement task editing in future story
+                    toast.info('Task editing coming soon!')
+                  }}
+                />
+              ))}
             </Card>
           )
         })}
