@@ -46,7 +46,7 @@ export async function DELETE(
       .from('tasks')
       .delete()
       .eq('id', taskId)
-      .eq('userId', user.id);
+      .eq('user_id', user.id);
 
     if (deleteError) {
       console.error('[DELETE /api/tasks/:id] Database error:', deleteError);
