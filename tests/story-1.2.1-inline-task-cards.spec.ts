@@ -55,16 +55,22 @@ async function authenticateUser(page: any) {
 
 // Helper to get journal editor and wait for it to be ready
 async function getJournalEditor(page: any) {
+  // Wait for journal entries to load
+  await page.waitForSelector('[data-entry-id]', { timeout: 10000 });
+
   // First, click on the journal entry card to enter edit mode
   // Journal entries are displayed in read-only mode by default
   const entryCard = page.locator('[data-entry-id]').first();
-  await entryCard.waitFor({ state: 'visible', timeout: 10000 });
-  await entryCard.click();
+  await entryCard.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(500); // Wait for scroll animation
 
-  // Now wait for the contenteditable editor to appear
-  const editor = page.locator('[contenteditable="true"]').first();
+  // Click specifically on the clickable area (not on a link inside it)
+  const clickableArea = entryCard.locator('.cursor-text').first();
+  await clickableArea.click();
+
+  // Now wait for the contenteditable editor to appear within the clicked card
+  const editor = entryCard.locator('[contenteditable="true"]').or(entryCard.locator('div[contenteditable]'));
   await editor.waitFor({ state: 'visible', timeout: 10000 });
-  await editor.scrollIntoViewIfNeeded();
   return editor;
 }
 
@@ -92,8 +98,8 @@ test.describe('Story 1.2.1: TaskCard Display', () => {
     // Wait a bit more for TaskCard to render
     await page.waitForTimeout(1000);
 
-    // Look for TaskCard component
-    const taskCard = page.locator('[data-slot="card"]').filter({ hasText: /Tomorrow at 3:00 PM/i });
+    // Look for TaskCard component (it will be the last card with this text)
+    const taskCard = page.locator('[data-slot="card"]').filter({ hasText: /Tomorrow at 3:00 PM/i }).last();
     await expect(taskCard).toBeVisible({ timeout: 5000 });
 
     // Verify TaskCard has the date displayed
