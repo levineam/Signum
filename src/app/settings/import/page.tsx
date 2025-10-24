@@ -15,6 +15,9 @@ export const metadata: Metadata = {
   description: 'Import your notes from Obsidian or other note-taking apps',
 };
 
+// Force dynamic rendering - this page requires authentication
+export const dynamic = 'force-dynamic';
+
 export default function ImportPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
