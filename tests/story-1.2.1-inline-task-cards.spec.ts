@@ -55,8 +55,16 @@ async function authenticateUser(page: any) {
 
 // Helper to get journal editor and wait for it to be ready
 async function getJournalEditor(page: any) {
+  // First, click on the journal entry card to enter edit mode
+  // Journal entries are displayed in read-only mode by default
+  const entryCard = page.locator('[data-entry-id]').first();
+  await entryCard.waitFor({ state: 'visible', timeout: 10000 });
+  await entryCard.click();
+
+  // Now wait for the contenteditable editor to appear
   const editor = page.locator('[contenteditable="true"]').first();
-  await editor.waitFor({ state: 'visible', timeout: 30000 });
+  await editor.waitFor({ state: 'visible', timeout: 10000 });
+  await editor.scrollIntoViewIfNeeded();
   return editor;
 }
 
