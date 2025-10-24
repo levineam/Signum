@@ -53,15 +53,21 @@ async function authenticateUser(page: any) {
   await page.waitForTimeout(2000);
 }
 
+// Helper to get journal editor and wait for it to be ready
+async function getJournalEditor(page: any) {
+  const editor = page.locator('[contenteditable="true"]').first();
+  await editor.waitFor({ state: 'visible', timeout: 30000 });
+  return editor;
+}
+
 test.describe('Story 1.2.1: TaskCard Display', () => {
   test.skip(skipTests, 'Skipping because TEST_URL is not set');
 
   test('should display TaskCard after creating task in journal', async ({ page }) => {
     await authenticateUser(page);
 
-    // Wait for the journal editor to be visible (today's entry)
-    const editor = page.locator('[contenteditable="true"]').first();
-    await editor.waitFor({ state: 'visible', timeout: 30000 });
+    // Get the journal editor
+    const editor = await getJournalEditor(page);
     await editor.click();
 
     // Type a task with a date
@@ -96,7 +102,7 @@ test.describe('Story 1.2.1: TaskCard Display', () => {
   test('should show recurring indicator for recurring tasks', async ({ page }) => {
     await authenticateUser(page);
 
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await getJournalEditor(page);
     await editor.click();
 
     // Type a recurring task
@@ -126,7 +132,7 @@ test.describe('Story 1.2.1: TaskCard Display', () => {
   test('should show pending status badge', async ({ page }) => {
     await authenticateUser(page);
 
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await getJournalEditor(page);
     await editor.click();
 
     const taskText = `Status test: review docs next Friday (${Date.now()})`;
@@ -151,7 +157,7 @@ test.describe('Story 1.2.1: TaskCard Actions - Accept', () => {
     await authenticateUser(page);
 
     // Create a task
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await getJournalEditor(page);
     await editor.click();
 
     const taskText = `Accept test: buy groceries tomorrow (${Date.now()})`;
@@ -193,7 +199,7 @@ test.describe('Story 1.2.1: TaskCard Actions - Reject', () => {
     await authenticateUser(page);
 
     // Create a task
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await getJournalEditor(page);
     await editor.click();
 
     const taskText = `Reject test: unwanted reminder (${Date.now()})`;
@@ -236,7 +242,7 @@ test.describe('Story 1.2.1: TaskCard Actions - Edit', () => {
     await authenticateUser(page);
 
     // Create a task
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await getJournalEditor(page);
     await editor.click();
 
     const taskText = `Edit test: task to edit (${Date.now()})`;
@@ -268,7 +274,7 @@ test.describe('Story 1.2.1: TaskCard Persistence', () => {
 
     // Create a unique task
     const uniqueText = `Persistence test ${Date.now()}`;
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await getJournalEditor(page);
     await editor.click();
     await editor.fill(`Task: ${uniqueText} tomorrow at 2pm`);
 
@@ -299,7 +305,7 @@ test.describe('Story 1.2.1: TaskCard Persistence', () => {
 
     // Create a task
     const uniqueText = `Status persistence ${Date.now()}`;
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await getJournalEditor(page);
     await editor.click();
     await editor.fill(`Task: ${uniqueText} next week`);
 
@@ -333,7 +339,7 @@ test.describe('Story 1.2.1: Multiple Tasks', () => {
   test('should display multiple TaskCards in same entry', async ({ page }) => {
     await authenticateUser(page);
 
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await getJournalEditor(page);
     await editor.click();
 
     // Type multiple task paragraphs
