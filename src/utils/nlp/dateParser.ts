@@ -9,12 +9,19 @@
  */
 
 import * as chrono from 'chrono-node';
-import { RRule, Frequency } from 'rrule';
+import { RRule, Frequency, type Options as RRuleOptions } from 'rrule';
 
 export interface ParsedDate {
   dueAt: Date;
   rrule?: string;
 }
+
+// Type for RRule options with optional timezone
+type RRuleOptionsWithTzid = Partial<RRuleOptions> & {
+  freq: Frequency;
+  dtstart: Date;
+  tzid?: string;
+};
 
 /**
  * Parse natural language date/time from text
@@ -206,7 +213,7 @@ function detectRecurringPattern(
 
     // Include tzid in RRULE to prevent DST drift
     // When timezone is provided, rrule will handle DST transitions correctly
-    const rruleOptions: any = {
+    const rruleOptions: RRuleOptionsWithTzid = {
       freq: Frequency.DAILY,
       dtstart: adjustedDate
     };
@@ -235,7 +242,7 @@ function detectRecurringPattern(
     const adjustedDate = adjustDateToUserTimezone(nextDate, timezoneOffsetMinutes, timezone);
 
     // Include tzid in RRULE to prevent DST drift
-    const rruleOptions: any = {
+    const rruleOptions: RRuleOptionsWithTzid = {
       freq: Frequency.WEEKLY,
       byweekday: [dayIndex],
       dtstart: adjustedDate
@@ -270,7 +277,7 @@ function detectRecurringPattern(
     const adjustedDate = adjustDateToUserTimezone(nextWeek, timezoneOffsetMinutes, timezone);
 
     // Include tzid in RRULE to prevent DST drift
-    const rruleOptions: any = {
+    const rruleOptions: RRuleOptionsWithTzid = {
       freq: Frequency.WEEKLY,
       interval,
       dtstart: adjustedDate
@@ -304,7 +311,7 @@ function detectRecurringPattern(
     const rruleWeekday = weekdayMap[dayIndex];
 
     // Include tzid in RRULE to prevent DST drift
-    const rruleOptions: any = {
+    const rruleOptions: RRuleOptionsWithTzid = {
       freq: Frequency.MONTHLY,
       byweekday: [rruleWeekday.nth(1)], // First occurrence of detected weekday
       dtstart: adjustedDate
@@ -339,7 +346,7 @@ function detectRecurringPattern(
     const adjustedDate = adjustDateToUserTimezone(nextMonth, timezoneOffsetMinutes, timezone);
 
     // Include tzid in RRULE to prevent DST drift
-    const rruleOptions: any = {
+    const rruleOptions: RRuleOptionsWithTzid = {
       freq: Frequency.MONTHLY,
       interval,
       dtstart: adjustedDate
