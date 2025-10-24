@@ -338,15 +338,9 @@ export function JournalStream() {
       clearTimeout(taskDetectionTimeoutRef.current)
     }
 
-    // Clear processed paragraphs cache for this entry when content changes
-    // This allows re-detection of tasks if user edits/adds content
-    const keysToRemove: string[] = []
-    processedParagraphs.current.forEach(key => {
-      if (key.startsWith(`${entryId}-`)) {
-        keysToRemove.push(key)
-      }
-    })
-    keysToRemove.forEach(key => processedParagraphs.current.delete(key))
+    // NOTE: We intentionally DON'T clear the processedParagraphs cache here
+    // The cache prevents duplicate task creation even if user edits content
+    // The deduplication_key in the database provides additional protection
 
     // Update content immediately for responsive UI
     setEntries(prev => prev.map(entry =>
