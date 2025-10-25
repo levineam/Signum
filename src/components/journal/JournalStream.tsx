@@ -891,6 +891,32 @@ export function JournalStream() {
                       toast.error('Failed to delete task')
                     }
                   }}
+                  onDelete={async () => {
+                    // Delete task from database
+                    try {
+                      const response = await fetch(`/api/tasks/${task.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                          'Authorization': `Bearer ${session?.access_token}`
+                        }
+                      })
+
+                      if (response.ok) {
+                        setEntryTasks(prev => {
+                          const updated = new Map(prev)
+                          const tasks = updated.get(entry.id) || []
+                          updated.set(entry.id, tasks.filter(t => t.id !== task.id))
+                          return updated
+                        })
+                        toast.success('Task deleted')
+                      } else {
+                        toast.error('Failed to delete task')
+                      }
+                    } catch (error) {
+                      console.error('Failed to delete task:', error)
+                      toast.error('Failed to delete task')
+                    }
+                  }}
                   onEdit={() => {
                     // TODO: Implement task editing in future story
                     toast.info('Task editing coming soon!')
