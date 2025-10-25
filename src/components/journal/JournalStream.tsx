@@ -858,16 +858,34 @@ export function JournalStream() {
                     rrule={task.rrule}
                     status={task.status}
                   onAccept={async () => {
-                    // Accept task - update status
-                    setEntryTasks(prev => {
-                      const updated = new Map(prev)
-                      const tasks = updated.get(entry.id) || []
-                      updated.set(entry.id, tasks.map(t =>
-                        t.id === task.id ? { ...t, status: 'accepted' as const } : t
-                      ))
-                      return updated
-                    })
-                    toast.success('Task accepted')
+                    // Accept task - update status in database
+                    try {
+                      const response = await fetch(`/api/tasks/${task.id}`, {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${session?.access_token}`
+                        },
+                        body: JSON.stringify({ status: 'accepted' })
+                      })
+
+                      if (response.ok) {
+                        setEntryTasks(prev => {
+                          const updated = new Map(prev)
+                          const tasks = updated.get(entry.id) || []
+                          updated.set(entry.id, tasks.map(t =>
+                            t.id === task.id ? { ...t, status: 'accepted' as const } : t
+                          ))
+                          return updated
+                        })
+                        toast.success('Task accepted')
+                      } else {
+                        toast.error('Failed to accept task')
+                      }
+                    } catch (error) {
+                      console.error('Failed to accept task:', error)
+                      toast.error('Failed to accept task')
+                    }
                   }}
                   onReject={async () => {
                     // Reject task - remove from list and delete from database
