@@ -282,7 +282,25 @@ so that I can understand triggers and inform my values/ontology work.
    ```
 3. ✅ Data source: `mood_checks` table (last 7 days)
 4. ✅ Insights calculated server-side via API route `/api/mood-patterns`
-5. ✅ Chart library: Recharts (already in dependencies)
+5. ✅ Chart library: **Recharts** (install via `npm i recharts` - not currently in dependencies)
+   - SSR note (Next.js): import charts dynamically with `next/dynamic` and `ssr: false`; wrap charts with `ResponsiveContainer` to avoid hydration/layout issues
+   - Example:
+     ```tsx
+     const { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } = dynamic(
+       () => import('recharts'),
+       { ssr: false }
+     ) as unknown as typeof import('recharts')
+
+     // ...
+     <ResponsiveContainer width="100%" height={200}>
+       <LineChart data={weeklyRNTScores}>
+         <XAxis dataKey="day" />
+         <YAxis domain={[0, 8]} />
+         <Tooltip />
+         <Line type="monotone" dataKey="rnt" stroke="#7C3AED" />
+       </LineChart>
+     </ResponsiveContainer>
+     ```
 6. ✅ Clicking "Explore values helper" → opens `ValuesAffirmationHelper`
 7. ✅ Pattern card only appears if user has ≥3 check-ins in past 7 days
 
@@ -324,7 +342,12 @@ function calculateWeeklyPattern(checkIns: MoodCheck[]): WeeklyPattern {
 
 ### Database Schema
 
+**Note**: Requires `pgcrypto` extension (enabled by default on Supabase) for `gen_random_uuid()`. Include an explicit extension guard in the migration to avoid env drift.
+
 ```sql
+-- Ensure required extension exists
+create extension if not exists pgcrypto;
+
 -- Phase 1: Mood check-ins
 CREATE TABLE mood_checks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -339,20 +362,21 @@ CREATE TABLE mood_checks (
   rnt_replaying_score INT NOT NULL CHECK (rnt_replaying_score BETWEEN 0 AND 4),
   rnt_worrying_score INT NOT NULL CHECK (rnt_worrying_score BETWEEN 0 AND 4),
   rnt_total_score INT GENERATED ALWAYS AS (rnt_replaying_score + rnt_worrying_score) STORED,
+  CHECK (rnt_total_score BETWEEN 0 AND 8),
 
   -- Trigger context
   trigger_source TEXT NOT NULL CHECK (trigger_source IN ('manual', 'typing', 'scheduled')),
 
   -- Phase 2: Follow-up actions
-  suggested_helper TEXT,  -- HelperType if suggestion shown
+  suggested_helper TEXT CHECK (suggested_helper IN ('cbt-distortions', 'gratitude', 'values-affirmation', 'self-compassion', 'woop', 'expressive-writing')),
   helper_accepted BOOLEAN,
 
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-  -- Indexes for pattern queries
-  INDEX idx_mood_checks_user_created (user_id, created_at DESC),
-  INDEX idx_mood_checks_rnt (user_id, rnt_total_score)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Indexes for pattern queries (separate from table definition)
+CREATE INDEX idx_mood_checks_user_created ON mood_checks (user_id, created_at DESC);
+CREATE INDEX idx_mood_checks_rnt ON mood_checks (user_id, rnt_total_score);
 
 -- Phase 3: Language flags
 CREATE TABLE language_flags (
@@ -367,37 +391,85 @@ CREATE TABLE language_flags (
   check_in_completed BOOLEAN NOT NULL DEFAULT false,
   banner_dismissed BOOLEAN NOT NULL DEFAULT false,
 
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-  INDEX idx_language_flags_user_date (user_id, created_at DESC)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- RLS policies
+-- Index for language flags (separate from table definition)
+CREATE INDEX idx_language_flags_user_date ON language_flags (user_id, created_at DESC);
+
+-- RLS policies (explicit SELECT/INSERT/UPDATE/DELETE)
 ALTER TABLE mood_checks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE language_flags ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users manage own mood checks"
-  ON mood_checks FOR ALL
+-- Enforce RLS even for table owners (service role still bypasses)
+ALTER TABLE mood_checks FORCE ROW LEVEL SECURITY;
+ALTER TABLE language_flags FORCE ROW LEVEL SECURITY;
+
+-- Mood checks RLS policies
+CREATE POLICY "Users can view own mood checks"
+  ON mood_checks FOR SELECT
   USING (auth.uid() = user_id);
 
-CREATE POLICY "Users manage own language flags"
-  ON language_flags FOR ALL
+CREATE POLICY "Users can insert own mood checks"
+  ON mood_checks FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own mood checks"
+  ON mood_checks FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own mood checks"
+  ON mood_checks FOR DELETE
   USING (auth.uid() = user_id);
+
+-- Language flags RLS policies
+CREATE POLICY "Users can view own language flags"
+  ON language_flags FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own language flags"
+  ON language_flags FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own language flags"
+  ON language_flags FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own language flags"
+  ON language_flags FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Phase 3: User preferences for Noticer settings
+-- Extend existing user_preferences table
+ALTER TABLE user_preferences
+ADD COLUMN IF NOT EXISTS noticer_preferences JSONB DEFAULT '{}'::jsonb;
+
+-- Example noticer_preferences shape:
+-- {
+--   "typingTriggerMutedUntil": "2025-11-15T00:00:00Z",
+--   "autoSuggestionsEnabled": true
+-- }
 ```
 
 ### Type Definitions
+
+**Implementation Note**: Follow existing snake_case → camelCase mapping pattern from `src/lib/supabase/helpers.ts:206-227`. Consider creating `src/types/noticer.ts` for Noticer-specific types.
 
 ```typescript
 // src/types/helper.ts additions
 
 export type HelperType =
   | 'cbt-distortions'
-  | 'gratitude'
-  | 'values-affirmation'
-  | 'self-compassion'
-  | 'woop'
-  | 'expressive-writing'
-  | 'mood-check'  // 🆕 Noticer
+  | 'gratitude'          // Add when Story 2.5.5 implemented
+  | 'values-affirmation' // Add when Story 2.5.6 implemented
+  | 'self-compassion'    // Add when Story 2.5.7 implemented
+  | 'woop'               // Add when Story 2.5.8 implemented
+  | 'expressive-writing' // Add when Story 2.5.9 implemented
+  | 'mood-check'         // 🆕 Add in Story 2.5.10
+
+// Keep HelperType union aligned with DB CHECK constraints and UI to avoid runtime errors
 
 export type AffectType = 'calm' | 'tense' | 'sad' | 'irritable' | 'worried' | 'other'
 
@@ -426,6 +498,11 @@ export interface LanguageFlag {
   checkInCompleted: boolean
   bannerDismissed: boolean
   createdAt: string
+}
+
+export interface NoticerPreferences {
+  typingTriggerMutedUntil: string | null  // ISO timestamp
+  autoSuggestionsEnabled: boolean
 }
 ```
 
@@ -486,23 +563,49 @@ export interface LanguageFlag {
 
 ## Integration with Existing Features
 
-### Helper Toolbar (Journal Stream)
+### Helper Integration Strategy
 
+**Current UI Pattern** (as of Story 2.5.4):
+- Helpers render as `HelperContainer` components embedded directly above the journal editor
+- CBT helper currently shown for today's entry: `src/components/journal/JournalStream.tsx:520-527`
+- No separate helper toolbar yet
+
+**Phase 1 Implementation Options**:
+
+**Option A (Lighter, Matches Current Pattern):**
+Render `MoodCheckHelper` as another `HelperContainer` above today's editor, similar to CBT:
 ```tsx
 // src/components/journal/JournalStream.tsx
 
-<HelperToolbar>
-  <Button onClick={() => openHelper('gratitude')}>Three Good Things</Button>
-  <Button onClick={() => openHelper('values-affirmation')}>Values</Button>
-  <Button onClick={() => openHelper('cbt-distortions')}>CBT</Button>
-  <Button onClick={() => openHelper('self-compassion')}>Self-Compassion</Button>
-  <Button onClick={() => openHelper('woop')}>WOOP</Button>
-  <Button onClick={() => openHelper('expressive-writing')}>Expressive Writing</Button>
-  <Button onClick={() => openHelper('mood-check')} variant="purple">
-    Quick Check-In  {/* 🆕 Noticer */}
-  </Button>
-</HelperToolbar>
+{isTodaysEntry && (
+  <>
+    <CbtDistortions {...} />
+    <MoodCheckHelper {...} />  {/* 🆕 Add below CBT helper */}
+  </>
+)}
 ```
+
+**Option B (Future-Ready Toolbar):**
+Implement a helper toolbar row with buttons for all helpers (includes refactoring CBT):
+```tsx
+// src/components/journal/JournalStream.tsx
+
+{isTodaysEntry && (
+  <HelperToolbar>
+    <Button onClick={() => openHelper('gratitude')}>Three Good Things</Button>
+    <Button onClick={() => openHelper('values-affirmation')}>Values</Button>
+    <Button onClick={() => openHelper('cbt-distortions')}>CBT</Button>
+    <Button onClick={() => openHelper('self-compassion')}>Self-Compassion</Button>
+    <Button onClick={() => openHelper('woop')}>WOOP</Button>
+    <Button onClick={() => openHelper('expressive-writing')}>Expressive Writing</Button>
+    <Button onClick={() => openHelper('mood-check')} variant="purple">
+      Quick Check-In  {/* 🆕 Noticer */}
+    </Button>
+  </HelperToolbar>
+)}
+```
+
+**Recommendation**: Use **Option A** for Phase 1 (Story 2.5.10) to minimize scope, then migrate to **Option B** in a dedicated "Helper Toolbar" story after all Phase 1-2 helpers are implemented.
 
 ### Notes Page (Personal Ontology)
 
@@ -541,18 +644,25 @@ await createHelperUsage({
 
 ### Privacy-First Design
 
-1. **On-device analysis:** Sentiment detection runs client-side (no text transmitted)
+1. **On-device analysis:** Sentiment detection runs client-side (no text transmitted to server)
 2. **Aggregate storage:** Only counts/scores stored, not full text
+   - `language_flags` table stores `absolutist_count` and `negation_ratio`, **not raw entry text**
+   - `mood_checks` stores affect labels (user-provided strings), but **not journal entry content**
+   - Existing `helper_usage.metadata` stores fixed prompt text (CBT distortion names), **never free-text journal content**
 3. **User control:**
-   - Mute typing triggers for 30 days
-   - Dismiss individual suggestions
-   - Delete mood check history
-4. **Data ownership:** All mood data exportable via user settings
+   - Mute typing triggers for 30 days via `noticer_preferences.typingTriggerMutedUntil`
+   - Dismiss individual suggestions (non-persistent, session-only)
+   - Delete mood check history via Settings → "Delete all mood checks" (API endpoint: `/api/mood-checks/delete-all`)
+4. **Data ownership:** All mood data exportable via Settings → "Export mood data" (CSV/JSON download with RLS-scoped query)
 
 ### Guardrails
 
 1. **Disclaimer:** "This is for self-awareness, not a medical tool"
 2. **Crisis detection:** If entry contains crisis phrases → show resources link (non-blocking, dismissible)
+   - **Implementation**: Client-side phrase detection (minimal list: "suicide", "kill myself", "end my life", "no reason to live")
+   - **UX**: Non-blocking banner with external resources link (e.g., 988 Suicide & Crisis Lifeline)
+   - **Privacy**: No DB writes for crisis phrases; only log `crisis_banner_shown: boolean` flag (no text content)
+   - **Dismissible**: User can close banner; don't re-trigger for same entry
 3. **No diagnosis:** Never use clinical terms ("anxiety disorder", "depression")
 4. **Tone guidelines:**
    - Use: "notice", "explore", "check in", "pattern"
@@ -712,6 +822,131 @@ Scale: 0 (Not at all) → 4 (Very much)
 
 ---
 
+## Ready-To-Implement Checklist
+
+### Phase 1 Prerequisites (Story 2.5.10)
+
+**Type System:**
+- [ ] Add `'mood-check'` to `HelperType` union in `src/types/helper.ts:17`
+- [ ] Create `src/types/noticer.ts` with `MoodCheck`, `LanguageFlag`, `NoticerPreferences` interfaces
+- [ ] Follow snake_case → camelCase mapping pattern from `src/lib/supabase/helpers.ts:206-227`
+
+**Database Migration:**
+- [ ] Create migration file: `supabase/migrations/YYYYMMDDHHMMSS_create_noticer_tables.sql`
+- [ ] Add `mood_checks` table with corrected index syntax (separate `CREATE INDEX` statements)
+- [ ] Add RLS policies with explicit `SELECT/INSERT/UPDATE/DELETE` and `WITH CHECK` clauses
+- [ ] Add `noticer_preferences` JSONB column to existing `user_preferences` table
+- [ ] Apply migration to dev environment and test RLS
+
+**Component:**
+- [ ] Create `src/components/journal/helpers/MoodCheckHelper.tsx`
+- [ ] Use existing `HelperContainer` component with `variant="purple"`
+- [ ] Implement 4-item form (affect dropdown + affect label text + 2 RNT Likert scales)
+- [ ] Follow CBT helper pattern for collapse/announce/insert and non-blocking usage logging
+- [ ] Wire `handleHelperInsertion` in `src/components/journal/JournalStream.tsx:182-229`
+
+**UI Integration (Option A - Recommended for MVP):**
+- [ ] Render `MoodCheckHelper` below `CbtDistortions` for today's entry
+- [ ] Add conditional rendering: `{isTodaysEntry && <MoodCheckHelper {...} />}`
+- [ ] Defer helper toolbar refactor to post-Phase 2
+
+**Testing:**
+- [ ] Add Playwright test: `tests/mood-check-insert.spec.ts`
+- [ ] Test flow: open → fill form → submit → insertion → collapse
+- [ ] Assertion: inserted markdown block present in entry and helper collapses after submit
+- [ ] Unit test RNT score calculation (sum of 2 Likert scales, 0-8 range)
+
+---
+
+### Phase 2 Prerequisites (Story 2.5.11)
+
+**Utils:**
+- [ ] Create `src/utils/helperRecommendations.ts`
+- [ ] Implement `recommendHelper(rntScore, affectPrimary)` logic (see PRD:157-174)
+- [ ] Add unit tests for recommendation matrix
+
+**Component:**
+- [ ] Create `src/components/journal/helpers/HelperSuggestionBanner.tsx`
+- [ ] Embed in `MoodCheckHelper` conditional on RNT thresholds (3-5, 6-8)
+- [ ] Test helper auto-open flow (accept vs dismiss)
+
+**Database:**
+- [ ] Ensure `mood_checks.suggested_helper` and `helper_accepted` columns exist
+- [ ] Log suggestion data for analytics
+
+---
+
+### Phase 3 Prerequisites (Story 2.5.12)
+
+**Utils:**
+- [ ] Create `src/utils/sentimentAnalyzer.ts`
+- [ ] Implement `analyzeEntry(text)` with absolutist word detection
+- [ ] Add debounce logic (e.g., 2-second delay after typing stops)
+
+**Database Migration:**
+- [ ] Add `language_flags` table with corrected indexes
+- [ ] Add RLS policies (SELECT/INSERT/UPDATE/DELETE with WITH CHECK)
+
+**UI:**
+- [ ] Add typing trigger banner above editor (purple, dismissible)
+- [ ] Enforce 1-banner-per-day limit via `language_flags` query
+- [ ] Add "Mute for 30 days" preference UI in Settings
+
+**Privacy:**
+- [ ] Verify all analysis runs client-side (no text sent to API)
+- [ ] Store only `absolutist_count` and `negation_ratio` in DB
+
+---
+
+### Phase 4 Prerequisites (Story 2.5.13)
+
+**Dependencies:**
+- [ ] Install Recharts: `npm i recharts`
+
+**API:**
+- [ ] Create `src/app/api/mood-patterns/route.ts`
+- [ ] Implement weekly pattern aggregation (last 7 days)
+- [ ] Return RNT trends, peak times, common affect labels
+
+**Component:**
+- [ ] Create `src/components/notes/EmotionalPatternCard.tsx`
+- [ ] Add to Notes page: `src/app/notes/page.tsx`
+- [ ] Gate visibility on ≥3 check-ins in past 7 days
+- [ ] Integrate Recharts for RNT timeline visualization
+
+**Testing:**
+- [ ] Mock API with 7 days of sample mood check data
+- [ ] Test pattern calculation logic (peak times, common labels)
+- [ ] Verify chart renders correctly with real RNT scores
+
+---
+
+### Additional Implementation Notes (from GPT-5 Feedback)
+
+**Data Minimization:**
+- [ ] Review existing `helper_usage.metadata` to avoid logging free-text journal content
+- [ ] Confirm CBT helper only stores fixed distortion names, not user entries
+
+**Crisis Detection:**
+- [ ] Add minimal phrase list: `["suicide", "kill myself", "end my life", "no reason to live"]`
+- [ ] Implement non-blocking banner with external resources link (988 Lifeline)
+- [ ] Log only `crisis_banner_shown: boolean` flag (no phrase content)
+
+**Export/Delete Features:**
+- [ ] Add Settings page action: "Delete all mood checks" → `/api/mood-checks/delete-all`
+- [ ] Add Settings page action: "Export mood data" → CSV/JSON download (RLS-scoped)
+
+**Performance:**
+- [ ] Debounce sentiment analyzer in editor (minimize re-renders)
+- [ ] Index `mood_checks` by `(user_id, created_at DESC)` for fast pattern queries
+- [ ] Batch fetch only last 7 days for weekly patterns (avoid full scan)
+
+**Timezone Handling:**
+- [ ] Consider storing user timezone or computing pattern bins client-side
+- [ ] Ensure "Tuesday evening" insights match user's local time, not UTC
+
+---
+
 ## References
 
 1. **EMA in Mental Health:** [PMC8428969](https://pmc.ncbi.nlm.nih.gov/articles/PMC8428969/)
@@ -722,6 +957,6 @@ Scale: 0 (Not at all) → 4 (Very much)
 
 ---
 
-**Document Version:** 1.0
+**Document Version:** 1.1 (Updated with GPT-5 feedback)
 **Last Updated:** October 2025
 **Next Review:** After Phase 1 completion
