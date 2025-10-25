@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 
 interface TaskCardProps {
   taskId: string;
+  title: string;
   dueAt: string | null;
   rrule: string | null;
   status: 'pending' | 'accepted' | 'rejected';
@@ -19,6 +20,7 @@ interface TaskCardProps {
 }
 
 export function TaskCard({
+  title,
   dueAt,
   rrule,
   status,
@@ -94,21 +96,27 @@ export function TaskCard({
         compact && 'px-4'
       )}
     >
-      {/* Due date/time and recurrence info */}
-      <div className="flex items-center gap-3 text-sm">
-        {dueAt && (
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Calendar className="size-4" />
-            <span>{formatDueDate(dueAt)}</span>
-          </div>
-        )}
-        {rrule && (
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Repeat className="size-3.5" />
-            <span className="text-xs">Recurring</span>
-          </div>
-        )}
-        {getStatusBadge()}
+      {/* Task info */}
+      <div className="flex flex-col gap-1.5">
+        {/* Task title */}
+        <div className="font-medium text-sm">{title}</div>
+
+        {/* Due date/time and recurrence info */}
+        <div className="flex items-center gap-3 text-sm">
+          {dueAt && (
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Calendar className="size-4" />
+              <span>{formatDueDate(dueAt)}</span>
+            </div>
+          )}
+          {rrule && (
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Repeat className="size-3.5" />
+              <span className="text-xs">Recurring</span>
+            </div>
+          )}
+          {getStatusBadge()}
+        </div>
       </div>
 
       {/* Actions */}

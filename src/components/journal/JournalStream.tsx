@@ -27,6 +27,7 @@ interface JournalEntry {
 
 interface ParsedTask {
   id: string
+  title: string
   paragraphHash: string
   dueAt: string | null
   rrule: string | null
@@ -130,6 +131,7 @@ export function JournalStream() {
           if (tasks && tasks.length > 0) {
             tasksMap.set(note.id, tasks.map(t => ({
               id: t.id,
+              title: '', // Will be fetched from tasks table via bulk API
               paragraphHash: t.paragraphHash,
               dueAt: null, // Will be fetched from tasks table if needed
               rrule: null,
@@ -166,7 +168,7 @@ export function JournalStream() {
               if (response.ok) {
                 const { tasks } = await response.json()
                 const taskDetailsMap = new Map(
-                  tasks.map((t: { id: string; dueAt: string | null; rrule: string | null }) => [t.id, t])
+                  tasks.map((t: { id: string; title: string; dueAt: string | null; rrule: string | null }) => [t.id, t])
                 )
 
                 // Merge task details with metadata, filtering out orphaned tasks
@@ -177,9 +179,10 @@ export function JournalStream() {
                 for (const [entryId, entryTaskList] of tasksMap.entries()) {
                   tasksMap.set(entryId, entryTaskList
                     .map(t => {
-                      const details = taskDetailsMap.get(t.id) as { id: string; dueAt: string | null; rrule: string | null } | undefined
+                      const details = taskDetailsMap.get(t.id) as { id: string; title: string; dueAt: string | null; rrule: string | null } | undefined
                       return {
                         ...t,
+                        title: details?.title ?? '',
                         dueAt: details?.dueAt ?? null,
                         rrule: details?.rrule ?? null,
                         exists: !!details // Mark whether task exists in DB
@@ -455,6 +458,7 @@ export function JournalStream() {
             // Store task for inline display
             const parsedTask: ParsedTask = {
               id: data.task.id,
+              title: data.task.title,
               paragraphHash: paraHash,
               dueAt: data.task.dueAt,
               rrule: data.task.rrule,
@@ -844,6 +848,7 @@ export function JournalStream() {
               {entryTasks.get(entry.id)?.map((task) => (
                   <TaskCard
                     key={task.id}
+                    title={task.title}
                     dueAt={task.dueAt}
                     rrule={task.rrule}
                     status={task.status}

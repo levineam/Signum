@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Fetch tasks by IDs (RLS will ensure user owns them)
     const { data: tasks, error: fetchError } = await supabase
       .from('tasks')
-      .select('id, due_at, rrule')
+      .select('id, title, due_at, rrule')
       .in('id', taskIds)
       .eq('user_id', user.id);
 
@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
     // Transform snake_case to camelCase for frontend
     const transformedTasks = (tasks || []).map(task => ({
       id: task.id,
+      title: task.title,
       dueAt: task.due_at,
       rrule: task.rrule
     }));
