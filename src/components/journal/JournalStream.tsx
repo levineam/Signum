@@ -31,7 +31,7 @@ interface ParsedTask {
   paragraphHash: string
   dueAt: string | null
   rrule: string | null
-  status: 'pending' | 'accepted' | 'rejected'
+  status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
 }
 
 // Helper: Get today's date in local timezone as YYYY-MM-DD
@@ -168,7 +168,7 @@ export function JournalStream() {
               if (response.ok) {
                 const { tasks } = await response.json()
                 const taskDetailsMap = new Map(
-                  tasks.map((t: { id: string; title: string; dueAt: string | null; rrule: string | null }) => [t.id, t])
+                  tasks.map((t: { id: string; title: string; dueAt: string | null; rrule: string | null; status: string }) => [t.id, t])
                 )
 
                 // Merge task details with metadata, filtering out orphaned tasks
@@ -179,12 +179,13 @@ export function JournalStream() {
                 for (const [entryId, entryTaskList] of tasksMap.entries()) {
                   tasksMap.set(entryId, entryTaskList
                     .map(t => {
-                      const details = taskDetailsMap.get(t.id) as { id: string; title: string; dueAt: string | null; rrule: string | null } | undefined
+                      const details = taskDetailsMap.get(t.id) as { id: string; title: string; dueAt: string | null; rrule: string | null; status: string } | undefined
                       return {
                         ...t,
                         title: details?.title ?? '',
                         dueAt: details?.dueAt ?? null,
                         rrule: details?.rrule ?? null,
+                        status: (details?.status as 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled') ?? t.status,
                         exists: !!details // Mark whether task exists in DB
                       }
                     })
@@ -893,6 +894,39 @@ export function JournalStream() {
                   onEdit={() => {
                     // TODO: Implement task editing in future story
                     toast.info('Task editing coming soon!')
+                  }}
+                  onComplete={async () => {
+                    // Toggle task completion status
+                    const newStatus = task.status === 'completed' ? 'accepted' : 'completed';
+
+                    try {
+                      // Update task status in database
+                      const response = await fetch(`/api/tasks/${task.id}`, {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${session?.access_token}`
+                        },
+                        body: JSON.stringify({ status: newStatus })
+                      })
+
+                      if (response.ok) {
+                        setEntryTasks(prev => {
+                          const updated = new Map(prev)
+                          const tasks = updated.get(entry.id) || []
+                          updated.set(entry.id, tasks.map(t =>
+                            t.id === task.id ? { ...t, status: newStatus } : t
+                          ))
+                          return updated
+                        })
+                        toast.success(newStatus === 'completed' ? 'Task completed!' : 'Task reopened')
+                      } else {
+                        toast.error('Failed to update task')
+                      }
+                    } catch (error) {
+                      console.error('Failed to update task:', error)
+                      toast.error('Failed to update task')
+                    }
                   }}
                 />
               ))}

@@ -12,10 +12,11 @@ interface TaskCardProps {
   title: string;
   dueAt: string | null;
   rrule: string | null;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled';
   onAccept?: () => void;
   onReject?: () => void;
   onEdit?: () => void;
+  onComplete?: () => void;
   compact?: boolean;
 }
 
@@ -27,6 +28,7 @@ export function TaskCard({
   onAccept,
   onReject,
   onEdit,
+  onComplete,
   compact = true,
 }: Omit<TaskCardProps, 'taskId'>) {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -150,6 +152,26 @@ export function TaskCard({
             <X className="size-4" />
           </Button>
         </div>
+      )}
+
+      {/* Completion checkbox for accepted tasks */}
+      {status === 'accepted' && (
+        <button
+          onClick={onComplete}
+          className="flex size-5 items-center justify-center rounded border-2 border-gray-300 transition-colors hover:border-green-600 dark:border-gray-600 dark:hover:border-green-500"
+          aria-label="Mark as complete"
+        />
+      )}
+
+      {/* Completed checkbox (checked) */}
+      {status === 'completed' && (
+        <button
+          onClick={onComplete}
+          className="flex size-5 items-center justify-center rounded border-2 border-green-600 bg-green-600 text-white transition-colors dark:border-green-500 dark:bg-green-500"
+          aria-label="Mark as incomplete"
+        >
+          <Check className="size-3.5" />
+        </button>
       )}
     </Card>
   );
