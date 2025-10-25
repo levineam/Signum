@@ -3,6 +3,7 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Quote, AlignLeft, AlignCenter, AlignRight, FileText } from 'lucide-react'
+import { VoiceRecordButton } from '@/components/editor/VoiceRecordButton'
 
 interface SimpleRichEditorProps {
   value?: string
@@ -13,6 +14,7 @@ interface SimpleRichEditorProps {
   onBlur?: (e: React.FocusEvent) => void
   autoFocus?: boolean
   onMakeNote?: (selectedText: string) => void
+  onTranscription?: (text: string) => void
 }
 
 export function SimpleRichEditor({
@@ -23,7 +25,8 @@ export function SimpleRichEditor({
   onFocus,
   onBlur,
   autoFocus = false,
-  onMakeNote
+  onMakeNote,
+  onTranscription
 }: SimpleRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const [selectedText, setSelectedText] = useState('')
@@ -132,6 +135,44 @@ export function SimpleRichEditor({
     }
   }, [])
 
+  const handleTranscription = useCallback((text: string) => {
+    if (editorRef.current && onChange) {
+      // Insert transcribed text at cursor position or append to end
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0)
+        const isWithinEditor = editorRef.current.contains(range.commonAncestorContainer)
+
+        if (isWithinEditor) {
+          // Insert at cursor
+          const textNode = document.createTextNode(text)
+          range.insertNode(textNode)
+
+          // Move cursor after inserted text
+          range.setStartAfter(textNode)
+          range.setEndAfter(textNode)
+          selection.removeAllRanges()
+          selection.addRange(range)
+        } else {
+          // Append to end as text node (prevents XSS from transcription service)
+          const textNode = document.createTextNode(text)
+          editorRef.current.appendChild(textNode)
+        }
+      } else {
+        // Append to end as text node (prevents XSS from transcription service)
+        const textNode = document.createTextNode(text)
+        editorRef.current.appendChild(textNode)
+      }
+
+      // Trigger onChange
+      const content = editorRef.current.innerHTML || ''
+      onChange(content)
+
+      // Call parent callback if provided
+      onTranscription?.(text)
+    }
+  }, [onChange, onTranscription])
+
   // Set initial content when value changes
   React.useEffect(() => {
     if (editorRef.current && value !== undefined) {
@@ -193,8 +234,29 @@ export function SimpleRichEditor({
 
   return (
     <div className="relative min-h-[120px] w-full border rounded-md overflow-hidden">
+      {/* Editor */}
+      <div className="relative">
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning={true}
+          onInput={handleInput}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          onPaste={handlePaste}
+          className="min-h-[120px] w-full resize-none border-0 bg-transparent p-4 text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed"
+          style={{ whiteSpace: 'pre-wrap' }}
+        />
+        {/* Placeholder */}
+        {(!value && !initialValue) && (
+          <div className="absolute left-4 top-4 text-muted-foreground pointer-events-none select-none text-base">
+            {placeholder}
+          </div>
+        )}
+      </div>
+
       {/* Formatting Toolbar */}
-      <div className="flex items-center gap-1 p-2 border-b bg-muted/50 flex-wrap">
+      <div className="flex items-center gap-1 p-2 border-t bg-muted/50 flex-wrap">
         {/* Text Formatting */}
         <div className="flex items-center gap-1 border-r pr-2 mr-2">
           <Button
@@ -344,27 +406,11 @@ export function SimpleRichEditor({
             </Button>
           </div>
         )}
-      </div>
 
-      {/* Editor */}
-      <div className="relative">
-        <div
-          ref={editorRef}
-          contentEditable
-          suppressContentEditableWarning={true}
-          onInput={handleInput}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          onPaste={handlePaste}
-          className="min-h-[120px] w-full resize-none border-0 bg-transparent p-4 text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed"
-          style={{ whiteSpace: 'pre-wrap' }}
-        />
-        {/* Placeholder */}
-        {(!value && !initialValue) && (
-          <div className="absolute left-4 top-4 text-muted-foreground pointer-events-none select-none text-base">
-            {placeholder}
-          </div>
-        )}
+        {/* Voice Transcription Button */}
+        <div className="flex items-center border-l pl-2 ml-2" data-voice-button>
+          <VoiceRecordButton onTranscriptionComplete={handleTranscription} />
+        </div>
       </div>
 
     </div>
