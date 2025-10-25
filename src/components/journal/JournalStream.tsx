@@ -125,7 +125,7 @@ export function JournalStream() {
           const meta = note.metadata || {}
           const journalDate = (meta as { journalDate?: string }).journalDate
           const isSample = (meta as { isSample?: boolean }).isSample
-          const tasks = (meta as { tasks?: Array<{ id: string; paragraphHash: string; status: 'pending' | 'accepted' | 'rejected' }> }).tasks
+          const tasks = (meta as { tasks?: Array<{ id: string; paragraphHash: string; status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled' }> }).tasks
 
           // Restore tasks for this entry
           if (tasks && tasks.length > 0) {

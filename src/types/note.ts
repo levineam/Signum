@@ -49,7 +49,7 @@ export interface NoteMetadata {
   tasks?: Array<{               // Story 1.2.1: Parsed tasks with paragraph mapping
     id: string                  // Task ID from tasks table
     paragraphHash: string       // Hash of paragraph text (entryId-text)
-    status: 'pending' | 'accepted' | 'rejected'
+    status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
   }>
 
   // For reflections (note_type: 'reflection')
