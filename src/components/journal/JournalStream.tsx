@@ -415,7 +415,12 @@ export function JournalStream() {
 
       // Skip empty paragraphs or already processed ones
       const paraHash = `${entryId}-${paragraphText}`
-      if (!paragraphText || processedParagraphs.current.has(paraHash)) {
+      if (!paragraphText) {
+        continue
+      }
+
+      if (processedParagraphs.current.has(paraHash)) {
+        console.log('[Task Detection] Skipping already processed paragraph:', paragraphText.substring(0, 50))
         continue
       }
 
@@ -836,10 +841,7 @@ export function JournalStream() {
               </div>
 
               {/* Task Cards - Display parsed tasks inline */}
-              {(() => {
-                const tasks = entryTasks.get(entry.id);
-                console.log(`[TaskCard Render] Entry ${entry.id} has ${tasks?.length || 0} tasks`, tasks);
-                return tasks?.map((task) => (
+              {entryTasks.get(entry.id)?.map((task) => (
                   <TaskCard
                     key={task.id}
                     dueAt={task.dueAt}
@@ -888,8 +890,7 @@ export function JournalStream() {
                     toast.info('Task editing coming soon!')
                   }}
                 />
-              ));
-              })()}
+              ))}
             </Card>
           )
         })}
