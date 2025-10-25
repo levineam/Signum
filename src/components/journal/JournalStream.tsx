@@ -779,7 +779,21 @@ export function JournalStream() {
               )}
 
               <div
-                onClick={() => setEditingEntryId(entry.id)}
+                onClick={(event) => {
+                  // Guard against text node targets
+                  const target = event.target;
+                  if (!(target instanceof HTMLElement)) {
+                    return;
+                  }
+
+                  // Don't toggle edit mode if clicking on a TaskCard or its children
+                  if (target.closest('[data-task-card]')) {
+                    return;
+                  }
+
+                  // Toggle edit mode
+                  setEditingEntryId(entry.id);
+                }}
                 className="cursor-text hover:bg-muted/30 p-2 rounded-md transition-colors"
               >
                 {isEditingThis ? (

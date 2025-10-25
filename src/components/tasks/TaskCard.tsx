@@ -105,6 +105,7 @@ export function TaskCard({
   return (
     <TooltipProvider>
       <Card
+        data-task-card
         className={cn(
           'my-2 flex flex-row items-center gap-3 py-3 shadow-xs',
           compact && 'px-4'
@@ -113,7 +114,10 @@ export function TaskCard({
         {/* Checkbox (for accepted/completed tasks only) */}
         {isAccepted && (
           <button
-            onClick={onComplete}
+            onClick={(e) => {
+              e.stopPropagation();
+              onComplete?.();
+            }}
             className={cn(
               'flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors',
               isCompleted
@@ -161,7 +165,10 @@ export function TaskCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleAccept}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAccept();
+              }}
               disabled={isProcessing}
               className="h-7 px-2 text-green-600 hover:bg-green-100 hover:text-green-700 dark:text-green-400 dark:hover:bg-green-900/30"
             >
@@ -172,7 +179,10 @@ export function TaskCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onEdit}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit?.();
+                  }}
                   disabled={isProcessing}
                   className="h-7 px-2"
                 >
@@ -186,7 +196,10 @@ export function TaskCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleReject}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleReject();
+                  }}
                   disabled={isProcessing}
                   className="h-7 px-2 text-red-600 hover:bg-red-100 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/30"
                 >
@@ -206,7 +219,10 @@ export function TaskCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onEdit}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit?.();
+                  }}
                   disabled={isProcessing}
                   className="h-7 px-2"
                 >
@@ -220,7 +236,10 @@ export function TaskCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onDelete}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete?.();
+                  }}
                   disabled={isProcessing}
                   className="h-7 px-2 text-red-600 hover:bg-red-100 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/30"
                 >
