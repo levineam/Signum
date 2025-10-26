@@ -25,25 +25,35 @@ Users often experience anxiety, rumination, and worry during journaling but:
 2. **Don't know which tool to use** (Signum will have 6+ helpers; which one fits this moment?)
 3. **Miss subtle signals** in their own writing (all-or-nothing language, repetitive themes)
 
-### Current State
+### Current State (as of Story 2.5.4)
 
-Signum has:
-- ✅ **6 evidence-based helpers** (CBT, Gratitude, Values, Self-Compassion, WOOP, Expressive Writing)
-- ✅ **Manual helper activation** (user clicks helper button)
+**Implemented:**
+- ✅ **1 evidence-based helper** (CBT Cognitive Distortions - Story 2.5.4)
+- ✅ **Manual helper activation** (user clicks "Explore" button on helper)
 - ✅ **Helper usage tracking** (Supabase `helper_usage` table)
+- ✅ **Helper infrastructure** (`HelperContainer` component, helper types, RLS policies)
 - ✅ **ACT-inspired prompts** for reflection
+
+**In Progress (Issue #66 - Stories 2.5.5–2.5.9):**
+- 🚧 **5 additional helpers** (Gratitude, Values, Self-Compassion, WOOP, Expressive Writing)
+- **Timeline:** 5 weeks (3 weeks Phase 1 + 2 weeks Phase 2)
+- **Completion target:** Before Noticer implementation begins
+
+**Missing (Noticer will add):**
 - ❌ **No emotional state detection**
 - ❌ **No helper recommendation logic**
 - ❌ **No pattern visualization over time**
 
 ### Proposed Solution
 
-Add a **4-phase Noticer system**:
+⚠️ **CRITICAL DEPENDENCY**: Noticer implementation **MUST wait** until Stories 2.5.5–2.5.9 are complete. The Noticer recommends helpers that don't exist yet.
+
+Add a **4-phase Noticer system** (Stories 2.5.10–2.5.13):
 
 1. **Phase 1 (Story 2.5.10):** Manual mood check-in helper (affect + RNT scales)
-2. **Phase 2 (Story 2.5.11):** RNT-based helper suggestions (low/medium/high intervention paths)
+2. **Phase 2 (Story 2.5.11):** RNT-based helper suggestions (requires Gratitude, Values, Self-Compassion, WOOP helpers from Stories 2.5.5-2.5.8)
 3. **Phase 3 (Story 2.5.12):** Auto-triggered check-ins based on typing patterns (absolutist language detection)
-4. **Phase 4 (Story 2.5.13):** Weekly pattern visualization (emotional trends on Notes page)
+4. **Phase 4 (Story 2.5.13):** Weekly pattern visualization (requires ≥3 check-ins from Phase 1)
 
 ---
 
@@ -138,6 +148,11 @@ so that I become more aware of hidden anxiety or rumination patterns.
 
 ### Phase 2: Smart Helper Suggestions (Story 2.5.11)
 
+⚠️ **BLOCKING DEPENDENCIES:**
+- **Story 2.5.6** (Values Affirmation Helper) must be complete
+- **Story 2.5.7** (Self-Compassion Helper) must be complete
+- Without these, suggestions will target non-existent components and throw errors
+
 **As a user,**
 I want personalized suggestions for which helper to use based on my emotional state,
 so that I don't have to guess which tool will help most right now.
@@ -146,8 +161,8 @@ so that I don't have to guess which tool will help most right now.
 
 1. ✅ After mood check-in completion, system evaluates RNT score:
    - **RNT 0-2:** No suggestion, just insert mood reflection
-   - **RNT 3-5:** Suggest self-compassion or values helper
-   - **RNT 6-8:** Suggest CBT distortions or thought record helper
+   - **RNT 3-5:** Suggest self-compassion or values helper (Stories 2.5.6–2.5.7)
+   - **RNT 6-8:** Suggest CBT distortions helper (Story 2.5.4 - already exists)
 2. ✅ Suggestion appears as banner within MoodCheckHelper:
    ```tsx
    <SuggestionBanner variant="purple">
@@ -165,27 +180,45 @@ so that I don't have to guess which tool will help most right now.
    - Logs `helper_accepted: false`
    - User continues journaling normally
 5. ✅ Suggestion logic stored in `/src/utils/helperRecommendations.ts`
+6. ✅ **Helper availability check**: Before suggesting, verify helper component exists (avoid throwing errors)
 
-#### Recommendation Logic (MVP)
+#### Recommendation Logic (MVP with Availability Checks)
 
 ```typescript
-function recommendHelper(rntScore: number, affectPrimary: string): HelperType | null {
+// Available helpers at different stages
+const AVAILABLE_HELPERS: Set<HelperType> = new Set([
+  'cbt-distortions',        // Story 2.5.4 ✅
+  'gratitude',              // Story 2.5.5 (add when implemented)
+  'values-affirmation',     // Story 2.5.6 (add when implemented)
+  'self-compassion',        // Story 2.5.7 (add when implemented)
+  'woop',                   // Story 2.5.8 (add when implemented)
+  'expressive-writing',     // Story 2.5.9 (add when implemented)
+])
+
+function recommendHelper(
+  rntScore: number,
+  affectPrimary: AffectType
+): HelperType | null {
   // No intervention needed
   if (rntScore <= 2) return null
 
   // Medium RNT: self-kindness or values work
   if (rntScore >= 3 && rntScore <= 5) {
-    return affectPrimary === 'sad' ? 'self-compassion' : 'values-affirmation'
+    const suggestion = affectPrimary === 'sad' ? 'self-compassion' : 'values-affirmation'
+    // ⚠️ SAFETY: Only suggest if helper exists
+    return AVAILABLE_HELPERS.has(suggestion) ? suggestion : null
   }
 
   // High RNT: cognitive restructuring
   if (rntScore >= 6) {
-    return 'cbt-distortions'
+    return AVAILABLE_HELPERS.has('cbt-distortions') ? 'cbt-distortions' : null
   }
 
   return null
 }
 ```
+
+**Implementation Note**: Update `AVAILABLE_HELPERS` set as each helper story completes. Phase 2 can be **partially implemented** with only CBT (RNT 6-8), then enhanced as Stories 2.5.6–2.5.7 complete.
 
 ---
 
@@ -678,51 +711,90 @@ await createHelperUsage({
 
 ## Implementation Plan
 
+⚠️ **UPSTREAM DEPENDENCY (Issue #66):** All Noticer phases require Stories 2.5.5–2.5.9 to be complete first (5 weeks). Do not schedule Noticer work until helper toolkit is built.
+
+---
+
 ### Phase 1: Mood Check-In (Story 2.5.10)
 **Timeline:** 1 week
-**Dependencies:** None (uses existing HelperContainer)
+**Dependencies:**
+- ⚠️ **BLOCKING**: Stories 2.5.5–2.5.9 must be complete (helper toolkit)
+- Uses existing `HelperContainer` from Story 2.5.4
+- Can implement without helper suggestions (Phase 2 feature)
 
+**Deliverables:**
 - [ ] Create `MoodCheckHelper.tsx` component
 - [ ] Add `mood-check` to HelperType union
 - [ ] Create `mood_checks` table + RLS policies
 - [ ] Implement 4-item form (affect + RNT Likert)
-- [ ] Add "Quick Check-In" button to helper toolbar
+- [ ] Render below CBT helper for today's entry (Option A pattern)
 - [ ] Write Playwright tests
 - [ ] Deploy to dev environment
 
+**Can start:** After Story 2.5.9 (Expressive Writing) completes
+
+---
+
 ### Phase 2: Smart Suggestions (Story 2.5.11)
 **Timeline:** 3-4 days
-**Dependencies:** Phase 1 complete
+**Dependencies:**
+- ✅ Phase 1 (Story 2.5.10) complete
+- ⚠️ **BLOCKING**: Stories 2.5.6–2.5.7 complete (Values, Self-Compassion helpers)
+- Story 2.5.4 (CBT) already exists for RNT 6-8 suggestions
 
+**Deliverables:**
 - [ ] Create `HelperSuggestionBanner.tsx`
-- [ ] Implement `/src/utils/helperRecommendations.ts`
+- [ ] Implement `/src/utils/helperRecommendations.ts` with `AVAILABLE_HELPERS` check
 - [ ] Add suggestion logic to MoodCheckHelper
 - [ ] Update `mood_checks` schema (suggested_helper, helper_accepted)
-- [ ] Test helper auto-open flow
+- [ ] Test helper auto-open flow (CBT for RNT 6-8, Values/Self-Compassion for RNT 3-5)
 - [ ] Measure acceptance rates
+
+**Can start:** After Story 2.5.10 + Stories 2.5.6–2.5.7 complete
+
+---
 
 ### Phase 3: Typing Triggers (Story 2.5.12)
 **Timeline:** 1 week
-**Dependencies:** Phase 1 complete
+**Dependencies:**
+- ✅ Phase 1 (Story 2.5.10) complete (provides check-in to trigger)
+- Phase 2 optional (typing triggers can work without suggestions)
 
+**Deliverables:**
 - [ ] Create `/src/utils/sentimentAnalyzer.ts`
 - [ ] Add absolutist word lexicon
 - [ ] Create `language_flags` table
 - [ ] Implement debounced text analysis in JournalStream
 - [ ] Add suggestion banner to editor
-- [ ] Add "Mute for 30 days" user preference
+- [ ] Add "Mute for 30 days" user preference to `noticer_preferences`
 - [ ] Test trigger thresholds (avoid false positives)
+
+**Can start:** After Story 2.5.10 complete
+
+---
 
 ### Phase 4: Weekly Patterns (Story 2.5.13)
 **Timeline:** 1 week
-**Dependencies:** Phase 1 complete + 7 days of user data
+**Dependencies:**
+- ✅ Phase 1 (Story 2.5.10) complete (provides mood check data)
+- ✅ 7+ days of user mood check data (requires active usage)
+- Install Recharts: `npm i recharts`
 
+**Deliverables:**
+- [ ] Install Recharts dependency
 - [ ] Create `EmotionalPatternCard.tsx`
 - [ ] Implement `/api/mood-patterns` route
-- [ ] Add pattern calculation logic
-- [ ] Integrate Recharts for RNT visualization
-- [ ] Add card to Notes page
+- [ ] Add pattern calculation logic (RNT trends, peak times, common labels)
+- [ ] Integrate Recharts for RNT timeline visualization
+- [ ] Add card to Notes page (gated on ≥3 check-ins in past 7 days)
 - [ ] Test with mock weekly data
+
+**Can start:** After Story 2.5.10 complete + 1 week of dev environment testing
+
+---
+
+**Total Timeline:** 3.5-4 weeks (assumes sequential phases after Issue #66 complete)
+**Earliest Start Date:** After Story 2.5.9 completion (~5 weeks from now)
 
 **Total Estimated Timeline:** 3-4 weeks across 4 stories
 
@@ -824,7 +896,18 @@ Scale: 0 (Not at all) → 4 (Very much)
 
 ## Ready-To-Implement Checklist
 
+⚠️ **DO NOT START** until Stories 2.5.5–2.5.9 are complete (5-week prerequisite from Issue #66).
+
+---
+
 ### Phase 1 Prerequisites (Story 2.5.10)
+
+⚠️ **BLOCKING DEPENDENCY**: All 5 helper stories from Issue #66 must be complete before starting:
+- ✅ Story 2.5.5: Gratitude Helper
+- ✅ Story 2.5.6: Values Affirmation Helper
+- ✅ Story 2.5.7: Self-Compassion Helper
+- ✅ Story 2.5.8: WOOP Helper
+- ✅ Story 2.5.9: Expressive Writing Helper
 
 **Type System:**
 - [ ] Add `'mood-check'` to `HelperType` union in `src/types/helper.ts:17`
@@ -860,19 +943,28 @@ Scale: 0 (Not at all) → 4 (Very much)
 
 ### Phase 2 Prerequisites (Story 2.5.11)
 
+⚠️ **BLOCKING DEPENDENCY**: Stories 2.5.6–2.5.7 must be complete:
+- ✅ Story 2.5.6: Values Affirmation Helper (for RNT 3-5 suggestions)
+- ✅ Story 2.5.7: Self-Compassion Helper (for RNT 3-5 suggestions)
+- ✅ Story 2.5.4: CBT Helper already exists (for RNT 6-8 suggestions)
+
 **Utils:**
 - [ ] Create `src/utils/helperRecommendations.ts`
-- [ ] Implement `recommendHelper(rntScore, affectPrimary)` logic (see PRD:157-174)
-- [ ] Add unit tests for recommendation matrix
+- [ ] Implement `recommendHelper(rntScore, affectPrimary)` with `AVAILABLE_HELPERS` safety check (see PRD:187-219)
+- [ ] Start with `AVAILABLE_HELPERS = new Set(['cbt-distortions'])` only
+- [ ] Add `'values-affirmation'` and `'self-compassion'` after Stories 2.5.6–2.5.7 complete
+- [ ] Add unit tests for recommendation matrix (test all RNT score ranges)
 
 **Component:**
 - [ ] Create `src/components/journal/helpers/HelperSuggestionBanner.tsx`
 - [ ] Embed in `MoodCheckHelper` conditional on RNT thresholds (3-5, 6-8)
+- [ ] Only render if `recommendHelper()` returns non-null (helper exists)
 - [ ] Test helper auto-open flow (accept vs dismiss)
+- [ ] Test graceful degradation when helper doesn't exist (no banner shown)
 
 **Database:**
-- [ ] Ensure `mood_checks.suggested_helper` and `helper_accepted` columns exist
-- [ ] Log suggestion data for analytics
+- [ ] Ensure `mood_checks.suggested_helper` and `helper_accepted` columns exist (already in Phase 1 migration)
+- [ ] Log suggestion data for analytics (track acceptance rates per helper type)
 
 ---
 
@@ -957,6 +1049,31 @@ Scale: 0 (Not at all) → 4 (Very much)
 
 ---
 
-**Document Version:** 1.1 (Updated with GPT-5 feedback)
+**Document Version:** 1.2 (Updated with Codex dependency alignment feedback)
 **Last Updated:** October 2025
-**Next Review:** After Phase 1 completion
+**Next Review:** After Issue #66 (Stories 2.5.5–2.5.9) completion
+
+---
+
+## Version History
+
+### v1.2 (Codex Feedback - October 2025)
+**Critical fixes for dependency alignment:**
+- Fixed "Current State" section to reflect actual implementation status (1 helper, not 6)
+- Added `AVAILABLE_HELPERS` safety checks to prevent suggesting non-existent helpers
+- Corrected Phase 1 dependencies: now correctly blocks on Stories 2.5.5–2.5.9
+- Added explicit blocking dependencies throughout all phases
+- Clarified earliest start date: ~5 weeks from now (after Issue #66 complete)
+
+### v1.1 (GPT-5 Feedback - October 2025)
+**Technical corrections:**
+- Fixed PostgreSQL schema syntax (separate `CREATE INDEX`, explicit RLS WITH CHECK)
+- Added helper integration strategy (Option A vs Option B)
+- Enhanced privacy/data minimization documentation
+- Added crisis detection implementation details
+- Created comprehensive Ready-To-Implement checklist
+
+### v1.0 (Initial - October 2025)
+- Original PRD with 4-phase Noticer system
+- Evidence base, UX flows, database schema
+- Type definitions and integration patterns
