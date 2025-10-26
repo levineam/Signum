@@ -298,14 +298,39 @@ export function JournalStream() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]) // Only re-run when user ID changes (login/logout), not on user object updates
 
+  // Track previous entryTasks state to detect which entries actually changed
+  const prevEntryTasksRef = useRef<Map<string, ParsedTask[]>>(new Map())
+
   // Save task metadata to note when tasks change (Story 1.2.1)
   useEffect(() => {
     if (!user) return
 
     const saveTaskMetadata = async () => {
+      const entriesToUpdate: string[] = []
+
+      // Find entries where tasks actually changed
       for (const [entryId, tasks] of entryTasks.entries()) {
+        const prevTasks = prevEntryTasksRef.current.get(entryId)
+
+        // Check if tasks changed for this entry
+        const tasksChanged = !prevTasks ||
+          prevTasks.length !== tasks.length ||
+          !prevTasks.every((prevTask, idx) => {
+            const currentTask = tasks[idx]
+            return prevTask.id === currentTask.id &&
+                   prevTask.status === currentTask.status &&
+                   prevTask.paragraphHash === currentTask.paragraphHash
+          })
+
+        if (tasksChanged) {
+          entriesToUpdate.push(entryId)
+        }
+      }
+
+      // Only update entries that actually changed
+      for (const entryId of entriesToUpdate) {
+        const tasks = entryTasks.get(entryId)!
         try {
-          // Update note metadata with current tasks
           await updateNoteInDb(
             entryId,
             {
@@ -323,6 +348,9 @@ export function JournalStream() {
           console.error(`Failed to save task metadata for entry ${entryId}:`, error)
         }
       }
+
+      // Update the ref to current state
+      prevEntryTasksRef.current = new Map(entryTasks)
     }
 
     // Debounce to avoid excessive saves
