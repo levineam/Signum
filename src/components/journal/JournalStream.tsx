@@ -481,23 +481,40 @@ export function JournalStream() {
         if (response.ok) {
           const data = await response.json()
           if (data.task) {
-            console.log('✅ Task created from paragraph:', data.task)
-            toast.success(`Task created: ${data.task.title}`)
+            const { task, alreadyExisted } = data
 
-            // Store task for inline display
-            const parsedTask: ParsedTask = {
-              id: data.task.id,
-              title: data.task.title,
-              paragraphHash: paraHash,
-              dueAt: data.task.dueAt,
-              rrule: data.task.rrule,
-              status: 'pending'
-            }
-
+            // Check if this task already exists in entryTasks to avoid duplicates
             setEntryTasks(prev => {
               const updated = new Map(prev)
               const existing = updated.get(entryId) || []
+
+              // Skip if task with this ID already exists in this entry
+              const taskExists = existing.some(t => t.id === task.id)
+              if (taskExists) {
+                console.log('⏭️ Task already exists in entryTasks, skipping:', task.id)
+                return prev
+              }
+
+              // Use the status from the server (for existing tasks) or 'pending' for new tasks
+              const parsedTask: ParsedTask = {
+                id: task.id,
+                title: task.title,
+                paragraphHash: paraHash,
+                dueAt: task.dueAt,
+                rrule: task.rrule,
+                status: task.status || 'pending'
+              }
+
               updated.set(entryId, [...existing, parsedTask])
+
+              // Only show toast for newly created tasks
+              if (!alreadyExisted) {
+                console.log('✅ New task created from paragraph:', task)
+                toast.success(`Task created: ${task.title}`)
+              } else {
+                console.log('✅ Loaded existing task from paragraph:', task)
+              }
+
               return updated
             })
           } else {
