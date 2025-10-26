@@ -270,6 +270,8 @@ const updateGoodThing = (index: number, field: keyof GoodThing, value: string) =
 
 ⚠️ **BLOCKING**: Before implementing this story, the database CHECK constraint must be updated.
 
+> Update 2025-10-26: Covered by consolidated migration across 2.5.5–2.5.8. If you have applied `supabase/migrations/20251026000000_extend_helper_types.sql`, no per‑story SQL is needed. Types are updated once in `src/types/helper.ts` (HelperType, labels, and gratitude telemetry fields).
+
 **IMPORTANT - Migration Consolidation**: This story and Stories 2.5.6–2.5.13 each add new helper types to the database. **It is strongly recommended to consolidate all helper type additions into a single migration** to avoid multiple DROP/ADD constraint cycles. Consider creating one migration that adds all new types at once:
 
 ```sql

@@ -266,6 +266,8 @@ Based on ACT values work and Cohen research:
 
 ⚠️ **BLOCKING**: The database CHECK constraint must include 'values-affirmation'.
 
+> Update 2025-10-26: Covered by consolidated migration across 2.5.5–2.5.8. If you have applied `supabase/migrations/20251026000000_extend_helper_types.sql`, no per‑story SQL is needed. Types are updated once in `src/types/helper.ts` (HelperType, labels, and values telemetry fields).
+
 **Required Migration** (create new file: `supabase/migrations/YYYYMMDDHHMMSS_add_values_affirmation_helper_type.sql`):
 ```sql
 -- Add 'values-affirmation' to helper_type CHECK constraint

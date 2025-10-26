@@ -277,6 +277,8 @@ export function WoopHelper({ entryId, userId, onInsert }: WoopHelperProps) {
 
 ⚠️ **BLOCKING**: Before implementing this story, the database CHECK constraint must be updated.
 
+> Update 2025-10-26: Covered by consolidated migration across 2.5.5–2.5.8. If you have applied `supabase/migrations/20251026000000_extend_helper_types.sql`, no per‑story SQL is needed. Types are updated once in `src/types/helper.ts` (HelperType, labels, and `HelperUsageMetadata.woopStepCounts`/`hasIfThenFormat`).
+
 **Required Migration** (create new file: `supabase/migrations/YYYYMMDDHHMMSS_add_woop_helper_type.sql`):
 ```sql
 -- Add 'woop' to helper_type CHECK constraint
