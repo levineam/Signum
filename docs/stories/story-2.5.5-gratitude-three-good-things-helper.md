@@ -57,8 +57,8 @@ so that I can build a daily gratitude practice with structured prompts and see a
 
 3. **Insert Behavior**
    - "Add to Journal Entry" button
-   - Formats all 3 good things as markdown
-   - Inserts at cursor position in journal entry
+   - Formats all 3 good things as HTML paragraphs (`<p>text</p><p><br></p>`)
+   - Prepends to TOP of journal entry (matches `JournalStream.tsx:424-425`)
    - Helper collapses after insert
 
 4. **Integration**
@@ -487,7 +487,7 @@ export interface HelperUsageMetadata {
 - ✅ All acceptance criteria met
 - ✅ GratitudeHelper component created and working
 - ✅ Helper integrated into JournalStream
-- ✅ Markdown insertion working correctly
+- ✅ HTML paragraph insertion working correctly (prepends to top)
 - ✅ Helper usage tracking implemented
 - ✅ Responsive testing passed at all breakpoints
 - ✅ Accessibility validation passed (WCAG AA)

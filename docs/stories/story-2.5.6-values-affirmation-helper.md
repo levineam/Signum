@@ -62,7 +62,8 @@ so that I can strengthen my sense of identity and buffer against stress through 
 
 4. **Insert Behavior**
    - "Add to Journal Entry" button
-   - Formats as markdown with selected value as header
+   - Formats as HTML paragraphs (`<p>text</p><p><br></p>`) with selected value in header
+   - Prepends to TOP of journal entry (matches `JournalStream.tsx:424-425`)
    - Helper collapses after insert
 
 ### Out of Scope
@@ -462,7 +463,7 @@ export interface HelperUsageMetadata {
 - ✅ All acceptance criteria met
 - ✅ ValuesAffirmationHelper component created
 - ✅ Helper integrated into JournalStream
-- ✅ Markdown insertion working
+- ✅ HTML paragraph insertion working (prepends to top)
 - ✅ Usage tracking implemented
 - ✅ Responsive testing passed
 - ✅ Accessibility validation (WCAG AA)
