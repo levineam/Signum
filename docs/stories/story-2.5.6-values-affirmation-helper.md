@@ -253,58 +253,116 @@ Based on ACT values work and Cohen research:
 - **Spirituality**: Meaning, transcendence, faith
 - **Other**: Catch-all for unlisted values
 
+### Database Migration Required
+
+⚠️ **BLOCKING**: The database CHECK constraint must include 'values-affirmation'.
+
+**Required Migration** (create new file: `supabase/migrations/YYYYMMDDHHMMSS_add_values_affirmation_helper_type.sql`):
+```sql
+-- Add 'values-affirmation' to helper_type CHECK constraint
+ALTER TABLE helper_usage
+DROP CONSTRAINT valid_helper_type;
+
+ALTER TABLE helper_usage
+ADD CONSTRAINT valid_helper_type CHECK (
+  helper_type IN ('cbt-distortions', 'gentle-prompt', 'gratitude', 'values-affirmation')
+);
+```
+
+**Note**: If Story 2.5.5 (Gratitude) has not been deployed yet, combine both helpers into a single migration to avoid multiple constraint drops/adds.
+
 ### Helper Types Extension
 ```typescript
 // Add to src/types/helper.ts
+
+// STEP 1: Update HelperType union
 export type HelperType =
   | 'cbt-distortions'
   | 'gratitude'
   | 'values-affirmation'  // 🆕 Story 2.5.6
 
+// STEP 2: Update labels
 export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
   'cbt-distortions': 'CBT Cognitive Distortions',
   'gratitude': 'Three Good Things',
   'values-affirmation': 'Values Affirmation'  // 🆕
 }
+
+// STEP 3: Extend HelperUsageMetadata for values-specific fields
+export interface HelperUsageMetadata {
+  events: HelperEvent[]
+  selectionCount: number
+  insertedText?: string
+  distortionNames?: string[]
+  promptCategory?: string
+  fieldCompletionCount?: number  // Gratitude helper
+  characterCounts?: { ... }       // Gratitude helper
+
+  // 🆕 Values Affirmation helper fields (Story 2.5.6)
+  selectedValue?: string          // Which value was chosen (e.g., "Relationships")
+  reflectionCharacterCounts?: {   // Character counts per field
+    whyImportant?: number
+    specificTime?: number
+  }
+}
 ```
+
+**Why This Matters:**
+- TypeScript union must match database CHECK constraint
+- Without migration, Supabase will reject 'values-affirmation' helper_type
+- HelperUsageMetadata extension prevents unsafe type casts
 
 ---
 
 ## Tasks
 
-### Phase 1: Component Setup (1 hour)
+### Phase 0: Database Migration (30 min) ⚠️ PREREQUISITE
+- [ ] Create migration file: `supabase/migrations/YYYYMMDDHHMMSS_add_values_affirmation_helper_type.sql`
+- [ ] Add 'values-affirmation' to valid_helper_type CHECK constraint
+- [ ] Test migration on local Supabase: `supabase db reset`
+- [ ] Verify constraint allows 'values-affirmation' value
+- [ ] Push migration to dev environment
+
+### Phase 1: Type System Updates (30 min)
+- [ ] Add `'values-affirmation'` to HelperType union in `/src/types/helper.ts`
+- [ ] Add 'Values Affirmation' to HELPER_TYPE_LABELS
+- [ ] Extend HelperUsageMetadata interface with values fields:
+  - `selectedValue?: string`
+  - `reflectionCharacterCounts?: { whyImportant, specificTime }`
+- [ ] Verify TypeScript compiles without errors
+
+### Phase 2: Component Setup (1 hour)
 - [ ] Create `/src/components/journal/helpers/ValuesAffirmationHelper.tsx`
-- [ ] Add `'values-affirmation'` to HelperType union
 - [ ] Set up component with HelperContainer (purple variant)
-- [ ] Define VALUES_OPTIONS constant
+- [ ] Define VALUES_OPTIONS constant (9 values)
 - [ ] Initialize form state (selectedValue, whyImportant, specificTime)
 
-### Phase 2: Form UI (2 hours)
+### Phase 3: Form UI (2 hours)
 - [ ] Implement values dropdown (shadcn/ui Select)
 - [ ] Add "Why is this value important to you?" text area
 - [ ] Add "Describe a specific time you lived this value" text area
 - [ ] Add guidance text for each prompt
 - [ ] Implement "Add to Journal Entry" button (disabled when incomplete)
 
-### Phase 3: Markdown Formatting (30 min)
+### Phase 4: Markdown Formatting (30 min)
 - [ ] Implement formatValuesEntry() function
 - [ ] Handle edge cases (empty text areas)
 - [ ] Test markdown rendering in journal editor
 
-### Phase 4: Integration (1 hour)
+### Phase 5: Integration (1 hour)
 - [ ] Add ValuesAffirmationHelper to JournalStream
 - [ ] Wire onInsert to handleHelperInsertion
 - [ ] Test insertion and collapse behavior
 - [ ] Verify entry auto-save
 
-### Phase 5: Usage Tracking (1 hour)
+### Phase 6: Usage Tracking (1 hour)
 - [ ] Track helper_opened event
 - [ ] Track helper_selection event (value chosen)
 - [ ] Track helper_inserted event with metadata
 - [ ] Log selected value and field completion
 - [ ] Test non-blocking behavior
 
-### Phase 6: Testing & Polish (2 hours)
+### Phase 7: Testing & Polish (2 hours)
 - [ ] Add ARIA labels and live regions
 - [ ] Test keyboard navigation (Tab, Arrow keys, Enter)
 - [ ] Test screen reader (dropdown and text areas)
@@ -319,6 +377,9 @@ export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
 - ✅ ValuesAffirmationHelper renders for today's entry
 - ✅ Dropdown with 9 value options
 - ✅ 2 text areas with clear prompts
+- ✅ **Button Enablement Rule**: "Add to Journal Entry" button is disabled UNLESS:
+  - A value is selected from dropdown AND
+  - At least ONE text area has non-empty content (whyImportant OR specificTime)
 - ✅ "Add to Journal Entry" inserts formatted markdown
 - ✅ Markdown format: "## Values Affirmation: [Value]"
 - ✅ Helper collapses after insertion

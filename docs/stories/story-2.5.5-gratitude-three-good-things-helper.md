@@ -264,31 +264,93 @@ const updateGoodThing = (index: number, field: keyof GoodThing, value: string) =
 - **No judgment**: Grammar/spelling don't matter
 - **Gentle refocus**: If user writes negatively, prompt: "Try to refocus on the good event"
 
+### Database Migration Required
+
+⚠️ **BLOCKING**: Before implementing this story, the database CHECK constraint must be updated.
+
+**Current Constraint** (`supabase/migrations/20251014200000_create_helper_usage_table.sql`):
+```sql
+CONSTRAINT valid_helper_type CHECK (
+  helper_type IN ('cbt-distortions', 'gentle-prompt')
+)
+```
+
+**Required Migration** (create new file: `supabase/migrations/YYYYMMDDHHMMSS_add_gratitude_helper_type.sql`):
+```sql
+-- Add 'gratitude' to helper_type CHECK constraint
+ALTER TABLE helper_usage
+DROP CONSTRAINT valid_helper_type;
+
+ALTER TABLE helper_usage
+ADD CONSTRAINT valid_helper_type CHECK (
+  helper_type IN ('cbt-distortions', 'gentle-prompt', 'gratitude')
+);
+```
+
 ### Helper Types Extension
 ```typescript
 // Add to src/types/helper.ts
+
+// STEP 1: Update HelperType union
 export type HelperType =
   | 'cbt-distortions'
   | 'gratitude'  // 🆕 Story 2.5.5
 
+// STEP 2: Update labels
 export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
   'cbt-distortions': 'CBT Cognitive Distortions',
   'gratitude': 'Three Good Things'  // 🆕
 }
+
+// STEP 3: Extend HelperUsageMetadata for gratitude-specific fields
+export interface HelperUsageMetadata {
+  events: HelperEvent[]
+  selectionCount: number
+  insertedText?: string
+  distortionNames?: string[]     // CBT helper
+  promptCategory?: string         // Gentle prompt helper
+
+  // 🆕 Gratitude helper fields (Story 2.5.5)
+  fieldCompletionCount?: number   // Number of non-empty fields (0-12)
+  characterCounts?: {             // Character counts per field
+    goodThing1?: { title: number, what: number, feel: number, why: number }
+    goodThing2?: { title: number, what: number, feel: number, why: number }
+    goodThing3?: { title: number, what: number, feel: number, why: number }
+  }
+}
 ```
+
+**Why This Matters:**
+- TypeScript union must match database CHECK constraint
+- Without migration, Supabase will reject 'gratitude' helper_type
+- HelperUsageMetadata extension prevents unsafe type casts
 
 ---
 
 ## Tasks
 
-### Phase 1: Component Setup (1-2 hours)
-- [ ] Create `/src/components/journal/helpers/GratitudeHelper.tsx`
+### Phase 0: Database Migration (30 min) ⚠️ PREREQUISITE
+- [ ] Create migration file: `supabase/migrations/YYYYMMDDHHMMSS_add_gratitude_helper_type.sql`
+- [ ] Add 'gratitude' to valid_helper_type CHECK constraint
+- [ ] Test migration on local Supabase: `supabase db reset`
+- [ ] Verify constraint allows 'gratitude' value
+- [ ] Push migration to dev environment
+
+### Phase 1: Type System Updates (30 min)
 - [ ] Add `'gratitude'` to HelperType union in `/src/types/helper.ts`
+- [ ] Add 'Three Good Things' to HELPER_TYPE_LABELS
+- [ ] Extend HelperUsageMetadata interface with gratitude fields:
+  - `fieldCompletionCount?: number`
+  - `characterCounts?: { goodThing1: {...}, goodThing2: {...}, goodThing3: {...} }`
+- [ ] Verify TypeScript compiles without errors
+
+### Phase 2: Component Setup (1-2 hours)
+- [ ] Create `/src/components/journal/helpers/GratitudeHelper.tsx`
 - [ ] Set up component with HelperContainer (green variant)
 - [ ] Define GoodThing interface and state structure
 - [ ] Implement updateGoodThing() helper function
 
-### Phase 2: Form UI (2-3 hours)
+### Phase 3: Form UI (2-3 hours)
 - [ ] Create 3 collapsible sections (Good Thing #1, #2, #3)
 - [ ] Add title Input field for each section
 - [ ] Add 3 Textarea fields per section (what, feel, why)
@@ -296,27 +358,27 @@ export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
 - [ ] Implement "Add to Journal Entry" button (disabled when empty)
 - [ ] Optional: Add "Clear All" button
 
-### Phase 3: Markdown Formatting (1 hour)
+### Phase 4: Markdown Formatting (1 hour)
 - [ ] Implement formatGratitudeEntry() function
 - [ ] Handle empty fields gracefully (skip or use placeholder)
 - [ ] Escape special markdown characters if needed
 - [ ] Test markdown rendering in journal editor
 
-### Phase 4: Integration (1-2 hours)
+### Phase 5: Integration (1-2 hours)
 - [ ] Add GratitudeHelper to JournalStream (below CBT helper)
 - [ ] Wire onInsert to handleHelperInsertion
 - [ ] Test insertion at cursor position
 - [ ] Verify helper collapses after insertion
 - [ ] Test entry auto-save after insertion
 
-### Phase 5: Usage Tracking (1 hour)
+### Phase 6: Usage Tracking (1 hour)
 - [ ] Track helper_opened event
 - [ ] Track helper_inserted event with metadata
 - [ ] Calculate field completion percentage
 - [ ] Log character counts per field
 - [ ] Test non-blocking behavior (insertion works if logging fails)
 
-### Phase 6: Accessibility & Testing (2-3 hours)
+### Phase 7: Accessibility & Testing (2-3 hours)
 - [ ] Add ARIA labels to all form fields
 - [ ] Implement live region for announcements
 - [ ] Test keyboard navigation (Tab, Enter, Escape)
