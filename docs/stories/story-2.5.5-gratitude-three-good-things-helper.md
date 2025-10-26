@@ -270,16 +270,34 @@ const updateGoodThing = (index: number, field: keyof GoodThing, value: string) =
 
 ⚠️ **BLOCKING**: Before implementing this story, the database CHECK constraint must be updated.
 
-**Current Constraint** (`supabase/migrations/20251014200000_create_helper_usage_table.sql`):
+**IMPORTANT - Migration Consolidation**: This story and Stories 2.5.6–2.5.13 each add new helper types to the database. **It is strongly recommended to consolidate all helper type additions into a single migration** to avoid multiple DROP/ADD constraint cycles. Consider creating one migration that adds all new types at once:
+
 ```sql
-CONSTRAINT valid_helper_type CHECK (
-  helper_type IN ('cbt-distortions', 'gentle-prompt')
-)
+-- Recommended: Single migration for all new helpers (Stories 2.5.5-2.5.13)
+ALTER TABLE helper_usage
+DROP CONSTRAINT valid_helper_type;
+
+ALTER TABLE helper_usage
+ADD CONSTRAINT valid_helper_type CHECK (
+  helper_type IN (
+    'cbt-distortions',
+    'gentle-prompt',
+    'gratitude',              -- Story 2.5.5
+    'values-affirmation',     -- Story 2.5.6
+    'self-compassion',        -- Story 2.5.7
+    'woop',                   -- Story 2.5.8
+    'best-possible-self',     -- Story 2.5.9
+    'savoring',               -- Story 2.5.10
+    'pmr',                    -- Story 2.5.11
+    'loving-kindness',        -- Story 2.5.12
+    'mental-contrasting'      -- Story 2.5.13
+  )
+);
 ```
 
-**Required Migration** (create new file: `supabase/migrations/YYYYMMDDHHMMSS_add_gratitude_helper_type.sql`):
+**Alternative: Individual Migration** (if implementing stories one at a time):
 ```sql
--- Add 'gratitude' to helper_type CHECK constraint
+-- Story 2.5.5 only: Add 'gratitude' to helper_type CHECK constraint
 ALTER TABLE helper_usage
 DROP CONSTRAINT valid_helper_type;
 

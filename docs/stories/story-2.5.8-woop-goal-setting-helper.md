@@ -137,7 +137,8 @@ export function WoopHelper({ entryId, userId, onInsert }: WoopHelperProps) {
 - ✅ Component renders with Card (blue/sky gradient: `bg-gradient-to-r from-blue-50 to-sky-50`)
 - ✅ Progressive disclosure with Explore/Collapse button (follows CbtDistortions pattern)
 - ✅ 4 text areas for WOOP steps (Wish, Outcome, Obstacle, Plan)
-- ✅ "Add to Journal Entry" button disabled if all fields empty
+- ✅ **Button Enablement Rule**: "Add to Journal Entry" button is disabled UNLESS:
+  - Wish field has content (Outcome, Obstacle, and Plan are optional)
 - ✅ Form state management for 4 text inputs
 
 ---
@@ -161,9 +162,10 @@ export function WoopHelper({ entryId, userId, onInsert }: WoopHelperProps) {
 
 **Acceptance:**
 - ✅ formatWoopPlan() generates correct HTML paragraphs (NOT Markdown)
-- ✅ All 4 WOOP steps integrated into output
-- ✅ If-then plan clearly formatted
-- ✅ Empty fields handled gracefully (require at least wish to submit)
+- ✅ Wish field always included in output
+- ✅ Outcome, Obstacle, and Plan fields included only if provided
+- ✅ If-then plan clearly formatted when present
+- ✅ Empty optional fields handled gracefully (omit sections for empty fields)
 - ✅ HTML renders correctly in SimpleRichEditor
 - ✅ Format matches existing CBT helper pattern (`<p>text</p><p><br></p>`)
 
@@ -359,12 +361,12 @@ export interface HelperUsageMetadata {
 
 ### Phase 3: Form UI (2-3 hours)
 - [ ] Add descriptive header explaining WOOP method
-- [ ] Add Textarea for Wish with prompt: "What do you want to accomplish?"
-- [ ] Add Textarea for Outcome with prompt: "What's the best result if you achieve it?"
-- [ ] Add Textarea for Obstacle with prompt: "What internal obstacle might prevent this?"
-- [ ] Add Textarea for Plan with prompt: "If [obstacle], then I will..."
+- [ ] Add Textarea for Wish with prompt: "What do you want to accomplish?" (REQUIRED - mark as such)
+- [ ] Add Textarea for Outcome with prompt: "What's the best result if you achieve it?" (optional)
+- [ ] Add Textarea for Obstacle with prompt: "What internal obstacle might prevent this?" (optional)
+- [ ] Add Textarea for Plan with prompt: "If [obstacle], then I will..." (optional)
 - [ ] Add guidance text for each step (explain internal vs external obstacles)
-- [ ] Implement "Add to Journal Entry" button (disabled when all empty)
+- [ ] Implement "Add to Journal Entry" button (disabled when Wish is empty)
 
 ### Phase 4: HTML Formatting (1 hour)
 - [ ] Implement formatWoopPlan() function to generate HTML paragraphs
@@ -385,7 +387,7 @@ export interface HelperUsageMetadata {
 - [ ] Track helper_inserted event with metadata
 - [ ] Calculate field completion count (0-4)
 - [ ] Log character counts for each WOOP step
-- [ ] Detect if-then format in plan field (simple regex check)
+- [ ] Detect if-then format in plan field: case-insensitive regex `/if\s+.+\s+then/i`
 - [ ] Test non-blocking behavior (insertion works if logging fails)
 
 ### Phase 7: Accessibility & Testing (2 hours)
@@ -406,10 +408,12 @@ export interface HelperUsageMetadata {
 
 ### Functional Requirements
 - ✅ WoopHelper component renders in today's journal entry
-- ✅ 4 text areas for WOOP steps (Wish, Outcome, Obstacle, Plan)
+- ✅ 4 text areas for WOOP steps (Wish required, others optional)
+- ✅ **Button Enablement Rule**: "Add to Journal Entry" button is disabled UNLESS:
+  - Wish field has content (other fields are optional)
 - ✅ "Add to Journal Entry" button inserts formatted HTML paragraphs (NOT Markdown)
 - ✅ HTML format matches system pattern (`<p>text</p><p><br></p>` from `cbtDistortions.ts`)
-- ✅ All 4 WOOP steps included in output
+- ✅ Wish always included in output; other steps included only if provided
 - ✅ **Content prepends to TOP of entry** (matches `JournalStream.tsx:424-425`)
 - ✅ Helper collapses after successful insertion
 - ✅ Journal entry auto-saves after insertion
@@ -449,10 +453,12 @@ export interface HelperUsageMetadata {
 - [ ] **Insert Test**: Click "Add to Journal Entry" → HTML paragraphs appear in editor
 - [ ] **HTML Rendering**: Journal entry displays formatted WOOP plan in SimpleRichEditor
 - [ ] **Prepend Behavior**: Content appears at TOP of entry, not at cursor
-- [ ] **Four-Step Structure**: Wish, Outcome, Obstacle, Plan all present
+- [ ] **Wish Only**: Works with just Wish filled (other steps optional)
+- [ ] **Partial Fill**: Gracefully handles any combination of filled fields
+- [ ] **If-Then Detection**: Test with plan like "If I feel tired, then I will do 10 minutes" - should detect format
 - [ ] **Collapse Test**: Helper collapses after insertion
-- [ ] **Empty State**: Button disabled when all fields empty
-- [ ] **Partial Fill**: Works if user only fills some steps (graceful degradation)
+- [ ] **Empty State**: Button disabled when Wish is empty
+- [ ] **Full WOOP**: All 4 steps work when all filled
 
 ### Responsive Testing
 - [ ] **Desktop (>=1280px)**: Helper fits without horizontal scroll
