@@ -22,11 +22,6 @@ const SUPPORTED_MIME_TYPES = [
   'audio/ogg',
 ]
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
-
 /**
  * POST /api/transcribe
  *
@@ -51,6 +46,11 @@ export async function POST(request: NextRequest) {
   console.log(`[transcribe:${requestId}] Request received`)
 
   try {
+    // Initialize OpenAI client (done here to avoid build-time issues)
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+
     // 1. Authenticate user (optional for now - Phase 7 will add stricter auth)
     const cookieStore = await cookies()
     const supabase = createServerClient(

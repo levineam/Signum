@@ -18,11 +18,12 @@ export async function PATCH(
 
     const { taskId } = await params;
     const body = await request.json();
-    const { status } = body;
+    const { status, title, due_at } = body;
 
-    if (!status) {
+    // At least one field must be provided
+    if (!status && !title && due_at === undefined) {
       return NextResponse.json(
-        { error: 'Status is required' },
+        { error: 'At least one field (status, title, or due_at) is required' },
         { status: 400 }
       );
     }
@@ -50,15 +51,35 @@ export async function PATCH(
       );
     }
 
-    // Update task status (RLS will ensure user owns it)
-    const updateData: { status: string; completed_at?: string | null } = { status };
+    // Build update data (RLS will ensure user owns it)
+    const updateData: {
+      status?: string;
+      title?: string;
+      due_at?: string | null;
+      completed_at?: string | null;
+    } = {};
 
-    // Set completed_at timestamp when marking as completed
-    if (status === 'completed') {
-      updateData.completed_at = new Date().toISOString();
-    } else if (status === 'accepted') {
-      // Clear completed_at when reopening
-      updateData.completed_at = null;
+    // Update status if provided
+    if (status) {
+      updateData.status = status;
+
+      // Set completed_at timestamp when marking as completed
+      if (status === 'completed') {
+        updateData.completed_at = new Date().toISOString();
+      } else if (status === 'accepted') {
+        // Clear completed_at when reopening
+        updateData.completed_at = null;
+      }
+    }
+
+    // Update title if provided
+    if (title !== undefined) {
+      updateData.title = title;
+    }
+
+    // Update due_at if provided (null to clear)
+    if (due_at !== undefined) {
+      updateData.due_at = due_at;
     }
 
     const { error: updateError } = await supabase

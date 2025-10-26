@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
 import { TaskCard } from '@/components/tasks/TaskCard'
+import { TaskEditDialog } from '@/components/tasks/TaskEditDialog'
 
 interface JournalEntry {
   id: string
@@ -59,6 +60,7 @@ export function JournalStream() {
   const [noteLinkClicked, setNoteLinkClicked] = useState(false)
   const [creatingLink, setCreatingLink] = useState(false)
   const [entryTasks, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
+  const [editingTask, setEditingTask] = useState<{ id: string; title: string; dueAt: string | null } | null>(null)
 
   // Cache editor element reference before opening modal (Phase 1 bug fix)
   const cachedEditorRef = useRef<HTMLElement | null>(null)
@@ -731,6 +733,56 @@ export function JournalStream() {
     }
   }
 
+  const handleTaskSave = async (
+    taskId: string,
+    updates: { title: string; due_at: string | null }
+  ) => {
+    if (!session?.access_token) {
+      toast.error('You must be logged in to edit tasks');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update task');
+      }
+
+      // Update local state to reflect the changes
+      setEntryTasks(prev => {
+        const updated = new Map(prev);
+        for (const [entryId, tasks] of updated.entries()) {
+          const taskIndex = tasks.findIndex(t => t.id === taskId);
+          if (taskIndex !== -1) {
+            const updatedTasks = [...tasks];
+            updatedTasks[taskIndex] = {
+              ...updatedTasks[taskIndex],
+              title: updates.title,
+              dueAt: updates.due_at,
+            };
+            updated.set(entryId, updatedTasks);
+            break;
+          }
+        }
+        return updated;
+      });
+
+      toast.success('Task updated successfully');
+    } catch (error) {
+      console.error('Failed to update task:', error);
+      toast.error('Failed to update task');
+      throw error;
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00') // Ensure consistent date parsing
     const today = new Date()
@@ -999,8 +1051,11 @@ export function JournalStream() {
                     }
                   }}
                   onEdit={() => {
-                    // TODO: Implement task editing in future story
-                    toast.info('Task editing coming soon!')
+                    setEditingTask({
+                      id: task.id,
+                      title: task.title,
+                      dueAt: task.dueAt,
+                    });
                   }}
                   onComplete={async () => {
                     // Toggle task completion status
@@ -1056,6 +1111,20 @@ export function JournalStream() {
         onClose={handleCloseNoteViewer}
         noteId={viewingNoteId}
       />
+
+      {/* Task Edit Dialog */}
+      {editingTask && (
+        <TaskEditDialog
+          open={!!editingTask}
+          onOpenChange={(open) => {
+            if (!open) setEditingTask(null);
+          }}
+          taskId={editingTask.id}
+          initialTitle={editingTask.title}
+          initialDueAt={editingTask.dueAt}
+          onSave={handleTaskSave}
+        />
+      )}
     </div>
   )
 }
