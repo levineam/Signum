@@ -83,6 +83,13 @@ export function TaskCard({
             Accepted
           </span>
         );
+      case 'completed':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-md bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+            <Check className="size-3" />
+            Completed
+          </span>
+        );
       case 'rejected':
         return (
           <span className="inline-flex items-center gap-1 rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-400">
@@ -90,6 +97,14 @@ export function TaskCard({
             Rejected
           </span>
         );
+      case 'cancelled':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-900/30 dark:text-gray-400">
+            <X className="size-3" />
+            Cancelled
+          </span>
+        );
+      case 'pending':
       default:
         return (
           <span className="inline-flex items-center gap-1 rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
@@ -154,8 +169,8 @@ export function TaskCard({
                 <span className="text-xs">Recurring</span>
               </div>
             )}
-            {/* Only show status badge for pending tasks */}
-            {status === 'pending' && getStatusBadge()}
+            {/* Show status badge for all tasks */}
+            {getStatusBadge()}
           </div>
         </div>
 
