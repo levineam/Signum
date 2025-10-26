@@ -911,6 +911,10 @@ export function JournalStream() {
                       if (relatedTarget && relatedTarget.closest('[data-voice-button]')) {
                         return
                       }
+                      // Don't exit edit mode if the user clicked on a TaskCard
+                      if (relatedTarget && relatedTarget.closest('[data-task-card]')) {
+                        return
+                      }
                       setEditingEntryId(null)
                     }}
                     onMakeNote={handleMakeNote}
