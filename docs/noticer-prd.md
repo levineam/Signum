@@ -185,16 +185,39 @@ so that I don't have to guess which tool will help most right now.
 #### Recommendation Logic (MVP with Availability Checks)
 
 ```typescript
-// Available helpers at different stages
+// src/utils/helperRecommendations.ts
+
+/**
+ * Registry of implemented helpers (updated as stories ship)
+ *
+ * IMPORTANT: Only add helpers to this set AFTER their story is complete and deployed.
+ * This prevents the recommendation system from suggesting non-existent components.
+ *
+ * Update timeline:
+ * - Story 2.5.4 (CBT): ALREADY SHIPPED ✅
+ * - Story 2.5.5 (Gratitude): Add 'gratitude' when complete
+ * - Story 2.5.6 (Values): Add 'values-affirmation' when complete
+ * - Story 2.5.7 (Self-Compassion): Add 'self-compassion' when complete
+ * - Story 2.5.8 (WOOP): Add 'woop' when complete
+ * - Story 2.5.9 (Expressive Writing): Add 'expressive-writing' when complete
+ */
 const AVAILABLE_HELPERS: Set<HelperType> = new Set([
-  'cbt-distortions',        // Story 2.5.4 ✅
-  'gratitude',              // Story 2.5.5 (add when implemented)
-  'values-affirmation',     // Story 2.5.6 (add when implemented)
-  'self-compassion',        // Story 2.5.7 (add when implemented)
-  'woop',                   // Story 2.5.8 (add when implemented)
-  'expressive-writing',     // Story 2.5.9 (add when implemented)
+  'cbt-distortions',  // Story 2.5.4 ✅ SHIPPED
+  // Add new helpers here as stories complete:
+  // 'gratitude',              // Story 2.5.5
+  // 'values-affirmation',     // Story 2.5.6
+  // 'self-compassion',        // Story 2.5.7
+  // 'woop',                   // Story 2.5.8
+  // 'expressive-writing',     // Story 2.5.9
 ])
 
+/**
+ * Recommends a helper based on RNT score and affect state
+ *
+ * @param rntScore - Total RNT score (0-8) from mood check-in
+ * @param affectPrimary - Primary affect selected by user
+ * @returns HelperType if recommendation available, null if no helper matches or helper not yet implemented
+ */
 function recommendHelper(
   rntScore: number,
   affectPrimary: AffectType
@@ -205,7 +228,7 @@ function recommendHelper(
   // Medium RNT: self-kindness or values work
   if (rntScore >= 3 && rntScore <= 5) {
     const suggestion = affectPrimary === 'sad' ? 'self-compassion' : 'values-affirmation'
-    // ⚠️ SAFETY: Only suggest if helper exists
+    // ⚠️ SAFETY: Only suggest if helper exists (returns null if not in AVAILABLE_HELPERS)
     return AVAILABLE_HELPERS.has(suggestion) ? suggestion : null
   }
 
@@ -218,7 +241,33 @@ function recommendHelper(
 }
 ```
 
-**Implementation Note**: Update `AVAILABLE_HELPERS` set as each helper story completes. Phase 2 can be **partially implemented** with only CBT (RNT 6-8), then enhanced as Stories 2.5.6–2.5.7 complete.
+**Implementation Workflow:**
+
+1. **Initial State (Story 2.5.10 - Mood Check-In):**
+   ```typescript
+   const AVAILABLE_HELPERS = new Set(['cbt-distortions'])
+   ```
+   - Only RNT 6-8 suggestions work (CBT)
+   - RNT 3-5 suggestions return `null` (no banner shown)
+
+2. **After Story 2.5.6 (Values Affirmation):**
+   ```typescript
+   const AVAILABLE_HELPERS = new Set(['cbt-distortions', 'values-affirmation'])
+   ```
+   - RNT 3-5 with non-sad affect → suggests Values
+   - RNT 3-5 with sad affect → returns `null` (Self-Compassion not ready yet)
+
+3. **After Story 2.5.7 (Self-Compassion):**
+   ```typescript
+   const AVAILABLE_HELPERS = new Set(['cbt-distortions', 'values-affirmation', 'self-compassion'])
+   ```
+   - Full Phase 2 functionality unlocked
+   - All RNT ranges (3-5, 6-8) have suggestions
+
+**Testing Strategy:**
+- Unit tests should mock `AVAILABLE_HELPERS` to test recommendation logic independently
+- E2E tests verify UI gracefully handles `null` returns (no suggestion banner)
+- After each helper story ships, update both set AND tests
 
 ---
 
@@ -950,10 +999,17 @@ Scale: 0 (Not at all) → 4 (Very much)
 
 **Utils:**
 - [ ] Create `src/utils/helperRecommendations.ts`
-- [ ] Implement `recommendHelper(rntScore, affectPrimary)` with `AVAILABLE_HELPERS` safety check (see PRD:187-219)
-- [ ] Start with `AVAILABLE_HELPERS = new Set(['cbt-distortions'])` only
-- [ ] Add `'values-affirmation'` and `'self-compassion'` after Stories 2.5.6–2.5.7 complete
+- [ ] Implement `recommendHelper(rntScore, affectPrimary)` with `AVAILABLE_HELPERS` safety check (see PRD:187-270)
+- [ ] **CRITICAL**: Initialize with `AVAILABLE_HELPERS = new Set(['cbt-distortions'])` ONLY
+- [ ] Comment out future helpers (do NOT add them until stories ship):
+  ```typescript
+  // 'gratitude',              // Story 2.5.5
+  // 'values-affirmation',     // Story 2.5.6
+  // 'self-compassion',        // Story 2.5.7
+  ```
+- [ ] Document update workflow: "Uncomment each helper AFTER its story is deployed"
 - [ ] Add unit tests for recommendation matrix (test all RNT score ranges)
+- [ ] Add unit test for `null` returns when helper not in `AVAILABLE_HELPERS`
 
 **Component:**
 - [ ] Create `src/components/journal/helpers/HelperSuggestionBanner.tsx`
@@ -1061,6 +1117,8 @@ Scale: 0 (Not at all) → 4 (Very much)
 **Critical fixes for dependency alignment:**
 - Fixed "Current State" section to reflect actual implementation status (1 helper, not 6)
 - Added `AVAILABLE_HELPERS` safety checks to prevent suggesting non-existent helpers
+- **Fixed `AVAILABLE_HELPERS` initialization**: Now starts with only `'cbt-distortions'`, future helpers commented out
+- Added 3-stage implementation workflow showing progressive helper unlocking
 - Corrected Phase 1 dependencies: now correctly blocks on Stories 2.5.5–2.5.9
 - Added explicit blocking dependencies throughout all phases
 - Clarified earliest start date: ~5 weeks from now (after Issue #66 complete)
