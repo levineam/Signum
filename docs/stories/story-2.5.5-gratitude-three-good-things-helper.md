@@ -7,8 +7,8 @@
 **Parent Epic:** Phase 1: Foundation & High-Impact Basics
 **Prerequisites:**
 - Story 2.5.4 (CBT Helper) ✅ Complete
-- `HelperContainer` component available
 - Helper usage tracking infrastructure
+- shadcn/ui Card component (already available)
 
 ---
 
@@ -47,7 +47,7 @@ so that I can build a daily gratitude practice with structured prompts and see a
 1. **Three Good Things Helper Component**
    - 3 sections, each with title + 3 text areas (9 inputs total)
    - Based on Greater Good in Action research (GGIA)
-   - Follows CBT helper's HelperContainer pattern
+   - Follows CBT helper's Card pattern (progressive disclosure with Explore button)
 
 2. **Structured Prompts**
    - Title field for each good thing
@@ -94,12 +94,13 @@ so that I can build a daily gratitude practice with structured prompts and see a
  */
 
 import { useState, useRef } from 'react'
+import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
-import { HelperContainer } from './HelperContainer'
 
 interface GratitudeHelperProps {
   entryId: string
@@ -115,21 +116,23 @@ interface GoodThing {
 }
 
 export function GratitudeHelper({ entryId, userId, onInsert }: GratitudeHelperProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
   const [goodThings, setGoodThings] = useState<[GoodThing, GoodThing, GoodThing]>([
     { title: '', whatHappened: '', howIFelt: '', whyItHappened: '' },
     { title: '', whatHappened: '', howIFelt: '', whyItHappened: '' },
     { title: '', whatHappened: '', howIFelt: '', whyItHappened: '' }
   ])
+  const exploreButtonRef = useRef<HTMLButtonElement>(null)
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
-  const collapseHelperRef = useRef<(() => void) | null>(null)
   const eventsRef = useRef<HelperEvent[]>([])
 
-  // ... implementation details
+  // ... implementation details (follow CbtDistortions.tsx pattern)
 }
 ```
 
 **Acceptance:**
-- ✅ Component renders with HelperContainer (green variant)
+- ✅ Component renders with Card (green/emerald gradient: `bg-gradient-to-r from-green-50 to-emerald-50`)
+- ✅ Progressive disclosure with Explore/Collapse button (follows CbtDistortions pattern)
 - ✅ 3 collapsible sections for good things
 - ✅ Each section has 4 fields (title, what, feel, why)
 - ✅ Form state management handles 9 text inputs
@@ -345,7 +348,8 @@ export interface HelperUsageMetadata {
 
 ### Phase 2: Component Setup (1-2 hours)
 - [ ] Create `/src/components/journal/helpers/GratitudeHelper.tsx`
-- [ ] Set up component with HelperContainer (green variant)
+- [ ] Set up component with Card (green/emerald gradient: `from-green-50 to-emerald-50`)
+- [ ] Implement progressive disclosure UI (Explore/Collapse button) following `CbtDistortions.tsx:34-74`
 - [ ] Define GoodThing interface and state structure
 - [ ] Implement updateGoodThing() helper function
 
@@ -379,8 +383,10 @@ export interface HelperUsageMetadata {
 
 ### Phase 7: Accessibility & Testing (2-3 hours)
 - [ ] Add ARIA labels to all form fields
-- [ ] Implement live region for announcements
+- [ ] Implement live region for announcements (follow `CbtDistortions.tsx:37-52`)
+- [ ] Add Explore button ref and focus management (follow `CbtDistortions.tsx:36, 70-73`)
 - [ ] Test keyboard navigation (Tab, Enter, Escape)
+- [ ] Test Escape key collapses helper (follow `CbtDistortions.tsx` pattern if implemented)
 - [ ] Test screen reader (macOS VoiceOver or NVDA)
 - [ ] Test mobile responsiveness (<768px)
 - [ ] Test touch targets on mobile device

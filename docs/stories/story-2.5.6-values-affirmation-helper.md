@@ -8,7 +8,7 @@
 **Prerequisites:**
 - Story 2.5.4 (CBT Helper) ✅ Complete
 - Story 2.5.5 (Gratitude Helper) - Recommended (establishes pattern)
-- `HelperContainer` component available
+- shadcn/ui Card component (already available)
 
 ---
 
@@ -92,8 +92,10 @@ so that I can strengthen my sense of identity and buffer against stress through 
  */
 
 import { useState, useRef } from 'react'
+import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -102,7 +104,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { createHelperUsage } from '@/lib/supabase/helpers'
-import { HelperContainer } from './HelperContainer'
+import { HelperEvent } from '@/types/helper'
 
 const VALUES_OPTIONS = [
   'Relationships',
@@ -125,18 +127,21 @@ interface ValuesAffirmationHelperProps {
 }
 
 export function ValuesAffirmationHelper({ entryId, userId, onInsert }: ValuesAffirmationHelperProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
   const [selectedValue, setSelectedValue] = useState<ValueOption | ''>('')
   const [whyImportant, setWhyImportant] = useState('')
   const [specificTime, setSpecificTime] = useState('')
+  const exploreButtonRef = useRef<HTMLButtonElement>(null)
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
-  const collapseHelperRef = useRef<(() => void) | null>(null)
+  const eventsRef = useRef<HelperEvent[]>([])
 
-  // ... implementation details
+  // ... implementation details (follow CbtDistortions.tsx pattern)
 }
 ```
 
 **Acceptance:**
-- ✅ Component renders with HelperContainer (purple variant)
+- ✅ Component renders with Card (purple/violet gradient: `bg-gradient-to-r from-purple-50 to-violet-50`)
+- ✅ Progressive disclosure with Explore/Collapse button (follows CbtDistortions pattern)
 - ✅ Values dropdown with 9 options
 - ✅ 2 text areas with clear labels
 - ✅ "Add to Journal Entry" button disabled if value not selected
@@ -337,7 +342,8 @@ export interface HelperUsageMetadata {
 
 ### Phase 2: Component Setup (1 hour)
 - [ ] Create `/src/components/journal/helpers/ValuesAffirmationHelper.tsx`
-- [ ] Set up component with HelperContainer (purple variant)
+- [ ] Set up component with Card (purple/violet gradient: `from-purple-50 to-violet-50`)
+- [ ] Implement progressive disclosure UI (Explore/Collapse button) following `CbtDistortions.tsx:34-74`
 - [ ] Define VALUES_OPTIONS constant (9 values)
 - [ ] Initialize form state (selectedValue, whyImportant, specificTime)
 
@@ -369,8 +375,10 @@ export interface HelperUsageMetadata {
 - [ ] Test non-blocking behavior
 
 ### Phase 7: Testing & Polish (2 hours)
-- [ ] Add ARIA labels and live regions
+- [ ] Add ARIA labels and live regions (follow `CbtDistortions.tsx:37-52`)
+- [ ] Add Explore button ref and focus management (follow `CbtDistortions.tsx:36, 70-73`)
 - [ ] Test keyboard navigation (Tab, Arrow keys, Enter)
+- [ ] Test Escape key collapses helper (follow `CbtDistortions.tsx` pattern if implemented)
 - [ ] Test screen reader (dropdown and text areas)
 - [ ] Test mobile responsiveness
 - [ ] Run ESLint and build verification
