@@ -23,6 +23,7 @@ import {
   type AnalysisRunSummary
 } from '@/lib/ontology/state'
 import { runIncrementalExtraction } from '@/lib/ontology/extractor'
+import { hasAdminKey } from '@/lib/supabase-admin'
 
 // Feature flag - server-side control
 const INCREMENTAL_ENABLED =
@@ -60,6 +61,18 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Incremental analysis is currently disabled',
           details: 'Feature flag ONTOLOGY_INCREMENTAL_ENABLED is off'
+        },
+        { status: 503 }
+      )
+    }
+
+    // 1b. Ensure admin key is present for server-side operations
+    if (!hasAdminKey()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Server configuration incomplete',
+          details: 'Missing SUPABASE_SERVICE_ROLE_KEY'
         },
         { status: 503 }
       )

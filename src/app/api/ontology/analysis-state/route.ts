@@ -10,9 +10,16 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getAnalysisState } from '@/lib/ontology/state'
+import { hasAdminKey } from '@/lib/supabase-admin'
 
 export async function GET() {
   try {
+    if (!hasAdminKey()) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration incomplete: missing SUPABASE_SERVICE_ROLE_KEY' },
+        { status: 503 }
+      )
+    }
     // 1. Get authenticated user from session
     const cookieStore = await cookies()
     const supabase = createServerClient(

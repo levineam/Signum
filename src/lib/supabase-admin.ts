@@ -6,18 +6,37 @@
  * NEVER expose to client.
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 
-if (!supabaseServiceRole) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required for admin operations')
+let cachedAdmin: SupabaseClient | null = null
+
+export function hasAdminKey(): boolean {
+  return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY && supabaseUrl)
 }
 
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRole, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+export function getSupabaseAdmin(): SupabaseClient {
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !serviceRole) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required for admin operations')
+  }
+  if (!cachedAdmin) {
+    cachedAdmin = createClient(supabaseUrl, serviceRole, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  }
+  return cachedAdmin
+}
+
+// Backward-compatible export: proxy defers client creation until used
+export const supabaseAdmin = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const client = getSupabaseAdmin()
+    // @ts-expect-error dynamic prop proxy
+    return client[prop]
   }
 })
