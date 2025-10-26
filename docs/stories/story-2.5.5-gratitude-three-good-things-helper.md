@@ -137,44 +137,43 @@ export function GratitudeHelper({ entryId, userId, onInsert }: GratitudeHelperPr
 
 ---
 
-### 2. Implement Formatted Markdown Insert
+### 2. Implement Formatted HTML Insert
 **File:** `/src/components/journal/helpers/GratitudeHelper.tsx`
 
-**Markdown Format:**
-```markdown
-## Three Good Things
-
-### [Title from #1]
-**What happened:** [User's response]
-
-**How I felt:** [User's response]
-
-**Why it happened:** [User's response]
-
----
-
-### [Title from #2]
-**What happened:** [User's response]
-
-**How I felt:** [User's response]
-
-**Why it happened:** [User's response]
-
----
-
-### [Title from #3]
-**What happened:** [User's response]
-
-**How I felt:** [User's response]
-
-**Why it happened:** [User's response]
+**HTML Paragraph Format** (matching system behavior in `src/data/cbtDistortions.ts:98`):
+```html
+<p><strong>Three Good Things</strong></p>
+<p><br></p>
+<p><strong>[Title from #1]</strong></p>
+<p>What happened: [User's response]</p>
+<p><br></p>
+<p>How I felt: [User's response]</p>
+<p><br></p>
+<p>Why it happened: [User's response]</p>
+<p><br></p>
+<p><br></p>
+<p><strong>[Title from #2]</strong></p>
+<p>What happened: [User's response]</p>
+<p><br></p>
+<p>How I felt: [User's response]</p>
+<p><br></p>
+<p>Why it happened: [User's response]</p>
+<p><br></p>
+<p><br></p>
+<p><strong>[Title from #3]</strong></p>
+<p>What happened: [User's response]</p>
+<p><br></p>
+<p>How I felt: [User's response]</p>
+<p><br></p>
+<p>Why it happened: [User's response]</p>
+<p><br></p>
 ```
 
 **Acceptance:**
-- ✅ formatGratitudeEntry() generates correct markdown
+- ✅ formatGratitudeEntry() generates correct HTML paragraphs (NOT Markdown)
 - ✅ Empty fields handled gracefully (skip or placeholder)
-- ✅ Special characters escaped properly
-- ✅ Markdown preview renders correctly in journal
+- ✅ HTML renders correctly in SimpleRichEditor
+- ✅ Format matches existing CBT helper pattern (`<p>text</p><p><br></p>`)
 
 ---
 
@@ -183,13 +182,13 @@ export function GratitudeHelper({ entryId, userId, onInsert }: GratitudeHelperPr
 
 **Integration:**
 ```tsx
-{isTodaysEntry && (
+{isTodayEntry && user && (
   <>
     <CbtDistortions {...} />
     <GratitudeHelper
       entryId={entry.id}
-      userId={userId}
-      onInsert={handleHelperInsertion}
+      userId={user.id}
+      onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
     />
   </>
 )}
@@ -197,8 +196,8 @@ export function GratitudeHelper({ entryId, userId, onInsert }: GratitudeHelperPr
 
 **Acceptance:**
 - ✅ Helper renders below CBT helper for today's entry only
-- ✅ handleHelperInsertion() receives formatted text
-- ✅ Text inserts at cursor position (or end if no cursor)
+- ✅ handleHelperInsertion() receives formatted HTML text
+- ✅ **Text prepends to TOP of entry** (matches system behavior at `JournalStream.tsx:424-425`)
 - ✅ Entry auto-saves after insertion
 
 ---
@@ -358,16 +357,16 @@ export interface HelperUsageMetadata {
 - [ ] Implement "Add to Journal Entry" button (disabled when empty)
 - [ ] Optional: Add "Clear All" button
 
-### Phase 4: Markdown Formatting (1 hour)
-- [ ] Implement formatGratitudeEntry() function
+### Phase 4: HTML Formatting (1 hour)
+- [ ] Implement formatGratitudeEntry() function to generate HTML paragraphs
 - [ ] Handle empty fields gracefully (skip or use placeholder)
-- [ ] Escape special markdown characters if needed
-- [ ] Test markdown rendering in journal editor
+- [ ] Follow existing pattern from `cbtDistortions.ts:formatDistortionReflection()`: `<p>text</p><p><br></p>`
+- [ ] Test HTML rendering in SimpleRichEditor
 
 ### Phase 5: Integration (1-2 hours)
 - [ ] Add GratitudeHelper to JournalStream (below CBT helper)
-- [ ] Wire onInsert to handleHelperInsertion
-- [ ] Test insertion at cursor position
+- [ ] Wire onInsert to handleHelperInsertion with entry ID: `(helperText) => handleHelperInsertion(entry.id, helperText)`
+- [ ] **Test insertion prepends to TOP** (system behavior, not cursor insertion)
 - [ ] Verify helper collapses after insertion
 - [ ] Test entry auto-save after insertion
 
@@ -395,8 +394,9 @@ export interface HelperUsageMetadata {
 ### Functional Requirements
 - ✅ GratitudeHelper component renders in today's journal entry
 - ✅ 3 sections with 4 fields each (12 total fields: 3 titles + 9 text areas)
-- ✅ "Add to Journal Entry" button inserts formatted markdown
-- ✅ Markdown format matches specification (## Three Good Things, ### titles, etc.)
+- ✅ "Add to Journal Entry" button inserts formatted HTML paragraphs (NOT Markdown)
+- ✅ HTML format matches system pattern (`<p>text</p><p><br></p>` from `cbtDistortions.ts`)
+- ✅ **Content prepends to TOP of entry** (matches `JournalStream.tsx:424-425`)
 - ✅ Helper collapses after successful insertion
 - ✅ Journal entry auto-saves after insertion
 
@@ -431,8 +431,9 @@ export interface HelperUsageMetadata {
 ### Manual Testing
 - [ ] **Render Test**: Helper appears below CBT helper for today's entry
 - [ ] **Form Interaction**: All 12 fields accept input and update state
-- [ ] **Insert Test**: Click "Add to Journal Entry" → markdown appears in editor
-- [ ] **Markdown Rendering**: Journal entry displays formatted "Three Good Things"
+- [ ] **Insert Test**: Click "Add to Journal Entry" → HTML paragraphs appear in editor
+- [ ] **HTML Rendering**: Journal entry displays formatted "Three Good Things" in SimpleRichEditor
+- [ ] **Prepend Behavior**: Content appears at TOP of entry, not at cursor
 - [ ] **Collapse Test**: Helper collapses after insertion
 - [ ] **Empty State**: Button disabled when all fields empty
 - [ ] **Partial Fill**: Works if user only fills 1-2 good things (graceful degradation)

@@ -161,25 +161,27 @@ export function ValuesAffirmationHelper({ entryId, userId, onInsert }: ValuesAff
 
 ---
 
-### 3. Implement Formatted Markdown Insert
+### 3. Implement Formatted HTML Insert
 **File:** `/src/components/journal/helpers/ValuesAffirmationHelper.tsx`
 
-**Markdown Format:**
-```markdown
-## Values Affirmation: [Selected Value]
-
-**Why this matters to me:**
-[User's response]
-
-**A time I lived this value:**
-[User's response]
+**HTML Paragraph Format** (matching system behavior in `src/data/cbtDistortions.ts:98`):
+```html
+<p><strong>Values Affirmation: [Selected Value]</strong></p>
+<p><br></p>
+<p>Why this matters to me:</p>
+<p>[User's response]</p>
+<p><br></p>
+<p>A time I lived this value:</p>
+<p>[User's response]</p>
+<p><br></p>
 ```
 
 **Acceptance:**
-- ✅ formatValuesEntry() generates correct markdown
-- ✅ Selected value appears in header
+- ✅ formatValuesEntry() generates correct HTML paragraphs (NOT Markdown)
+- ✅ Selected value appears in header paragraph
 - ✅ Empty text areas handled gracefully
-- ✅ Special characters escaped properly
+- ✅ HTML renders correctly in SimpleRichEditor
+- ✅ Format matches existing CBT helper pattern (`<p>text</p><p><br></p>`)
 
 ---
 
@@ -188,14 +190,14 @@ export function ValuesAffirmationHelper({ entryId, userId, onInsert }: ValuesAff
 
 **Integration:**
 ```tsx
-{isTodaysEntry && (
+{isTodayEntry && user && (
   <>
     <CbtDistortions {...} />
     <GratitudeHelper {...} />
     <ValuesAffirmationHelper
       entryId={entry.id}
-      userId={userId}
-      onInsert={handleHelperInsertion}
+      userId={user.id}
+      onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
     />
   </>
 )}
@@ -203,7 +205,8 @@ export function ValuesAffirmationHelper({ entryId, userId, onInsert }: ValuesAff
 
 **Acceptance:**
 - ✅ Helper renders below Gratitude helper for today's entry
-- ✅ Insert behavior matches other helpers
+- ✅ handleHelperInsertion() receives formatted HTML text
+- ✅ **Text prepends to TOP of entry** (matches system behavior at `JournalStream.tsx:424-425`)
 - ✅ Entry auto-saves after insertion
 
 ---
@@ -344,15 +347,17 @@ export interface HelperUsageMetadata {
 - [ ] Add guidance text for each prompt
 - [ ] Implement "Add to Journal Entry" button (disabled when incomplete)
 
-### Phase 4: Markdown Formatting (30 min)
-- [ ] Implement formatValuesEntry() function
+### Phase 4: HTML Formatting (30 min)
+- [ ] Implement formatValuesEntry() function to generate HTML paragraphs
 - [ ] Handle edge cases (empty text areas)
-- [ ] Test markdown rendering in journal editor
+- [ ] Follow existing pattern from `cbtDistortions.ts:formatDistortionReflection()`: `<p>text</p><p><br></p>`
+- [ ] Test HTML rendering in SimpleRichEditor
 
 ### Phase 5: Integration (1 hour)
 - [ ] Add ValuesAffirmationHelper to JournalStream
-- [ ] Wire onInsert to handleHelperInsertion
-- [ ] Test insertion and collapse behavior
+- [ ] Wire onInsert to handleHelperInsertion with entry ID: `(helperText) => handleHelperInsertion(entry.id, helperText)`
+- [ ] **Test insertion prepends to TOP** (system behavior, not cursor insertion)
+- [ ] Test collapse behavior
 - [ ] Verify entry auto-save
 
 ### Phase 6: Usage Tracking (1 hour)
@@ -380,8 +385,9 @@ export interface HelperUsageMetadata {
 - ✅ **Button Enablement Rule**: "Add to Journal Entry" button is disabled UNLESS:
   - A value is selected from dropdown AND
   - At least ONE text area has non-empty content (whyImportant OR specificTime)
-- ✅ "Add to Journal Entry" inserts formatted markdown
-- ✅ Markdown format: "## Values Affirmation: [Value]"
+- ✅ "Add to Journal Entry" inserts formatted HTML paragraphs (NOT Markdown)
+- ✅ HTML format matches system pattern (`<p>text</p><p><br></p>` from `cbtDistortions.ts`)
+- ✅ **Content prepends to TOP of entry** (matches `JournalStream.tsx:424-425`)
 - ✅ Helper collapses after insertion
 - ✅ Entry auto-saves after insertion
 
@@ -414,9 +420,11 @@ export interface HelperUsageMetadata {
 ### Manual Testing
 - [ ] **Dropdown**: All 9 values appear, selection works
 - [ ] **Text Areas**: Accept input, update state correctly
-- [ ] **Insert**: Markdown appears with selected value in header
+- [ ] **Insert**: HTML paragraphs appear with selected value in header
+- [ ] **HTML Rendering**: Journal entry displays formatted values affirmation in SimpleRichEditor
+- [ ] **Prepend Behavior**: Content appears at TOP of entry, not at cursor
 - [ ] **Collapse**: Helper collapses after insertion
-- [ ] **Disabled State**: Button disabled until value selected
+- [ ] **Disabled State**: Button disabled until value selected AND at least one text area filled
 - [ ] **Empty Text**: Works if only one text area filled
 
 ### Accessibility Testing
