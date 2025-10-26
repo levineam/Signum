@@ -16,6 +16,10 @@
  */
 export type HelperType =
   | 'cbt-distortions'     // CBT Cognitive Distortions helper
+  | 'gratitude'           // Three Good Things (Story 2.5.5)
+  | 'values-affirmation'  // Values Affirmation (Story 2.5.6)
+  | 'self-compassion'     // Self-Compassion Break (Story 2.5.7)
+  | 'woop'                // WOOP Goal-Setting (Story 2.5.8)
 
 // ============================================================================
 // Helper Event Types (Discriminated Union)
@@ -104,6 +108,41 @@ export interface HelperUsageMetadata {
   insertedText?: string          // Final text inserted (if any)
   distortionNames?: string[]     // For CBT distortions helper
   promptCategory?: string        // For gentle prompt helper
+
+  // ===============================
+  // Story 2.5.5 — Gratitude helper
+  // ===============================
+  // Number of gratitude fields with content (e.g., 0–3 for Three Good Things)
+  gratitudeFieldsCompleted?: number
+  // Per-field character counts for gratitude inputs (ordered)
+  gratitudeFieldCharCounts?: number[]
+
+  // ======================================
+  // Story 2.5.6 — Values Affirmation helper
+  // ======================================
+  // Which value was selected for affirmation (label or id)
+  valuesSelectedValue?: string
+  // Per-field character counts for values reflection inputs (ordered)
+  valuesFieldCharCounts?: number[]
+
+  // ====================================
+  // Story 2.5.7 — Self-Compassion helper
+  // ====================================
+  // Character count for the described situation (telemetry)
+  situationCharacterCount?: number
+
+  // ============================
+  // Story 2.5.8 — WOOP helper
+  // ============================
+  // Character counts per WOOP step
+  woopStepCounts?: {
+    wish: number
+    outcome: number
+    obstacle: number
+    plan: number
+  }
+  // Plan contains an if-then structure (simple heuristic detection)
+  hasIfThenFormat?: boolean
 }
 
 /**
@@ -235,7 +274,11 @@ export function isHelperDismissedEvent(event: HelperEvent): event is HelperDismi
  * Issue #18: Removed gentle-prompt - only in-entry helpers.
  */
 export const HELPER_TYPES: HelperType[] = [
-  'cbt-distortions'
+  'cbt-distortions',
+  'gratitude',
+  'values-affirmation',
+  'self-compassion',
+  'woop'
 ]
 
 /**
@@ -243,5 +286,9 @@ export const HELPER_TYPES: HelperType[] = [
  * Issue #18: Simplified to only in-entry helpers.
  */
 export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
-  'cbt-distortions': 'CBT Cognitive Distortions'
+  'cbt-distortions': 'CBT Cognitive Distortions',
+  'gratitude': 'Three Good Things',
+  'values-affirmation': 'Values Affirmation',
+  'self-compassion': 'Self-Compassion Break',
+  'woop': 'WOOP Goal Planning'
 }
