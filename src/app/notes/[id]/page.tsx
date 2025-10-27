@@ -10,6 +10,8 @@ import { ArrowLeft } from 'lucide-react'
 import { OntologyCardViewer } from '@/components/notes/OntologyCardViewer'
 import { useAuth } from '@/contexts/AuthContext'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
+import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
+import { NoteViewer } from '@/components/notes/NoteViewer'
 
 interface AimsContent {
   todos: string
@@ -25,6 +27,14 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Make Note functionality
+  const [showNoteModal, setShowNoteModal] = useState(false)
+  const [selectedText, setSelectedText] = useState('')
+
+  // Note Viewer functionality
+  const [showNoteViewer, setShowNoteViewer] = useState(false)
+  const [viewingNoteId, setViewingNoteId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -71,6 +81,66 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     if (updated) {
       setNote(updated)
     }
+  }
+
+  // Auto-save with debounce (like JournalStream.tsx:266-282)
+  const handleContentChange = (newContent: string) => {
+    if (!note || !user) return
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    // Update content immediately for responsive UI
+    setContent(newContent)
+
+    // Auto-save after 2 seconds of no typing
+    saveTimeoutRef.current = setTimeout(async () => {
+      const previousContent = note.content || ''
+
+      // Save if content is non-empty OR if we're clearing previously non-empty content
+      const shouldSave = newContent.trim() !== '' || previousContent.trim() !== ''
+
+      if (shouldSave) {
+        console.log('Auto-saving note:', note.id)
+        try {
+          const updated = await updateNote(note.id, { content: newContent }, user.id)
+          if (updated) {
+            setNote(updated)
+          }
+        } catch (error) {
+          console.error('Error auto-saving note:', error)
+        }
+      }
+    }, 2000)
+  }
+
+  // Make Note functionality
+  const handleMakeNote = (text: string) => {
+    setSelectedText(text)
+    setShowNoteModal(true)
+  }
+
+  const handleCloseNoteModal = () => {
+    setShowNoteModal(false)
+    setSelectedText('')
+  }
+
+  const handleNoteCreated = (newNote: Note) => {
+    // Note created successfully - could show toast notification here
+    console.log('Sub-note created:', newNote)
+  }
+
+  // Note Viewer functionality
+  const handleLinkClick = (noteId: string) => {
+    setViewingNoteId(noteId)
+    setShowNoteViewer(true)
+  }
+
+  const handleCloseNoteViewer = () => {
+    setShowNoteViewer(false)
+    setViewingNoteId(null)
   }
 
   const handleBack = () => {
