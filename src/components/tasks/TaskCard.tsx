@@ -155,24 +155,26 @@ export function TaskCard({
             {title}
           </div>
 
-          {/* Due date/time and recurrence info */}
-          <div className="flex items-center gap-3 text-sm">
-            {dueAt && (
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Calendar className="size-4" />
-                <span>{formatDueDate(dueAt)}</span>
-              </div>
-            )}
-            {rrule && (
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Repeat className="size-3.5" />
-                <span className="text-xs">Recurring</span>
-              </div>
-            )}
-            {/* Only show status badge for rejected and cancelled tasks
-                (pending tasks have action buttons, accepted/completed have checkbox) */}
-            {(status === 'rejected' || status === 'cancelled') && getStatusBadge()}
-          </div>
+          {/* Due date/time and recurrence info - only render if there's content */}
+          {(dueAt || rrule || status === 'rejected' || status === 'cancelled') && (
+            <div className="flex items-center gap-3 text-sm">
+              {dueAt && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Calendar className="size-4" />
+                  <span>{formatDueDate(dueAt)}</span>
+                </div>
+              )}
+              {rrule && (
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Repeat className="size-3.5" />
+                  <span className="text-xs">Recurring</span>
+                </div>
+              )}
+              {/* Only show status badge for rejected and cancelled tasks
+                  (pending tasks have action buttons, accepted/completed have checkbox) */}
+              {(status === 'rejected' || status === 'cancelled') && getStatusBadge()}
+            </div>
+          )}
         </div>
 
         {/* Actions for pending tasks */}
