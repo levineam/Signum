@@ -20,6 +20,11 @@ export type HelperType =
   | 'values-affirmation'  // Values Affirmation (Story 2.5.6)
   | 'self-compassion'     // Self-Compassion Break (Story 2.5.7)
   | 'woop'                // WOOP Goal-Setting (Story 2.5.8)
+  | 'best-possible-self'  // Best Possible Self Helper (Story 2.5.9)
+  | 'savoring'            // Savoring Helper (Story 2.5.10)
+  | 'pmr'                 // Progressive Muscle Relaxation (Story 2.5.11)
+  | 'loving-kindness'     // Loving-Kindness Meditation (Story 2.5.12)
+  | 'mental-contrasting'  // Mental Contrasting Helper (Story 2.5.13)
 
 // ============================================================================
 // Helper Event Types (Discriminated Union)
@@ -143,6 +148,48 @@ export interface HelperUsageMetadata {
   }
   // Plan contains an if-then structure (simple heuristic detection)
   hasIfThenFormat?: boolean
+
+  // ====================================
+  // Story 2.5.9 — Best Possible Self helper
+  // ====================================
+  // Character and word counts for the future vision entry
+  visionCharacterCount?: number
+  visionWordCount?: number
+
+  // ===============================
+  // Story 2.5.10 — Savoring helper
+  // ===============================
+  // Selected savoring strategy and reflection stats
+  savoringStrategy?: string
+  reflectionCharacterCount?: number
+  hasReflection?: boolean
+
+  // =================================================
+  // Story 2.5.11 — Progressive Muscle Relaxation helper
+  // =================================================
+  // Telemetry for completed muscle groups and reflection
+  muscleGroupCount?: number
+  muscleGroupNames?: string[]
+  completedFullSequence?: boolean
+  pmrReflectionLength?: number
+
+  // ========================================================
+  // Story 2.5.12 — Loving-Kindness Meditation helper
+  // ========================================================
+  // Recipient selection and name telemetry
+  lkmRecipient?: 'Self' | 'Loved One' | 'Neutral Person' | 'Difficult Person'
+  lkmPersonNamed?: boolean
+  lkmNameLength?: number
+
+  // ==================================
+  // Story 2.5.13 — Mental Contrasting helper
+  // ==================================
+  // Character counts per contrasting step
+  mcStepCounts?: {
+    desiredFuture?: number
+    internalObstacle?: number
+  }
+  mcBothFieldsFilled?: boolean
 }
 
 /**
@@ -278,7 +325,12 @@ export const HELPER_TYPES: HelperType[] = [
   'gratitude',
   'values-affirmation',
   'self-compassion',
-  'woop'
+  'woop',
+  'best-possible-self',
+  'savoring',
+  'pmr',
+  'loving-kindness',
+  'mental-contrasting'
 ]
 
 /**
@@ -290,5 +342,10 @@ export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
   'gratitude': 'Three Good Things',
   'values-affirmation': 'Values Affirmation',
   'self-compassion': 'Self-Compassion Break',
-  'woop': 'WOOP Goal Planning'
+  'woop': 'WOOP Goal Planning',
+  'best-possible-self': 'Best Possible Self',
+  'savoring': 'Savoring Practice',
+  'pmr': 'Progressive Muscle Relaxation',
+  'loving-kindness': 'Loving-Kindness Meditation',
+  'mental-contrasting': 'Mental Contrasting'
 }
