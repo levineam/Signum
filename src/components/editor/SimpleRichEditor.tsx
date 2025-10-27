@@ -400,7 +400,7 @@ export function SimpleRichEditor({
     formatText(`justify${align.charAt(0).toUpperCase() + align.slice(1)}`)
   }, [formatText])
 
-  const toggleBlockquote = useCallback(() => {
+  const toggleBlockquoteOrIndent = useCallback(() => {
     if (editorRef.current) {
       editorRef.current.focus()
       const selection = window.getSelection()
@@ -413,19 +413,25 @@ export function SimpleRichEditor({
           node = node.parentElement
         }
 
-        // Check if already in a blockquote
+        // Check if we're in a list - if so, use indent
         let currentEl: HTMLElement | null = node as HTMLElement
+        let inList = false
         let existingBlockquote: HTMLElement | null = null
 
         while (currentEl && editorRef.current.contains(currentEl)) {
+          if (currentEl.tagName === 'UL' || currentEl.tagName === 'OL' || currentEl.tagName === 'LI') {
+            inList = true
+          }
           if (currentEl.tagName === 'BLOCKQUOTE') {
             existingBlockquote = currentEl
-            break
           }
           currentEl = currentEl.parentElement
         }
 
-        if (existingBlockquote) {
+        if (inList) {
+          // In a list: use indent command to increase nesting
+          document.execCommand('indent', false)
+        } else if (existingBlockquote) {
           // Remove blockquote: unwrap contents
           const parent = existingBlockquote.parentElement
           if (parent) {
@@ -436,7 +442,7 @@ export function SimpleRichEditor({
             parent.replaceChild(fragment, existingBlockquote)
           }
         } else {
-          // Add blockquote using formatBlock
+          // Not in list, not in blockquote: add blockquote using formatBlock
           document.execCommand('formatBlock', false, 'blockquote')
         }
 
@@ -784,10 +790,10 @@ export function SimpleRichEditor({
           onMouseDown={(e) => {
             e.preventDefault()
           }}
-          onClick={toggleBlockquote}
+          onClick={toggleBlockquoteOrIndent}
           className="h-8 w-8 p-0"
           type="button"
-          title="Quote/Blockquote"
+          title="Quote/Blockquote (or Indent in lists)"
         >
           <Quote className="h-4 w-4" />
         </Button>
