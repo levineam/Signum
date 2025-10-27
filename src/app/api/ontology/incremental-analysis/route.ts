@@ -185,11 +185,20 @@ export async function POST(request: NextRequest) {
 
     // 7. Calculate run count for rate limiting
     // SECURITY FIX: Only increment for manual runs to prevent scheduled jobs from blocking users
-    // SECURITY FIX: Scheduled runs MUST preserve existing manual run count to prevent rate limit bypass
+    // SECURITY FIX: Scheduled runs preserve manual count ONLY if within active window
     // SECURITY FIX: Declare outside try block so error handler can preserve count
     const runCountInWindow = triggeredBy === 'manual'
       ? (state ? countRecentRuns(state) + 1 : 1)
-      : (state?.lastRunSummary as AnalysisRunSummary & { runCountInWindow?: number })?.runCountInWindow // Preserve existing count for scheduled runs
+      : (() => {
+          // For scheduled runs: only preserve count if last run was within the window
+          if (!state?.lastRunSummary?.timestamp) return undefined
+          const lastRunTime = new Date(state.lastRunSummary.timestamp).getTime()
+          const timeSinceLastRun = Date.now() - lastRunTime
+          // If outside window, reset count so cooldown can expire
+          if (timeSinceLastRun >= RATE_LIMIT_WINDOW) return undefined
+          // Otherwise preserve the count
+          return (state.lastRunSummary as AnalysisRunSummary & { runCountInWindow?: number })?.runCountInWindow
+        })()
 
     let notesToAnalyze: Note[] = [] // Declare outside try block for error handler access
 
