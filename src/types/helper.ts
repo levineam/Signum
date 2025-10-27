@@ -13,9 +13,12 @@
  * Helper type discriminator.
  * Matches CHECK constraint in helper_usage table (Story 1.8.1, Codex fix #2).
  * Issue #18: Removed 'gentle-prompt' - only in-entry helpers remain.
+ * Issue #92: Added placeholder helpers for tile-based UI.
  */
 export type HelperType =
   | 'cbt-distortions'     // CBT Cognitive Distortions helper
+  | '3-good-things'       // Gratitude practice helper
+  | 'values'              // Core values reflection helper
 
 // ============================================================================
 // Helper Event Types (Discriminated Union)
@@ -233,15 +236,21 @@ export function isHelperDismissedEvent(event: HelperEvent): event is HelperDismi
 /**
  * All available helper types (for UI dropdowns, validation, etc.)
  * Issue #18: Removed gentle-prompt - only in-entry helpers.
+ * Issue #92: Added placeholder helpers for tile-based UI.
  */
 export const HELPER_TYPES: HelperType[] = [
-  'cbt-distortions'
+  'cbt-distortions',
+  '3-good-things',
+  'values'
 ]
 
 /**
  * Human-readable labels for helper types.
  * Issue #18: Simplified to only in-entry helpers.
+ * Issue #92: Added placeholder helpers for tile-based UI.
  */
 export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
-  'cbt-distortions': 'CBT Cognitive Distortions'
+  'cbt-distortions': 'CBT Cognitive Distortions',
+  '3-good-things': '3 Good Things',
+  'values': 'Values'
 }

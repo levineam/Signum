@@ -2,14 +2,13 @@
 
 /**
  * CBT Cognitive Distortions Helper Component
- * Story 1.8.2: Helper System Enhancement
- * Issue #18: Refactored to use HelperContainer
+ * Issue #92: Refactored for tile-based modal UI
  *
- * Provides a progressive disclosure interface for selecting and inserting
+ * Provides interface for selecting and inserting
  * CBT cognitive distortion reflection prompts into journal entries.
+ * Now renders as modal content (no HelperContainer wrapper).
  *
  * Features:
- * - Unified HelperContainer wrapper
  * - Multiple selection via checkboxes
  * - Usage tracking integration
  * - Full WCAG AA accessibility compliance
@@ -22,20 +21,17 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { CBT_DISTORTIONS, formatMultipleReflections } from '@/data/cbtDistortions'
 import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
-import { HelperContainer } from './HelperContainer'
 
 interface CbtDistortionsProps {
   entryId: string
   userId: string
   onInsert: (text: string) => void
+  onClose?: () => void // Callback to close modal after insertion
 }
 
-export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProps) {
+export function CbtDistortions({ entryId, userId, onInsert, onClose }: CbtDistortionsProps) {
   const [selectedDistortions, setSelectedDistortions] = useState<Set<string>>(new Set())
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
-
-  // Ref to access HelperContainer's collapse function
-  const collapseHelperRef = useRef<(() => void) | null>(null)
 
   // Track events for usage logging
   const eventsRef = useRef<HelperEvent[]>([])
@@ -50,21 +46,6 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
     setLiveRegionMessage(message)
     // Clear after announcement
     setTimeout(() => setLiveRegionMessage(''), 1000)
-  }
-
-  // Handle expand/collapse from HelperContainer
-  const handleExpandChange = (isExpanded: boolean) => {
-    if (isExpanded) {
-      // Track helper opened event
-      addEvent({
-        type: 'helper_opened',
-        timestamp: new Date().toISOString(),
-        data: { triggerSource: 'manual' }
-      })
-      announce('CBT Distortions helper expanded. 10 distortions available.')
-    } else {
-      announce('CBT Distortions helper collapsed')
-    }
   }
 
   // Handle checkbox selection
@@ -154,9 +135,9 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
     setSelectedDistortions(new Set())
     eventsRef.current = []
 
-    // Collapse the helper after insertion
-    if (collapseHelperRef.current) {
-      collapseHelperRef.current()
+    // Close modal after insertion
+    if (onClose) {
+      onClose()
     }
   }
 
@@ -172,78 +153,66 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
         {liveRegionMessage}
       </div>
 
-      <HelperContainer
-        helperType="cbt-distortions"
-        headerText="Have you experienced any distorted thinking today?"
-        descriptionText="Select one or more and click &quot;Continue&quot; to add them to your journal."
-        variant="blue"
-        onExpandChange={handleExpandChange}
-        collapseRef={collapseHelperRef}
-        showDismiss={false}
-        defaultExpanded={false}
-        testId="cbt"
-      >
-        {/* Distortion checkboxes */}
-        <div className="space-y-3 pr-2">
-          {CBT_DISTORTIONS.map((distortion) => (
-            <div
-              key={distortion.id}
-              className="flex items-start gap-3 p-3 rounded-md bg-white/50 dark:bg-gray-900/50 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-colors"
+      {/* Distortion checkboxes */}
+      <div className="space-y-3 pr-2">
+        {CBT_DISTORTIONS.map((distortion) => (
+          <div
+            key={distortion.id}
+            className="flex items-start gap-3 p-3 rounded-md bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors border border-blue-100 dark:border-blue-900"
+          >
+            <Checkbox
+              id={`distortion-${distortion.id}`}
+              checked={selectedDistortions.has(distortion.id)}
+              onCheckedChange={() => handleSelect(distortion.id, distortion.name)}
+              aria-label={`Select ${distortion.name}`}
+              className="mt-1"
+              data-testid={`distortion-${distortion.id}-checkbox`}
+            />
+            <label
+              htmlFor={`distortion-${distortion.id}`}
+              className="flex-1 cursor-pointer"
             >
-              <Checkbox
-                id={`distortion-${distortion.id}`}
-                checked={selectedDistortions.has(distortion.id)}
-                onCheckedChange={() => handleSelect(distortion.id, distortion.name)}
-                aria-label={`Select ${distortion.name}`}
-                className="mt-1"
-                data-testid={`distortion-${distortion.id}-checkbox`}
-              />
-              <label
-                htmlFor={`distortion-${distortion.id}`}
-                className="flex-1 cursor-pointer"
-              >
-                <div className="font-medium text-base text-blue-900 dark:text-blue-100 mb-1">
-                  {distortion.name}
-                </div>
-                <div className="text-sm text-blue-700/80 dark:text-blue-300/80 mb-1">
-                  {distortion.description}
-                </div>
-                <div className="text-sm text-blue-600/60 dark:text-blue-400/60 italic">
-                  Example: {distortion.example}
-                </div>
-              </label>
-            </div>
-          ))}
-        </div>
+              <div className="font-medium text-base text-blue-900 dark:text-blue-100 mb-1">
+                {distortion.name}
+              </div>
+              <div className="text-sm text-blue-700/80 dark:text-blue-300/80 mb-1">
+                {distortion.description}
+              </div>
+              <div className="text-sm text-blue-600/60 dark:text-blue-400/60 italic">
+                Example: {distortion.example}
+              </div>
+            </label>
+          </div>
+        ))}
+      </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-2 pt-4 border-t border-blue-200 dark:border-blue-800">
-          <Button
-            onClick={handleInsert}
-            disabled={selectedDistortions.size === 0}
-            className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600"
-            size="sm"
-            data-testid="cbt-continue-button"
-          >
-            Continue
-            {selectedDistortions.size > 0 && (
-              <span className="ml-2 px-1.5 py-0.5 bg-blue-500 dark:bg-blue-800 rounded text-xs">
-                {selectedDistortions.size}
-              </span>
-            )}
-          </Button>
-          <Button
-            onClick={handleClear}
-            disabled={selectedDistortions.size === 0}
-            variant="ghost"
-            size="sm"
-            className="text-blue-700 hover:text-blue-900 hover:bg-blue-100 dark:text-blue-300 dark:hover:text-blue-100 dark:hover:bg-blue-900/50"
-            data-testid="cbt-clear-button"
-          >
-            Clear
-          </Button>
-        </div>
-      </HelperContainer>
+      {/* Action buttons */}
+      <div className="flex gap-2 pt-4 border-t border-border">
+        <Button
+          onClick={handleInsert}
+          disabled={selectedDistortions.size === 0}
+          className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600"
+          size="sm"
+          data-testid="cbt-continue-button"
+        >
+          Continue
+          {selectedDistortions.size > 0 && (
+            <span className="ml-2 px-1.5 py-0.5 bg-blue-500 dark:bg-blue-800 rounded text-xs">
+              {selectedDistortions.size}
+            </span>
+          )}
+        </Button>
+        <Button
+          onClick={handleClear}
+          disabled={selectedDistortions.size === 0}
+          variant="ghost"
+          size="sm"
+          className="text-blue-700 hover:text-blue-900 hover:bg-blue-100 dark:text-blue-300 dark:hover:text-blue-100 dark:hover:bg-blue-900/50"
+          data-testid="cbt-clear-button"
+        >
+          Clear
+        </Button>
+      </div>
     </>
   )
 }

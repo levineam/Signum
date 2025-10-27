@@ -14,7 +14,10 @@ import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata
 import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
+import { HelperTileGrid } from '@/components/journal/helpers/HelperTileGrid'
+import { HelperModal } from '@/components/journal/helpers/HelperModal'
 import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
+import { HelperType } from '@/types/helper'
 
 interface JournalEntry {
   id: string
@@ -48,6 +51,9 @@ export function JournalStream() {
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null)
   const [noteLinkClicked, setNoteLinkClicked] = useState(false)
   const [creatingLink, setCreatingLink] = useState(false)
+  const [showHelperModal, setShowHelperModal] = useState(false)
+  const [activeHelperId, setActiveHelperId] = useState<HelperType | null>(null)
+  const [helperEntryId, setHelperEntryId] = useState<string | null>(null)
 
   // Cache editor element reference before opening modal (Phase 1 bug fix)
   const cachedEditorRef = useRef<HTMLElement | null>(null)
@@ -486,6 +492,18 @@ export function JournalStream() {
     setViewingNoteId(null)
   }
 
+  const handleTileClick = (helperId: HelperType, entryId: string) => {
+    setActiveHelperId(helperId)
+    setHelperEntryId(entryId)
+    setShowHelperModal(true)
+  }
+
+  const handleCloseHelperModal = () => {
+    setShowHelperModal(false)
+    setActiveHelperId(null)
+    setHelperEntryId(null)
+  }
+
   const handleHelperInsertion = async (entryId: string, helperText: string) => {
     if (!user) {
       return
@@ -643,12 +661,10 @@ export function JournalStream() {
                 )}
               </div>
 
-              {/* CBT Distortions Helper (only on today's entry) */}
+              {/* Helper Tile Grid (only on today's entry) */}
               {isTodayEntry && user && (
-                <CbtDistortions
-                  entryId={entry.id}
-                  userId={user.id}
-                  onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                <HelperTileGrid
+                  onTileClick={(helperId) => handleTileClick(helperId, entry.id)}
                 />
               )}
 
@@ -741,6 +757,23 @@ export function JournalStream() {
         onClose={handleCloseNoteViewer}
         noteId={viewingNoteId}
       />
+
+      {/* Helper Modal */}
+      <HelperModal
+        isOpen={showHelperModal}
+        onClose={handleCloseHelperModal}
+        helperId={activeHelperId}
+      >
+        {activeHelperId === 'cbt-distortions' && helperEntryId && user && (
+          <CbtDistortions
+            entryId={helperEntryId}
+            userId={user.id}
+            onInsert={(helperText) => handleHelperInsertion(helperEntryId, helperText)}
+            onClose={handleCloseHelperModal}
+          />
+        )}
+        {/* Future helpers will be added here */}
+      </HelperModal>
     </div>
   )
 }
