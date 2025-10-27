@@ -26,7 +26,7 @@ export interface HelperInfoContent {
 
 interface HelperInfoProps {
   content: HelperInfoContent
-  variant?: 'default' | 'blue' | 'green' | 'purple'
+  variant?: 'default' | 'blue' | 'green' | 'purple' | 'pink'
 }
 
 /** Theme color mappings for info icon */
@@ -35,6 +35,7 @@ const INFO_COLORS = {
   blue: 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200',
   green: 'text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200',
   purple: 'text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-200',
+  pink: 'text-pink-600 hover:text-pink-800 dark:text-pink-400 dark:hover:text-pink-200',
 }
 
 export function HelperInfo({ content, variant = 'default' }: HelperInfoProps) {

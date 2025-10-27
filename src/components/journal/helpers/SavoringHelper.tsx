@@ -202,10 +202,15 @@ export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProp
 
   return (
     <HelperContainer
-      title="Savoring Practice"
+      helperType="savoring"
+      headerText="Amplify a positive moment"
+      descriptionText="Evidence-based strategies to savor and extract more joy from good experiences."
       variant="pink"
       onExpandChange={handleExpandChange}
       collapseRef={collapseHelperRef}
+      showDismiss={false}
+      defaultExpanded={false}
+      testId="savoring"
       infoContent={{
         title: "Savoring Practice",
         description: "Research-based strategies to amplify positive experiences and extract more joy from good moments.",

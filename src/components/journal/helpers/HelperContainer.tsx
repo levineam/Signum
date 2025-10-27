@@ -44,7 +44,7 @@ export interface HelperContainerProps {
   collapseRef?: React.MutableRefObject<(() => void) | null>
 
   /** Visual theme variant */
-  variant?: 'default' | 'blue' | 'green' | 'purple'
+  variant?: 'default' | 'blue' | 'green' | 'purple' | 'pink'
 
   /** Optional CSS class name for customization */
   className?: string
@@ -87,6 +87,12 @@ const THEME_COLORS = {
     text: 'text-purple-900 dark:text-purple-100',
     subtext: 'text-purple-800 dark:text-purple-200',
     button: 'text-purple-700 hover:text-purple-900 hover:bg-purple-100 dark:text-purple-300 dark:hover:text-purple-100 dark:hover:bg-purple-900/50',
+  },
+  pink: {
+    card: 'bg-gradient-to-r from-pink-50 to-rose-50 border-pink-200 dark:from-pink-950/30 dark:to-rose-950/30 dark:border-pink-800',
+    text: 'text-pink-900 dark:text-pink-100',
+    subtext: 'text-pink-800 dark:text-pink-200',
+    button: 'text-pink-700 hover:text-pink-900 hover:bg-pink-100 dark:text-pink-300 dark:hover:text-pink-100 dark:hover:bg-pink-900/50',
   },
 }
 
