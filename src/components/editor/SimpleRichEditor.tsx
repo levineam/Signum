@@ -31,6 +31,7 @@ export function SimpleRichEditor({
   const editorRef = useRef<HTMLDivElement>(null)
   const [selectedText, setSelectedText] = useState('')
   const [hasSelection, setHasSelection] = useState(false)
+  const isInternalChangeRef = useRef(false)
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
@@ -94,6 +95,7 @@ export function SimpleRichEditor({
       // Trigger change event after formatting
       if (onChange) {
         const content = editorRef.current.innerHTML || ''
+        isInternalChangeRef.current = true
         onChange(content)
       }
 
@@ -165,6 +167,7 @@ export function SimpleRichEditor({
         // Trigger change event
         if (onChange) {
           const content = editorRef.current.innerHTML || ''
+          isInternalChangeRef.current = true
           onChange(content)
         }
 
@@ -405,6 +408,7 @@ export function SimpleRichEditor({
       if (onChange) {
         const content = editorRef.current.innerHTML || ''
         console.log('[insertList] Triggering onChange with content length:', content.length)
+        isInternalChangeRef.current = true
         onChange(content)
       }
 
@@ -467,6 +471,7 @@ export function SimpleRichEditor({
         // Trigger change event
         if (onChange) {
           const content = editorRef.current.innerHTML || ''
+          isInternalChangeRef.current = true
           onChange(content)
         }
 
@@ -573,6 +578,12 @@ export function SimpleRichEditor({
 
   // Set initial content when value changes
   React.useEffect(() => {
+    // Skip updating if this was an internal change (formatting, list creation, etc.)
+    if (isInternalChangeRef.current) {
+      isInternalChangeRef.current = false
+      return
+    }
+
     if (editorRef.current && value !== undefined) {
       const currentContent = editorRef.current.innerHTML || ''
       if (currentContent !== value) {

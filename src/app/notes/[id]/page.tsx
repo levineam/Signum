@@ -1,14 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getNoteById, updateNote } from '@/lib/notes'
 import { Note, getNoteDisplayTitle } from '@/types/note'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { Card } from '@/components/ui/card'
 import { ArrowLeft } from 'lucide-react'
 import { OntologyCardViewer } from '@/components/notes/OntologyCardViewer'
 import { useAuth } from '@/contexts/AuthContext'
+import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 
 interface AimsContent {
   todos: string
@@ -22,6 +23,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const [content, setContent] = useState('')
   const [aimsContent, setAimsContent] = useState<AimsContent>({ todos: '', goals: '' })
   const [isLoading, setIsLoading] = useState(true)
+  const [isEditing, setIsEditing] = useState(false)
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     if (!user) return
