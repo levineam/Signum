@@ -40,14 +40,6 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
   const [completedSteps, setCompletedSteps] = useState(false)
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
 
-  // Debug logging
-  console.log('[SelfCompassionHelper] State:', {
-    situation: situation.trim(),
-    situationLength: situation.trim().length,
-    completedSteps,
-    canSubmit: situation.trim() !== '' && completedSteps
-  })
-
   // Ref to access HelperContainer's collapse function
   const collapseHelperRef = useRef<(() => void) | null>(null)
 
@@ -249,9 +241,7 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
               id="compassion-completed"
               checked={completedSteps}
               onCheckedChange={(checked) => {
-                console.log('[SelfCompassionHelper] Checkbox onCheckedChange called:', { checked, type: typeof checked })
                 const newValue = checked === true
-                console.log('[SelfCompassionHelper] Setting completedSteps to:', newValue)
                 setCompletedSteps(newValue)
                 announce(newValue ? 'Completion checkbox checked' : 'Completion checkbox unchecked')
               }}
