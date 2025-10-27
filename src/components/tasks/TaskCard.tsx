@@ -169,9 +169,9 @@ export function TaskCard({
                 <span className="text-xs">Recurring</span>
               </div>
             )}
-            {/* Show status badge for pending, rejected, and cancelled tasks
-                (accepted/completed tasks have the checkbox as visual indicator) */}
-            {!isAccepted && getStatusBadge()}
+            {/* Only show status badge for rejected and cancelled tasks
+                (pending tasks have action buttons, accepted/completed have checkbox) */}
+            {(status === 'rejected' || status === 'cancelled') && getStatusBadge()}
           </div>
         </div>
 
