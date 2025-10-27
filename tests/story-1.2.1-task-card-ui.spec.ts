@@ -5,9 +5,11 @@ import { loginAsTestUser } from './helpers/auth';
  * Story 1.2.1 UI Requirements Test
  *
  * Tests the TaskCard UI improvements:
- * 1. Accepted tasks should not show "Accepted" badge
- * 2. Checkbox should appear to the LEFT of the title
- * 3. Edit/Delete buttons with tooltips for accepted tasks
+ * 1. Pending tasks should NOT show "Pending" badge (action buttons indicate status)
+ * 2. Accepted tasks should NOT show "Accepted" badge (checkbox indicates status)
+ * 3. Checkbox should appear to the LEFT of the title for accepted tasks
+ * 4. Edit/Delete buttons with tooltips for accepted tasks
+ * 5. Only rejected/cancelled tasks show status badges
  */
 test.describe('Story 1.2.1 - TaskCard UI Improvements', () => {
   test.beforeEach(async ({ page }) => {
@@ -26,11 +28,11 @@ test.describe('Story 1.2.1 - TaskCard UI Improvements', () => {
     // Wait for task detection (3 second debounce)
     await page.waitForTimeout(3500);
 
-    // Verify pending task shows "Pending" badge
-    const taskCard = page.locator('[class*="TaskCard"]').or(page.locator('div').filter({ hasText: 'test the task card UI' }).first());
-    await expect(taskCard.locator('text=Pending')).toBeVisible();
+    // Verify pending task does NOT show "Pending" badge (action buttons make status clear)
+    const taskCard = page.locator('[data-task-card]').filter({ hasText: 'test the task card UI' }).first();
+    await expect(taskCard.locator('text=Pending')).not.toBeVisible();
 
-    // Verify pending task has accept/edit/reject buttons
+    // Verify pending task has accept/edit/reject buttons (these indicate pending status)
     await expect(taskCard.locator('button', { has: page.locator('svg[class*="Check"]') })).toBeVisible();
     await expect(taskCard.locator('button', { has: page.locator('svg[class*="Edit"]') })).toBeVisible();
     await expect(taskCard.locator('button', { has: page.locator('svg[class*="X"]') })).toBeVisible();
