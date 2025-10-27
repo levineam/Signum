@@ -67,6 +67,8 @@ export interface HelperInsertedEvent extends BaseHelperEvent {
   data: {
     insertedText: string
     distortionCount?: number  // For CBT distortions helper
+    fieldCompletionCount?: number  // For gratitude and other form-based helpers
+    [key: string]: unknown  // Allow additional helper-specific fields
   }
 }
 
@@ -76,7 +78,9 @@ export interface HelperInsertedEvent extends BaseHelperEvent {
 export interface HelperClearedEvent extends BaseHelperEvent {
   type: 'helper_cleared'
   data: {
-    previousSelectionCount: number
+    previousSelectionCount?: number
+    previousFieldCount?: number  // For form-based helpers
+    [key: string]: unknown  // Allow additional helper-specific fields
   }
 }
 
