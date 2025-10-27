@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
 import { HelperContainer } from './HelperContainer'
+import { escapeHtml } from '@/utils/htmlEscape'
 
 interface BestPossibleSelfHelperProps {
   entryId: string
@@ -91,7 +92,7 @@ export function BestPossibleSelfHelper({ entryId, userId, onInsert }: BestPossib
     // Split vision into paragraphs (preserve user's line breaks)
     const paragraphs = vision.split('\n').filter(p => p.trim())
     paragraphs.forEach(paragraph => {
-      parts.push(`<p>${paragraph}</p>`)
+      parts.push(`<p>${escapeHtml(paragraph)}</p>`)
       parts.push('<p><br></p>')
     })
 

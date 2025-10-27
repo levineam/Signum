@@ -27,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
 import { HelperContainer } from './HelperContainer'
+import { escapeHtml } from '@/utils/htmlEscape'
 
 interface WoopHelperProps {
   entryId: string
@@ -108,24 +109,24 @@ export function WoopHelper({ entryId, userId, onInsert }: WoopHelperProps) {
     parts.push('<p><br></p>')
 
     // Wish (always included, it's required)
-    parts.push(`<p><strong>Wish:</strong> ${steps.wish}</p>`)
+    parts.push(`<p><strong>Wish:</strong> ${escapeHtml(steps.wish)}</p>`)
     parts.push('<p><br></p>')
 
     // Outcome (optional)
     if (steps.outcome.trim()) {
-      parts.push(`<p><strong>Outcome:</strong> ${steps.outcome}</p>`)
+      parts.push(`<p><strong>Outcome:</strong> ${escapeHtml(steps.outcome)}</p>`)
       parts.push('<p><br></p>')
     }
 
     // Obstacle (optional)
     if (steps.obstacle.trim()) {
-      parts.push(`<p><strong>Obstacle:</strong> ${steps.obstacle}</p>`)
+      parts.push(`<p><strong>Obstacle:</strong> ${escapeHtml(steps.obstacle)}</p>`)
       parts.push('<p><br></p>')
     }
 
     // Plan (optional)
     if (steps.plan.trim()) {
-      parts.push(`<p><strong>Plan:</strong> ${steps.plan}</p>`)
+      parts.push(`<p><strong>Plan:</strong> ${escapeHtml(steps.plan)}</p>`)
       parts.push('<p><br></p>')
     }
 

@@ -29,6 +29,7 @@ import {
 import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
 import { HelperContainer } from './HelperContainer'
+import { escapeHtml } from '@/utils/htmlEscape'
 
 // Evidence-based values list from ACT framework and Cohen research
 export const VALUES_OPTIONS = [
@@ -115,21 +116,21 @@ export function ValuesAffirmationHelper({ entryId, userId, onInsert }: ValuesAff
   const formatValuesEntry = (): string => {
     const parts: string[] = []
 
-    // Header with selected value
-    parts.push(`<p><strong>Values Affirmation: ${selectedValue}</strong></p>`)
+    // Header with selected value (VALUES_OPTIONS are hardcoded strings, but escape anyway for safety)
+    parts.push(`<p><strong>Values Affirmation: ${escapeHtml(selectedValue)}</strong></p>`)
     parts.push('<p><br></p>')
 
     // Why this matters
     if (whyImportant.trim()) {
       parts.push('<p>Why this matters to me:</p>')
-      parts.push(`<p>${whyImportant}</p>`)
+      parts.push(`<p>${escapeHtml(whyImportant)}</p>`)
       parts.push('<p><br></p>')
     }
 
     // Specific time lived this value
     if (specificTime.trim()) {
       parts.push('<p>A time I lived this value:</p>')
-      parts.push(`<p>${specificTime}</p>`)
+      parts.push(`<p>${escapeHtml(specificTime)}</p>`)
       parts.push('<p><br></p>')
     }
 

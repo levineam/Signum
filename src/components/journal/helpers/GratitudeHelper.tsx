@@ -104,26 +104,26 @@ export function GratitudeHelper({ entryId, userId, onInsert }: GratitudeHelperPr
 
       // Add good thing number and title
       if (thing.title.trim()) {
-        parts.push(`<p><strong>${thing.title}</strong></p>`)
+        parts.push(`<p><strong>${escapeHtml(thing.title)}</strong></p>`)
       } else {
         parts.push(`<p><strong>Good Thing #${index + 1}</strong></p>`)
       }
 
       // Add what happened
       if (thing.whatHappened.trim()) {
-        parts.push(`<p>What happened: ${thing.whatHappened}</p>`)
+        parts.push(`<p>What happened: ${escapeHtml(thing.whatHappened)}</p>`)
         parts.push('<p><br></p>')
       }
 
       // Add how I felt
       if (thing.howIFelt.trim()) {
-        parts.push(`<p>How I felt: ${thing.howIFelt}</p>`)
+        parts.push(`<p>How I felt: ${escapeHtml(thing.howIFelt)}</p>`)
         parts.push('<p><br></p>')
       }
 
       // Add why it happened
       if (thing.whyItHappened.trim()) {
-        parts.push(`<p>Why it happened: ${thing.whyItHappened}</p>`)
+        parts.push(`<p>Why it happened: ${escapeHtml(thing.whyItHappened)}</p>`)
         parts.push('<p><br></p>')
       }
 

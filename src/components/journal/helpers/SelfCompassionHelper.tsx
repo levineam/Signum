@@ -28,6 +28,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
 import { HelperContainer } from './HelperContainer'
+import { escapeHtml } from '@/utils/htmlEscape'
 
 interface SelfCompassionHelperProps {
   entryId: string
@@ -86,7 +87,7 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
 
     // User's situation
     parts.push('<p><strong>What\'s difficult right now:</strong></p>')
-    parts.push(`<p>${situation}</p>`)
+    parts.push(`<p>${escapeHtml(situation)}</p>`)
     parts.push('<p><br></p>')
 
     // Step 1: Mindfulness
