@@ -366,11 +366,14 @@ export function SimpleRichEditor({
           }
 
           listItems.forEach(item => listElement.appendChild(item))
+          console.log('[insertList] Created list with', listItems.length, 'items')
           range.insertNode(listElement)
           listElement.normalize()
+          console.log('[insertList] List inserted into DOM:', listElement)
 
           const firstItem = listElement.firstElementChild as HTMLLIElement | null
           const lastItem = listElement.lastElementChild as HTMLLIElement | null
+          console.log('[insertList] First item:', firstItem, 'Last item:', lastItem)
           if (firstItem && lastItem) {
             const newRange = document.createRange()
             if (wasCollapsed) {
@@ -401,11 +404,13 @@ export function SimpleRichEditor({
       // Trigger change event
       if (onChange) {
         const content = editorRef.current.innerHTML || ''
+        console.log('[insertList] Triggering onChange with content length:', content.length)
         onChange(content)
       }
 
       // Update active format states
       setTimeout(updateActiveFormats, 10)
+      console.log('[insertList] Complete')
     }
   }, [onChange, updateActiveFormats])
 
