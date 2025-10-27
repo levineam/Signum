@@ -483,3 +483,11 @@ export interface HelperUsageMetadata {
 - **Helper Types**: `/src/types/helper.ts`
 - **Kristin Neff's Practice**: https://self-compassion.org/exercise-2-self-compassion-break/
 - **Evidence**: Neff (2003), meta-analysis showing d=0.47 effect size
+
+---
+
+## QA Results
+
+- **Gate:** PASS
+- **Review Date:** 2025-10-26
+- **Notes:** Card-based progressive disclosure matches the shipped helper pattern on this branch; inline Tailwind gradients remain acceptable. Telemetry requirements (`situationCharacterCount`) line up with the existing consolidated helper migration (`20251026000000_extend_helper_types.sql`) and TypeScript updates, so dev can proceed without additional schema work.

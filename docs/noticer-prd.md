@@ -34,10 +34,10 @@ Users often experience anxiety, rumination, and worry during journaling but:
 - ✅ **Helper infrastructure** (`HelperContainer` component, helper types, RLS policies)
 - ✅ **ACT-inspired prompts** for reflection
 
-**In Progress (Issue #66 - Stories 2.5.5–2.5.9):**
-- 🚧 **5 additional helpers** (Gratitude, Values, Self-Compassion, WOOP, Expressive Writing)
-- **Timeline:** 5 weeks (3 weeks Phase 1 + 2 weeks Phase 2)
-- **Completion target:** Before Noticer implementation begins
+**In Progress (Issue #66 - Stories 2.5.5–2.5.13):**
+- 🚧 **9 additional helpers** (Gratitude, Values, Self-Compassion, WOOP, Best Possible Self, Savoring, Progressive Muscle Relaxation, Loving-Kindness, Mental Contrasting)
+- **Timeline:** 9 weeks
+- **Completion target:** Before Noticer (2.6.x series) implementation begins
 
 **Missing (Noticer will add):**
 - ❌ **No emotional state detection**
@@ -46,14 +46,14 @@ Users often experience anxiety, rumination, and worry during journaling but:
 
 ### Proposed Solution
 
-⚠️ **CRITICAL DEPENDENCY**: Noticer implementation **MUST wait** until Stories 2.5.5–2.5.9 are complete. The Noticer recommends helpers that don't exist yet.
+⚠️ **CRITICAL DEPENDENCY**: Noticer implementation **MUST wait** until Stories 2.5.5–2.5.13 are complete. The Noticer recommends helpers that don't exist yet.
 
-Add a **4-phase Noticer system** (Stories 2.5.10–2.5.13):
+Add a **4-phase Noticer system** (Stories 2.6.1–2.6.4):
 
-1. **Phase 1 (Story 2.5.10):** Manual mood check-in helper (affect + RNT scales)
-2. **Phase 2 (Story 2.5.11):** RNT-based helper suggestions (requires Gratitude, Values, Self-Compassion, WOOP helpers from Stories 2.5.5-2.5.8)
-3. **Phase 3 (Story 2.5.12):** Auto-triggered check-ins based on typing patterns (absolutist language detection)
-4. **Phase 4 (Story 2.5.13):** Weekly pattern visualization (requires ≥3 check-ins from Phase 1)
+1. **Phase 1 (Story 2.6.1):** Manual mood check-in helper (affect + RNT scales)
+2. **Phase 2 (Story 2.6.2):** RNT-based helper suggestions (requires Gratitude, Values, Self-Compassion, WOOP helpers from Stories 2.5.5-2.5.8)
+3. **Phase 3 (Story 2.6.3):** Auto-triggered check-ins based on typing patterns (absolutist language detection)
+4. **Phase 4 (Story 2.6.4):** Weekly pattern visualization (requires ≥3 check-ins from Phase 1)
 
 ---
 
@@ -107,7 +107,7 @@ Add a **4-phase Noticer system** (Stories 2.5.10–2.5.13):
 
 ## User Stories & Acceptance Criteria
 
-### Phase 1: Mood Check-In Helper (Story 2.5.10)
+### Phase 1: Mood Check-In Helper (Story 2.6.1)
 
 **As a user,**
 I want to quickly check in with my emotional state while journaling,
@@ -146,7 +146,7 @@ so that I become more aware of hidden anxiety or rumination patterns.
 
 ---
 
-### Phase 2: Smart Helper Suggestions (Story 2.5.11)
+### Phase 2: Smart Helper Suggestions (Story 2.6.2)
 
 ⚠️ **BLOCKING DEPENDENCIES:**
 - **Story 2.5.6** (Values Affirmation Helper) must be complete
@@ -243,7 +243,7 @@ function recommendHelper(
 
 **Implementation Workflow:**
 
-1. **Initial State (Story 2.5.10 - Mood Check-In):**
+1. **Initial State (Story 2.6.1 - Mood Check-In):**
    ```typescript
    const AVAILABLE_HELPERS = new Set(['cbt-distortions'])
    ```
@@ -271,7 +271,7 @@ function recommendHelper(
 
 ---
 
-### Phase 3: Typing-Based Triggers (Story 2.5.12)
+### Phase 3: Typing-Based Triggers (Story 2.6.3)
 
 **As a user,**
 I want subtle prompts to check in with myself when my writing shows signs of distress,
@@ -335,7 +335,7 @@ export function analyzeEntry(text: string): SentimentAnalysis {
 
 ---
 
-### Phase 4: Weekly Pattern Visualization (Story 2.5.13)
+### Phase 4: Weekly Pattern Visualization (Story 2.6.4)
 
 **As a user,**
 I want to see patterns in my emotional state over time,
@@ -549,7 +549,7 @@ export type HelperType =
   | 'self-compassion'    // Add when Story 2.5.7 implemented
   | 'woop'               // Add when Story 2.5.8 implemented
   | 'expressive-writing' // Add when Story 2.5.9 implemented
-  | 'mood-check'         // 🆕 Add in Story 2.5.10
+  | 'mood-check'         // 🆕 Add in Story 2.6.1
 
 // Keep HelperType union aligned with DB CHECK constraints and UI to avoid runtime errors
 
@@ -687,7 +687,7 @@ Implement a helper toolbar row with buttons for all helpers (includes refactorin
 )}
 ```
 
-**Recommendation**: Use **Option A** for Phase 1 (Story 2.5.10) to minimize scope, then migrate to **Option B** in a dedicated "Helper Toolbar" story after all Phase 1-2 helpers are implemented.
+**Recommendation**: Use **Option A** for Phase 1 (Story 2.6.1) to minimize scope, then migrate to **Option B** in a dedicated "Helper Toolbar" story after all Phase 1-2 helpers are implemented.
 
 ### Notes Page (Personal Ontology)
 
@@ -760,14 +760,14 @@ await createHelperUsage({
 
 ## Implementation Plan
 
-⚠️ **UPSTREAM DEPENDENCY (Issue #66):** All Noticer phases require Stories 2.5.5–2.5.9 to be complete first (5 weeks). Do not schedule Noticer work until helper toolkit is built.
+⚠️ **UPSTREAM DEPENDENCY (Issue #66):** All Noticer phases require Stories 2.5.5–2.5.13 to be complete first (9 weeks). Do not schedule Noticer work until helper toolkit is built.
 
 ---
 
-### Phase 1: Mood Check-In (Story 2.5.10)
+### Phase 1: Mood Check-In (Story 2.6.1)
 **Timeline:** 1 week
 **Dependencies:**
-- ⚠️ **BLOCKING**: Stories 2.5.5–2.5.9 must be complete (helper toolkit)
+- ⚠️ **BLOCKING**: Stories 2.5.5–2.5.13 must be complete (helper toolkit)
 - Uses existing `HelperContainer` from Story 2.5.4
 - Can implement without helper suggestions (Phase 2 feature)
 
@@ -780,14 +780,14 @@ await createHelperUsage({
 - [ ] Write Playwright tests
 - [ ] Deploy to dev environment
 
-**Can start:** After Story 2.5.9 (Expressive Writing) completes
+**Can start:** After Story 2.5.13 (Mental Contrasting) completes
 
 ---
 
-### Phase 2: Smart Suggestions (Story 2.5.11)
+### Phase 2: Smart Suggestions (Story 2.6.2)
 **Timeline:** 3-4 days
 **Dependencies:**
-- ✅ Phase 1 (Story 2.5.10) complete
+- ✅ Phase 1 (Story 2.6.1) complete
 - ⚠️ **BLOCKING**: Stories 2.5.6–2.5.7 complete (Values, Self-Compassion helpers)
 - Story 2.5.4 (CBT) already exists for RNT 6-8 suggestions
 
@@ -799,14 +799,14 @@ await createHelperUsage({
 - [ ] Test helper auto-open flow (CBT for RNT 6-8, Values/Self-Compassion for RNT 3-5)
 - [ ] Measure acceptance rates
 
-**Can start:** After Story 2.5.10 + Stories 2.5.6–2.5.7 complete
+**Can start:** After Story 2.6.1 + Stories 2.5.6–2.5.7 complete
 
 ---
 
-### Phase 3: Typing Triggers (Story 2.5.12)
+### Phase 3: Typing Triggers (Story 2.6.3)
 **Timeline:** 1 week
 **Dependencies:**
-- ✅ Phase 1 (Story 2.5.10) complete (provides check-in to trigger)
+- ✅ Phase 1 (Story 2.6.1) complete (provides check-in to trigger)
 - Phase 2 optional (typing triggers can work without suggestions)
 
 **Deliverables:**
@@ -818,14 +818,14 @@ await createHelperUsage({
 - [ ] Add "Mute for 30 days" user preference to `noticer_preferences`
 - [ ] Test trigger thresholds (avoid false positives)
 
-**Can start:** After Story 2.5.10 complete
+**Can start:** After Story 2.6.1 complete
 
 ---
 
-### Phase 4: Weekly Patterns (Story 2.5.13)
+### Phase 4: Weekly Patterns (Story 2.6.4)
 **Timeline:** 1 week
 **Dependencies:**
-- ✅ Phase 1 (Story 2.5.10) complete (provides mood check data)
+- ✅ Phase 1 (Story 2.6.1) complete (provides mood check data)
 - ✅ 7+ days of user mood check data (requires active usage)
 - Install Recharts: `npm i recharts`
 
@@ -838,12 +838,12 @@ await createHelperUsage({
 - [ ] Add card to Notes page (gated on ≥3 check-ins in past 7 days)
 - [ ] Test with mock weekly data
 
-**Can start:** After Story 2.5.10 complete + 1 week of dev environment testing
+**Can start:** After Story 2.6.1 complete + 1 week of dev environment testing
 
 ---
 
 **Total Timeline:** 3.5-4 weeks (assumes sequential phases after Issue #66 complete)
-**Earliest Start Date:** After Story 2.5.9 completion (~5 weeks from now)
+**Earliest Start Date:** After Story 2.5.13 completion (~9 weeks from now)
 
 **Total Estimated Timeline:** 3-4 weeks across 4 stories
 
@@ -945,21 +945,25 @@ Scale: 0 (Not at all) → 4 (Very much)
 
 ## Ready-To-Implement Checklist
 
-⚠️ **DO NOT START** until Stories 2.5.5–2.5.9 are complete (5-week prerequisite from Issue #66).
+⚠️ **DO NOT START** until Stories 2.5.5–2.5.13 are complete (9-week prerequisite from Issue #66).
 
 ---
 
-### Phase 1 Prerequisites (Story 2.5.10)
+### Phase 1 Prerequisites (Story 2.6.1)
 
-⚠️ **BLOCKING DEPENDENCY**: All 5 helper stories from Issue #66 must be complete before starting:
+⚠️ **BLOCKING DEPENDENCY**: All 9 helper stories from Issue #66 must be complete before starting:
 - ✅ Story 2.5.5: Gratitude Helper
 - ✅ Story 2.5.6: Values Affirmation Helper
 - ✅ Story 2.5.7: Self-Compassion Helper
 - ✅ Story 2.5.8: WOOP Helper
-- ✅ Story 2.5.9: Expressive Writing Helper
+- ✅ Story 2.5.9: Best Possible Self Helper
+- ✅ Story 2.5.10: Savoring Helper
+- ✅ Story 2.5.11: Progressive Muscle Relaxation Helper
+- ✅ Story 2.5.12: Loving-Kindness Meditation Helper
+- ✅ Story 2.5.13: Mental Contrasting Helper
 
 **Type System:**
-- [ ] Add `'mood-check'` to `HelperType` union in `src/types/helper.ts:17`
+- [ ] Add `'mood-check'` to `HelperType` union in `src/types/helper.ts`
 - [ ] Create `src/types/noticer.ts` with `MoodCheck`, `LanguageFlag`, `NoticerPreferences` interfaces
 - [ ] Follow snake_case → camelCase mapping pattern from `src/lib/supabase/helpers.ts:206-227`
 
@@ -990,7 +994,7 @@ Scale: 0 (Not at all) → 4 (Very much)
 
 ---
 
-### Phase 2 Prerequisites (Story 2.5.11)
+### Phase 2 Prerequisites (Story 2.6.2)
 
 ⚠️ **BLOCKING DEPENDENCY**: Stories 2.5.6–2.5.7 must be complete:
 - ✅ Story 2.5.6: Values Affirmation Helper (for RNT 3-5 suggestions)
@@ -1024,7 +1028,7 @@ Scale: 0 (Not at all) → 4 (Very much)
 
 ---
 
-### Phase 3 Prerequisites (Story 2.5.12)
+### Phase 3 Prerequisites (Story 2.6.3)
 
 **Utils:**
 - [ ] Create `src/utils/sentimentAnalyzer.ts`
@@ -1046,7 +1050,7 @@ Scale: 0 (Not at all) → 4 (Very much)
 
 ---
 
-### Phase 4 Prerequisites (Story 2.5.13)
+### Phase 4 Prerequisites (Story 2.6.4)
 
 **Dependencies:**
 - [ ] Install Recharts: `npm i recharts`
@@ -1119,9 +1123,10 @@ Scale: 0 (Not at all) → 4 (Very much)
 - Added `AVAILABLE_HELPERS` safety checks to prevent suggesting non-existent helpers
 - **Fixed `AVAILABLE_HELPERS` initialization**: Now starts with only `'cbt-distortions'`, future helpers commented out
 - Added 3-stage implementation workflow showing progressive helper unlocking
-- Corrected Phase 1 dependencies: now correctly blocks on Stories 2.5.5–2.5.9
+- Corrected Phase 1 dependencies: now correctly blocks on Stories 2.5.5–2.5.13
 - Added explicit blocking dependencies throughout all phases
-- Clarified earliest start date: ~5 weeks from now (after Issue #66 complete)
+- Clarified earliest start date: ~9 weeks from now (after Issue #66 complete)
+- Renumbered Noticer stories from 2.5.10–2.5.13 to 2.6.1–2.6.4 to separate Noticer epic from Journaling Helpers epic
 
 ### v1.1 (GPT-5 Feedback - October 2025)
 **Technical corrections:**

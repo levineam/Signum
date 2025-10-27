@@ -595,3 +595,11 @@ export interface HelperUsageMetadata {
 - **Helper Types**: `/src/types/helper.ts`
 - **Evidence**: Jacobson (1938), Manzoni et al. (2008)
 - **Complements**: Story 2.5.7 (Self-Compassion) - mental + physical stress relief
+
+---
+
+## QA Results
+
+- **Gate:** PASS
+- **Review Date:** 2025-10-26
+- **Notes:** Checklist + optional reflection follow the established Card-based helper pattern; inline Tailwind gradients are fine on this branch. Telemetry requirements (`muscleGroupCount`, `muscleGroupNames`, `completedFullSequence`, `pmrReflectionLength`) already land in the consolidated helper migration (`20251026093000_extend_helper_types_phase2.sql`) and updated TypeScript types, so dev can proceed without extra schema prep.

@@ -542,3 +542,11 @@ export interface HelperUsageMetadata {
 - **WOOP Website**: https://woopmylife.org/
 - **Evidence**: Oettingen (2014), Gollwitzer & Sheeran (2006)
 - **Pairs with**: Story 2.5.6 (Values Affirmation) - translates values into goals
+
+---
+
+## QA Results
+
+- **Gate:** PASS
+- **Review Date:** 2025-10-26
+- **Notes:** Card-based helper flow and inline gradient styling are consistent with current implementations. Telemetry requirements (`woopStepCounts`, `hasIfThenFormat`) align with the consolidated helper migration (`20251026000000_extend_helper_types.sql`) and the latest TypeScript updates covering stories 2.5.5–2.5.13, so no additional schema prep is needed.
