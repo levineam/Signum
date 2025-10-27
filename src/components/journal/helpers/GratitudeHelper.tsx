@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
 import { HelperContainer } from './HelperContainer'
+import { escapeHtml } from '@/utils/htmlEscape'
 
 interface GratitudeHelperProps {
   entryId: string
