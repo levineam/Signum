@@ -264,8 +264,8 @@ export function SimpleRichEditor({
             variant="ghost"
             onMouseDown={(e) => {
               e.preventDefault()
-              formatText('bold')
             }}
+            onClick={() => formatText('bold')}
             className="h-8 w-8 p-0"
             type="button"
             title="Bold"
@@ -277,8 +277,8 @@ export function SimpleRichEditor({
             variant="ghost"
             onMouseDown={(e) => {
               e.preventDefault()
-              formatText('italic')
             }}
+            onClick={() => formatText('italic')}
             className="h-8 w-8 p-0"
             type="button"
             title="Italic"
@@ -290,8 +290,8 @@ export function SimpleRichEditor({
             variant="ghost"
             onMouseDown={(e) => {
               e.preventDefault()
-              formatText('underline')
             }}
+            onClick={() => formatText('underline')}
             className="h-8 w-8 p-0"
             type="button"
             title="Underline"
@@ -307,8 +307,8 @@ export function SimpleRichEditor({
             variant="ghost"
             onMouseDown={(e) => {
               e.preventDefault()
-              insertHeading(1)
             }}
+            onClick={() => insertHeading(1)}
             className="h-8 w-8 p-0"
             type="button"
             title="Heading 1"
@@ -320,8 +320,8 @@ export function SimpleRichEditor({
             variant="ghost"
             onMouseDown={(e) => {
               e.preventDefault()
-              insertHeading(2)
             }}
+            onClick={() => insertHeading(2)}
             className="h-8 w-8 p-0"
             type="button"
             title="Heading 2"
@@ -337,8 +337,8 @@ export function SimpleRichEditor({
             variant="ghost"
             onMouseDown={(e) => {
               e.preventDefault()
-              insertList(false)
             }}
+            onClick={() => insertList(false)}
             className="h-8 w-8 p-0"
             type="button"
             title="Bullet List"
@@ -350,8 +350,8 @@ export function SimpleRichEditor({
             variant="ghost"
             onMouseDown={(e) => {
               e.preventDefault()
-              insertList(true)
             }}
+            onClick={() => insertList(true)}
             className="h-8 w-8 p-0"
             type="button"
             title="Numbered List"
@@ -367,8 +367,8 @@ export function SimpleRichEditor({
             variant="ghost"
             onMouseDown={(e) => {
               e.preventDefault()
-              setAlignment('left')
             }}
+            onClick={() => setAlignment('left')}
             className="h-8 w-8 p-0"
             type="button"
             title="Align Left"
@@ -380,8 +380,8 @@ export function SimpleRichEditor({
             variant="ghost"
             onMouseDown={(e) => {
               e.preventDefault()
-              setAlignment('center')
             }}
+            onClick={() => setAlignment('center')}
             className="h-8 w-8 p-0"
             type="button"
             title="Align Center"
@@ -393,8 +393,8 @@ export function SimpleRichEditor({
             variant="ghost"
             onMouseDown={(e) => {
               e.preventDefault()
-              setAlignment('right')
             }}
+            onClick={() => setAlignment('right')}
             className="h-8 w-8 p-0"
             type="button"
             title="Align Right"
@@ -409,8 +409,8 @@ export function SimpleRichEditor({
           variant="ghost"
           onMouseDown={(e) => {
             e.preventDefault()
-            formatText('indent')
           }}
+          onClick={() => formatText('indent')}
           className="h-8 w-8 p-0"
           type="button"
           title="Quote/Indent"
