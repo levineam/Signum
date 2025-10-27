@@ -68,21 +68,6 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     loadNote()
   }, [params, user])
 
-  const handleSave = async () => {
-    if (!note || !user) return
-
-    // Support both old (type) and new (noteType) field names during migration
-    const noteType = 'type' in note ? (note as { type: string }).type : note.noteType
-    const newContent = (noteType === 'aims' || noteType === 'ontology-aim')
-      ? JSON.stringify(aimsContent)
-      : content
-
-    const updated = await updateNote(note.id, { content: newContent }, user.id)
-    if (updated) {
-      setNote(updated)
-    }
-  }
-
   // Auto-save with debounce (like JournalStream.tsx:266-282)
   const handleContentChange = (newContent: string) => {
     if (!note || !user) return
@@ -191,16 +176,11 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   return (
     <div className="max-w-3xl mx-auto p-6">
       {/* Header with Back Button */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6">
         <Button variant="ghost" onClick={handleBack} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           {backButtonLabel}
         </Button>
-        {!isOntologyNote && (
-          <Button onClick={handleSave} size="sm">
-            Save
-          </Button>
-        )}
       </div>
 
       {/* Note Title */}
@@ -218,28 +198,80 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       {/* Editor Content */}
       <div className="space-y-6">
         {isOntologyNote ? (
-          // Use OntologyCardViewer for Values, Beliefs, Aims
+          // Use OntologyCardViewer for Values, Beliefs, Aims (read-only)
           <div className="min-h-[400px] p-6 rounded-md border bg-muted/30">
             <OntologyCardViewer note={note} />
           </div>
         ) : (
-          // Editable for regular notes
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={`Write your ${note.title.toLowerCase()} here...`}
-            className="min-h-[400px] resize-none"
-            onBlur={handleSave}
-          />
+          // Rich text editor for regular notes - matches JournalStream.tsx pattern
+          <Card className="p-6">
+            <div
+              onClick={() => setIsEditing(true)}
+              className="cursor-text hover:bg-muted/30 p-2 rounded-md transition-colors"
+            >
+              {isEditing ? (
+                <SimpleRichEditor
+                  value={content}
+                  placeholder={`Write your ${note.title.toLowerCase()} here...`}
+                  onChange={handleContentChange}
+                  onBlur={() => setIsEditing(false)}
+                  onMakeNote={handleMakeNote}
+                  autoFocus
+                />
+              ) : (
+                <div className="min-h-[100px]">
+                  {content ? (
+                    <div
+                      className="text-base leading-relaxed prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: content }}
+                      onClick={(e) => {
+                        // Handle link clicks in read-only mode
+                        const target = e.target as HTMLElement
+                        const linkElement = target.closest('a[data-note-id]') as HTMLElement
+
+                        if (linkElement) {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const noteId = linkElement.getAttribute('data-note-id')
+                          if (noteId) {
+                            handleLinkClick(noteId)
+                          }
+                        }
+                      }}
+                    />
+                  ) : (
+                    <p className="text-muted-foreground italic">
+                      Click here to start writing...
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </Card>
         )}
       </div>
 
       {/* Footer Instructions */}
       {!isOntologyNote && (
         <div className="mt-8 text-sm text-muted-foreground">
-          <p>Changes are auto-saved when you click outside the text area or click Save.</p>
+          <p>Changes are auto-saved 2 seconds after you stop typing.</p>
         </div>
       )}
+
+      {/* Note Creation Modal */}
+      <NoteCreationModal
+        isOpen={showNoteModal}
+        onClose={handleCloseNoteModal}
+        initialTitle={selectedText}
+        onNoteCreated={handleNoteCreated}
+      />
+
+      {/* Note Viewer Modal */}
+      <NoteViewer
+        isOpen={showNoteViewer}
+        onClose={handleCloseNoteViewer}
+        noteId={viewingNoteId}
+      />
     </div>
   )
 }
