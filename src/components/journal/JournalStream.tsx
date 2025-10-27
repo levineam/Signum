@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
 import { GratitudeHelper } from '@/components/journal/helpers/GratitudeHelper'
+import { ValuesAffirmationHelper } from '@/components/journal/helpers/ValuesAffirmationHelper'
 
 interface JournalEntry {
   id: string
@@ -546,6 +547,11 @@ export function JournalStream() {
                     onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
                   />
                   <GratitudeHelper
+                    entryId={entry.id}
+                    userId={user.id}
+                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                  />
+                  <ValuesAffirmationHelper
                     entryId={entry.id}
                     userId={user.id}
                     onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
