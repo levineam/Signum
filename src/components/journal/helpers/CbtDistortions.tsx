@@ -182,6 +182,12 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
         showDismiss={false}
         defaultExpanded={false}
         testId="cbt"
+        infoContent={{
+          title: "CBT Cognitive Distortions",
+          description: "Cognitive Behavioral Therapy identifies patterns of distorted thinking that contribute to emotional distress. Recognizing and reframing these patterns can reduce anxiety and depression.",
+          effectSize: "d=0.80-1.00 for depression and anxiety",
+          citation: "Hofmann, S. G., et al. (2012). The efficacy of cognitive behavioral therapy: A review of meta-analyses. Cognitive Therapy and Research, 36(5), 427-440."
+        }}
       >
         {/* Distortion checkboxes */}
         <div className="space-y-3 pr-2">
