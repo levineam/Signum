@@ -24,6 +24,7 @@
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
 import { HelperContainer } from './HelperContainer'
@@ -36,6 +37,7 @@ interface SelfCompassionHelperProps {
 
 export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassionHelperProps) {
   const [situation, setSituation] = useState('')
+  const [completedSteps, setCompletedSteps] = useState(false)
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
 
   // Ref to access HelperContainer's collapse function
@@ -73,7 +75,7 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
 
   // Check if form can be submitted
   const canSubmit = (): boolean => {
-    return situation.trim() !== ''
+    return situation.trim() !== '' && completedSteps
   }
 
   // Format self-compassion break as HTML paragraphs
@@ -146,6 +148,7 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
 
     // Reset state
     setSituation('')
+    setCompletedSteps(false)
     eventsRef.current = []
 
     // Collapse the helper after insertion
@@ -157,6 +160,7 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
   // Handle clear field
   const handleClear = () => {
     setSituation('')
+    setCompletedSteps(false)
 
     // Track cleared event
     addEvent({
@@ -231,6 +235,22 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
               <li><strong>Common Humanity:</strong> Remember you&apos;re not alone</li>
               <li><strong>Self-Kindness:</strong> Offer yourself compassion</li>
             </ol>
+          </div>
+
+          {/* Completion Checkbox */}
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="compassion-completed"
+              checked={completedSteps}
+              onCheckedChange={(checked) => setCompletedSteps(checked === true)}
+              data-testid="compassion-completed-checkbox"
+            />
+            <label
+              htmlFor="compassion-completed"
+              className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+            >
+              I have completed the 3 steps of self-compassion
+            </label>
           </div>
         </div>
 
