@@ -19,6 +19,7 @@ import { GratitudeHelper } from '@/components/journal/helpers/GratitudeHelper'
 import { ValuesAffirmationHelper } from '@/components/journal/helpers/ValuesAffirmationHelper'
 import { SelfCompassionHelper } from '@/components/journal/helpers/SelfCompassionHelper'
 import { WoopHelper } from '@/components/journal/helpers/WoopHelper'
+import { BestPossibleSelfHelper } from '@/components/journal/helpers/BestPossibleSelfHelper'
 
 interface JournalEntry {
   id: string
@@ -564,6 +565,11 @@ export function JournalStream() {
                     onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
                   />
                   <WoopHelper
+                    entryId={entry.id}
+                    userId={user.id}
+                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                  />
+                  <BestPossibleSelfHelper
                     entryId={entry.id}
                     userId={user.id}
                     onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
