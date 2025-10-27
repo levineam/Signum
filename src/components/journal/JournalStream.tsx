@@ -17,6 +17,8 @@ import { toast } from 'sonner'
 import { HelperTileGrid } from '@/components/journal/helpers/HelperTileGrid'
 import { HelperModal } from '@/components/journal/helpers/HelperModal'
 import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
+import { ThreeGoodThings } from '@/components/journal/helpers/ThreeGoodThings'
+import { Values } from '@/components/journal/helpers/Values'
 import { HelperType } from '@/types/helper'
 
 interface JournalEntry {
@@ -772,7 +774,22 @@ export function JournalStream() {
             onClose={handleCloseHelperModal}
           />
         )}
-        {/* Future helpers will be added here */}
+        {activeHelperId === '3-good-things' && helperEntryId && user && (
+          <ThreeGoodThings
+            entryId={helperEntryId}
+            userId={user.id}
+            onInsert={(helperText) => handleHelperInsertion(helperEntryId, helperText)}
+            onClose={handleCloseHelperModal}
+          />
+        )}
+        {activeHelperId === 'values' && helperEntryId && user && (
+          <Values
+            entryId={helperEntryId}
+            userId={user.id}
+            onInsert={(helperText) => handleHelperInsertion(helperEntryId, helperText)}
+            onClose={handleCloseHelperModal}
+          />
+        )}
       </HelperModal>
     </div>
   )
