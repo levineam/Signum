@@ -230,6 +230,12 @@ export function ValuesAffirmationHelper({ entryId, userId, onInsert }: ValuesAff
         showDismiss={false}
         defaultExpanded={false}
         testId="values"
+        infoContent={{
+          title: "Values Self-Affirmation",
+          description: "Reflecting on your core values strengthens your sense of self-integrity and acts as a psychological buffer against stress. This practice is foundational to ACT (Acceptance and Commitment Therapy).",
+          effectSize: "d=0.20-0.40 for stress buffering",
+          citation: "Sherman, D. K., & Cohen, G. L. (2006). The psychology of self-defense: Self-affirmation theory. Advances in Experimental Social Psychology, 38, 183-242."
+        }}
       >
         {/* Values Selection Form */}
         <div className="space-y-4">

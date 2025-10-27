@@ -269,6 +269,13 @@ export function GratitudeHelper({ entryId, userId, onInsert }: GratitudeHelperPr
         showDismiss={false}
         defaultExpanded={false}
         testId="gratitude"
+        infoContent={{
+          title: "Three Good Things",
+          description: "A gratitude practice where you identify three positive events from your day and reflect on why they happened. Regular practice strengthens well-being and life satisfaction.",
+          effectSize: "d=0.31 for well-being improvements",
+          citation: "Dickens, L. (2017). Using gratitude to promote positive change. Journal of Positive Psychology.",
+          learnMoreUrl: "https://ggia.berkeley.edu/practice/three-good-things"
+        }}
       >
         {/* Good Things Form */}
         <div className="space-y-6">

@@ -190,6 +190,13 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
         showDismiss={false}
         defaultExpanded={false}
         testId="self-compassion"
+        infoContent={{
+          title: "Self-Compassion Break",
+          description: "Kristin Neff's three-step practice for responding to difficult moments with kindness instead of self-criticism. Combines mindfulness, common humanity, and self-kindness to reduce suffering.",
+          effectSize: "d=0.47 for well-being improvements",
+          citation: "Neff, K. D., & Germer, C. K. (2013). A pilot study and randomized controlled trial of the mindful self-compassion program. Journal of Clinical Psychology, 69(1), 28-44.",
+          learnMoreUrl: "https://self-compassion.org/exercise-2-self-compassion-break/"
+        }}
       >
         {/* Self-Compassion Form */}
         <div className="space-y-4">

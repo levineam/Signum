@@ -19,6 +19,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, ChevronUp, X } from 'lucide-react'
 import { HelperType } from '@/types/helper'
+import { HelperInfo, HelperInfoContent } from './HelperInfo'
 
 export interface HelperContainerProps {
   /** Unique identifier for the helper type */
@@ -56,6 +57,9 @@ export interface HelperContainerProps {
 
   /** Whether to start in expanded state */
   defaultExpanded?: boolean
+
+  /** Optional info content to display in popover */
+  infoContent?: HelperInfoContent
 }
 
 /** Theme color mappings for different helper types */
@@ -99,6 +103,7 @@ export function HelperContainer({
   testId,
   showDismiss = true,
   defaultExpanded = false,
+  infoContent,
 }: HelperContainerProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
@@ -190,7 +195,12 @@ export function HelperContainer({
               {headerText}
             </span>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              {/* Info Icon */}
+              {infoContent && (
+                <HelperInfo content={infoContent} variant={variant} />
+              )}
+
               <Button
                 ref={exploreButtonRef}
                 onClick={handleExpand}
