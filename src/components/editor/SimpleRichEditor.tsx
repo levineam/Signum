@@ -262,7 +262,10 @@ export function SimpleRichEditor({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => formatText('bold')}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              formatText('bold')
+            }}
             className="h-8 w-8 p-0"
             type="button"
             title="Bold"
@@ -272,7 +275,10 @@ export function SimpleRichEditor({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => formatText('italic')}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              formatText('italic')
+            }}
             className="h-8 w-8 p-0"
             type="button"
             title="Italic"
@@ -282,7 +288,10 @@ export function SimpleRichEditor({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => formatText('underline')}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              formatText('underline')
+            }}
             className="h-8 w-8 p-0"
             type="button"
             title="Underline"
@@ -296,7 +305,10 @@ export function SimpleRichEditor({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => insertHeading(1)}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              insertHeading(1)
+            }}
             className="h-8 w-8 p-0"
             type="button"
             title="Heading 1"
@@ -306,7 +318,10 @@ export function SimpleRichEditor({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => insertHeading(2)}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              insertHeading(2)
+            }}
             className="h-8 w-8 p-0"
             type="button"
             title="Heading 2"
@@ -320,7 +335,10 @@ export function SimpleRichEditor({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => insertList(false)}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              insertList(false)
+            }}
             className="h-8 w-8 p-0"
             type="button"
             title="Bullet List"
@@ -330,7 +348,10 @@ export function SimpleRichEditor({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => insertList(true)}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              insertList(true)
+            }}
             className="h-8 w-8 p-0"
             type="button"
             title="Numbered List"
@@ -344,7 +365,10 @@ export function SimpleRichEditor({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => setAlignment('left')}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              setAlignment('left')
+            }}
             className="h-8 w-8 p-0"
             type="button"
             title="Align Left"
@@ -354,7 +378,10 @@ export function SimpleRichEditor({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => setAlignment('center')}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              setAlignment('center')
+            }}
             className="h-8 w-8 p-0"
             type="button"
             title="Align Center"
@@ -364,7 +391,10 @@ export function SimpleRichEditor({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => setAlignment('right')}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              setAlignment('right')
+            }}
             className="h-8 w-8 p-0"
             type="button"
             title="Align Right"
@@ -377,7 +407,10 @@ export function SimpleRichEditor({
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => formatText('indent')}
+          onMouseDown={(e) => {
+            e.preventDefault()
+            formatText('indent')
+          }}
           className="h-8 w-8 p-0"
           type="button"
           title="Quote/Indent"
