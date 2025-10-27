@@ -51,18 +51,23 @@ export function SimpleRichEditor({
       const selection = window.getSelection()
       if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0)
-        const selectedText = range.toString()
 
-        // Create heading element with selected text or placeholder
+        // Create heading element
         const headingElement = document.createElement(`h${level}`)
         headingElement.style.fontSize = level === 1 ? '1.5em' : '1.25em'
         headingElement.style.fontWeight = 'bold'
         headingElement.style.marginBottom = '0.5em'
-        headingElement.textContent = selectedText || 'Heading'
 
-        // Delete the selected content and insert heading
-        range.deleteContents()
-        range.insertNode(headingElement)
+        try {
+          // Try to wrap the selection (preserves HTML content)
+          range.surroundContents(headingElement)
+        } catch {
+          // If surroundContents fails (e.g., selection spans multiple elements),
+          // extract contents as document fragment to preserve HTML
+          const fragment = range.extractContents()
+          headingElement.appendChild(fragment)
+          range.insertNode(headingElement)
+        }
 
         // Move cursor after the heading
         range.setStartAfter(headingElement)
