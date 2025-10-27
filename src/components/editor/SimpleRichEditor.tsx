@@ -207,56 +207,181 @@ export function SimpleRichEditor({
           currentEl = currentEl.parentElement
         }
 
+        const moveChildren = (source: Node, target: HTMLElement) => {
+          while (source.firstChild) {
+            target.appendChild(source.firstChild)
+          }
+        }
+
+        const wasCollapsed = selection.isCollapsed
+
         if (existingList) {
-          // Remove list: unwrap all LI elements
+          // Remove list: unwrap LI elements back into block content
           const parent = existingList.parentElement
           if (parent) {
             const fragment = document.createDocumentFragment()
-            const items = Array.from(existingList.querySelectorAll('li'))
-            items.forEach(li => {
-              // Extract content from LI and add line break
-              while (li.firstChild) {
-                fragment.appendChild(li.firstChild)
+            Array.from(existingList.children).forEach(child => {
+              if (!(child instanceof HTMLLIElement)) return
+              const block = document.createElement('div')
+              moveChildren(child, block)
+              if (!block.hasChildNodes()) {
+                block.appendChild(document.createElement('br'))
               }
-              fragment.appendChild(document.createElement('br'))
+              fragment.appendChild(block)
             })
             parent.replaceChild(fragment, existingList)
           }
         } else if (existingOtherList) {
           // Convert from one list type to another
           const newList = document.createElement(listTag)
-          const items = Array.from(existingOtherList.querySelectorAll('li'))
-          items.forEach(li => {
+          Array.from(existingOtherList.children).forEach(child => {
+            if (!(child instanceof HTMLLIElement)) return
             const newLi = document.createElement('li')
-            while (li.firstChild) {
-              newLi.appendChild(li.firstChild)
+            moveChildren(child, newLi)
+            if (!newLi.hasChildNodes()) {
+              newLi.appendChild(document.createElement('br'))
             }
             newList.appendChild(newLi)
           })
           existingOtherList.parentElement?.replaceChild(newList, existingOtherList)
         } else {
-          // Create new list
           const listElement = document.createElement(listTag)
-          const listItem = document.createElement('li')
 
-          try {
-            // Try to wrap selection
-            const fragment = range.extractContents()
-            listItem.appendChild(fragment)
-            listElement.appendChild(listItem)
-            range.insertNode(listElement)
-          } catch {
-            // Fallback: create empty list item
-            listItem.textContent = 'List item'
-            listElement.appendChild(listItem)
-            range.insertNode(listElement)
+          const finishCurrentItem = (items: HTMLLIElement[], currentItem: HTMLLIElement, forceEmpty = false) => {
+            if (!currentItem.hasChildNodes()) {
+              if (!forceEmpty) {
+                return { items, currentItem }
+              }
+              currentItem.appendChild(document.createElement('br'))
+            }
+            items.push(currentItem)
+            return { items, currentItem: document.createElement('li') }
           }
 
-          // Move cursor into the list item
-          range.setStart(listItem, 0)
-          range.setEnd(listItem, listItem.childNodes.length)
-          selection.removeAllRanges()
-          selection.addRange(range)
+          try {
+            const fragment = range.extractContents()
+            const nodes = Array.from(fragment.childNodes)
+
+            let listItems: HTMLLIElement[] = []
+            let currentItem = document.createElement('li')
+
+            nodes.forEach(node => {
+              if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.textContent ?? ''
+                const parts = text.split(/\n/)
+                parts.forEach((part, index) => {
+                  if (index > 0) {
+                    const result = finishCurrentItem(listItems, currentItem, true)
+                    listItems = result.items
+                    currentItem = result.currentItem
+                  }
+                  if (part.length > 0) {
+                    currentItem.appendChild(document.createTextNode(part))
+                  }
+                })
+                return
+              }
+
+              if (node.nodeName === 'BR') {
+                const result = finishCurrentItem(listItems, currentItem, true)
+                listItems = result.items
+                currentItem = result.currentItem
+                return
+              }
+
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                const element = node as HTMLElement
+                const tag = element.tagName.toLowerCase()
+
+                if (tag === 'div' || tag === 'p') {
+                  const before = finishCurrentItem(listItems, currentItem)
+                  listItems = before.items
+                  currentItem = before.currentItem
+                  const newItem = document.createElement('li')
+                  moveChildren(element, newItem)
+                  if (!newItem.hasChildNodes()) {
+                    newItem.appendChild(document.createElement('br'))
+                  }
+                  listItems.push(newItem)
+                  return
+                }
+
+                if (tag === 'ul' || tag === 'ol') {
+                  const before = finishCurrentItem(listItems, currentItem)
+                  listItems = before.items
+                  currentItem = before.currentItem
+                  Array.from(element.children).forEach(child => {
+                    if (!(child instanceof HTMLLIElement)) return
+                    const newItem = document.createElement('li')
+                    moveChildren(child, newItem)
+                    if (!newItem.hasChildNodes()) {
+                      newItem.appendChild(document.createElement('br'))
+                    }
+                    listItems.push(newItem)
+                  })
+                  return
+                }
+
+                if (tag === 'li') {
+                  const before = finishCurrentItem(listItems, currentItem)
+                  listItems = before.items
+                  currentItem = before.currentItem
+                  const newItem = document.createElement('li')
+                  moveChildren(element, newItem)
+                  if (!newItem.hasChildNodes()) {
+                    newItem.appendChild(document.createElement('br'))
+                  }
+                  listItems.push(newItem)
+                  return
+                }
+
+                currentItem.appendChild(element)
+                return
+              }
+
+              currentItem.appendChild(node)
+            })
+
+            if (currentItem.hasChildNodes()) {
+              listItems.push(currentItem)
+            }
+
+            if (listItems.length === 0) {
+              const emptyItem = document.createElement('li')
+              emptyItem.appendChild(document.createElement('br'))
+              listItems.push(emptyItem)
+            }
+
+            listItems.forEach(item => listElement.appendChild(item))
+            range.insertNode(listElement)
+            listElement.normalize()
+
+            const firstItem = listElement.firstElementChild as HTMLLIElement | null
+            const lastItem = listElement.lastElementChild as HTMLLIElement | null
+            if (firstItem && lastItem) {
+              const newRange = document.createRange()
+              if (wasCollapsed) {
+                newRange.setStart(firstItem, 0)
+                newRange.collapse(true)
+              } else {
+                newRange.setStart(firstItem, 0)
+                newRange.setEnd(lastItem, lastItem.childNodes.length)
+              }
+              selection.removeAllRanges()
+              selection.addRange(newRange)
+            }
+          } catch {
+            const fallbackItem = document.createElement('li')
+            fallbackItem.appendChild(document.createElement('br'))
+            listElement.appendChild(fallbackItem)
+            range.insertNode(listElement)
+
+            const newRange = document.createRange()
+            newRange.setStart(fallbackItem, 0)
+            newRange.collapse(true)
+            selection.removeAllRanges()
+            selection.addRange(newRange)
+          }
         }
 
         // Trigger change event
