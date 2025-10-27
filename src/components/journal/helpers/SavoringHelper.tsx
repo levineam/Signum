@@ -45,16 +45,16 @@ export const SAVORING_STRATEGIES = [
 
 export type SavoringStrategy = typeof SAVORING_STRATEGIES[number]
 
-// Strategy descriptions for guidance
-const STRATEGY_DESCRIPTIONS: Record<SavoringStrategy, string> = {
-  'Sharing with Others': 'Tell someone about this positive experience',
-  'Memory Building': 'Create a mental snapshot or keep a memento',
-  'Sensory-Perceptual Sharpening': 'Focus on what you see, hear, smell, taste, or touch',
-  'Behavioral Expression': 'Let yourself smile, laugh, or physically express joy',
-  'Self-Congratulation': 'Acknowledge your role in making this happen',
-  'Absorption': 'Lose yourself completely in the experience',
-  'Temporal Awareness': 'Remind yourself this moment is fleeting',
-  'Comparison': 'Think about how this could have been less positive'
+// Placeholder text for the reflection field based on selected strategy
+const STRATEGY_PLACEHOLDERS: Record<SavoringStrategy, string> = {
+  'Sharing with Others': 'Describe sharing this positive experience with someone...',
+  'Memory Building': 'Describe the mental snapshot or memento you created...',
+  'Sensory-Perceptual Sharpening': 'Think of what you saw, heard, smelled, tasted, or felt when something good happened.',
+  'Behavioral Expression': 'Describe how you physically expressed your joy (smile, laugh, etc.)...',
+  'Self-Congratulation': 'Describe your role in making this good thing happen...',
+  'Absorption': 'Describe how you lost yourself completely in the experience...',
+  'Temporal Awareness': 'Reflect on this fleeting moment and why it matters...',
+  'Comparison': 'Think about how this could have been less positive...'
 }
 
 interface SavoringHelperProps {
@@ -119,7 +119,7 @@ export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProp
 
   // Check if form can be submitted
   const canSubmit = (): boolean => {
-    return selectedStrategy !== ''
+    return selectedStrategy !== '' && reflection.trim() !== ''
   }
 
   // Format savoring entry as HTML paragraphs
@@ -204,7 +204,7 @@ export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProp
     <HelperContainer
       helperType="savoring"
       headerText="Amplify a positive moment"
-      descriptionText="Evidence-based strategies to savor and extract more joy from good experiences."
+      descriptionText="Savor a good experience you recently had."
       variant="pink"
       onExpandChange={handleExpandChange}
       collapseRef={collapseHelperRef}
@@ -230,19 +230,13 @@ export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProp
       </div>
 
       <div className="space-y-4">
-        {/* Guidance text */}
-        <p className="text-sm text-gray-700">
-          Choose a strategy you used (or want to try) to savor a positive moment.
-          Strategy selection alone has value—reflection enhances it.
-        </p>
-
         {/* Strategy dropdown */}
         <div className="space-y-2">
           <label
             htmlFor="savoring-strategy"
             className="text-sm font-medium text-gray-700"
           >
-            Savoring Strategy <span className="text-red-500">*</span>
+            Savoring Strategy
           </label>
           <Select
             value={selectedStrategy}
@@ -262,33 +256,28 @@ export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProp
                   value={strategy}
                   className="cursor-pointer"
                 >
-                  <div>
-                    <div className="font-medium">{strategy}</div>
-                    <div className="text-xs text-gray-500">
-                      {STRATEGY_DESCRIPTIONS[strategy]}
-                    </div>
-                  </div>
+                  {strategy}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Reflection text area (optional) */}
+        {/* Reflection text area (required) */}
         <div className="space-y-2">
           <label
             htmlFor="savoring-reflection"
             className="text-sm font-medium text-gray-700"
           >
-            How did you apply this strategy? (optional)
+            Apply this strategy
           </label>
           <Textarea
             id="savoring-reflection"
             value={reflection}
             onChange={(e) => setReflection(e.target.value)}
-            placeholder="Describe your savoring experience..."
+            placeholder={selectedStrategy ? STRATEGY_PLACEHOLDERS[selectedStrategy] : "Choose a strategy first..."}
             className="min-h-[100px] resize-y"
-            aria-label="Describe your savoring experience (optional)"
+            aria-label="Apply this savoring strategy"
           />
         </div>
 
