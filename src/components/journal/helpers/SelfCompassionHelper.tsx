@@ -74,9 +74,7 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
   }
 
   // Check if form can be submitted
-  const canSubmit = (): boolean => {
-    return situation.trim() !== '' && completedSteps
-  }
+  const canSubmit = situation.trim() !== '' && completedSteps
 
   // Format self-compassion break as HTML paragraphs
   const formatCompassionBreak = (): string => {
@@ -108,7 +106,7 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
 
   // Handle insert to journal
   const handleInsert = async () => {
-    if (!canSubmit()) return
+    if (!canSubmit) return
 
     // Format compassion break text
     const compassionText = formatCompassionBreak()
@@ -243,8 +241,9 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
               id="compassion-completed"
               checked={completedSteps}
               onCheckedChange={(checked) => {
-                setCompletedSteps(checked === true)
-                announce(checked ? 'Completion checkbox checked' : 'Completion checkbox unchecked')
+                const newValue = checked === true
+                setCompletedSteps(newValue)
+                announce(newValue ? 'Completion checkbox checked' : 'Completion checkbox unchecked')
               }}
               className="mt-0.5 border-2 border-gray-400 dark:border-gray-500"
               data-testid="compassion-completed-checkbox"
@@ -262,7 +261,7 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
         <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-800 mt-4">
           <Button
             onClick={handleInsert}
-            disabled={!canSubmit()}
+            disabled={!canSubmit}
             className="bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-700 dark:hover:bg-amber-600"
             size="sm"
             data-testid="compassion-insert-button"
