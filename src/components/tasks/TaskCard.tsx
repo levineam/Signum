@@ -74,22 +74,10 @@ export function TaskCard({
     }
   };
 
+  // Only renders badges for rejected and cancelled tasks
+  // (pending has action buttons, accepted/completed have checkbox)
   const getStatusBadge = () => {
     switch (status) {
-      case 'accepted':
-        return (
-          <span className="inline-flex items-center gap-1 rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
-            <Check className="size-3" />
-            Accepted
-          </span>
-        );
-      case 'completed':
-        return (
-          <span className="inline-flex items-center gap-1 rounded-md bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-            <Check className="size-3" />
-            Completed
-          </span>
-        );
       case 'rejected':
         return (
           <span className="inline-flex items-center gap-1 rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-400">
@@ -104,13 +92,8 @@ export function TaskCard({
             Cancelled
           </span>
         );
-      case 'pending':
       default:
-        return (
-          <span className="inline-flex items-center gap-1 rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-            Pending
-          </span>
-        );
+        return null;
     }
   };
 
@@ -189,6 +172,8 @@ export function TaskCard({
               }}
               disabled={isProcessing}
               className="h-7 px-2 text-green-600 hover:bg-green-100 hover:text-green-700 dark:text-green-400 dark:hover:bg-green-900/30"
+              data-testid="task-accept"
+              aria-label="Accept task"
             >
               <Check className="size-4" />
             </Button>
@@ -203,6 +188,7 @@ export function TaskCard({
                   }}
                   disabled={isProcessing}
                   className="h-7 px-2"
+                  data-testid="task-edit"
                 >
                   <Edit2 className="size-3.5" />
                 </Button>
@@ -220,6 +206,7 @@ export function TaskCard({
                   }}
                   disabled={isProcessing}
                   className="h-7 px-2 text-red-600 hover:bg-red-100 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/30"
+                  data-testid="task-reject"
                 >
                   <X className="size-4" />
                 </Button>
@@ -243,6 +230,7 @@ export function TaskCard({
                   }}
                   disabled={isProcessing}
                   className="h-7 px-2"
+                  data-testid="task-edit"
                 >
                   <Edit2 className="size-3.5" />
                 </Button>
@@ -260,6 +248,7 @@ export function TaskCard({
                   }}
                   disabled={isProcessing}
                   className="h-7 px-2 text-red-600 hover:bg-red-100 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/30"
+                  data-testid="task-delete"
                 >
                   <Trash2 className="size-3.5" />
                 </Button>

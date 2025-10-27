@@ -18,6 +18,9 @@ import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskEditDialog } from '@/components/tasks/TaskEditDialog'
 
+// Debug logging flag (disable in production for performance)
+const DEBUG_TASK_DETECTION = process.env.NODE_ENV === 'development'
+
 interface JournalEntry {
   id: string
   date: string  // YYYY-MM-DD format
@@ -442,27 +445,37 @@ export function JournalStream() {
       ? leafParagraphs
       : [tempDiv]
 
-    console.log(`[Task Detection] Checking ${paragraphs.length} leaf paragraphs in entry ${entryId}`)
+    if (DEBUG_TASK_DETECTION) {
+      console.log(`[Task Detection] Checking ${paragraphs.length} leaf paragraphs in entry ${entryId}`)
+    }
 
     for (const para of paragraphs) {
       const paragraphText = para.textContent?.trim() || ''
       const paraHash = `${entryId}-${paragraphText}`
 
-      console.log('[Task Detection] Examining paragraph:', { paragraphText, isEmpty: !paragraphText, paraHash })
+      if (DEBUG_TASK_DETECTION) {
+        console.log('[Task Detection] Examining paragraph:', { paragraphText, isEmpty: !paragraphText, paraHash })
+      }
 
       // Skip empty paragraphs
       if (!paragraphText) {
-        console.log('[Task Detection] Skipping empty paragraph')
+        if (DEBUG_TASK_DETECTION) {
+          console.log('[Task Detection] Skipping empty paragraph')
+        }
         continue
       }
 
       // Check if already processed - but only mark as processed AFTER successful task creation
       if (processedParagraphs.current.has(paraHash)) {
-        console.log('[Task Detection] Skipping already processed paragraph:', paragraphText.substring(0, 50))
+        if (DEBUG_TASK_DETECTION) {
+          console.log('[Task Detection] Skipping already processed paragraph:', paragraphText.substring(0, 50))
+        }
         continue
       }
 
-      console.log('[Task Detection] Processing paragraph:', paragraphText)
+      if (DEBUG_TASK_DETECTION) {
+        console.log('[Task Detection] Processing paragraph:', paragraphText)
+      }
 
       // Call task parsing API (with user's timezone info for DST handling)
       try {
@@ -524,7 +537,9 @@ export function JournalStream() {
               return updated
             })
           } else {
-            console.log('[Task Detection] No task detected in:', paragraphText.substring(0, 50))
+            if (DEBUG_TASK_DETECTION) {
+              console.log('[Task Detection] No task detected in:', paragraphText.substring(0, 50))
+            }
           }
         } else {
           const error = await response.json()
