@@ -175,8 +175,101 @@ export function SimpleRichEditor({
   }, [onChange, updateActiveFormats])
 
   const insertList = useCallback((ordered: boolean) => {
-    formatText(ordered ? 'insertOrderedList' : 'insertUnorderedList')
-  }, [formatText])
+    if (editorRef.current) {
+      editorRef.current.focus()
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0)
+        let node: Node | null = range.commonAncestorContainer
+
+        // If text node, get parent element
+        if (node.nodeType === Node.TEXT_NODE) {
+          node = node.parentElement
+        }
+
+        const listTag = ordered ? 'OL' : 'UL'
+        const otherListTag = ordered ? 'UL' : 'OL'
+
+        // Check if already in a list of this type
+        let currentEl: HTMLElement | null = node as HTMLElement
+        let existingList: HTMLElement | null = null
+        let existingOtherList: HTMLElement | null = null
+
+        while (currentEl && editorRef.current.contains(currentEl)) {
+          if (currentEl.tagName === listTag) {
+            existingList = currentEl
+            break
+          }
+          if (currentEl.tagName === otherListTag) {
+            existingOtherList = currentEl
+            break
+          }
+          currentEl = currentEl.parentElement
+        }
+
+        if (existingList) {
+          // Remove list: unwrap all LI elements
+          const parent = existingList.parentElement
+          if (parent) {
+            const fragment = document.createDocumentFragment()
+            const items = Array.from(existingList.querySelectorAll('li'))
+            items.forEach(li => {
+              // Extract content from LI and add line break
+              while (li.firstChild) {
+                fragment.appendChild(li.firstChild)
+              }
+              fragment.appendChild(document.createElement('br'))
+            })
+            parent.replaceChild(fragment, existingList)
+          }
+        } else if (existingOtherList) {
+          // Convert from one list type to another
+          const newList = document.createElement(listTag)
+          const items = Array.from(existingOtherList.querySelectorAll('li'))
+          items.forEach(li => {
+            const newLi = document.createElement('li')
+            while (li.firstChild) {
+              newLi.appendChild(li.firstChild)
+            }
+            newList.appendChild(newLi)
+          })
+          existingOtherList.parentElement?.replaceChild(newList, existingOtherList)
+        } else {
+          // Create new list
+          const listElement = document.createElement(listTag)
+          const listItem = document.createElement('li')
+
+          try {
+            // Try to wrap selection
+            const fragment = range.extractContents()
+            listItem.appendChild(fragment)
+            listElement.appendChild(listItem)
+            range.insertNode(listElement)
+          } catch {
+            // Fallback: create empty list item
+            listItem.textContent = 'List item'
+            listElement.appendChild(listItem)
+            range.insertNode(listElement)
+          }
+
+          // Move cursor into the list item
+          range.setStart(listItem, 0)
+          range.setEnd(listItem, listItem.childNodes.length)
+          selection.removeAllRanges()
+          selection.addRange(range)
+        }
+
+        // Trigger change event
+        if (onChange) {
+          const content = editorRef.current.innerHTML || ''
+          onChange(content)
+        }
+
+        // Update active format states
+        setTimeout(updateActiveFormats, 10)
+      }
+    }
+  }, [onChange, updateActiveFormats])
 
   const setAlignment = useCallback((align: string) => {
     formatText(`justify${align.charAt(0).toUpperCase() + align.slice(1)}`)
