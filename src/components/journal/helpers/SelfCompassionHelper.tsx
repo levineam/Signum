@@ -238,16 +238,20 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
           </div>
 
           {/* Completion Checkbox */}
-          <div className="flex items-start gap-2">
+          <div className="flex items-start gap-3 p-3 rounded-md bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700">
             <Checkbox
               id="compassion-completed"
               checked={completedSteps}
-              onCheckedChange={(checked) => setCompletedSteps(checked === true)}
+              onCheckedChange={(checked) => {
+                setCompletedSteps(checked === true)
+                announce(checked ? 'Completion checkbox checked' : 'Completion checkbox unchecked')
+              }}
+              className="mt-0.5 border-2 border-gray-400 dark:border-gray-500"
               data-testid="compassion-completed-checkbox"
             />
             <label
               htmlFor="compassion-completed"
-              className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+              className="text-sm font-medium text-gray-800 dark:text-gray-200 cursor-pointer select-none leading-tight"
             >
               I have completed the 3 steps of self-compassion
             </label>
