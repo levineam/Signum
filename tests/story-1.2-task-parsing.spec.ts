@@ -11,7 +11,7 @@
  *   TEST_URL=https://your-preview.vercel.app npx playwright test
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 // Use environment variable or skip tests
 const TEST_URL = process.env.TEST_URL || process.env.PLAYWRIGHT_BASE_URL;
@@ -31,7 +31,7 @@ if (skipTests) {
 }
 
 // Helper to authenticate and get session
-async function getAuthenticatedSession(page: any) {
+async function getAuthenticatedSession(page: Page) {
   if (!TEST_URL) {
     throw new Error('TEST_URL is not set');
   }
