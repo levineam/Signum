@@ -446,22 +446,23 @@ export function JournalStream() {
 
     for (const para of paragraphs) {
       const paragraphText = para.textContent?.trim() || ''
-
-      // Skip empty paragraphs or already processed ones
       const paraHash = `${entryId}-${paragraphText}`
+
+      console.log('[Task Detection] Examining paragraph:', { paragraphText, isEmpty: !paragraphText, paraHash })
+
+      // Skip empty paragraphs
       if (!paragraphText) {
+        console.log('[Task Detection] Skipping empty paragraph')
         continue
       }
 
+      // Check if already processed - but only mark as processed AFTER successful task creation
       if (processedParagraphs.current.has(paraHash)) {
         console.log('[Task Detection] Skipping already processed paragraph:', paragraphText.substring(0, 50))
         continue
       }
 
       console.log('[Task Detection] Processing paragraph:', paragraphText)
-
-      // Mark as processed to avoid duplicate API calls
-      processedParagraphs.current.add(paraHash)
 
       // Call task parsing API (with user's timezone info for DST handling)
       try {
@@ -508,6 +509,9 @@ export function JournalStream() {
               }
 
               updated.set(entryId, [...existing, parsedTask])
+
+              // Mark paragraph as processed now that task was successfully created
+              processedParagraphs.current.add(paraHash)
 
               // Only show toast for newly created tasks
               if (!alreadyExisted) {
