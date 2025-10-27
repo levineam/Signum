@@ -31,6 +31,60 @@ export function SimpleRichEditor({
   const editorRef = useRef<HTMLDivElement>(null)
   const [selectedText, setSelectedText] = useState('')
   const [hasSelection, setHasSelection] = useState(false)
+  const [activeFormats, setActiveFormats] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+    h1: false,
+    h2: false,
+    ul: false,
+    ol: false,
+    blockquote: false
+  })
+
+  const updateActiveFormats = useCallback(() => {
+    if (!editorRef.current) return
+
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+
+    const range = selection.getRangeAt(0)
+    let node: Node | null = range.commonAncestorContainer
+
+    // If text node, get parent element
+    if (node.nodeType === Node.TEXT_NODE) {
+      node = node.parentElement
+    }
+
+    const element = node as HTMLElement
+    if (!element || !editorRef.current.contains(element)) return
+
+    // Check for inline formats (bold, italic, underline)
+    const formats = {
+      bold: document.queryCommandState('bold'),
+      italic: document.queryCommandState('italic'),
+      underline: document.queryCommandState('underline'),
+      h1: false,
+      h2: false,
+      ul: false,
+      ol: false,
+      blockquote: false
+    }
+
+    // Check for block-level formats by traversing up the DOM
+    let currentEl: HTMLElement | null = element
+    while (currentEl && editorRef.current.contains(currentEl)) {
+      const tagName = currentEl.tagName?.toLowerCase()
+      if (tagName === 'h1') formats.h1 = true
+      if (tagName === 'h2') formats.h2 = true
+      if (tagName === 'ul') formats.ul = true
+      if (tagName === 'ol') formats.ol = true
+      if (tagName === 'blockquote') formats.blockquote = true
+      currentEl = currentEl.parentElement
+    }
+
+    setActiveFormats(formats)
+  }, [])
 
   const formatText = useCallback((command: string, value?: string) => {
     if (editorRef.current) {
@@ -42,8 +96,11 @@ export function SimpleRichEditor({
         const content = editorRef.current.innerHTML || ''
         onChange(content)
       }
+
+      // Update active format states
+      setTimeout(updateActiveFormats, 10)
     }
-  }, [onChange])
+  }, [onChange, updateActiveFormats])
 
   const insertHeading = useCallback((level: number) => {
     if (editorRef.current) {
@@ -51,38 +108,71 @@ export function SimpleRichEditor({
       const selection = window.getSelection()
       if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0)
+        let node: Node | null = range.commonAncestorContainer
 
-        // Create heading element
-        const headingElement = document.createElement(`h${level}`)
-        headingElement.style.fontSize = level === 1 ? '1.5em' : '1.25em'
-        headingElement.style.fontWeight = 'bold'
-        headingElement.style.marginBottom = '0.5em'
-
-        try {
-          // Try to wrap the selection (preserves HTML content)
-          range.surroundContents(headingElement)
-        } catch {
-          // If surroundContents fails (e.g., selection spans multiple elements),
-          // extract contents as document fragment to preserve HTML
-          const fragment = range.extractContents()
-          headingElement.appendChild(fragment)
-          range.insertNode(headingElement)
+        // If text node, get parent element
+        if (node.nodeType === Node.TEXT_NODE) {
+          node = node.parentElement
         }
 
-        // Move cursor after the heading
-        range.setStartAfter(headingElement)
-        range.setEndAfter(headingElement)
-        selection.removeAllRanges()
-        selection.addRange(range)
+        // Check if already in a heading of this level
+        let currentEl: HTMLElement | null = node as HTMLElement
+        let existingHeading: HTMLElement | null = null
+
+        while (currentEl && editorRef.current.contains(currentEl)) {
+          if (currentEl.tagName === `H${level}`) {
+            existingHeading = currentEl
+            break
+          }
+          currentEl = currentEl.parentElement
+        }
+
+        if (existingHeading) {
+          // Remove heading: unwrap contents back to parent
+          const parent = existingHeading.parentElement
+          if (parent) {
+            const fragment = document.createDocumentFragment()
+            while (existingHeading.firstChild) {
+              fragment.appendChild(existingHeading.firstChild)
+            }
+            parent.replaceChild(fragment, existingHeading)
+          }
+        } else {
+          // Add heading
+          const headingElement = document.createElement(`h${level}`)
+          headingElement.style.fontSize = level === 1 ? '1.5em' : '1.25em'
+          headingElement.style.fontWeight = 'bold'
+          headingElement.style.marginBottom = '0.5em'
+
+          try {
+            // Try to wrap the selection (preserves HTML content)
+            range.surroundContents(headingElement)
+          } catch {
+            // If surroundContents fails (e.g., selection spans multiple elements),
+            // extract contents as document fragment to preserve HTML
+            const fragment = range.extractContents()
+            headingElement.appendChild(fragment)
+            range.insertNode(headingElement)
+          }
+
+          // Move cursor after the heading
+          range.setStartAfter(headingElement)
+          range.setEndAfter(headingElement)
+          selection.removeAllRanges()
+          selection.addRange(range)
+        }
 
         // Trigger change event
         if (onChange) {
           const content = editorRef.current.innerHTML || ''
           onChange(content)
         }
+
+        // Update active format states
+        setTimeout(updateActiveFormats, 10)
       }
     }
-  }, [onChange])
+  }, [onChange, updateActiveFormats])
 
   const insertList = useCallback((ordered: boolean) => {
     formatText(ordered ? 'insertOrderedList' : 'insertUnorderedList')
@@ -92,12 +182,65 @@ export function SimpleRichEditor({
     formatText(`justify${align.charAt(0).toUpperCase() + align.slice(1)}`)
   }, [formatText])
 
+  const toggleBlockquote = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.focus()
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0)
+        let node: Node | null = range.commonAncestorContainer
+
+        // If text node, get parent element
+        if (node.nodeType === Node.TEXT_NODE) {
+          node = node.parentElement
+        }
+
+        // Check if already in a blockquote
+        let currentEl: HTMLElement | null = node as HTMLElement
+        let existingBlockquote: HTMLElement | null = null
+
+        while (currentEl && editorRef.current.contains(currentEl)) {
+          if (currentEl.tagName === 'BLOCKQUOTE') {
+            existingBlockquote = currentEl
+            break
+          }
+          currentEl = currentEl.parentElement
+        }
+
+        if (existingBlockquote) {
+          // Remove blockquote: unwrap contents
+          const parent = existingBlockquote.parentElement
+          if (parent) {
+            const fragment = document.createDocumentFragment()
+            while (existingBlockquote.firstChild) {
+              fragment.appendChild(existingBlockquote.firstChild)
+            }
+            parent.replaceChild(fragment, existingBlockquote)
+          }
+        } else {
+          // Add blockquote using formatBlock
+          document.execCommand('formatBlock', false, 'blockquote')
+        }
+
+        // Trigger change event
+        if (onChange) {
+          const content = editorRef.current.innerHTML || ''
+          onChange(content)
+        }
+
+        // Update active format states
+        setTimeout(updateActiveFormats, 10)
+      }
+    }
+  }, [onChange, updateActiveFormats])
+
   const handleInput = useCallback(() => {
     if (onChange && editorRef.current) {
       const content = editorRef.current.innerHTML || ''
       onChange(content)
     }
-  }, [onChange])
+    updateActiveFormats()
+  }, [onChange, updateActiveFormats])
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault()
@@ -121,14 +264,16 @@ export function SimpleRichEditor({
           if (isWithinEditor) {
             setSelectedText(selectedText)
             setHasSelection(true)
+            updateActiveFormats()
             return
           }
         }
       }
 
       setHasSelection(false)
+      updateActiveFormats()
     }, 50)
-  }, [])
+  }, [updateActiveFormats])
 
   const handleMakeNoteClick = useCallback(() => {
     if (selectedText && onMakeNote) {
@@ -272,7 +417,7 @@ export function SimpleRichEditor({
         <div className="flex items-center gap-1 border-r pr-2 mr-2">
           <Button
             size="sm"
-            variant="ghost"
+            variant={activeFormats.bold ? "secondary" : "ghost"}
             onMouseDown={(e) => {
               e.preventDefault()
             }}
@@ -285,7 +430,7 @@ export function SimpleRichEditor({
           </Button>
           <Button
             size="sm"
-            variant="ghost"
+            variant={activeFormats.italic ? "secondary" : "ghost"}
             onMouseDown={(e) => {
               e.preventDefault()
             }}
@@ -298,7 +443,7 @@ export function SimpleRichEditor({
           </Button>
           <Button
             size="sm"
-            variant="ghost"
+            variant={activeFormats.underline ? "secondary" : "ghost"}
             onMouseDown={(e) => {
               e.preventDefault()
             }}
@@ -315,7 +460,7 @@ export function SimpleRichEditor({
         <div className="flex items-center gap-1 border-r pr-2 mr-2">
           <Button
             size="sm"
-            variant="ghost"
+            variant={activeFormats.h1 ? "secondary" : "ghost"}
             onMouseDown={(e) => {
               e.preventDefault()
             }}
@@ -328,7 +473,7 @@ export function SimpleRichEditor({
           </Button>
           <Button
             size="sm"
-            variant="ghost"
+            variant={activeFormats.h2 ? "secondary" : "ghost"}
             onMouseDown={(e) => {
               e.preventDefault()
             }}
@@ -345,7 +490,7 @@ export function SimpleRichEditor({
         <div className="flex items-center gap-1 border-r pr-2 mr-2">
           <Button
             size="sm"
-            variant="ghost"
+            variant={activeFormats.ul ? "secondary" : "ghost"}
             onMouseDown={(e) => {
               e.preventDefault()
             }}
@@ -358,7 +503,7 @@ export function SimpleRichEditor({
           </Button>
           <Button
             size="sm"
-            variant="ghost"
+            variant={activeFormats.ol ? "secondary" : "ghost"}
             onMouseDown={(e) => {
               e.preventDefault()
             }}
@@ -417,14 +562,14 @@ export function SimpleRichEditor({
         {/* Quote */}
         <Button
           size="sm"
-          variant="ghost"
+          variant={activeFormats.blockquote ? "secondary" : "ghost"}
           onMouseDown={(e) => {
             e.preventDefault()
           }}
-          onClick={() => formatText('indent')}
+          onClick={toggleBlockquote}
           className="h-8 w-8 p-0"
           type="button"
-          title="Quote/Indent"
+          title="Quote/Blockquote"
         >
           <Quote className="h-4 w-4" />
         </Button>
