@@ -15,6 +15,7 @@ import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
+import { ValuesAffirmationHelper } from '@/components/journal/helpers/ValuesAffirmationHelper'
 
 interface JournalEntry {
   id: string
@@ -536,13 +537,20 @@ export function JournalStream() {
                 )}
               </div>
 
-              {/* CBT Distortions Helper (only on today's entry) */}
+              {/* Helpers (only on today's entry) */}
               {isTodayEntry && user && (
-                <CbtDistortions
-                  entryId={entry.id}
-                  userId={user.id}
-                  onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                />
+                <>
+                  <CbtDistortions
+                    entryId={entry.id}
+                    userId={user.id}
+                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                  />
+                  <ValuesAffirmationHelper
+                    entryId={entry.id}
+                    userId={user.id}
+                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                  />
+                </>
               )}
 
               <div
