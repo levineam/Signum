@@ -111,18 +111,75 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)
 None
 
 ### Completion Notes
-- Root cause: Formatting buttons used `onClick` handlers, causing editor blur and selection loss before formatting could apply
-- Solution: Changed all formatting buttons from `onClick` to `onMouseDown` with `e.preventDefault()` to prevent focus loss
-- Pattern matches working "Make Note" button (line 394-398) which already used this approach
-- All 11 formatting buttons updated: Bold, Italic, Underline, H1, H2, Bullet List, Numbered List, Align Left, Align Center, Align Right, Quote/Indent
-- Build compiled successfully after installing missing dependencies (@radix-ui/react-accordion, @radix-ui/react-progress, gray-matter, remark-rehype, rehype-sanitize)
-- Manual testing requires Vercel preview deployment for full validation
+
+**Root Cause:**
+- Formatting buttons used `onClick` handlers, causing editor blur and selection loss before formatting could apply
+
+**Solutions Implemented:**
+
+1. **Keyboard + Mouse Support (cdeeab7)**
+   - Added both `onClick` and `onMouseDown` handlers to all formatting buttons
+   - `onMouseDown` with `preventDefault()` prevents focus loss for mouse users
+   - `onClick` enables keyboard activation (Tab+Space/Enter, screen readers)
+   - Addresses accessibility concern from code review
+
+2. **Heading HTML Preservation (e1f32f2, 203c56a)**
+   - Initial fix used `range.toString()` which converted HTML to plain text
+   - Refined to use `surroundContents()` for simple cases (preserves child nodes)
+   - Falls back to `extractContents()` for complex selections (preserves as DocumentFragment)
+   - Prevents loss of links, emphasis, and other formatting within headings
+
+3. **Toggle Functionality & Visual Feedback (09dde97)**
+   - Implemented `updateActiveFormats()` to track which formats are applied at cursor position
+   - Uses `document.queryCommandState()` for inline formats (bold, italic, underline)
+   - Traverses DOM for block formats (headings, lists, blockquote)
+   - Buttons show `variant="secondary"` (darkened) when format is active
+   - Clicking active format button now removes/toggles off the formatting
+   - Prevents duplicate heading nesting
+
+4. **Custom List Implementation (a219f02, e2a3277)**
+   - `document.execCommand` for lists was not working
+   - Implemented custom DOM manipulation for bullet and numbered lists
+   - Detects existing lists and toggles them on/off
+   - Converts between list types (UL ↔ OL)
+   - Codex enhancement: Split multi-line selections into proper `<li>` entries
+   - Added `moveChildren()` helper for clean content extraction
+   - Handles text nodes, `<br>`, block elements, and nested lists
+   - Preserves HTML formatting within list items
+   - Stable caret positioning after list operations
+
+5. **Blockquote Toggle (09dde97)**
+   - Replaced indent command with proper blockquote toggle
+   - Unwraps blockquote when already active
+   - Uses `formatBlock` for new blockquotes
+
+6. **Lint Fix (747d933)**
+   - Fixed pre-existing TypeScript lint error in test file
+   - Replaced `any` type with `Page` type from @playwright/test
+
+**Build Status:**
+- ✅ Lint passes (npm run lint)
+- ✅ Build compiles successfully (npm run build)
+- 📦 Dependencies installed: @radix-ui/react-accordion, @radix-ui/react-progress, gray-matter, remark-rehype, rehype-sanitize
+
+**Testing:**
+- Manual testing on Vercel preview deployment required for full validation
+- Test multi-line selections with list buttons
+- Test formatting toggle behavior with nested content
+- Verify keyboard accessibility (Tab navigation + Space/Enter)
 
 ### File List
-- Modified: `/src/components/editor/SimpleRichEditor.tsx` (lines 262-419)
+- Modified: `/src/components/editor/SimpleRichEditor.tsx`
+- Modified: `/tests/story-1.2-task-parsing.spec.ts` (lint fix)
 
 ### Change Log
-- **2025-10-27**: Updated all formatting button handlers from `onClick` to `onMouseDown` with `e.preventDefault()` to prevent editor focus loss and preserve text selection during formatting operations
+- **2025-10-27 (cdeeab7)**: Added both `onClick` and `onMouseDown` handlers for keyboard + mouse accessibility
+- **2025-10-27 (e1f32f2)**: Fixed heading insertion to extract and use selected text instead of inserting "Heading"
+- **2025-10-27 (203c56a)**: Preserved HTML content in headings using `extractContents()` fallback
+- **2025-10-27 (09dde97)**: Added toggle functionality and visual feedback for all formatting buttons
+- **2025-10-27 (a219f02)**: Implemented custom list functionality to replace broken `execCommand`
+- **2025-10-27 (e2a3277)**: Codex enhancement for multi-line list handling with proper caret positioning
+- **2025-10-27 (747d933)**: Fixed TypeScript lint error in test file
 
 ---
 
