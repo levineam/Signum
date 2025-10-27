@@ -139,6 +139,8 @@ export interface HelperUsageMetadata {
   // ====================================
   // Character count for the described situation (telemetry)
   situationCharacterCount?: number
+  // Whether the user affirmed completing the three compassion steps
+  selfCompassionStepsAcknowledged?: boolean
 
   // ============================
   // Story 2.5.8 — WOOP helper

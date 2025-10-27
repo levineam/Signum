@@ -75,7 +75,8 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
   }
 
   // Check if form can be submitted
-  const canSubmit = situation.trim() !== '' && completedSteps
+  const trimmedSituation = situation.trim()
+  const canSubmit = trimmedSituation !== '' && completedSteps
 
   // Format self-compassion break as HTML paragraphs
   const formatCompassionBreak = (): string => {
@@ -133,7 +134,8 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
           events: eventsRef.current,
           selectionCount: 0,
           insertedText: compassionText,
-          situationCharacterCount: situation.length
+          situationCharacterCount: situation.length,
+          selfCompassionStepsAcknowledged: completedSteps
         }
       }, userId)
     } catch (error) {
