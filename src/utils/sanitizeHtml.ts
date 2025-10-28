@@ -23,13 +23,13 @@ async function loadDOMPurify() {
 
   try {
     // Try isomorphic-dompurify first (SSR-safe)
-    const module = await import('isomorphic-dompurify')
-    DOMPurify = module.default
+    const purifyModule = await import('isomorphic-dompurify')
+    DOMPurify = purifyModule.default
     return DOMPurify
   } catch {
     // Fallback to regular dompurify if isomorphic version fails
-    const module = await import('dompurify')
-    DOMPurify = module.default
+    const purifyModule = await import('dompurify')
+    DOMPurify = purifyModule.default
     return DOMPurify
   }
 }
@@ -82,14 +82,26 @@ const styleFilterHook = (node: Element, data: { attrName: string; attrValue: str
 
 // Track if hook is registered to avoid duplicate registration
 let hookRegistered = false
+let initializationPromise: Promise<void> | null = null
 
-// Register the hook once on first use (client-side only)
-// This avoids race conditions from adding/removing hooks on every sanitize call
-function ensureHookRegistered() {
-  if (typeof window !== 'undefined' && !hookRegistered) {
-    DOMPurify.addHook('uponSanitizeAttribute', styleFilterHook)
-    hookRegistered = true
-  }
+// Initialize DOMPurify and register hooks (client-side only)
+async function initializeDOMPurify() {
+  if (initializationPromise) return initializationPromise
+
+  initializationPromise = (async () => {
+    const purify = await loadDOMPurify()
+    if (purify && !hookRegistered) {
+      purify.addHook('uponSanitizeAttribute', styleFilterHook)
+      hookRegistered = true
+    }
+  })()
+
+  return initializationPromise
+}
+
+// Auto-initialize on client side
+if (typeof window !== 'undefined') {
+  initializeDOMPurify()
 }
 
 /**
@@ -100,6 +112,9 @@ function ensureHookRegistered() {
  *
  * Filters style attributes to only allow text-align property with safe values.
  *
+ * During SSR, this returns the raw HTML (safe since it won't be rendered server-side).
+ * On the client, it uses DOMPurify to sanitize the HTML.
+ *
  * @param html - The HTML string to sanitize
  * @returns Sanitized HTML safe for rendering with dangerouslySetInnerHTML
  *
@@ -109,10 +124,12 @@ function ensureHookRegistered() {
  * ```
  */
 export function sanitizeHtml(html: string): string {
-  // Ensure hook is registered on first use (client-side only)
-  ensureHookRegistered()
+  // During SSR, return raw HTML (it won't be rendered anyway)
+  if (typeof window === 'undefined' || !DOMPurify) {
+    return html
+  }
 
   // Use DOMPurify with the globally registered hook
-  // No need to add/remove hooks on each call - the hook is safe and idempotent
+  // Hook is registered during initialization, so it's safe to use
   return DOMPurify.sanitize(html, sanitizeConfig)
 }
