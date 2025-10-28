@@ -12,6 +12,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
 import { NoteViewer } from '@/components/notes/NoteViewer'
+import { createLink } from '@/lib/supabase/notes'
+import { convertTextToLink, captureSelectionMetadata } from '@/utils/textToLink'
+import { toast } from 'sonner'
 import { sanitizeHtml } from '@/utils/sanitizeHtml'
 
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
@@ -22,10 +25,13 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const editorRef = useRef<HTMLElement | null>(null)
+  const selectionMetadataRef = useRef<ReturnType<typeof captureSelectionMetadata> | null>(null)
 
   // Make Note functionality
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [selectedText, setSelectedText] = useState('')
+  const [creatingLink, setCreatingLink] = useState(false)
 
   // Note Viewer functionality
   const [showNoteViewer, setShowNoteViewer] = useState(false)
@@ -53,6 +59,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   }, [params, user])
 
   // Cleanup: Flush pending autosave before unmount
+  // Use empty dependency array so cleanup only runs on unmount, not on every keystroke
   useEffect(() => {
     return () => {
       // If there's a pending save when component unmounts, execute it immediately
@@ -60,38 +67,52 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
         clearTimeout(saveTimeoutRef.current)
 
         // Flush the save immediately if there's unsaved content
-        if (note && user && content !== note.content) {
-          updateNote(note.id, { content }, user.id).catch(error => {
-            console.error('Error flushing autosave on unmount:', error)
-          })
+        // Access latest values via closure - they're captured when cleanup runs
+        if (note && user) {
+          // Get the latest content from the DOM or state
+          const currentContent = document.querySelector('[contenteditable="true"]')?.innerHTML || content
+          if (currentContent !== note.content) {
+            updateNote(note.id, { content: currentContent }, user.id).catch(error => {
+              console.error('Error flushing autosave on unmount:', error)
+            })
+          }
         }
       }
     }
-  }, [note, user, content])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Empty array - cleanup only runs on unmount
 
   // Handle browser close/navigation: Flush pending save before page unload
   useEffect(() => {
     const handleBeforeUnload = () => {
       // If there's a pending save timeout, clear it and save immediately
-      if (saveTimeoutRef.current && note && user && content !== note.content) {
+      if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
 
-        // Attempt to save before page unloads
-        // Note: This may not complete if the browser closes too quickly,
-        // but it gives the best chance for the data to be saved
-        updateNote(note.id, { content }, user.id).catch(error => {
-          console.error('Error flushing autosave on page unload:', error)
-        })
+        // Get the latest content from the DOM
+        const currentContent = document.querySelector('[contenteditable="true"]')?.innerHTML || content
+        if (note && user && currentContent !== note.content) {
+          // Attempt to save before page unloads
+          updateNote(note.id, { content: currentContent }, user.id).catch(error => {
+            console.error('Error flushing autosave on page unload:', error)
+          })
+        }
       }
     }
 
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [note, user, content])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Empty array - register once on mount
 
   // Auto-save with debounce (like JournalStream.tsx:266-282)
   const handleContentChange = (newContent: string) => {
     if (!note || !user) return
+
+    // Don't override content changes while we're creating a link
+    if (creatingLink) {
+      return
+    }
 
     // Clear existing timeout
     if (saveTimeoutRef.current) {
@@ -125,17 +146,124 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   // Make Note functionality
   const handleMakeNote = (text: string) => {
     setSelectedText(text)
+
+    // Cache editor element BEFORE opening modal to prevent "editor not found" error
+    // Modal opening causes editor to blur (onBlur sets isEditing=false), removing contenteditable from DOM
+    const editorElement = document.querySelector('[contenteditable="true"]') as HTMLElement
+    if (editorElement) {
+      editorRef.current = editorElement
+      console.log('💾 Cached editor element before modal open')
+
+      // CRITICAL: Capture selection metadata NOW, while selection is still active
+      // After modal opens and editor blurs, window.getSelection() is lost and
+      // captureSelectionMetadata falls back to indexOf(), which finds the FIRST
+      // occurrence of the text, not the one the user actually selected
+      const metadata = captureSelectionMetadata(editorElement, text)
+      selectionMetadataRef.current = metadata
+      console.log('📍 Captured selection metadata before blur:', metadata)
+    } else {
+      console.warn('⚠️ No contenteditable element found when caching')
+    }
+
     setShowNoteModal(true)
   }
 
   const handleCloseNoteModal = () => {
     setShowNoteModal(false)
     setSelectedText('')
+    selectionMetadataRef.current = null // Clear cached metadata
   }
 
-  const handleNoteCreated = (newNote: Note) => {
-    // Note created successfully - could show toast notification here
-    console.log('Sub-note created:', newNote)
+  const handleNoteCreated = async (newNote: Note) => {
+    if (!note || !selectedText || !user) {
+      console.log('❌ Missing note, selectedText, or user', { note, selectedText, user: !!user })
+      return
+    }
+
+    console.log('📝 Creating note link', { selectedText, noteId: newNote.id, sourceNoteId: note.id })
+
+    // Clear any pending autosave to prevent stale content from overwriting the link
+    if (saveTimeoutRef.current) {
+      console.log('🛑 Clearing pending autosave timeout before link creation')
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+
+    // Set flag to prevent content change interference
+    setCreatingLink(true)
+
+    // Use cached editor element (cached in handleMakeNote before modal opened)
+    const editorElement = editorRef.current
+
+    // Hard fail with toast if editor missing (shouldn't happen if properly cached)
+    if (!editorElement) {
+      console.error('❌ No cached editor element - modal may have opened before caching')
+      toast.error('Failed to create link: editor not found. Please try again.')
+      setCreatingLink(false)
+      return
+    }
+
+    console.log('✅ Using cached editor element')
+
+    try {
+      // Use cached selection metadata (captured in handleMakeNote before blur)
+      // This ensures we link the CORRECT occurrence when text appears multiple times
+      const metadata = selectionMetadataRef.current
+      console.log('📊 Using cached selection metadata:', metadata)
+
+      // Create link in Supabase with metadata
+      const link = await createLink({
+        sourceNoteId: note.id,
+        targetNoteId: newNote.id,
+        linkType: 'created_from',
+        metadata: metadata || undefined
+      }, user.id)
+      console.log('💾 Link created in Supabase:', link)
+
+      // Convert the selected text to a link in the DOM with linkId
+      // Pass metadata to ensure we link the CORRECT occurrence (not just the first one via indexOf)
+      const linkCreated = convertTextToLink(editorElement, selectedText, newNote.id, link.id, handleLinkClick, metadata)
+
+      if (!linkCreated) {
+        console.error('❌ Failed to create link in editor')
+        toast.error('Failed to create link in editor. Please try again.')
+        setCreatingLink(false)
+        return
+      }
+
+      console.log('🔗 Created link in editor DOM')
+
+      // Read the updated HTML from the editor after the link was created
+      // Wait for DOM to settle, then read the actual content
+      setTimeout(() => {
+        const updatedContent = editorElement.innerHTML
+        console.log('📄 Read updated content from editor after link creation')
+
+        // Update state with the content that includes the link
+        setContent(updatedContent)
+        setNote(prev => prev ? { ...prev, content: updatedContent } : null)
+
+        // Persist the linked content to Supabase
+        updateNote(note.id, { content: updatedContent }, user.id)
+          .then(() => {
+            console.log('💾 Persisted link to Supabase')
+            toast.success('Note created and linked successfully!')
+          })
+          .catch(error => {
+            console.error('Error persisting link to Supabase:', error)
+            toast.error('Failed to save link. Please try again.')
+          })
+
+        // Reset the creating link flag after a brief delay to ensure state updates complete
+        setTimeout(() => {
+          setCreatingLink(false)
+        }, 100)
+      }, 50)
+    } catch (error) {
+      console.error('❌ Error in handleNoteCreated:', error)
+      toast.error('Failed to create linked note. Please try again.')
+      setCreatingLink(false)
+    }
   }
 
   // Note Viewer functionality
