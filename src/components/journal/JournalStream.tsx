@@ -587,9 +587,9 @@ export function JournalStream() {
                   />
 
                   {/* Render helper in sheet/dialog */}
-                  {activeHelper && activeEntryId === entry.id && (
+                  {activeHelper && (
                     <HelperSheet
-                      isOpen={true}
+                      isOpen={activeEntryId === entry.id}
                       onClose={() => {
                         setActiveHelper(null)
                         setActiveEntryId(null)

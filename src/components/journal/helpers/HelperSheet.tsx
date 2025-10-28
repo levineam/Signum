@@ -43,11 +43,23 @@ export function HelperSheet({
       url.searchParams.set('helper', helperType)
       window.history.replaceState({}, '', url)
     } else {
+      // Clear URL parameter when closing
       const url = new URL(window.location.href)
       url.searchParams.delete('helper')
       window.history.replaceState({}, '', url)
     }
   }, [isOpen, helperType])
+
+  // Cleanup URL on unmount (in case component unmounts before isOpen becomes false)
+  useEffect(() => {
+    return () => {
+      const url = new URL(window.location.href)
+      if (url.searchParams.has('helper')) {
+        url.searchParams.delete('helper')
+        window.history.replaceState({}, '', url)
+      }
+    }
+  }, [])
 
   // Lock body scroll when open
   useEffect(() => {
