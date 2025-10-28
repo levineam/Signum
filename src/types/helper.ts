@@ -24,7 +24,6 @@ export type HelperType =
   | 'savoring'            // Savoring Helper (Story 2.5.10)
   | 'pmr'                 // Progressive Muscle Relaxation (Story 2.5.11)
   | 'loving-kindness'     // Loving-Kindness Meditation (Story 2.5.12)
-  | 'mental-contrasting'  // Mental Contrasting Helper (Story 2.5.13)
 
 // ============================================================================
 // Helper Event Types (Discriminated Union)
@@ -186,16 +185,6 @@ export interface HelperUsageMetadata {
   lkmRecipient?: 'Self' | 'Loved One' | 'Neutral Person' | 'Difficult Person'
   lkmPersonNamed?: boolean
   lkmNameLength?: number
-
-  // ==================================
-  // Story 2.5.13 — Mental Contrasting helper
-  // ==================================
-  // Character counts per contrasting step
-  mcStepCounts?: {
-    desiredFuture?: number
-    internalObstacle?: number
-  }
-  mcBothFieldsFilled?: boolean
 }
 
 /**
@@ -335,8 +324,7 @@ export const HELPER_TYPES: HelperType[] = [
   'best-possible-self',
   'savoring',
   'pmr',
-  'loving-kindness',
-  'mental-contrasting'
+  'loving-kindness'
 ]
 
 /**
@@ -352,6 +340,5 @@ export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
   'best-possible-self': 'Best Possible Self',
   'savoring': 'Savoring Practice',
   'pmr': 'Progressive Muscle Relaxation',
-  'loving-kindness': 'Loving-Kindness Meditation',
-  'mental-contrasting': 'Mental Contrasting'
+  'loving-kindness': 'Loving-Kindness Meditation'
 }

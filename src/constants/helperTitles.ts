@@ -73,10 +73,4 @@ export const HELPER_TILES: Record<HelperType, HelperTileData> = {
     fullTitle: 'Loving-Kindness Meditation',
     icon: '💝',
   },
-  'mental-contrasting': {
-    shortTitle: 'Mental Contrasting',
-    description: 'Balance optimism with realistic obstacles',
-    fullTitle: 'Mental Contrasting Exercise',
-    icon: '⚖️',
-  },
 }

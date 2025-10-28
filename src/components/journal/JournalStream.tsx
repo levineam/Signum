@@ -23,7 +23,6 @@ import { BestPossibleSelfHelper } from '@/components/journal/helpers/BestPossibl
 import { SavoringHelper } from '@/components/journal/helpers/SavoringHelper'
 import { ProgressiveMuscleRelaxationHelper } from '@/components/journal/helpers/ProgressiveMuscleRelaxationHelper'
 import { LovingKindnessHelper } from '@/components/journal/helpers/LovingKindnessHelper'
-import { MentalContrastingHelper } from '@/components/journal/helpers/MentalContrastingHelper'
 import { HelperTileGrid } from '@/components/journal/helpers/HelperTileGrid'
 import { HelperSheet } from '@/components/journal/helpers/HelperSheet'
 import { HelperType } from '@/types/helper'
@@ -655,13 +654,6 @@ export function JournalStream() {
                       )}
                       {activeHelper === 'loving-kindness' && (
                         <LovingKindnessHelper
-                          entryId={entry.id}
-                          userId={user.id}
-                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                        />
-                      )}
-                      {activeHelper === 'mental-contrasting' && (
-                        <MentalContrastingHelper
                           entryId={entry.id}
                           userId={user.id}
                           onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
