@@ -725,8 +725,32 @@ Use Tailwind grid utilities:
 
 ---
 
+## GPT-5 Review (2025-10-28)
+
+### Verdict
+Solid, user-friendly direction. Moving helpers into a compact, scannable grid with just-in-time detail via sheet/dialog is a sensible modernization that reduces vertical clutter while preserving depth.
+
+### Key Recommendations Incorporated
+✅ **Sheet on desktop, Dialog on mobile** - Keeps journal context visible on desktop
+✅ **True button semantics** - Tiles as `<button>` with `aria-haspopup="dialog"`
+✅ **Lightweight affordance** - Icon + title + description (8-12 words) per tile
+✅ **Deep linking** - Support ?helper=woop to open specific helper
+✅ **Code-split and prefetch** - next/dynamic with hover/focus prefetch
+✅ **Keyboard polish** - Space/Enter open, visible focus states, Escape everywhere
+✅ **Visual hierarchy** - Standardized height, line-clamp-2, hover elevation
+✅ **Non-color cues** - Icons paired with colors for differentiation
+✅ **Analytics foundation** - Define events for future personalization
+
+### UX Improvements
+- Changed "Distorted Thoughts" → "Thinking Traps" (more user-friendly)
+- Added 1-line descriptions for recognition over recall
+- Expanded grid to 4 columns on xl screens for large monitors
+- Added body scroll lock and URL state management
+
+---
+
 ## QA Results
 
 - **Gate:** PENDING
 - **Review Date:** TBD
-- **Notes:** Story pending review before development starts
+- **Notes:** GPT-5 review incorporated. Story ready for development after user approval.
