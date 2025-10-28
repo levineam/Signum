@@ -20,3 +20,19 @@ This repository uses a standard Next.js layout with consolidated application cod
 - Co-locate styles and tests with components when practical.
 - Keep Playwright flows focused; store expected screenshots in `test-results/`.
 
+## Shared Components Architecture
+
+### Rich Text Editor (`SimpleRichEditor`)
+- **Location**: `src/components/editor/SimpleRichEditor.tsx`
+- **Used by**:
+  - Journal entries (`src/components/journal/JournalStream.tsx`)
+  - Note detail pages (`src/app/notes/[id]/page.tsx`)
+- **Benefits**: Bug fixes and feature additions automatically apply to both contexts
+- **Features**: Rich text toolbar, voice transcription, "Make Note" functionality, auto-save support
+- **Pattern**: Single source of truth for all WYSIWYG editing in the application
+
+### Voice Transcription (`VoiceRecordButton`)
+- **Location**: `src/components/editor/VoiceRecordButton.tsx`
+- **Integrated**: Automatically included in `SimpleRichEditor`
+- **Used by**: All contexts that use `SimpleRichEditor`
+
