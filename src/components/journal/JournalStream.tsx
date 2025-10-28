@@ -22,6 +22,8 @@ import { WoopHelper } from '@/components/journal/helpers/WoopHelper'
 import { BestPossibleSelfHelper } from '@/components/journal/helpers/BestPossibleSelfHelper'
 import { SavoringHelper } from '@/components/journal/helpers/SavoringHelper'
 import { ProgressiveMuscleRelaxationHelper } from '@/components/journal/helpers/ProgressiveMuscleRelaxationHelper'
+import { LovingKindnessHelper } from '@/components/journal/helpers/LovingKindnessHelper'
+import { MentalContrastingHelper } from '@/components/journal/helpers/MentalContrastingHelper'
 
 interface JournalEntry {
   id: string
@@ -582,6 +584,16 @@ export function JournalStream() {
                     onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
                   />
                   <ProgressiveMuscleRelaxationHelper
+                    entryId={entry.id}
+                    userId={user.id}
+                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                  />
+                  <LovingKindnessHelper
+                    entryId={entry.id}
+                    userId={user.id}
+                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                  />
+                  <MentalContrastingHelper
                     entryId={entry.id}
                     userId={user.id}
                     onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
