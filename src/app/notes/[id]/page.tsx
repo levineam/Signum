@@ -31,6 +31,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   // Refs to track latest values for cleanup effects
   const noteRef = useRef<Note | null>(null)
   const userRef = useRef(user)
+  const contentRef = useRef(content)
 
   // Sync refs with latest state values
   useEffect(() => {
@@ -40,6 +41,10 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     userRef.current = user
   }, [user])
+
+  useEffect(() => {
+    contentRef.current = content
+  }, [content])
 
   // Make Note functionality
   const [showNoteModal, setShowNoteModal] = useState(false)
@@ -85,8 +90,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
         const latestUser = userRef.current
 
         if (latestNote && latestUser) {
-          // Get the latest content from the DOM or state
-          const currentContent = document.querySelector('[contenteditable="true"]')?.innerHTML || content
+          // Get the latest content from the DOM or ref (not stale closure variable)
+          const currentContent = document.querySelector('[contenteditable="true"]')?.innerHTML || contentRef.current
           if (currentContent !== latestNote.content) {
             updateNote(latestNote.id, { content: currentContent }, latestUser.id).catch(error => {
               console.error('Error flushing autosave on unmount:', error)
@@ -95,7 +100,6 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
         }
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Empty array - cleanup only runs on unmount
 
   // Handle browser close/navigation: Flush pending save before page unload
@@ -109,8 +113,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
         const latestNote = noteRef.current
         const latestUser = userRef.current
 
-        // Get the latest content from the DOM
-        const currentContent = document.querySelector('[contenteditable="true"]')?.innerHTML || content
+        // Get the latest content from the DOM or ref (not stale closure variable)
+        const currentContent = document.querySelector('[contenteditable="true"]')?.innerHTML || contentRef.current
         if (latestNote && latestUser && currentContent !== latestNote.content) {
           // Attempt to save before page unloads
           updateNote(latestNote.id, { content: currentContent }, latestUser.id).catch(error => {
@@ -122,7 +126,6 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
 
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Empty array - register once on mount
 
   // Auto-save with debounce (like JournalStream.tsx:266-282)
