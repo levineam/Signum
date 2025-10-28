@@ -14,17 +14,11 @@ import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
 import { NoteViewer } from '@/components/notes/NoteViewer'
 import { sanitizeHtml } from '@/utils/sanitizeHtml'
 
-interface AimsContent {
-  todos: string
-  goals: string
-}
-
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { user } = useAuth()
   const [note, setNote] = useState<Note | null>(null)
   const [content, setContent] = useState('')
-  const [aimsContent, setAimsContent] = useState<AimsContent>({ todos: '', goals: '' })
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -50,19 +44,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
 
       if (loadedNote) {
         setNote(loadedNote)
-
-        // Support both old (type) and new (noteType) field names during migration
-        const noteType = 'type' in loadedNote ? (loadedNote as { type: string }).type : loadedNote.noteType
-        if (noteType === 'aims' || noteType === 'ontology-aim') {
-          try {
-            const parsed = JSON.parse(loadedNote.content)
-            setAimsContent(parsed)
-          } catch {
-            setAimsContent({ todos: '', goals: '' })
-          }
-        } else {
-          setContent(loadedNote.content)
-        }
+        // Set content for all note types
+        setContent(loadedNote.content)
       }
       setIsLoading(false)
     }

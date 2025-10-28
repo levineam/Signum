@@ -3,8 +3,12 @@
  *
  * Sanitizes HTML content to prevent XSS attacks while preserving safe formatting.
  * Uses DOMPurify to strip dangerous elements and attributes.
+ *
+ * IMPORTANT: This module must be used in client components only ('use client')
+ * since it relies on browser APIs through DOMPurify.
  */
 
+import DOMPurify from 'isomorphic-dompurify'
 import type { Config } from 'dompurify'
 
 const sanitizeConfig: Config = {
@@ -43,33 +47,5 @@ const sanitizeConfig: Config = {
  * ```
  */
 export function sanitizeHtml(html: string): string {
-  // Only run on client-side (dangerouslySetInnerHTML only renders client-side anyway)
-  if (typeof window !== 'undefined') {
-    try {
-      const DOMPurify = require('isomorphic-dompurify')
-      return DOMPurify.sanitize(html, sanitizeConfig)
-    } catch (error) {
-      console.error('Failed to load DOMPurify, falling back to HTML escaping:', error)
-      return escapeHtml(html)
-    }
-  }
-
-  // Server-side: escape HTML entities for safety
-  // (The client will re-sanitize when it renders)
-  return escapeHtml(html)
-}
-
-/**
- * Basic HTML escaping fallback
- * Converts dangerous characters to HTML entities to prevent script execution
- */
-function escapeHtml(html: string): string {
-  const escapeMap: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  }
-  return html.replace(/[&<>"']/g, (char) => escapeMap[char] || char)
+  return DOMPurify.sanitize(html, sanitizeConfig)
 }
