@@ -14,16 +14,12 @@ import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata
 import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
-<<<<<<< HEAD
 import { HelperTileGrid } from '@/components/journal/helpers/HelperTileGrid'
 import { HelperInfoDialog } from '@/components/journal/helpers/HelperInfoDialog'
 import { HelperDialogContent } from '@/components/journal/helpers/HelperDialogContent'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { HelperType } from '@/types/helper'
 import { HELPER_TILES } from '@/constants/helperTitles'
-=======
-import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
->>>>>>> origin/main
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskEditDialog } from '@/components/tasks/TaskEditDialog'
 
@@ -73,7 +69,6 @@ export function JournalStream() {
   const [creatingLink, setCreatingLink] = useState(false)
   const [entryTasks, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
   const [editingTask, setEditingTask] = useState<{ id: string; title: string; dueAt: string | null } | null>(null)
-<<<<<<< HEAD
 
   // Story 2.8: Helper tile UI state
   const [activeHelper, setActiveHelper] = useState<HelperType | null>(null)
@@ -81,8 +76,6 @@ export function JournalStream() {
 
   // Story 2.9: Helper mode state (info vs use)
   const [activeHelperMode, setActiveHelperMode] = useState<'info' | 'use' | null>(null)
-=======
->>>>>>> origin/main
 
   // Cache editor element reference before opening modal (Phase 1 bug fix)
   const cachedEditorRef = useRef<HTMLElement | null>(null)
@@ -322,7 +315,6 @@ export function JournalStream() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]) // Only re-run when user ID changes (login/logout), not on user object updates
 
-<<<<<<< HEAD
   // Story 2.8: Deep linking support - check URL for ?helper=type on mount
   // Story 2.9: Updated to set mode to 'use' for deep links
   useEffect(() => {
@@ -342,8 +334,6 @@ export function JournalStream() {
     }
   }, [entries])
 
-=======
->>>>>>> origin/main
   // Track previous entryTasks state to detect which entries actually changed
   const prevEntryTasksRef = useRef<Map<string, ParsedTask[]>>(new Map())
 
