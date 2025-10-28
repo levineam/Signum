@@ -32,7 +32,6 @@ const HELPER_VARIANTS: Record<HelperType, string> = {
   savoring: 'from-pink-50 to-rose-50 border-pink-200 hover:shadow-pink-100 dark:from-pink-950/30 dark:to-rose-950/30 dark:border-pink-800',
   pmr: 'from-cyan-50 to-teal-50 border-cyan-200 hover:shadow-cyan-100 dark:from-cyan-950/30 dark:to-teal-950/30 dark:border-cyan-800',
   'loving-kindness': 'from-rose-50 to-pink-50 border-rose-200 hover:shadow-rose-100 dark:from-rose-950/30 dark:to-pink-950/30 dark:border-rose-800',
-  'mental-contrasting': 'from-slate-50 to-gray-50 border-slate-200 hover:shadow-slate-100 dark:from-slate-950/30 dark:to-gray-950/30 dark:border-slate-800',
 }
 
 export function HelperTileGrid({

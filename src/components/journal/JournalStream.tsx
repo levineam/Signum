@@ -577,7 +577,6 @@ export function JournalStream() {
                       'savoring',
                       'pmr',
                       'loving-kindness',
-                      'mental-contrasting',
                     ]}
                     onTileClick={(helperType) => {
                       setActiveHelper(helperType)
