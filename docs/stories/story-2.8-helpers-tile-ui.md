@@ -2,7 +2,7 @@
 
 **Status:** 📋 DRAFT
 **Created:** 2025-10-28
-**Updated:** 2025-10-28
+**Updated:** 2025-10-28 (GPT-5 review incorporated)
 **Issue:** #92
 **Prerequisites:**
 - HelperContainer component (already available)
@@ -46,43 +46,52 @@ so that I can see all available helpers at once without excessive scrolling.
 ### In Scope
 1. **Meta-Helper Container**
    - Wrapping container for all helper tiles
-   - Header: "Need help journaling? Check out our helpers."
-   - Grid layout: 3 tiles per row (desktop), responsive on mobile
+   - Semantic header (h2): "Need help journaling? Check out our helpers."
+   - Grid layout: 3-4 tiles per row (desktop), responsive on mobile
+   - Grid: 4 cols (xl), 3 cols (lg), 2 cols (md), 1 col (sm)
 
 2. **Helper Tiles**
-   - Compact card design with shortened title
-   - Click entire tile to open modal
-   - Icon/visual indicator per helper type
-   - Grid responsive: 3 cols (desktop), 2 cols (tablet), 1 col (mobile)
+   - Proper button semantics (`<button>` element with `aria-haspopup="dialog"`)
+   - Shortened title + icon + 1-line description (8-12 words)
+   - Icon/visual indicator per helper type (not color-only differentiation)
+   - Standardized tile height with text truncation (line-clamp-2)
+   - Visible focus states for keyboard navigation
+   - Subtle hover elevation
+   - Touch-friendly (>=44x44px targets)
 
-3. **Title Shortening**
-   - "Have you experienced distorted thinking today?" → **"Distorted Thoughts"**
-   - "What went well today?" → **"3 Good Things"**
-   - "What matters most to you?" → **"Values"**
-   - "Give yourself some kindness" → **"Self-Compassion"**
-   - "Plan a goal with WOOP" → **"WOOP Goals"**
-   - "Imagine your best possible self" → **"Best Possible Self"**
-   - "Savor positive experiences" → **"Savoring"**
+3. **Title & Description Pairs**
+   - "Thinking Traps" + "Identify unhelpful thought patterns" (icon: 🧠)
+   - "3 Good Things" + "Reflect on what went well today" (icon: ✨)
+   - "Values" + "Clarify what matters most to you" (icon: 🎯)
+   - "Self-Compassion" + "Give yourself kindness when struggling" (icon: 💚)
+   - "WOOP Goals" + "Plan goals with evidence-based strategy" (icon: 🎯)
+   - "Best Possible Self" + "Envision your ideal future" (icon: 🌟)
+   - "Savoring" + "Amplify positive experiences" (icon: 🌸)
 
-4. **Modal Implementation**
-   - Opens when tile is clicked
-   - Displays full helper content (existing HelperContainer children)
-   - Close button (X) and backdrop click to dismiss
-   - Keyboard navigation (Escape to close)
+4. **Sheet/Dialog Implementation**
+   - **Desktop (>=lg)**: Sheet component (right-side panel) keeps journal context visible
+   - **Mobile (<lg)**: Full-screen Dialog
+   - Close button (X), backdrop click, and Escape key to dismiss
+   - Body scroll lock when open
+   - URL state: `?helper=woop` for deep linking
+   - Focus returns to invoking tile on close
 
-5. **Accessibility**
-   - ARIA labels for tiles and modal
-   - Keyboard navigation (Tab, Enter, Escape)
-   - Focus management (trap focus in modal)
-   - Screen reader announces modal open/close
+5. **Accessibility & Performance**
+   - Proper ARIA: `aria-haspopup="dialog"`, `aria-controls`, `aria-label`
+   - Keyboard: Tab, Enter, Space, Escape
+   - Focus trap in sheet/dialog
+   - Dynamic imports with next/dynamic per helper
+   - Prefetch on hover/focus to reduce latency
+   - Loading skeleton during helper load
 
 ### Out of Scope
 - Reordering/customizing helper tiles
 - Favoriting/pinning specific helpers
 - Helper usage statistics in tiles
-- Animated tile transitions
+- Complex animated transitions (micro-transitions like hover/opacity OK)
 - Drag-and-drop tile reordering
 - User preferences for grid layout
+- Personalized helper recommendations (define events for future)
 
 ---
 
@@ -137,25 +146,28 @@ export function HelperTileGrid({ tiles, onTileClick }: HelperTileGridProps) {
 
 ---
 
-### 2. Create HelperModal Component
-**File:** `/src/components/journal/helpers/HelperModal.tsx`
+### 2. Create HelperSheet/Dialog Component
+**File:** `/src/components/journal/helpers/HelperSheet.tsx`
 
 **Implementation:**
 ```tsx
 'use client'
 
 /**
- * HelperModal Component
- * Story 2.8: Modal for full helper content
+ * HelperSheet Component
+ * Story 2.8: Sheet (desktop) / Dialog (mobile) for helper content
  *
- * Opens when helper tile is clicked, displays full helper UI.
+ * Uses Sheet on >=lg screens (keeps journal context visible)
+ * Uses full-screen Dialog on mobile
  */
 
-import { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { HelperType } from '@/types/helper'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 
-interface HelperModalProps {
+interface HelperSheetProps {
   isOpen: boolean
   onClose: () => void
   helperType: HelperType
@@ -163,52 +175,112 @@ interface HelperModalProps {
   children: ReactNode
 }
 
-export function HelperModal({ isOpen, onClose, helperType, title, children }: HelperModalProps) {
-  // Modal implementation with Dialog component
+export function HelperSheet({ isOpen, onClose, helperType, title, children }: HelperSheetProps) {
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
+
+  // Update URL with ?helper=type on open
+  useEffect(() => {
+    if (isOpen) {
+      const url = new URL(window.location.href)
+      url.searchParams.set('helper', helperType)
+      window.history.pushState({}, '', url)
+    } else {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('helper')
+      window.history.pushState({}, '', url)
+    }
+  }, [isOpen, helperType])
+
+  // Lock body scroll when open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
+
+  // Desktop: Sheet (side panel), Mobile: Full-screen Dialog
   // ... implementation
 }
 ```
 
 **Acceptance:**
-- ✅ Modal opens on tile click
-- ✅ Modal displays full helper content (HelperContainer children)
-- ✅ Close button (X) in modal header
-- ✅ Clicking backdrop closes modal
-- ✅ Escape key closes modal
-- ✅ Focus trapped in modal when open
-- ✅ Focus returns to tile after modal closes
+- ✅ Desktop (>=1024px): Right-side Sheet preserves journal context
+- ✅ Mobile (<1024px): Full-screen Dialog
+- ✅ URL updates with ?helper=type on open
+- ✅ Body scroll locked when open
+- ✅ Close button (X), backdrop click, Escape key all close
+- ✅ Focus trapped in sheet/dialog when open
+- ✅ Focus returns to tile after close
 
 ---
 
-### 3. Update Helper Title Constants
-**File:** `/src/types/helper.ts` or new `/src/constants/helperTitles.ts`
+### 3. Update Helper Title & Description Constants
+**File:** `/src/constants/helperTitles.ts`
 
-**Shortened Titles:**
+**Tile Data Structure:**
 ```typescript
-export const HELPER_SHORT_TITLES: Record<HelperType, string> = {
-  'cbt-distortions': 'Distorted Thoughts',
-  'gratitude': '3 Good Things',
-  'values-affirmation': 'Values',
-  'self-compassion': 'Self-Compassion',
-  'woop': 'WOOP Goals',
-  'best-possible-self': 'Best Possible Self',
-  'savoring': 'Savoring',
+export interface HelperTileData {
+  shortTitle: string        // For tile display
+  description: string       // 8-12 words, shown on tile
+  fullTitle: string         // For sheet/dialog header
+  icon: string              // Emoji for visual identity
 }
 
-export const HELPER_FULL_TITLES: Record<HelperType, string> = {
-  'cbt-distortions': 'Have you experienced distorted thinking today?',
-  'gratitude': 'What went well today?',
-  'values-affirmation': 'What matters most to you?',
-  'self-compassion': 'Give yourself some kindness',
-  'woop': 'Plan a goal with WOOP',
-  'best-possible-self': 'Imagine your best possible self',
-  'savoring': 'Savor positive experiences',
+export const HELPER_TILES: Record<HelperType, HelperTileData> = {
+  'cbt-distortions': {
+    shortTitle: 'Thinking Traps',
+    description: 'Identify unhelpful thought patterns',
+    fullTitle: 'Cognitive Distortions',
+    icon: '🧠',
+  },
+  'gratitude': {
+    shortTitle: '3 Good Things',
+    description: 'Reflect on what went well today',
+    fullTitle: 'Gratitude Practice',
+    icon: '✨',
+  },
+  'values-affirmation': {
+    shortTitle: 'Values',
+    description: 'Clarify what matters most to you',
+    fullTitle: 'Values Affirmation',
+    icon: '🎯',
+  },
+  'self-compassion': {
+    shortTitle: 'Self-Compassion',
+    description: 'Give yourself kindness when struggling',
+    fullTitle: 'Self-Compassion Break',
+    icon: '💚',
+  },
+  'woop': {
+    shortTitle: 'WOOP Goals',
+    description: 'Plan goals with evidence-based strategy',
+    fullTitle: 'WOOP Goal Planning',
+    icon: '🎯',
+  },
+  'best-possible-self': {
+    shortTitle: 'Best Possible Self',
+    description: 'Envision your ideal future',
+    fullTitle: 'Best Possible Self Exercise',
+    icon: '🌟',
+  },
+  'savoring': {
+    shortTitle: 'Savoring',
+    description: 'Amplify positive experiences',
+    fullTitle: 'Savoring Practice',
+    icon: '🌸',
+  },
 }
 ```
 
 **Acceptance:**
-- ✅ Short titles defined for all helper types
-- ✅ Full titles preserved for modal display
+- ✅ Short titles, descriptions, full titles, and icons defined for all helpers
+- ✅ Descriptions are 8-12 words for consistency
+- ✅ Icons provide non-color visual differentiation
 - ✅ Constants exported and used in components
 
 ---
@@ -332,42 +404,58 @@ JournalStream
 ```
 JournalStream
 ├── HelperTileGrid
-│   ├── Tile (CBT)
-│   ├── Tile (Gratitude)
-│   ├── Tile (Values)
+│   ├── button (CBT) with icon + title + description
+│   ├── button (Gratitude) with icon + title + description
+│   ├── button (Values) with icon + title + description
 │   └── ... other tiles
-└── HelperModal (conditional)
-    └── <HelperComponent /> (selected helper's full content)
+└── HelperSheet (conditional, responsive: Sheet on desktop / Dialog on mobile)
+    └── dynamic(() => import('./helpers/CbtDistortions')) (lazy-loaded)
 ```
 
-### Helper Content Rendering
+### Helper Content Rendering & Performance
 
-**Key Decision**: Each helper component (e.g., CbtDistortions) is instantiated when needed in modal, not pre-rendered.
+**Key Decision**: Use Next.js dynamic imports with prefetch on hover/focus.
 
 **Rationale:**
 - Avoid rendering 7+ helper components on every journal entry load
 - Lazy-load helper content only when user clicks tile
-- Reduce initial page weight and React tree size
+- Prefetch on hover/focus reduces perceived latency
+- Code-split each helper into separate chunks
 
 **Implementation:**
 ```tsx
-// In JournalStream, define helper definitions
-const helperDefinitions = [
-  {
-    helperType: 'cbt-distortions',
-    title: 'Distorted Thoughts',
-    variant: 'blue',
-    renderContent: () => <CbtDistortions entryId={entry.id} userId={user.id} onInsert={...} />
-  },
-  // ... other helpers
-]
+import dynamic from 'next/dynamic'
+import { ComponentType } from 'react'
 
-// Render only active modal's content
-{activeHelperModal && (
-  <HelperModal {...}>
-    {activeHelperModal.renderContent()}
-  </HelperModal>
-)}
+// Define dynamic imports with loading skeletons
+const CbtDistortionsHelper = dynamic(
+  () => import('./helpers/CbtDistortions').then(mod => mod.CbtDistortions),
+  { loading: () => <HelperSkeleton /> }
+)
+
+const helperComponents: Record<HelperType, ComponentType<HelperProps>> = {
+  'cbt-distortions': CbtDistortionsHelper,
+  'gratitude': GratitudeHelperDynamic,
+  // ... other helpers
+}
+
+// Prefetch on tile hover/focus
+const handleTileFocus = (helperType: HelperType) => {
+  // Prefetch the helper component
+  helperComponents[helperType].preload?.()
+}
+```
+
+**Deep Linking:**
+```tsx
+// On mount, check URL params for ?helper=type
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search)
+  const helperParam = params.get('helper') as HelperType | null
+  if (helperParam && helperParam in HELPER_TILES) {
+    setActiveHelper(helperParam)
+  }
+}, [])
 ```
 
 ### Modal vs HelperContainer Relationship
@@ -406,22 +494,26 @@ Use Tailwind grid utilities:
 
 ## Tasks
 
-### Phase 1: Create Base Components (2 hours)
-- [ ] Create `/src/constants/helperTitles.ts` with HELPER_SHORT_TITLES and HELPER_FULL_TITLES
+### Phase 1: Create Constants & Base Components (3 hours)
+- [ ] Create `/src/constants/helperTitles.ts` with HELPER_TILES (title, description, icon, fullTitle)
 - [ ] Create `/src/components/journal/helpers/HelperTileGrid.tsx` component
-- [ ] Implement grid layout (3/2/1 columns responsive)
-- [ ] Add header text: "Need help journaling? Check out our helpers."
-- [ ] Style tiles with hover states
-- [ ] Make entire tile clickable
+- [ ] Implement semantic header (h2): "Need help journaling? Check out our helpers."
+- [ ] Implement responsive grid: 4 cols (xl), 3 cols (lg), 2 cols (md), 1 col (sm)
+- [ ] Create tiles as `<button type="button">` with proper ARIA (`aria-haspopup="dialog"`)
+- [ ] Add icon + title + description (line-clamp-2) to each tile
+- [ ] Style tiles: visible focus states, hover elevation, standardized height
+- [ ] Ensure touch targets >= 44x44px
 
-### Phase 2: Create Modal Component (2 hours)
-- [ ] Create `/src/components/journal/helpers/HelperModal.tsx` component
-- [ ] Use shadcn/ui Dialog component for modal
-- [ ] Add close button (X) in modal header
-- [ ] Implement backdrop click to close
-- [ ] Add Escape key handler
-- [ ] Implement focus trap (focus locked in modal when open)
-- [ ] Return focus to tile after modal closes
+### Phase 2: Create Sheet/Dialog Component (3 hours)
+- [ ] Check if shadcn/ui Sheet component is available (if not, install)
+- [ ] Create `/src/components/journal/helpers/HelperSheet.tsx` component
+- [ ] Implement responsive: Sheet on desktop (>=1024px), Dialog on mobile
+- [ ] Add close button (X), backdrop click, Escape key handlers
+- [ ] Implement focus trap (focus locked when open)
+- [ ] Return focus to invoking tile after close
+- [ ] Add URL state management (?helper=type on open, remove on close)
+- [ ] Add body scroll lock when open
+- [ ] Create HelperSkeleton component for loading state
 
 ### Phase 3: Update HelperContainer (1 hour)
 - [ ] Simplify HelperContainer: remove expand/collapse logic
@@ -430,17 +522,26 @@ Use Tailwind grid utilities:
 - [ ] Content always rendered (no progressive disclosure)
 - [ ] Update HelperContainer props interface (remove unused props)
 
-### Phase 4: Integrate in JournalStream (3 hours)
-- [ ] Import HelperTileGrid and HelperModal in JournalStream
-- [ ] Define helper tile definitions array with all helpers
-- [ ] Add modal state management (activeHelperModal)
+### Phase 4: Dynamic Imports & Prefetch (2 hours)
+- [ ] Set up dynamic imports for each helper using next/dynamic
+- [ ] Create loading skeleton component (HelperSkeleton)
+- [ ] Map helper types to dynamic components in JournalStream
+- [ ] Implement prefetch on tile hover/focus
+- [ ] Test lazy loading works correctly
+- [ ] Verify code-splitting in build output
+
+### Phase 5: Integrate in JournalStream (3 hours)
+- [ ] Import HelperTileGrid and HelperSheet in JournalStream
+- [ ] Define helper tile definitions array with all helpers (from HELPER_TILES)
+- [ ] Add sheet state management (activeHelper, setActiveHelper)
+- [ ] Implement deep linking: Check ?helper=type on mount
 - [ ] Replace individual helper components with HelperTileGrid
-- [ ] Add HelperModal with conditional rendering
-- [ ] Wire up tile click to open modal
-- [ ] Test all helpers open in modal correctly
+- [ ] Add HelperSheet with conditional rendering
+- [ ] Wire up tile click to open sheet
+- [ ] Test all helpers open in sheet correctly
 - [ ] Verify onInsert callbacks still work
 
-### Phase 5: Update All Helper Components (2 hours)
+### Phase 6: Update All Helper Components (2 hours)
 - [ ] Update CbtDistortions: remove HelperContainer expand/collapse usage
 - [ ] Update GratitudeHelper: remove expand/collapse
 - [ ] Update ValuesAffirmationHelper: remove expand/collapse
@@ -449,33 +550,45 @@ Use Tailwind grid utilities:
 - [ ] Update BestPossibleSelfHelper: remove expand/collapse
 - [ ] Update SavoringHelper: remove expand/collapse
 
-### Phase 6: Accessibility Testing (2 hours)
+### Phase 7: Accessibility Testing (2 hours)
 - [ ] Test keyboard navigation: Tab through tiles
-- [ ] Test Enter key opens modal from tile
-- [ ] Test Escape key closes modal
-- [ ] Test focus trap in modal (Tab cycles within modal)
-- [ ] Test focus returns to tile after modal closes
-- [ ] Add ARIA labels to tiles (`aria-label="Open [helper name] helper"`)
-- [ ] Add ARIA labels to modal (`aria-labelledby`, `role="dialog"`)
-- [ ] Test with screen reader (announce tile names, modal open/close)
+- [ ] Test Enter AND Space keys open sheet from tile
+- [ ] Test Escape key closes sheet
+- [ ] Test focus trap in sheet (Tab cycles within sheet)
+- [ ] Test focus returns to tile after sheet closes
+- [ ] Verify ARIA: `aria-haspopup="dialog"`, `aria-controls`, `aria-label`
+- [ ] Test with screen reader (announce tile names, sheet open/close)
+- [ ] Verify visible focus states on all interactive elements
 
-### Phase 7: Responsive & Mobile Testing (2 hours)
-- [ ] Test 3-column grid on desktop (>=1024px)
-- [ ] Test 2-column grid on tablet (768-1023px)
-- [ ] Test 1-column stack on mobile (<768px)
-- [ ] Test modal full-screen on mobile
+### Phase 8: Responsive & Mobile Testing (2 hours)
+- [ ] Test 4-column grid on xl screens (>=1280px)
+- [ ] Test 3-column grid on lg screens (1024-1279px)
+- [ ] Test 2-column grid on md screens (768-1023px)
+- [ ] Test 1-column stack on sm screens (<768px)
+- [ ] Test Sheet on desktop (side panel, journal context visible)
+- [ ] Test Dialog on mobile (full-screen)
 - [ ] Test touch targets on mobile (tiles, close button)
 - [ ] Verify no horizontal scroll at all viewport sizes
 - [ ] Test on real mobile device (iOS/Android)
 
-### Phase 8: Quality Assurance (1 hour)
+### Phase 9: URL State & Analytics (2 hours)
+- [ ] Test deep linking: ?helper=woop opens WOOP helper on mount
+- [ ] Test URL updates when sheet opens
+- [ ] Test URL clears when sheet closes
+- [ ] Test browser back/forward with URL state
+- [ ] Add analytics events: tile_click, helper_opened (define for future use)
+- [ ] Verify events include helper type in metadata
+
+### Phase 10: Quality Assurance (1 hour)
 - [ ] Run ESLint: `npm run lint`
 - [ ] Build verification: `npm run build`
-- [ ] Test all helpers function correctly in modals
+- [ ] Verify code-splitting in build output (check chunk sizes)
+- [ ] Test all helpers function correctly in sheet
 - [ ] Test helper insertion still works (prepends to journal entry)
 - [ ] Test helper tracking still logs to database
 - [ ] Verify no console errors or warnings
 - [ ] Check TypeScript strict mode passes
+- [ ] Test dark mode contrast (WCAG AA)
 
 ---
 
