@@ -108,13 +108,4 @@ export const HELPER_INFO: Record<HelperType, HelperResearchInfo> = {
       'Galante, J., et al. (2014). Loving-kindness meditation for chronic pain. Journal of Clinical Psychology, 70(9), 794-807.',
     learnMoreUrl: 'https://www.mindful.org/a-guide-to-loving-kindness-meditation/',
   },
-
-  'mental-contrasting': {
-    title: 'Mental Contrasting Exercise',
-    description:
-      'Mental contrasting involves imagining a desired future and contrasting it with present obstacles. This creates a motivational tension that energizes action toward goals.',
-    effectSize: 'Significantly improves goal attainment rates',
-    citation:
-      'Oettingen, G., & Gollwitzer, P. M. (2010). Strategies of setting and implementing goals. In J. E. Maddux & J. P. Tangney (Eds.), Social psychological foundations of clinical psychology (pp. 114-135). Guilford Press.',
-  },
 }

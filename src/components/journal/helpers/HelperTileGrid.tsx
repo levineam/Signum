@@ -13,10 +13,12 @@ import { HelperType } from '@/types/helper'
 import { HELPER_TILES } from '@/constants/helperTitles'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { Info } from 'lucide-react'
 
 interface HelperTileGridProps {
   helperTypes: HelperType[]
   onTileClick: (helperType: HelperType) => void
+  onInfoClick: (helperType: HelperType) => void // NEW: For info icon clicks
   onTileFocus?: (helperType: HelperType) => void // For prefetch
   className?: string
 }
@@ -37,6 +39,7 @@ const HELPER_VARIANTS: Record<HelperType, string> = {
 export function HelperTileGrid({
   helperTypes,
   onTileClick,
+  onInfoClick,
   onTileFocus,
   className,
 }: HelperTileGridProps) {
@@ -54,49 +57,71 @@ export function HelperTileGrid({
           if (!tileData) return null
 
           return (
-            <button
-              key={helperType}
-              type="button"
-              onClick={() => onTileClick(helperType)}
-              onFocus={() => onTileFocus?.(helperType)}
-              onMouseEnter={() => onTileFocus?.(helperType)}
-              aria-haspopup="dialog"
-              aria-controls={`helper-sheet-${helperType}`}
-              aria-label={`Open ${tileData.fullTitle} helper`}
-              className={cn(
-                'group relative w-full text-left transition-all duration-200',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                'dark:focus:ring-blue-400 dark:focus:ring-offset-gray-900'
-              )}
-            >
+            <div key={helperType} className="relative group">
               <Card
                 className={cn(
                   'h-full p-4 bg-gradient-to-r border transition-all duration-200',
-                  'hover:shadow-lg hover:-translate-y-0.5',
-                  'group-focus:shadow-lg group-focus:-translate-y-0.5',
+                  'group-hover:shadow-lg group-hover:-translate-y-0.5',
                   HELPER_VARIANTS[helperType]
                 )}
               >
-                {/* Icon + Title */}
-                <div className="flex items-start gap-3 mb-2">
-                  <span
-                    className="text-2xl flex-shrink-0"
-                    role="img"
-                    aria-label={`${tileData.shortTitle} icon`}
-                  >
-                    {tileData.icon}
-                  </span>
-                  <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 line-clamp-1">
-                    {tileData.shortTitle}
-                  </h3>
-                </div>
+                {/* Info Icon Button - Top Right */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onInfoClick(helperType)
+                  }}
+                  aria-label={`Learn more about ${tileData.fullTitle}`}
+                  className={cn(
+                    'absolute top-2 right-2 z-10',
+                    'p-1.5 rounded-full',
+                    'bg-white/80 dark:bg-gray-900/80',
+                    'hover:bg-white dark:hover:bg-gray-900',
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+                    'transition-all duration-200',
+                    'opacity-70 hover:opacity-100'
+                  )}
+                >
+                  <Info className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                </button>
 
-                {/* Description */}
-                <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
-                  {tileData.description}
-                </p>
+                {/* Tile Body Button */}
+                <button
+                  type="button"
+                  onClick={() => onTileClick(helperType)}
+                  onFocus={() => onTileFocus?.(helperType)}
+                  onMouseEnter={() => onTileFocus?.(helperType)}
+                  aria-haspopup="dialog"
+                  aria-controls={`helper-dialog-${helperType}`}
+                  aria-label={`Open ${tileData.fullTitle} helper`}
+                  className={cn(
+                    'w-full text-left',
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-transparent',
+                    'rounded-md transition-all duration-200'
+                  )}
+                >
+                  {/* Icon + Title */}
+                  <div className="flex items-start gap-3 mb-2 pr-8">
+                    <span
+                      className="text-2xl flex-shrink-0"
+                      role="img"
+                      aria-label={`${tileData.shortTitle} icon`}
+                    >
+                      {tileData.icon}
+                    </span>
+                    <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 line-clamp-1">
+                      {tileData.shortTitle}
+                    </h3>
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                    {tileData.description}
+                  </p>
+                </button>
               </Card>
-            </button>
+            </div>
           )
         })}
       </div>

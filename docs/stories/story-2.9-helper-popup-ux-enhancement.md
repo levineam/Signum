@@ -530,21 +530,21 @@ export function CbtDistortionsContent({ entryId, userId, onInsert }: Props) {
 
 ---
 
-### Phase 3: Refactor Helper Components (1/10 per iteration)
+### Phase 3: Refactor Helper Components (1/9 complete) 🚧
 **Goal:** Extract content from HelperContainer
 **Files:** (All in `/src/components/journal/helpers/`)
-- `CbtDistortions.tsx` → Extract to `CbtDistortionsContent`
-- `GratitudeHelper.tsx` → Extract to `GratitudeContent`
-- `ValuesAffirmationHelper.tsx` → Extract to `ValuesAffirmationContent`
-- `SelfCompassionHelper.tsx` → Extract to `SelfCompassionContent`
-- `WoopHelper.tsx` → Extract to `WoopContent`
-- `BestPossibleSelfHelper.tsx` → Extract to `BestPossibleSelfContent`
-- `SavoringHelper.tsx` → Extract to `SavoringContent`
-- `ProgressiveMuscleRelaxationHelper.tsx` → Extract to `PMRContent`
-- `LovingKindnessHelper.tsx` → Extract to `LovingKindnessContent`
-- `MentalContrastingHelper.tsx` → Extract to `MentalContrastingContent`
+- ✅ `GratitudeHelper.tsx` → Extracted to `GratitudeContent`
+- ⏳ `CbtDistortions.tsx` → Extract to `CbtDistortionsContent`
+- ⏳ `ValuesAffirmationHelper.tsx` → Extract to `ValuesAffirmationContent`
+- ⏳ `SelfCompassionHelper.tsx` → Extract to `SelfCompassionContent`
+- ⏳ `WoopHelper.tsx` → Extract to `WoopContent`
+- ⏳ `BestPossibleSelfHelper.tsx` → Extract to `BestPossibleSelfContent`
+- ⏳ `SavoringHelper.tsx` → Extract to `SavoringContent`
+- ⏳ `ProgressiveMuscleRelaxationHelper.tsx` → Extract to `PMRContent`
+- ⏳ `LovingKindnessHelper.tsx` → Extract to `LovingKindnessContent`
+- ⏳ `MentalContrastingHelper.tsx` → Extract to `MentalContrastingContent` (helper doesn't exist yet - will skip)
 
-**Per-Helper Acceptance Criteria:**
+**Per-Helper Acceptance Criteria (Gratitude only so far):**
 - ✅ Content component created and exported
 - ✅ All state/handlers moved to content component
 - ✅ Original component still works (backward compatibility)
@@ -553,41 +553,43 @@ export function CbtDistortionsContent({ entryId, userId, onInsert }: Props) {
 
 **Testing:** Test each helper in isolation before moving to next
 
+**Status:** Gratitude complete, 8 remaining
+
 ---
 
-### Phase 4: Dialog Content Router ✅
+### Phase 4: Dialog Content Router ⏳
 **Goal:** Create component to route between helper contents
 **Files:**
 - Create `/src/components/journal/helpers/HelperDialogContent.tsx`
 
 **Acceptance Criteria:**
-- ✅ Component accepts helperType, entryId, userId, onInsert
-- ✅ Switch/case routes to correct *Content component
-- ✅ All 10 helpers have routes
-- ✅ DialogHeader displays correct title
-- ✅ Can be tested with each helper type
+- ⏳ Component accepts helperType, entryId, userId, onInsert
+- ⏳ Switch/case routes to correct *Content component
+- ⏳ All 9 helpers have routes (skipping Mental Contrasting - doesn't exist)
+- ⏳ DialogHeader displays correct title
+- ⏳ Can be tested with each helper type
 
 ---
 
-### Phase 5: Tile Grid Updates ✅
+### Phase 5: Tile Grid Updates ⏳
 **Goal:** Add info icons to tiles
 **Files:**
 - Update `/src/components/journal/helpers/HelperTileGrid.tsx`
 
 **Acceptance Criteria:**
-- ✅ Info icon appears in top-right of each tile
-- ✅ Info icon has proper positioning (absolute, top-2, right-2)
-- ✅ Info icon matches tile theme color
-- ✅ `onInfoClick` handler added to props
-- ✅ Info icon click uses `stopPropagation()`
-- ✅ Info icon has proper ARIA label
-- ✅ Tile body button still has proper ARIA label
-- ✅ Both buttons keyboard accessible
-- ✅ Hover states work correctly
+- ⏳ Info icon appears in top-right of each tile
+- ⏳ Info icon has proper positioning (absolute, top-2, right-2)
+- ⏳ Info icon matches tile theme color
+- ⏳ `onInfoClick` handler added to props
+- ⏳ Info icon click uses `stopPropagation()`
+- ⏳ Info icon has proper ARIA label
+- ⏳ Tile body button still has proper ARIA label
+- ⏳ Both buttons keyboard accessible
+- ⏳ Hover states work correctly
 
 ---
 
-### Phase 6: JournalStream Integration ✅
+### Phase 6: JournalStream Integration ⏳
 **Goal:** Wire up new state management and dialog rendering
 **Files:**
 - Update `/src/components/journal/JournalStream.tsx`
@@ -600,17 +602,17 @@ export function CbtDistortionsContent({ entryId, userId, onInsert }: Props) {
 5. Update URL state management (optional - see Open Questions)
 
 **Acceptance Criteria:**
-- ✅ Clicking info icon opens info dialog
-- ✅ Clicking tile body opens helper dialog
-- ✅ Info dialog displays correct research info
-- ✅ Helper dialog displays full helper content
-- ✅ Both dialogs can be closed (X button, Escape key)
-- ✅ State clears properly on close
-- ✅ No console errors
+- ⏳ Clicking info icon opens info dialog
+- ⏳ Clicking tile body opens helper dialog
+- ⏳ Info dialog displays correct research info
+- ⏳ Helper dialog displays full helper content
+- ⏳ Both dialogs can be closed (X button, Escape key)
+- ⏳ State clears properly on close
+- ⏳ No console errors
 
 ---
 
-### Phase 7: Testing & Cleanup ✅
+### Phase 7: Testing & Cleanup ⏳
 **Goal:** Comprehensive testing and remove deprecated code
 **Tasks:**
 1. Manual testing all 10 helpers (both modes)
@@ -621,13 +623,28 @@ export function CbtDistortionsContent({ entryId, userId, onInsert }: Props) {
 6. Update acceptance criteria
 
 **Acceptance Criteria:**
-- ✅ All 10 helpers work in info mode
-- ✅ All 10 helpers work in use mode
-- ✅ Playwright tests pass
-- ✅ No console warnings
-- ✅ Accessibility audit passes (keyboard nav, screen reader)
-- ✅ Documentation updated
-- ✅ Screenshots captured
+- ⏳ All 9 helpers work in info mode
+- ⏳ All 9 helpers work in use mode
+- ⏳ Playwright tests pass
+- ⏳ No console warnings
+- ⏳ Accessibility audit passes (keyboard nav, screen reader)
+- ⏳ Documentation updated
+- ⏳ Screenshots captured
+
+---
+
+## Implementation Status
+
+**Current Progress:** Phases 1-2 complete, Phase 3 in progress (1/9 helpers refactored)
+
+**Note on Phase Count:** This story has 7 implementation phases (not 8 as Codex suggested). The phases are:
+1. Data & Constants ✅
+2. Info Dialog ✅
+3. Refactor Helpers 🚧 (1/9 complete)
+4. Dialog Router ⏳
+5. Tile Grid Updates ⏳
+6. JournalStream Integration ⏳
+7. Testing & Cleanup ⏳
 
 ---
 

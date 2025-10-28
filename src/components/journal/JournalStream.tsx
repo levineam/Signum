@@ -14,17 +14,10 @@ import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata
 import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
-import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
-import { GratitudeHelper } from '@/components/journal/helpers/GratitudeHelper'
-import { ValuesAffirmationHelper } from '@/components/journal/helpers/ValuesAffirmationHelper'
-import { SelfCompassionHelper } from '@/components/journal/helpers/SelfCompassionHelper'
-import { WoopHelper } from '@/components/journal/helpers/WoopHelper'
-import { BestPossibleSelfHelper } from '@/components/journal/helpers/BestPossibleSelfHelper'
-import { SavoringHelper } from '@/components/journal/helpers/SavoringHelper'
-import { ProgressiveMuscleRelaxationHelper } from '@/components/journal/helpers/ProgressiveMuscleRelaxationHelper'
-import { LovingKindnessHelper } from '@/components/journal/helpers/LovingKindnessHelper'
 import { HelperTileGrid } from '@/components/journal/helpers/HelperTileGrid'
-import { HelperSheet } from '@/components/journal/helpers/HelperSheet'
+import { HelperInfoDialog } from '@/components/journal/helpers/HelperInfoDialog'
+import { HelperDialogContent } from '@/components/journal/helpers/HelperDialogContent'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { HelperType } from '@/types/helper'
 import { HELPER_TILES } from '@/constants/helperTitles'
 
@@ -63,6 +56,9 @@ export function JournalStream() {
   // Story 2.8: Helper tile UI state
   const [activeHelper, setActiveHelper] = useState<HelperType | null>(null)
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null)
+
+  // Story 2.9: Helper mode state (info vs use)
+  const [activeHelperMode, setActiveHelperMode] = useState<'info' | 'use' | null>(null)
 
   // Cache editor element reference before opening modal (Phase 1 bug fix)
   const cachedEditorRef = useRef<HTMLElement | null>(null)
@@ -226,15 +222,23 @@ export function JournalStream() {
   }, [user?.id]) // Only re-run when user ID changes (login/logout), not on user object updates
 
   // Story 2.8: Deep linking support - check URL for ?helper=type on mount
+  // Story 2.9: Updated to set mode to 'use' for deep links
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const helperParam = params.get('helper') as HelperType | null
     if (helperParam && helperParam in HELPER_TILES) {
       setActiveHelper(helperParam)
+      setActiveHelperMode('use')
+      // Set activeEntryId to today's entry when it's available
+      const today = getLocalDateString()
+      const todayEntry = entries.find(e => e.date === today)
+      if (todayEntry) {
+        setActiveEntryId(todayEntry.id)
+      }
       // Preserve existing scroll position - do NOT auto-scroll to helpers
       // User may have deep link but still want to see their entry
     }
-  }, [])
+  }, [entries])
 
   const handleContentChange = (entryId: string, newContent: string) => {
     // Don't override content changes while we're creating a link
@@ -405,6 +409,35 @@ export function JournalStream() {
     setShowNoteViewer(false)
     setViewingNoteId(null)
   }
+
+  // Story 2.9: Handler for info icon clicks
+  const handleInfoClick = (helperType: HelperType) => {
+    setActiveHelper(helperType)
+    setActiveHelperMode('info')
+    // No need to set activeEntryId for info mode
+  }
+
+  // Story 2.9: Handler for closing helper dialog
+  const handleHelperClose = () => {
+    setActiveHelper(null)
+    setActiveHelperMode(null)
+    setActiveEntryId(null)
+  }
+
+  // Story 2.9: URL management for helper state
+  useEffect(() => {
+    if (activeHelper && activeHelperMode) {
+      // Update URL with ?helper=type when dialog opens
+      const url = new URL(window.location.href)
+      url.searchParams.set('helper', activeHelper)
+      window.history.replaceState({}, '', url)
+    } else {
+      // Clear URL parameter when closing
+      const url = new URL(window.location.href)
+      url.searchParams.delete('helper')
+      window.history.replaceState({}, '', url)
+    }
+  }, [activeHelper, activeHelperMode])
 
   const handleHelperInsertion = async (entryId: string, helperText: string) => {
     if (!user) {
@@ -581,84 +614,38 @@ export function JournalStream() {
                     onTileClick={(helperType) => {
                       setActiveHelper(helperType)
                       setActiveEntryId(entry.id)
+                      setActiveHelperMode('use')
                     }}
+                    onInfoClick={handleInfoClick}
                   />
 
-                  {/* Render helper in sheet/dialog */}
+                  {/* Story 2.9: Render helper in dialog (info or use mode) */}
                   {activeHelper && (
-                    <HelperSheet
-                      isOpen={activeEntryId === entry.id}
-                      onClose={() => {
-                        setActiveHelper(null)
-                        setActiveEntryId(null)
-                      }}
-                      helperType={activeHelper}
-                      title={HELPER_TILES[activeHelper].fullTitle}
-                    >
-                      {activeHelper === 'cbt-distortions' && (
-                        <CbtDistortions
-                          entryId={entry.id}
-                          userId={user.id}
-                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                        />
-                      )}
-                      {activeHelper === 'gratitude' && (
-                        <GratitudeHelper
-                          entryId={entry.id}
-                          userId={user.id}
-                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                        />
-                      )}
-                      {activeHelper === 'values-affirmation' && (
-                        <ValuesAffirmationHelper
-                          entryId={entry.id}
-                          userId={user.id}
-                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                        />
-                      )}
-                      {activeHelper === 'self-compassion' && (
-                        <SelfCompassionHelper
-                          entryId={entry.id}
-                          userId={user.id}
-                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                        />
-                      )}
-                      {activeHelper === 'woop' && (
-                        <WoopHelper
-                          entryId={entry.id}
-                          userId={user.id}
-                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                        />
-                      )}
-                      {activeHelper === 'best-possible-self' && (
-                        <BestPossibleSelfHelper
-                          entryId={entry.id}
-                          userId={user.id}
-                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                        />
-                      )}
-                      {activeHelper === 'savoring' && (
-                        <SavoringHelper
-                          entryId={entry.id}
-                          userId={user.id}
-                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                        />
-                      )}
-                      {activeHelper === 'pmr' && (
-                        <ProgressiveMuscleRelaxationHelper
-                          entryId={entry.id}
-                          userId={user.id}
-                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                        />
-                      )}
-                      {activeHelper === 'loving-kindness' && (
-                        <LovingKindnessHelper
-                          entryId={entry.id}
-                          userId={user.id}
-                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                        />
-                      )}
-                    </HelperSheet>
+                    <Dialog open={true} onOpenChange={(open) => !open && handleHelperClose()}>
+                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                        {activeHelperMode === 'info' ? (
+                          <>
+                            <DialogHeader>
+                              <DialogTitle>{HELPER_TILES[activeHelper].fullTitle}</DialogTitle>
+                            </DialogHeader>
+                            <HelperInfoDialog helperType={activeHelper} />
+                          </>
+                        ) : activeHelperMode === 'use' && activeEntryId === entry.id ? (
+                          <>
+                            <DialogHeader>
+                              <DialogTitle>{HELPER_TILES[activeHelper].fullTitle}</DialogTitle>
+                            </DialogHeader>
+                            <HelperDialogContent
+                              helperType={activeHelper}
+                              entryId={entry.id}
+                              userId={user.id}
+                              onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                              onClose={handleHelperClose}
+                            />
+                          </>
+                        ) : null}
+                      </DialogContent>
+                    </Dialog>
                   )}
                 </>
               )}
