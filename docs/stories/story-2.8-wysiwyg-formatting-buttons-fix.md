@@ -3,7 +3,8 @@
 **Issue:** #87
 **Epic:** 2.x Accessibility & Polish
 **Story Points:** 5
-**Status:** Ready for Review
+**Status:** ✅ Completed
+**PR:** #94 (Merged to main on 2025-10-28)
 
 ---
 
@@ -188,6 +189,44 @@ None
 - **2025-10-28 (5022e41)**: Cache editor element before modal opens to prevent 'editor not found' error (PR #94 review fix)
 - **2025-10-28 (cebe953)**: Updated story changelog with editor caching fix
 - **2025-10-28 (14ec18e)**: Preserve selection context when creating note links to handle duplicate text (PR #94 review fix)
+- **2025-10-28 (026938d)**: Updated story changelog with selection context preservation fix
+
+---
+
+## Completion Summary
+
+**PR #94 merged to main on 2025-10-28**
+
+This story successfully fixed WYSIWYG formatting buttons in the editor and implemented the complete note link creation workflow. Key achievements:
+
+### Original Issue (Story 2.8)
+- ✅ Fixed formatting buttons exiting edit mode
+- ✅ Added keyboard accessibility (onClick + onMouseDown)
+- ✅ Implemented toggle functionality with visual feedback
+- ✅ Fixed heading conversion to preserve HTML content
+- ✅ Implemented custom list functionality (bullets & numbered)
+- ✅ Made blockquote/indent context-aware
+
+### Additional Features (PR #94 Reviews)
+- ✅ Implemented complete note link creation workflow (Review #3387903993)
+- ✅ Fixed autosave race condition (Review #3388985692)
+- ✅ Cached editor element to survive modal blur (Review #3389126613)
+- ✅ Preserved selection context for duplicate text (Review #3390197244)
+
+### Technical Highlights
+- Position-based text matching for accurate link placement
+- Race condition prevention with `isInternalChangeRef` and `creatingLink` flags
+- Editor element caching before DOM changes
+- Selection metadata preservation before blur events
+- Backward-compatible fallback to indexOf when metadata unavailable
+
+### Files Modified
+- `/src/components/editor/SimpleRichEditor.tsx` (WYSIWYG formatting)
+- `/src/app/notes/[id]/page.tsx` (Note link creation)
+- `/src/utils/textToLink.ts` (Position-based matching)
+- `/tests/story-1.2-task-parsing.spec.ts` (Lint fix)
+
+**Production Status:** Deployed to main, ready for user testing
 
 ---
 
