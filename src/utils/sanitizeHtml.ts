@@ -22,10 +22,18 @@ const sanitizeConfig: Config = {
   ],
   // Allow safe attributes
   ALLOWED_ATTR: [
-    'href', 'title', 'class',
+    'href', 'title', 'class', 'style',
     'data-note-id', // For internal note links
     'data-target', // For Obsidian wikilinks
   ],
+  // Allow only safe CSS properties in style attributes
+  // This preserves text alignment from the editor while blocking dangerous CSS
+  ALLOWED_STYLE: {
+    '*': {
+      // Allow text alignment (set by editor's alignment buttons)
+      'text-align': [/^(left|right|center|justify)$/],
+    }
+  },
   // Allow only safe protocols for links
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
   // Keep relative links safe
