@@ -45,6 +45,18 @@ export const SAVORING_STRATEGIES = [
 
 export type SavoringStrategy = typeof SAVORING_STRATEGIES[number]
 
+// Short descriptions shown in dropdown menu
+const STRATEGY_DESCRIPTIONS: Record<SavoringStrategy, string> = {
+  'Sharing with Others': 'Tell someone about this positive experience',
+  'Memory Building': 'Create a mental snapshot or keep a memento',
+  'Sensory-Perceptual Sharpening': 'Focus on what you see, hear, smell, taste, or touch',
+  'Behavioral Expression': 'Let yourself smile, laugh, or physically express joy',
+  'Self-Congratulation': 'Acknowledge your role in making this happen',
+  'Absorption': 'Lose yourself completely in the experience',
+  'Temporal Awareness': 'Remind yourself this moment is fleeting',
+  'Comparison': 'Think about how this could have been less positive'
+}
+
 // Placeholder text for the reflection field based on selected strategy
 const STRATEGY_PLACEHOLDERS: Record<SavoringStrategy, string> = {
   'Sharing with Others': 'Describe sharing this positive experience with someone...',
@@ -247,7 +259,9 @@ export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProp
               className="w-full"
               aria-label="Choose a savoring strategy"
             >
-              <SelectValue placeholder="Choose a savoring strategy" />
+              <SelectValue placeholder="Choose a savoring strategy">
+                {selectedStrategy || "Choose a savoring strategy"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {SAVORING_STRATEGIES.map((strategy) => (
@@ -256,7 +270,12 @@ export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProp
                   value={strategy}
                   className="cursor-pointer"
                 >
-                  {strategy}
+                  <div className="flex flex-col">
+                    <span className="font-medium">{strategy}</span>
+                    <span className="text-xs text-gray-500">
+                      {STRATEGY_DESCRIPTIONS[strategy]}
+                    </span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
