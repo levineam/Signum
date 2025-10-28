@@ -578,16 +578,26 @@ export function SimpleRichEditor({
 
   // Set initial content when value changes
   React.useEffect(() => {
+    console.log('[useEffect] value changed, isInternalChangeRef:', isInternalChangeRef.current)
+
     // Skip updating if this was an internal change (formatting, list creation, etc.)
     if (isInternalChangeRef.current) {
+      console.log('[useEffect] Skipping update - this was an internal change')
       isInternalChangeRef.current = false
       return
     }
 
     if (editorRef.current && value !== undefined) {
       const currentContent = editorRef.current.innerHTML || ''
+      console.log('[useEffect] Current content length:', currentContent.length, 'New value length:', value?.length)
+      console.log('[useEffect] Has <ul>/<ol> in DOM:', currentContent.includes('<ul>') || currentContent.includes('<ol>'))
+      console.log('[useEffect] Has <ul>/<ol> in value:', value?.includes('<ul>') || value?.includes('<ol>'))
+
       if (currentContent !== value) {
+        console.log('[useEffect] Content mismatch - OVERWRITING innerHTML')
         editorRef.current.innerHTML = value
+      } else {
+        console.log('[useEffect] Content matches - no overwrite needed')
       }
     }
   }, [value])
