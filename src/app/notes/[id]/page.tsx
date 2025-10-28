@@ -31,6 +31,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const [isEditing, setIsEditing] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const editorRef = useRef<HTMLElement | null>(null)
+  const selectionMetadataRef = useRef<ReturnType<typeof captureSelectionMetadata> | null>(null)
 
   // Make Note functionality
   const [showNoteModal, setShowNoteModal] = useState(false)
@@ -121,6 +122,14 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     if (editorElement) {
       editorRef.current = editorElement
       console.log('💾 Cached editor element before modal open')
+
+      // CRITICAL: Capture selection metadata NOW, while selection is still active
+      // After modal opens and editor blurs, window.getSelection() is lost and
+      // captureSelectionMetadata falls back to indexOf(), which finds the FIRST
+      // occurrence of the text, not the one the user actually selected
+      const metadata = captureSelectionMetadata(editorElement, text)
+      selectionMetadataRef.current = metadata
+      console.log('📍 Captured selection metadata before blur:', metadata)
     } else {
       console.warn('⚠️ No contenteditable element found when caching')
     }
@@ -131,6 +140,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const handleCloseNoteModal = () => {
     setShowNoteModal(false)
     setSelectedText('')
+    selectionMetadataRef.current = null // Clear cached metadata
   }
 
   const handleNoteCreated = async (newNote: Note) => {
@@ -165,9 +175,10 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     console.log('✅ Using cached editor element')
 
     try {
-      // Capture metadata BEFORE DOM manipulation
-      const metadata = captureSelectionMetadata(editorElement, selectedText)
-      console.log('📊 Captured selection metadata:', metadata)
+      // Use cached selection metadata (captured in handleMakeNote before blur)
+      // This ensures we link the CORRECT occurrence when text appears multiple times
+      const metadata = selectionMetadataRef.current
+      console.log('📊 Using cached selection metadata:', metadata)
 
       // Create link in Supabase with metadata
       const link = await createLink({
@@ -179,7 +190,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       console.log('💾 Link created in Supabase:', link)
 
       // Convert the selected text to a link in the DOM with linkId
-      const linkCreated = convertTextToLink(editorElement, selectedText, newNote.id, link.id, handleLinkClick)
+      // Pass metadata to ensure we link the CORRECT occurrence (not just the first one via indexOf)
+      const linkCreated = convertTextToLink(editorElement, selectedText, newNote.id, link.id, handleLinkClick, metadata)
 
       if (!linkCreated) {
         console.error('❌ Failed to create link in editor')

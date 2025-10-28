@@ -66,18 +66,78 @@ export function captureSelectionMetadata(
   }
 }
 
-export function convertTextToLink(
-  editorElement: HTMLElement,
+/**
+ * Helper function to create and insert a link element, replacing a text node
+ */
+function createAndInsertLink(
+  textNode: Text,
+  beforeText: string,
+  afterText: string,
   targetText: string,
   noteId: string,
   linkId: string,
   onLinkClick: (noteId: string) => void
 ): boolean {
-  console.log('🔗 convertTextToLink called', { targetText, noteId, linkId, editorElement: !!editorElement })
+  // Create the link element
+  const linkElement = document.createElement('a')
+  linkElement.href = '#'
+  linkElement.textContent = targetText
+  linkElement.className = 'note-link text-primary hover:text-primary/80 underline cursor-pointer'
+  linkElement.setAttribute('data-note-id', noteId)
+  linkElement.setAttribute('data-link-id', linkId)
+  linkElement.setAttribute('contenteditable', 'false')
+
+  // Add click handler
+  linkElement.addEventListener('click', (e) => {
+    console.log('🖱️ Link clicked:', noteId)
+    e.preventDefault()
+    e.stopPropagation()
+    e.stopImmediatePropagation()
+    onLinkClick(noteId)
+  })
+
+  // Create new text nodes for before and after
+  const beforeNode = beforeText ? document.createTextNode(beforeText) : null
+  const afterNode = afterText ? document.createTextNode(afterText) : null
+
+  // Get the parent element
+  const parent = textNode.parentNode
+  if (!parent) {
+    console.log('❌ No parent node found')
+    return false
+  }
+
+  // Replace the text node with our new elements
+  if (beforeNode) parent.insertBefore(beforeNode, textNode)
+  parent.insertBefore(linkElement, textNode)
+  if (afterNode) parent.insertBefore(afterNode, textNode)
+  parent.removeChild(textNode)
+
+  console.log('✅ Link created successfully')
+  return true
+}
+
+export function convertTextToLink(
+  editorElement: HTMLElement,
+  targetText: string,
+  noteId: string,
+  linkId: string,
+  onLinkClick: (noteId: string) => void,
+  metadata?: LinkMetadata | null
+): boolean {
+  console.log('🔗 convertTextToLink called', { targetText, noteId, linkId, metadata, editorElement: !!editorElement })
 
   if (!editorElement || !targetText.trim()) {
     console.log('❌ Missing editorElement or targetText')
     return false
+  }
+
+  // If we have metadata with position info, use it to find the correct occurrence
+  // This handles cases where the same text appears multiple times
+  let targetPosition: number | null = null
+  if (metadata?.textContentPos !== undefined) {
+    targetPosition = metadata.textContentPos
+    console.log('📍 Using metadata position:', targetPosition)
   }
 
   // Create a TreeWalker to find text nodes
@@ -99,57 +159,61 @@ export function convertTextToLink(
 
   console.log('📝 Found text nodes:', textNodes.length)
 
+  // Build a cumulative text position tracker to match against metadata position
+  let cumulativePosition = 0
+
   // Find the text node containing our target text
   for (const textNode of textNodes) {
     const content = textNode.textContent || ''
-    const index = content.indexOf(targetText)
+    const nodeLength = content.length
 
-    console.log('🔍 Checking text node:', { content, targetText, index })
+    // If we have a target position from metadata, check if it falls within this node
+    if (targetPosition !== null) {
+      const textStartInNode = targetPosition - cumulativePosition
+      const textEndInNode = textStartInNode + targetText.length
 
-    if (index !== -1) {
-      console.log('✅ Found target text, creating link')
+      // Check if the target position falls within this text node
+      if (textStartInNode >= 0 && textEndInNode <= nodeLength) {
+        const textAtPosition = content.substring(textStartInNode, textEndInNode)
 
-      // Found the text, now replace it with a link
-      const beforeText = content.substring(0, index)
-      const afterText = content.substring(index + targetText.length)
+        console.log('🎯 Checking position-based match:', {
+          cumulativePosition,
+          textStartInNode,
+          nodeLength,
+          textAtPosition,
+          targetText,
+          matches: textAtPosition === targetText
+        })
 
-      // Create the link element
-      const linkElement = document.createElement('a')
-      linkElement.href = '#'
-      linkElement.textContent = targetText
-      linkElement.className = 'note-link text-primary hover:text-primary/80 underline cursor-pointer'
-      linkElement.setAttribute('data-note-id', noteId)
-      linkElement.setAttribute('data-link-id', linkId) // Phase 1: Add link ID for persistence
-      linkElement.setAttribute('contenteditable', 'false') // Prevent editing the link itself
+        if (textAtPosition === targetText) {
+          console.log('✅ Found target text at exact position from metadata')
+          const index = textStartInNode
 
-      // Add click handler
-      linkElement.addEventListener('click', (e) => {
-        console.log('🖱️ Link clicked:', noteId)
-        e.preventDefault()
-        e.stopPropagation()
-        e.stopImmediatePropagation()
-        onLinkClick(noteId)
-      })
+          // Found the text, now replace it with a link
+          const beforeText = content.substring(0, index)
+          const afterText = content.substring(index + targetText.length)
 
-      // Create new text nodes for before and after
-      const beforeNode = beforeText ? document.createTextNode(beforeText) : null
-      const afterNode = afterText ? document.createTextNode(afterText) : null
-
-      // Get the parent element
-      const parent = textNode.parentNode
-      if (!parent) {
-        console.log('❌ No parent node found')
-        return false
+          // Create link and insert (common code moved below)
+          return createAndInsertLink(textNode, beforeText, afterText, targetText, noteId, linkId, onLinkClick)
+        }
       }
 
-      // Replace the text node with our new elements
-      if (beforeNode) parent.insertBefore(beforeNode, textNode)
-      parent.insertBefore(linkElement, textNode)
-      if (afterNode) parent.insertBefore(afterNode, textNode)
-      parent.removeChild(textNode)
+      cumulativePosition += nodeLength
+    } else {
+      // Fallback to indexOf when no metadata (finds first occurrence)
+      const index = content.indexOf(targetText)
 
-      console.log('✅ Link created successfully')
-      return true
+      console.log('🔍 Checking text node (no metadata):', { content, targetText, index })
+
+      if (index !== -1) {
+        console.log('✅ Found target text using indexOf (first occurrence)')
+
+        // Found the text, now replace it with a link
+        const beforeText = content.substring(0, index)
+        const afterText = content.substring(index + targetText.length)
+
+        return createAndInsertLink(textNode, beforeText, afterText, targetText, noteId, linkId, onLinkClick)
+      }
     }
   }
 
