@@ -24,6 +24,10 @@ import { SavoringHelper } from '@/components/journal/helpers/SavoringHelper'
 import { ProgressiveMuscleRelaxationHelper } from '@/components/journal/helpers/ProgressiveMuscleRelaxationHelper'
 import { LovingKindnessHelper } from '@/components/journal/helpers/LovingKindnessHelper'
 import { MentalContrastingHelper } from '@/components/journal/helpers/MentalContrastingHelper'
+import { HelperTileGrid } from '@/components/journal/helpers/HelperTileGrid'
+import { HelperSheet } from '@/components/journal/helpers/HelperSheet'
+import { HelperType } from '@/types/helper'
+import { HELPER_TILES } from '@/constants/helperTitles'
 
 interface JournalEntry {
   id: string
@@ -56,6 +60,10 @@ export function JournalStream() {
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null)
   const [noteLinkClicked, setNoteLinkClicked] = useState(false)
   const [creatingLink, setCreatingLink] = useState(false)
+
+  // Story 2.8: Helper tile UI state
+  const [activeHelper, setActiveHelper] = useState<HelperType | null>(null)
+  const [activeEntryId, setActiveEntryId] = useState<string | null>(null)
 
   // Cache editor element reference before opening modal (Phase 1 bug fix)
   const cachedEditorRef = useRef<HTMLElement | null>(null)
@@ -217,6 +225,17 @@ export function JournalStream() {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]) // Only re-run when user ID changes (login/logout), not on user object updates
+
+  // Story 2.8: Deep linking support - check URL for ?helper=type on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const helperParam = params.get('helper') as HelperType | null
+    if (helperParam && helperParam in HELPER_TILES) {
+      setActiveHelper(helperParam)
+      // Preserve existing scroll position - do NOT auto-scroll to helpers
+      // User may have deep link but still want to see their entry
+    }
+  }, [])
 
   const handleContentChange = (entryId: string, newContent: string) => {
     // Don't override content changes while we're creating a link
@@ -545,59 +564,111 @@ export function JournalStream() {
                 )}
               </div>
 
-              {/* Helpers (only on today's entry) */}
+              {/* Helpers (only on today's entry) - Story 2.8: Tile-based UI */}
               {isTodayEntry && user && (
                 <>
-                  <CbtDistortions
-                    entryId={entry.id}
-                    userId={user.id}
-                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                  <HelperTileGrid
+                    helperTypes={[
+                      'cbt-distortions',
+                      'gratitude',
+                      'values-affirmation',
+                      'self-compassion',
+                      'woop',
+                      'best-possible-self',
+                      'savoring',
+                      'pmr',
+                      'loving-kindness',
+                      'mental-contrasting',
+                    ]}
+                    onTileClick={(helperType) => {
+                      setActiveHelper(helperType)
+                      setActiveEntryId(entry.id)
+                    }}
                   />
-                  <GratitudeHelper
-                    entryId={entry.id}
-                    userId={user.id}
-                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                  />
-                  <ValuesAffirmationHelper
-                    entryId={entry.id}
-                    userId={user.id}
-                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                  />
-                  <SelfCompassionHelper
-                    entryId={entry.id}
-                    userId={user.id}
-                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                  />
-                  <WoopHelper
-                    entryId={entry.id}
-                    userId={user.id}
-                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                  />
-                  <BestPossibleSelfHelper
-                    entryId={entry.id}
-                    userId={user.id}
-                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                  />
-                  <SavoringHelper
-                    entryId={entry.id}
-                    userId={user.id}
-                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                  />
-                  <ProgressiveMuscleRelaxationHelper
-                    entryId={entry.id}
-                    userId={user.id}
-                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                  />
-                  <LovingKindnessHelper
-                    entryId={entry.id}
-                    userId={user.id}
-                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                  />
-                  <MentalContrastingHelper
-                    entryId={entry.id}
-                    userId={user.id}
-                    onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                  />
+
+                  {/* Render helper in sheet/dialog */}
+                  {activeHelper && activeEntryId === entry.id && (
+                    <HelperSheet
+                      isOpen={true}
+                      onClose={() => {
+                        setActiveHelper(null)
+                        setActiveEntryId(null)
+                      }}
+                      helperType={activeHelper}
+                      title={HELPER_TILES[activeHelper].fullTitle}
+                    >
+                      {activeHelper === 'cbt-distortions' && (
+                        <CbtDistortions
+                          entryId={entry.id}
+                          userId={user.id}
+                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                        />
+                      )}
+                      {activeHelper === 'gratitude' && (
+                        <GratitudeHelper
+                          entryId={entry.id}
+                          userId={user.id}
+                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                        />
+                      )}
+                      {activeHelper === 'values-affirmation' && (
+                        <ValuesAffirmationHelper
+                          entryId={entry.id}
+                          userId={user.id}
+                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                        />
+                      )}
+                      {activeHelper === 'self-compassion' && (
+                        <SelfCompassionHelper
+                          entryId={entry.id}
+                          userId={user.id}
+                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                        />
+                      )}
+                      {activeHelper === 'woop' && (
+                        <WoopHelper
+                          entryId={entry.id}
+                          userId={user.id}
+                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                        />
+                      )}
+                      {activeHelper === 'best-possible-self' && (
+                        <BestPossibleSelfHelper
+                          entryId={entry.id}
+                          userId={user.id}
+                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                        />
+                      )}
+                      {activeHelper === 'savoring' && (
+                        <SavoringHelper
+                          entryId={entry.id}
+                          userId={user.id}
+                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                        />
+                      )}
+                      {activeHelper === 'pmr' && (
+                        <ProgressiveMuscleRelaxationHelper
+                          entryId={entry.id}
+                          userId={user.id}
+                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                        />
+                      )}
+                      {activeHelper === 'loving-kindness' && (
+                        <LovingKindnessHelper
+                          entryId={entry.id}
+                          userId={user.id}
+                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                        />
+                      )}
+                      {activeHelper === 'mental-contrasting' && (
+                        <MentalContrastingHelper
+                          entryId={entry.id}
+                          userId={user.id}
+                          onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                        />
+                      )}
+                    </HelperSheet>
+                  )}
                 </>
               )}
 

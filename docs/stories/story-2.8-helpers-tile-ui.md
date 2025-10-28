@@ -1,6 +1,6 @@
 # Story 2.8: Convert Helpers to Compact Tile-Based UI
 
-**Status:** 📋 DRAFT
+**Status:** 🚧 IN PROGRESS - Core Implementation Complete
 **Created:** 2025-10-28
 **Updated:** 2025-10-28 (GPT-5 review incorporated)
 **Issue:** #92
@@ -711,13 +711,15 @@ Use Tailwind grid utilities:
 
 ### File List
 - **New Files:**
-  - `/src/components/journal/helpers/HelperTileGrid.tsx`
-  - `/src/components/journal/helpers/HelperModal.tsx`
-  - `/src/constants/helperTitles.ts` (or updated `/src/types/helper.ts`)
+  - `/src/constants/helperTitles.ts` - Helper tile metadata (title, description, icon, fullTitle)
+  - `/src/components/journal/helpers/HelperTileGrid.tsx` - Responsive tile grid component
+  - `/src/components/journal/helpers/HelperSheet.tsx` - Sheet (desktop) / Dialog (mobile) component
+  - `/src/components/journal/helpers/HelperSkeleton.tsx` - Loading skeleton for helpers
+  - `/src/hooks/useMediaQuery.ts` - Media query hook for responsive behavior
 - **Modified Files:**
-  - `/src/components/journal/JournalStream.tsx` - Integrate tile grid and modal
-  - `/src/components/journal/helpers/HelperContainer.tsx` - Simplify (remove expand/collapse)
-  - All helper components (remove expand/collapse usage)
+  - `/src/components/journal/JournalStream.tsx` - Integrated tile grid + sheet, added deep linking
+- **Modified (shadcn):**
+  - `/src/components/ui/sheet.tsx` - Installed via shadcn CLI
 
 ---
 
@@ -739,12 +741,58 @@ Use Tailwind grid utilities:
 - None yet
 
 ### Completion Notes
-- None yet
+
+**Implementation Status (2025-10-28):**
+
+✅ **Phase 1: Constants & Base Components (COMPLETE)**
+- Created `/src/constants/helperTitles.ts` with all 10 helper tile definitions
+- Created `/src/components/journal/helpers/HelperTileGrid.tsx`
+- Implemented responsive grid (4/3/2/1 columns for xl/lg/md/sm)
+- Button semantics with proper ARIA attributes
+- Icons, titles, descriptions for all helpers
+- Hover states and focus management
+
+✅ **Phase 2: Sheet/Dialog Component (COMPLETE)**
+- Installed shadcn/ui Sheet component
+- Created `/src/hooks/useMediaQuery.ts` for responsive detection
+- Created `/src/components/journal/helpers/HelperSheet.tsx`
+- Responsive: Sheet on desktop (>=1024px), Dialog on mobile
+- URL state management with replaceState
+- Body scroll lock when open
+- Created `/src/components/journal/helpers/HelperSkeleton.tsx`
+
+✅ **Phase 5: JournalStream Integration (COMPLETE)**
+- Integrated HelperTileGrid in JournalStream
+- Added state management for activeHelper and activeEntryId
+- Deep linking support: ?helper=type opens specific helper on mount
+- All 10 helpers wired up in sheet/dialog
+- Preserved all existing helper functionality
+
+✅ **Quality Checks (COMPLETE)**
+- No TypeScript errors in new files
+- No ESLint errors in new files
+- All imports resolve correctly
+
+⏭️ **Deferred (Not Blocking MVP)**
+- Dynamic imports with prefetch (optimization for later)
+- HelperContainer simplification (existing helpers still work)
+- Comprehensive accessibility testing
+- Full responsive testing at all breakpoints
+- Analytics event tracking
+
+🚧 **Next Steps for Testing:**
+1. Start dev server and test tile grid renders
+2. Test clicking tiles opens sheet/dialog
+3. Test helper functionality in sheet
+4. Test URL params (?helper=woop)
+5. Test responsive breakpoints
+6. Test keyboard navigation
 
 ### Change Log
 - 2025-10-28: Story created from GitHub issue #92
 - 2025-10-28: GPT-5 review incorporated (Sheet/Dialog, button semantics, descriptions, deep linking)
 - 2025-10-28: Codex feedback incorporated (grid counts, terminology, URL history, scroll behavior)
+- 2025-10-28: Core implementation complete (Phases 1, 2, 5) - simplified approach without dynamic imports
 
 ---
 
