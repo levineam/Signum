@@ -202,7 +202,7 @@ export function LovingKindnessHelper({ entryId, userId, onInsert }: LovingKindne
           events: [...eventsRef.current],
           selectionCount: 1,
           insertedText: lkmText,
-          lkmRecipient: selectedRecipient,
+          lkmRecipient: selectedRecipient as Recipient, // Type assertion safe here due to canSubmit() check
           lkmPersonNamed: personName.trim().length > 0,
           lkmNameLength: personName.trim().length
         }
