@@ -1,35 +1,45 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+let _supabase: SupabaseClient | null = null
 
-let cachedClient: SupabaseClient | null = null
-
+/**
+ * Check if public Supabase credentials are available
+ */
 export function hasPublicSupabase(): boolean {
-  return Boolean(supabaseUrl && supabaseAnonKey)
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 }
 
-export function getSupabase(): SupabaseClient {
+/**
+ * Get Supabase client (lazy initialization)
+ * This prevents build-time errors when env vars are not set
+ */
+function getSupabase(): SupabaseClient {
+  if (_supabase) {
+    return _supabase
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required')
+    throw new Error('Missing Supabase environment variables')
   }
-  if (!cachedClient) {
-    cachedClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-      }
-    })
-  }
-  return cachedClient
+
+  _supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
+  })
+
+  return _supabase
 }
 
-// Backward-compatible default export
+// Export a Proxy that lazily initializes the client
 export const supabase = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
-    const client = getSupabase()
-    // @ts-expect-error dynamic prop proxy
-    return client[prop]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (getSupabase() as any)[prop]
   }
 })

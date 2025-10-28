@@ -6,37 +6,52 @@
  * NEVER expose to client.
  */
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+let _supabaseAdmin: SupabaseClient | null = null
 
-let cachedAdmin: SupabaseClient | null = null
-
+/**
+ * Check if admin key is available
+ */
 export function hasAdminKey(): boolean {
-  return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY && supabaseUrl)
+  return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL)
 }
 
+/**
+ * Get Supabase admin client (lazy initialization)
+ * This prevents build-time errors when SUPABASE_SERVICE_ROLE_KEY is not set
+ */
 export function getSupabaseAdmin(): SupabaseClient {
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!supabaseUrl || !serviceRole) {
+  if (_supabaseAdmin) {
+    return _supabaseAdmin
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL environment variable is required')
+  }
+
+  if (!supabaseServiceRole) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required for admin operations')
   }
-  if (!cachedAdmin) {
-    cachedAdmin = createClient(supabaseUrl, serviceRole, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-  }
-  return cachedAdmin
+
+  _supabaseAdmin = createClient(supabaseUrl, supabaseServiceRole, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+
+  return _supabaseAdmin
 }
 
-// Backward-compatible export: proxy defers client creation until used
+// Legacy export for backward compatibility
+// @deprecated Use getSupabaseAdmin() instead
 export const supabaseAdmin = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
-    const client = getSupabaseAdmin()
-    // @ts-expect-error dynamic prop proxy
-    return client[prop]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (getSupabaseAdmin() as any)[prop]
   }
 })

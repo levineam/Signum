@@ -1,0 +1,343 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - button "Collapse sidebar" [ref=e3]:
+      - img
+    - generic [ref=e5]:
+      - link "Signum Home" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - img "Signum" [ref=e8] [cursor=pointer]
+      - navigation [ref=e9]:
+        - button "Journal" [ref=e10]:
+          - img
+          - generic [ref=e11]: Journal
+        - button "Notes" [ref=e12]:
+          - img
+          - generic [ref=e13]: Notes
+        - button "Ontology" [ref=e14]:
+          - img
+          - generic [ref=e15]: Ontology
+        - button "Feedback" [ref=e16]:
+          - img
+          - generic [ref=e17]: Feedback
+        - button "Articles" [ref=e18]:
+          - img
+          - generic [ref=e19]: Articles
+        - button "Meets" [ref=e20]:
+          - img
+          - generic [ref=e21]: Meets
+        - button "Karma" [ref=e22]:
+          - img
+          - generic [ref=e23]: Karma
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - paragraph [ref=e27]: "Signed in as:"
+          - paragraph [ref=e28]: dev-test-1@signum.dev
+        - button "Sign Out" [ref=e29]
+    - main [ref=e30]:
+      - generic [ref=e31]:
+        - switch "Toggle theme" [ref=e33] [cursor=pointer]:
+          - generic:
+            - img
+          - generic [ref=e34] [cursor=pointer]: Toggle theme
+        - generic [ref=e36]:
+          - heading "Journal" [level=1] [ref=e37]
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - generic [ref=e40]:
+                - generic [ref=e41]:
+                  - img [ref=e42]
+                  - generic [ref=e44]: Today
+                - generic [ref=e45]: "Last saved: 10:39 AM"
+              - status [ref=e46]
+              - generic [ref=e47]:
+                - status [ref=e48]
+                - generic [ref=e51]:
+                  - generic [ref=e52]: Have you experienced any distorted thinking today?
+                  - button "Explore" [ref=e54]:
+                    - img
+                    - text: Explore
+              - generic [ref=e56]:
+                - generic [ref=e57]:
+                  - generic [ref=e58]:
+                    - button "Bold" [ref=e59]:
+                      - img
+                    - button "Italic" [ref=e60]:
+                      - img
+                    - button "Underline" [ref=e61]:
+                      - img
+                  - generic [ref=e62]:
+                    - button "Heading 1" [ref=e63]:
+                      - img
+                    - button "Heading 2" [ref=e64]:
+                      - img
+                  - generic [ref=e65]:
+                    - button "Bullet List" [ref=e66]:
+                      - img
+                    - button "Numbered List" [ref=e67]:
+                      - img
+                  - generic [ref=e68]:
+                    - button "Align Left" [ref=e69]:
+                      - img
+                    - button "Align Center" [ref=e70]:
+                      - img
+                    - button "Align Right" [ref=e71]:
+                      - img
+                  - button "Quote/Indent" [ref=e72]:
+                    - img
+                - generic [active] [ref=e74]: "Task: Status persistence 1761316753738 next week"
+              - generic [ref=e75]:
+                - generic [ref=e77]: Pending
+                - generic [ref=e78]:
+                  - button [ref=e79]:
+                    - img
+                  - button [ref=e80]:
+                    - img
+                  - button [ref=e81]:
+                    - img
+              - generic [ref=e82]:
+                - generic [ref=e84]: Pending
+                - generic [ref=e85]:
+                  - button [ref=e86]:
+                    - img
+                  - button [ref=e87]:
+                    - img
+                  - button [ref=e88]:
+                    - img
+              - generic [ref=e89]:
+                - generic [ref=e91]: Pending
+                - generic [ref=e92]:
+                  - button [ref=e93]:
+                    - img
+                  - button [ref=e94]:
+                    - img
+                  - button [ref=e95]:
+                    - img
+              - generic [ref=e96]:
+                - generic [ref=e98]: Pending
+                - generic [ref=e99]:
+                  - button [ref=e100]:
+                    - img
+                  - button [ref=e101]:
+                    - img
+                  - button [ref=e102]:
+                    - img
+              - generic [ref=e103]:
+                - generic [ref=e105]: Pending
+                - generic [ref=e106]:
+                  - button [ref=e107]:
+                    - img
+                  - button [ref=e108]:
+                    - img
+                  - button [ref=e109]:
+                    - img
+              - generic [ref=e110]:
+                - generic [ref=e112]: Pending
+                - generic [ref=e113]:
+                  - button [ref=e114]:
+                    - img
+                  - button [ref=e115]:
+                    - img
+                  - button [ref=e116]:
+                    - img
+              - generic [ref=e117]:
+                - generic [ref=e119]: Pending
+                - generic [ref=e120]:
+                  - button [ref=e121]:
+                    - img
+                  - button [ref=e122]:
+                    - img
+                  - button [ref=e123]:
+                    - img
+              - generic [ref=e124]:
+                - generic [ref=e126]: Pending
+                - generic [ref=e127]:
+                  - button [ref=e128]:
+                    - img
+                  - button [ref=e129]:
+                    - img
+                  - button [ref=e130]:
+                    - img
+              - generic [ref=e131]:
+                - generic [ref=e133]: Pending
+                - generic [ref=e134]:
+                  - button [ref=e135]:
+                    - img
+                  - button [ref=e136]:
+                    - img
+                  - button [ref=e137]:
+                    - img
+              - generic [ref=e138]:
+                - generic [ref=e140]: Pending
+                - generic [ref=e141]:
+                  - button [ref=e142]:
+                    - img
+                  - button [ref=e143]:
+                    - img
+                  - button [ref=e144]:
+                    - img
+              - generic [ref=e145]:
+                - generic [ref=e146]:
+                  - generic [ref=e147]:
+                    - img [ref=e148]
+                    - generic [ref=e150]: Oct 31, 2025 at 10:39 AM
+                  - generic [ref=e151]: Pending
+                - generic [ref=e152]:
+                  - button [ref=e153]:
+                    - img
+                  - button [ref=e154]:
+                    - img
+                  - button [ref=e155]:
+                    - img
+            - generic [ref=e156]:
+              - generic [ref=e157]:
+                - generic [ref=e158]:
+                  - img [ref=e159]
+                  - generic [ref=e161]: Yesterday
+                - generic [ref=e162]: "Last saved: 4:06 PM"
+              - generic [ref=e165]:
+                - text: I need to call Mom
+                - generic [ref=e166]:
+                  - generic [ref=e168]: I need to call Mom tomorrow at 3pm
+                  - generic [ref=e170]: Review documentation
+            - generic [ref=e172]:
+              - generic [ref=e173]:
+                - generic [ref=e174]:
+                  - img [ref=e175]
+                  - generic [ref=e177]: Wednesday, Oct 22
+                - generic [ref=e178]: "Last saved: 6:16 AM"
+              - generic [ref=e181]:
+                - generic [ref=e182]: I need to call Mom tomorrow at 3pm
+                - generic [ref=e184]: I need to call Mom
+                - generic [ref=e186]: Review documentation
+            - generic [ref=e196]:
+              - generic [ref=e197]:
+                - generic [ref=e198]:
+                  - img [ref=e199]
+                  - generic [ref=e201]: Friday, Oct 17
+                - generic [ref=e202]: "Last saved: 6:30 AM"
+              - generic [ref=e205]:
+                - paragraph [ref=e206]: "Today I overgeneralized. Here's what happened:"
+                - paragraph [ref=e207]
+                - paragraph [ref=e208]: "Today I discounted a positive experience. Here's what happened:"
+                - paragraph [ref=e209]
+                - paragraph [ref=e210]: "Today I personalized something that wasn't about me. Here's what happened:"
+                - paragraph [ref=e211]
+            - generic [ref=e212]:
+              - generic [ref=e213]:
+                - generic [ref=e214]:
+                  - img [ref=e215]
+                  - generic [ref=e217]: Thursday, Oct 16
+                - generic [ref=e218]: "Last saved: 2:53 PM"
+              - generic [ref=e221]:
+                - paragraph [ref=e222]:
+                  - text: "Today I experienced Personalization/Blame. Here's what happened:"
+                  - link "My child is struggling" [ref=e223] [cursor=pointer]:
+                    - /url: "#"
+                  - text: with something and I blamed myself since she has my genes.
+                - paragraph [ref=e224]
+                - paragraph [ref=e225]
+                - paragraph [ref=e226]
+            - generic [ref=e227]:
+              - generic [ref=e228]:
+                - generic [ref=e229]:
+                  - img [ref=e230]
+                  - generic [ref=e232]: Wednesday, Oct 15
+                - generic [ref=e233]: "Last saved: 6:55 PM"
+              - generic [ref=e236]:
+                - paragraph [ref=e237]
+                - paragraph [ref=e238]: "Today I experienced Overgeneralization. Here's what happened:"
+                - paragraph [ref=e239]
+                - paragraph [ref=e240]
+                - paragraph [ref=e241]: "Today I experienced Jumping to Conclusions. Here's what happened:"
+                - paragraph [ref=e242]
+                - paragraph [ref=e243]
+                - paragraph [ref=e244]: "Today I experienced Should Statements. Here's what happened:"
+                - paragraph [ref=e245]
+                - paragraph [ref=e246]
+                - paragraph [ref=e247]: "Today I experienced Personalization/Blame. Here's what happened:"
+                - paragraph [ref=e248]
+            - generic [ref=e249]:
+              - generic [ref=e250]:
+                - generic [ref=e251]:
+                  - img [ref=e252]
+                  - generic [ref=e254]: Tuesday, Oct 14
+                - generic [ref=e255]: "Last saved: 12:27 PM"
+              - generic [ref=e258]:
+                - link "How do we define information in Swarm Theory?" [ref=e260] [cursor=pointer]:
+                  - /url: "#"
+                - text: "\"The way to live is to create. Die empty. Get every idea out of your head and into reality.\" - Derek Sivers"
+                - generic [ref=e263]: "my \"Practical Theory of Everything\": Swarm Theory. This is a theory I have been developing for many years and which attempts to explain, well, everything. Sounds ambitious, but hear me out."
+                - generic [ref=e265]: "The foundation of Swarm Theory is a simple idea: everything is a swarm (a large number of things acting as one). To be more specific; reality is constructed out of nested swarms of information processing nodes. My claim is that any concept you want to understand can be easily understood starting from this mental model of reality."
+                - generic [ref=e267]:
+                  - text: But before going deeper down this rabbit hole I want to share more about
+                  - link "why I think this is so important right now" [ref=e268] [cursor=pointer]:
+                    - /url: "#"
+                  - text: .
+                - generic [ref=e270]: Since Swarm Theory seeks to explain things in terms of swarms and information processing nodes, we can look at humanity as a swarm of information processing nodes where we, individual humans, are the information processing nodes. Now, we can also view ourselves--each individual human--as itself a swarm of information processing nodes, however, let's put that aside for the moment. As humans ourselves it can be difficult to get out of our individualist mindset. Every human is unique and special and it is certainly not bad for us to feel that way, but as I said earlier, an individual human on an island does not produce anything we would consider as valuable if it were able to survive at all. Real value only gets produced when we network with one another over time and at increasing scale.
+                - generic [ref=e272]:
+                  - link "What really sets humans apart from other animals" [ref=e273] [cursor=pointer]:
+                    - /url: "#"
+                  - text: is not how much information we can process individually,
+                - generic [ref=e275]: It seems to me that there is at least a 50% chance that this technological shift will be far more disruptive than all previous transitions, but perhaps that doesn't even matter. Regardless of the scope of the disruption it seems to me like the right thing to be doing during such a period is questioning who we are and what we should be doing with ourselves. We don't have to believe in a higher power to believe that there is room for the possibility that the there is something we *should* be doing that we are not currently doing. Industrialization transformed farming. If you had simply hoped it wouldn't affect you, you're precisely the person who would have been disrupted the most!
+                - generic [ref=e277]: But again, this disruption is different. Then it was reasonable to think that if farming was going away, that you could sell your land and open a store in a city. Start a company that builds trains. Learn a trade.
+                - generic [ref=e279]: What makes this coming disruption so qualitatively different in my mind is that you *cannot do that*. Whatever idea you have for some work you might do ... a general purpose machine can do that . The only thing we can say with any degree of certainty machines won't do is that they will not be human. They may become *people*--they may be able to come up with creative explanations for things--but they will not be us.
+                - generic [ref=e281]: Which begs the question; what are we?
+                - generic [ref=e283]: That's the question I hope to answer for people with Swarm Theory.
+                - generic [ref=e285]: Now, if you're familiar with the typical "Theory of Everything" you might be thinking that my claims is that Swarm Theory is a new theory of everything. Well, I think we find ourselves in a rather funny situation where the definition of a "Theory of Everything" would be very surprising to a lot of people. I love learning about Theories of Everything, but there's a funny thing that I realized about all of them; you could have a *perfect* understanding of a Theory of Everything and it would not help you really understand anything about the reality you occupy!
+            - generic [ref=e286]:
+              - generic [ref=e287]:
+                - generic [ref=e288]:
+                  - img [ref=e289]
+                  - generic [ref=e291]: Thursday, Oct 9
+                - generic [ref=e292]: "Last saved: 9:08 AM"
+              - generic [ref=e295]:
+                - text: This is a test of
+                - link "creating a link" [ref=e296] [cursor=pointer]:
+                  - /url: "#"
+                - text: . This is creating another link
+                - link "to be thorough" [ref=e297] [cursor=pointer]:
+                  - /url: "#"
+                - text: .
+            - generic [ref=e298]:
+              - generic [ref=e299]:
+                - generic [ref=e300]:
+                  - img [ref=e301]
+                  - generic [ref=e303]: Wednesday, Oct 8
+                - generic [ref=e304]: "Last saved: 4:29 PM"
+              - generic [ref=e307]:
+                - text: I've been thinking about stoicism lately. The practice of negative
+                - generic [ref=e308]:
+                  - text: visualization helps me appreciate what I have.
+                  - link "Marcus Aurelius" [ref=e309] [cursor=pointer]:
+                    - /url: "#"
+                  - text: wrote
+                - generic [ref=e310]: about this extensively in his Meditations.
+            - generic [ref=e311]:
+              - generic [ref=e312]:
+                - generic [ref=e313]:
+                  - img [ref=e314]
+                  - generic [ref=e316]: Tuesday, Oct 7
+                - generic [ref=e317]: "Last saved: 10:07 AM"
+              - generic [ref=e320]:
+                - paragraph [ref=e321]: Today I've been reflecting on what really matters to me and where I want to go in life.
+                - paragraph [ref=e322]:
+                  - link "I realize that authenticity is incredibly important to me - being true to myself even when it's uncomfortable or unpopular." [ref=e323] [cursor=pointer]:
+                    - /url: "#"
+                  - text: I've spent too much time trying to fit into others' expectations, and it's exhausting. Moving forward, I want to make decisions that align with who I really am, not who others think I should be.
+                - paragraph [ref=e324]
+                - paragraph [ref=e325]:
+                  - link "I believe that meaningful relationships are built on vulnerability and honest communication." [ref=e326] [cursor=pointer]:
+                    - /url: "#"
+                  - text: When I look back at my closest friendships, they all started with moments where someone took a risk and shared something real. Surface-level conversations feel hollow now. I want to cultivate deeper connections by showing up as my authentic self.
+                - paragraph [ref=e327]
+                - paragraph [ref=e328]:
+                  - text: I've been thinking about my career path lately.
+                  - link "My goal is to build work that has a positive impact on people's mental health and well-being." [ref=e329] [cursor=pointer]:
+                    - /url: "#"
+                  - text: I'm tired of feeling like my work is just a paycheck. I want to wake up excited about what I'm creating and know that it's helping people live better lives. Even if it means taking a pay cut or starting over, I think it's worth it.
+  - region "Notifications alt+T"
+  - alert [ref=e330]
+```

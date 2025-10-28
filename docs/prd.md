@@ -48,17 +48,26 @@ The solution combines two key innovations: gentle background AI that builds pers
 - ✅ Cloud data persistence (partial - needs unification)
 - ✅ Responsive UI with shadcn/ui components
 
-**Next Priorities:**
+**Completed Priorities:**
 1. ✅ **Story 2.4.0**: Dev Environment Setup (complete)
 2. ✅ **Story 2.4.1**: Complete Auth Integration (complete)
 3. ✅ **Story 2.4.2**: Migrate Links to Supabase (MVP) (complete)
 4. ✅ **Story 2.4.3**: AI Personal Ontology Extraction with GPT-5-mini (complete)
-5. **Story 2.4.4**: Incremental AI Ontology Analysis (incremental analysis on new journal entries) — see `docs/stories/story-2.4.4-incremental-analysis.md`
+5. ✅ **Story 2.4.4**: Incremental AI Ontology Analysis (complete)
+6. ✅ **Story 2.5**: Voice Transcription (Phases 1-2 complete)
+7. ✅ **Story 1.1**: Core NLP Infrastructure & Database Schema (complete)
+
+**Current Work:**
+- **Story 1.2**: Natural Language Task/Reminder Parsing (PR #65 - in review)
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|---------|
+| 2025-10-24 | 3.11 | **Story 1.2 implementation** (PR #65 in review). Natural language task parsing complete with timezone-aware date detection, DST handling, recurring tasks via RRULE, and atomic deduplication. Tasks auto-create from journal paragraphs with keywords like "need to", "remind me", etc. Fixed all P1 code review issues including timezone offset calculations, DST drift in RRULEs, race conditions in duplicate detection, and processed paragraph cache clearing. Toast notifications now working with Toaster component addition. | Claude Code |
+| 2025-10-23 | 3.10 | **Story 2.5 Phases 1-2 completed** (PRs #69, #72 merged). Voice transcription foundation: audio codec detection with MIME type verification, WebM Opus validation, and Safari compatibility (m4a/mp4 fallback). UI foundation with microphone permission handling, recording state management, and visual feedback during transcription. | Claude Code |
+| 2025-10-21 | 3.9 | **Story 1.1 completed** (PR #56 merged). Core NLP infrastructure and database schema for tasks/reminders system. Created `tasks`, `reminders`, and `task_tags` tables with RLS policies. Implemented CRUD operations and test suite. Foundation for natural language task parsing. | Claude Code |
+| 2025-10-14 | 3.8.1 | **Story 2.4.4 completed** (PRs #13, #16, #27 merged). Incremental AI Ontology Analysis now functional with automatic background processing. Supabase Edge Function runs daily to analyze new/edited journal entries. Manual "Analyze My Notes" uses same incremental pipeline. Tracks `lastAnalyzedAt` timestamp per user, merges new ontology items with existing ones, and prevents duplicate extractions. Reduces token usage by ~80% vs full re-analysis. | Claude Code |
 | 2025-10-09 | 3.8 | **Story 2.4.3 completed** (PR #11 merged). AI Personal Ontology Extraction with GPT-5-mini now functional. "Analyze My Notes" button processes up to 20 notes and populates Values, Beliefs, and Aims cards. Fixed critical bug where GPT-5-mini returns empty `output_text` in reasoning mode by extracting from `response.output` message chunks. Fixed P1 bug where only first chunk was read, causing truncated responses - now concatenates all chunks with `join('')`. Uses OpenAI Responses API with `reasoning.effort: 'medium'`. See `docs/stories/completed/story-2.4.3-ontology-extraction.md` for MVP scope. | Claude Code |
 | 2025-10-09 | 3.7 | **Story 2.4.2 (MVP) completed** (PR #8 Phase 1, PR #9 Phase 2 merged). Links now persist to Supabase with metadata and rehydrate on page load using exact text matching. Phase 0: Added `metadata` JSONB column to `links` table. Phase 1: Link creation captures selection metadata (snippet, contextBefore, contextAfter), adds `data-link-id` attributes. Phase 2: Link rehydration on journal entry load fetches from Supabase and restores missing links. Deferred advanced features (dangling link detection, fuzzy matching, recovery UI) to Story 2.4.6+. Total effort: 6 days. | Claude Code |
 | 2025-10-08 | 3.6 | Story 2.4.1 completed (PR #7 merged). Discovered link persistence issue (localStorage) during manual testing and data recovery. Created Story 2.4.2 for link migration to Supabase (MVP scope, 4-6 days). Renumbered existing stories: Ontology Extraction 2.4.2→2.4.3, Incremental Analysis 2.4.3→2.4.4, Analytics 2.4.4→2.4.5. See `docs/stories/completed/story-2.4.2-linked-text-resilience-plan.md` and `docs/stories/completed/story-2.4.2-linked-text-resilience-REVIEW.md` | Claude Code |

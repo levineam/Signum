@@ -1,0 +1,21 @@
+name: Codex Review Request
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  request-codex-review:
+    name: Post '@codex review' comment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask Codex for review
+        run: |
+          gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
+            -f body='@codex review'
+        env:
+          GH_TOKEN: ${{ secrets.CODEX_TRIGGER_PAT }}

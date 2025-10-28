@@ -3,6 +3,7 @@ import { Architects_Daughter, Fira_Code } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { Toaster } from "sonner";
 
 const architectsDaughter = Architects_Daughter({
   weight: "400",
@@ -35,6 +36,7 @@ export default function RootLayout({
             {children}
           </AuthProvider>
         </ThemeProvider>
+        <Toaster />
       </body>
     </html>
   );
