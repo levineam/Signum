@@ -275,6 +275,18 @@ export function SimpleRichEditor({
         }
 
         try {
+          // If selection is collapsed (just cursor), expand to include current block
+          if (wasCollapsed && range.commonAncestorContainer.nodeType === Node.TEXT_NODE) {
+            const textNode = range.commonAncestorContainer as Text
+            const parentBlock = textNode.parentElement
+
+            if (parentBlock && editorRef.current.contains(parentBlock)) {
+              // Expand range to select the entire parent block content
+              range.selectNodeContents(parentBlock)
+              console.log('[insertList] Expanded collapsed range to parent block:', parentBlock)
+            }
+          }
+
           const fragment = range.extractContents()
           const nodes = Array.from(fragment.childNodes)
 
