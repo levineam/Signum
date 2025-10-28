@@ -182,6 +182,8 @@ None
 - **2025-10-27 (747d933)**: Fixed TypeScript lint error in test file
 - **2025-10-28 (af67476)**: Added detailed useEffect logging to diagnose list insertion race condition
 - **2025-10-28 (a9373a4)**: Implemented note link insertion in note editor's Make Note feature (PR #94 review fix)
+- **2025-10-28 (3c34215)**: Updated story documentation
+- **2025-10-28 (ed895ef)**: Clear pending autosave before creating note links to prevent race condition (PR #94 review fix)
 
 ---
 
