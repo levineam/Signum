@@ -108,41 +108,36 @@ so that I can see all available helpers at once without excessive scrolling.
  * HelperTileGrid Component
  * Story 2.8: Tile-based helper UI
  *
- * Displays helpers as compact tiles in responsive grid.
- * Clicking tile opens modal with full helper content.
+ * Displays helpers as compact button tiles in responsive grid.
+ * Each tile is a <button> element with proper ARIA attributes.
+ * Clicking tile opens sheet/dialog with full helper content.
  */
 
-import { ReactNode } from 'react'
-import { Card } from '@/components/ui/card'
 import { HelperType } from '@/types/helper'
-
-export interface HelperTile {
-  helperType: HelperType
-  title: string           // Shortened title for tile display
-  icon?: ReactNode        // Optional icon/emoji for visual identity
-  variant: 'default' | 'blue' | 'green' | 'purple' | 'pink'
-  content: ReactNode      // Full helper content (for modal)
-}
+import { HELPER_TILES } from '@/constants/helperTitles'
 
 interface HelperTileGridProps {
-  tiles: HelperTile[]
-  onTileClick: (tile: HelperTile) => void
+  helperTypes: HelperType[]
+  onTileClick: (helperType: HelperType) => void
+  onTileFocus?: (helperType: HelperType) => void  // For prefetch
 }
 
-export function HelperTileGrid({ tiles, onTileClick }: HelperTileGridProps) {
-  // Grid: 3 cols desktop (lg), 2 cols tablet (sm-md), 1 col mobile
+export function HelperTileGrid({ helperTypes, onTileClick, onTileFocus }: HelperTileGridProps) {
+  // Grid: 4 cols (xl), 3 cols (lg), 2 cols (md), 1 col (sm)
+  // Each tile renders as <button> with icon, title, description
   // ... implementation
 }
 ```
 
 **Acceptance:**
-- ✅ Grid layout: 3 tiles per row on desktop (>=1024px)
-- ✅ Grid layout: 2 tiles per row on tablet (768-1023px)
-- ✅ Grid layout: 1 tile per column on mobile (<768px)
-- ✅ Header text: "Need help journaling? Check out our helpers."
-- ✅ Tiles are clickable (entire card is click target)
-- ✅ Tiles display shortened titles
-- ✅ Visual hover state on tiles
+- ✅ Grid layout: 4 tiles per row on xl screens (>=1280px)
+- ✅ Grid layout: 3 tiles per row on lg screens (1024-1279px)
+- ✅ Grid layout: 2 tiles per row on md screens (768-1023px)
+- ✅ Grid layout: 1 tile per column on sm screens (<768px)
+- ✅ Semantic header (h2): "Need help journaling? Check out our helpers."
+- ✅ Tiles are `<button>` elements with proper ARIA attributes
+- ✅ Tiles display icon + shortened title + description (8-12 words)
+- ✅ Visible focus states and hover elevation
 
 ---
 
@@ -178,16 +173,16 @@ interface HelperSheetProps {
 export function HelperSheet({ isOpen, onClose, helperType, title, children }: HelperSheetProps) {
   const isDesktop = useMediaQuery('(min-width: 1024px)')
 
-  // Update URL with ?helper=type on open
+  // Update URL with ?helper=type on open (use replaceState to avoid flooding history)
   useEffect(() => {
     if (isOpen) {
       const url = new URL(window.location.href)
       url.searchParams.set('helper', helperType)
-      window.history.pushState({}, '', url)
+      window.history.replaceState({}, '', url)
     } else {
       const url = new URL(window.location.href)
       url.searchParams.delete('helper')
-      window.history.pushState({}, '', url)
+      window.history.replaceState({}, '', url)
     }
   }, [isOpen, helperType])
 
@@ -306,36 +301,45 @@ export const HELPER_TILES: Record<HelperType, HelperTileData> = {
 **New Implementation:**
 ```tsx
 {isTodayEntry && user && (
-  <HelperTileGrid
-    tiles={[
-      {
-        helperType: 'cbt-distortions',
-        title: 'Distorted Thoughts',
-        variant: 'blue',
-        content: <CbtDistortions entryId={entry.id} userId={user.id} onInsert={...} />
-      },
-      {
-        helperType: 'gratitude',
-        title: '3 Good Things',
-        variant: 'green',
-        content: <GratitudeHelper entryId={entry.id} userId={user.id} onInsert={...} />
-      },
-      // ... other helpers
-    ]}
-    onTileClick={(tile) => setActiveHelperModal(tile)}
-  />
+  <>
+    <HelperTileGrid
+      helperTypes={[
+        'cbt-distortions',
+        'gratitude',
+        'values-affirmation',
+        'self-compassion',
+        'woop',
+        'best-possible-self',
+        'savoring',
+      ]}
+      onTileClick={(helperType) => setActiveHelper(helperType)}
+      onTileFocus={(helperType) => prefetchHelper(helperType)}
+    />
 
-  {activeHelperModal && (
-    <HelperModal
-      isOpen={!!activeHelperModal}
-      onClose={() => setActiveHelperModal(null)}
-      helperType={activeHelperModal.helperType}
-      title={activeHelperModal.title}
-    >
-      {activeHelperModal.content}
-    </HelperModal>
-  )}
+    {activeHelper && (
+      <HelperSheet
+        isOpen={!!activeHelper}
+        onClose={() => setActiveHelper(null)}
+        helperType={activeHelper}
+        title={HELPER_TILES[activeHelper].fullTitle}
+      >
+        {renderHelper(activeHelper, entry.id, user.id)}
+      </HelperSheet>
+    )}
+  </>
 )}
+
+// Helper render function with dynamic imports
+const renderHelper = (helperType: HelperType, entryId: string, userId: string) => {
+  const HelperComponent = helperComponents[helperType]
+  return (
+    <HelperComponent
+      entryId={entryId}
+      userId={userId}
+      onInsert={(helperText) => handleHelperInsertion(entryId, helperText)}
+    />
+  )
+}
 ```
 
 **Acceptance:**
@@ -454,9 +458,17 @@ useEffect(() => {
   const helperParam = params.get('helper') as HelperType | null
   if (helperParam && helperParam in HELPER_TILES) {
     setActiveHelper(helperParam)
+    // Preserve existing scroll position - do NOT auto-scroll to helpers
+    // User may have deep link but still want to see their entry
   }
 }, [])
 ```
+
+**Scroll Behavior Decision:**
+- When opening helper via URL param (?helper=woop), preserve existing journal scroll position
+- Do NOT auto-scroll to helper tiles or auto-focus sheet contents
+- Rationale: User may be coming from shared link but still wants to reference their journal entry
+- Sheet/dialog opens without disrupting journal context
 
 ### Modal vs HelperContainer Relationship
 
@@ -595,35 +607,41 @@ Use Tailwind grid utilities:
 ## Acceptance Criteria
 
 ### Functional Requirements
-- ✅ Helpers displayed as tiles in grid (3/2/1 columns responsive)
-- ✅ Header: "Need help journaling? Check out our helpers."
-- ✅ Tiles use shortened titles (e.g., "Distorted Thoughts")
-- ✅ Clicking tile opens modal with full helper content
-- ✅ Modal displays full helper title and functionality
-- ✅ Close button (X) and backdrop click close modal
-- ✅ Escape key closes modal
+- ✅ Helpers displayed as button tiles in grid (4/3/2/1 columns responsive)
+- ✅ Semantic header (h2): "Need help journaling? Check out our helpers."
+- ✅ Tiles display icon + shortened title + description (e.g., "Thinking Traps" + "Identify unhelpful thought patterns")
+- ✅ Clicking tile opens sheet/dialog with full helper content
+- ✅ Sheet/dialog displays full helper title and functionality
+- ✅ Close button (X), backdrop click, and Escape key close sheet/dialog
+- ✅ URL updates with ?helper=type when sheet/dialog opens
+- ✅ Deep linking: ?helper=woop opens WOOP helper on mount
 - ✅ All existing helper functionality preserved (insertion, tracking)
 
 ### UX Requirements
 - ✅ Reduced vertical space compared to current stacked layout
-- ✅ Scannable overview of all helpers at once
-- ✅ Hover state on tiles provides visual feedback
-- ✅ Modal displays helper content clearly
-- ✅ Smooth transitions (tile hover, modal open/close)
+- ✅ Scannable overview of all helpers at once with descriptions
+- ✅ Visible focus states and hover elevation on tiles
+- ✅ Desktop: Sheet preserves journal context (side panel)
+- ✅ Mobile: Full-screen dialog
+- ✅ Micro-transitions (hover/opacity/translate) without complex animations
+- ✅ Dynamic imports with prefetch reduce perceived latency
 
 ### Accessibility Requirements
-- ✅ WCAG AA contrast ratios on tiles and modal
-- ✅ Keyboard navigation: Tab through tiles, Enter to open, Escape to close
-- ✅ Focus trap in modal
-- ✅ Focus returns to tile after modal closes
-- ✅ Screen reader announces tile names and modal state
+- ✅ WCAG AA contrast ratios on tiles and sheet/dialog (including dark mode)
+- ✅ Tiles are `<button>` elements with proper ARIA (`aria-haspopup="dialog"`, `aria-controls`)
+- ✅ Keyboard navigation: Tab through tiles, Enter/Space to open, Escape to close
+- ✅ Focus trap in sheet/dialog
+- ✅ Focus returns to tile after sheet/dialog closes
+- ✅ Screen reader announces tile names and sheet/dialog state
 - ✅ Touch targets >= 44x44px on mobile
+- ✅ Icons provide non-color visual differentiation
 
 ### Responsive Requirements
-- ✅ 3 columns on desktop (>=1024px)
-- ✅ 2 columns on tablet (768-1023px)
-- ✅ 1 column on mobile (<768px)
-- ✅ Modal full-screen on mobile, centered on desktop
+- ✅ 4 columns on xl screens (>=1280px)
+- ✅ 3 columns on lg screens (1024-1279px)
+- ✅ 2 columns on md screens (768-1023px)
+- ✅ 1 column on sm screens (<768px)
+- ✅ Sheet on desktop (>=1024px), full-screen dialog on mobile
 - ✅ No horizontal scroll at any viewport
 
 ### Quality Requirements
@@ -638,28 +656,31 @@ Use Tailwind grid utilities:
 ## Testing Checklist
 
 ### Manual Testing
-- [ ] **Grid Layout**: 3 columns desktop, 2 tablet, 1 mobile
-- [ ] **Tiles**: All 7 helpers display with shortened titles
-- [ ] **Tile Click**: Opens modal with correct helper content
-- [ ] **Modal Close**: X button, backdrop click, Escape key all work
-- [ ] **Helper Functionality**: Each helper works in modal (forms, insertion, etc.)
+- [ ] **Grid Layout**: 4 cols (xl), 3 cols (lg), 2 cols (md), 1 col (sm)
+- [ ] **Tiles**: All 7 helpers display with icon + title + description
+- [ ] **Tile Click**: Opens sheet/dialog with correct helper content
+- [ ] **Sheet/Dialog Close**: X button, backdrop click, Escape key all work
+- [ ] **Helper Functionality**: Each helper works in sheet/dialog (forms, insertion, etc.)
 - [ ] **Insertion**: "Add to Journal Entry" still prepends content correctly
-- [ ] **Collapse**: Modal closes after insertion (optional behavior)
+- [ ] **URL State**: ?helper=type appears on open, clears on close
+- [ ] **Deep Linking**: ?helper=woop opens WOOP helper on mount
 
 ### Accessibility Testing
 - [ ] **Keyboard Navigation**: Tab through all tiles
-- [ ] **Enter Key**: Opens modal from focused tile
-- [ ] **Escape Key**: Closes modal
-- [ ] **Focus Trap**: Tab cycles within modal (doesn't leave)
-- [ ] **Focus Return**: Focus returns to tile after modal closes
-- [ ] **Screen Reader**: Announces tile names and modal open/close
+- [ ] **Enter/Space Keys**: Both open sheet/dialog from focused tile
+- [ ] **Escape Key**: Closes sheet/dialog
+- [ ] **Focus Trap**: Tab cycles within sheet/dialog (doesn't leave)
+- [ ] **Focus Return**: Focus returns to tile after sheet/dialog closes
+- [ ] **Screen Reader**: Announces tile descriptions and sheet/dialog state
+- [ ] **ARIA Attributes**: Verify aria-haspopup="dialog", aria-controls
 
 ### Responsive Testing
-- [ ] **Desktop** (>=1024px): 3-column grid
-- [ ] **Tablet** (768-1023px): 2-column grid
-- [ ] **Mobile** (<768px): 1-column stack
-- [ ] **Modal Mobile**: Full-screen on mobile
-- [ ] **Touch Targets**: Easy to tap on mobile device
+- [ ] **XL Screens** (>=1280px): 4-column grid
+- [ ] **LG Screens** (1024-1279px): 3-column grid, Sheet side panel
+- [ ] **MD Screens** (768-1023px): 2-column grid
+- [ ] **SM Screens** (<768px): 1-column stack, full-screen Dialog
+- [ ] **Sheet Context**: Desktop sheet keeps journal visible
+- [ ] **Touch Targets**: Easy to tap on mobile device (>=44x44px)
 - [ ] **No Horizontal Scroll**: All viewport sizes
 
 ### Automated Testing
@@ -722,6 +743,24 @@ Use Tailwind grid utilities:
 
 ### Change Log
 - 2025-10-28: Story created from GitHub issue #92
+- 2025-10-28: GPT-5 review incorporated (Sheet/Dialog, button semantics, descriptions, deep linking)
+- 2025-10-28: Codex feedback incorporated (grid counts, terminology, URL history, scroll behavior)
+
+---
+
+## Codex Review (2025-10-28)
+
+### Findings Resolved
+✅ **Grid counts aligned** - Updated all acceptance criteria to 4/3/2/1 columns (xl/lg/md/sm)
+✅ **Terminology consistency** - Changed "modal" to "sheet/dialog" throughout acceptance/testing sections
+✅ **Component naming** - Updated integration examples to use HelperSheet instead of HelperModal
+✅ **Sample code updated** - Tile definitions now use HELPER_TILES with "Thinking Traps" + descriptions
+✅ **URL history fixed** - Changed to replaceState to prevent flooding browser history stack
+✅ **Button semantics** - HelperTileGrid interface now reflects <button> elements with ARIA
+
+### Questions Answered
+**Q:** Should deep linking respect journal scroll or auto-focus sheet?
+**A:** Preserve existing journal scroll position. Do NOT auto-scroll or auto-focus sheet contents. User may have deep link but still wants to reference their journal entry. Sheet opens without disrupting context.
 
 ---
 
