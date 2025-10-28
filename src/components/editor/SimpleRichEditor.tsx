@@ -372,6 +372,44 @@ export function SimpleRichEditor({
           console.log('[insertList] Created list with', listItems.length, 'items')
           range.insertNode(listElement)
           listElement.normalize()
+
+          // Clean up empty list items (items with only <br> or whitespace)
+          Array.from(listElement.children).forEach(child => {
+            if (child instanceof HTMLLIElement) {
+              const hasContent = Array.from(child.childNodes).some(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                  return node.textContent && node.textContent.trim() !== ''
+                }
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                  const el = node as HTMLElement
+                  return el.tagName !== 'BR'
+                }
+                return false
+              })
+              if (!hasContent && listElement.children.length > 1) {
+                child.remove()
+              }
+            }
+          })
+
+          // Clean up empty adjacent nodes that may be left after extraction
+          const cleanupEmptyNode = (node: Node | null) => {
+            if (!node) return
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const el = node as HTMLElement
+              // Remove if empty div/p/br or just whitespace
+              if ((el.tagName === 'DIV' || el.tagName === 'P' || el.tagName === 'BR') &&
+                  (!el.textContent || el.textContent.trim() === '')) {
+                el.remove()
+              }
+            } else if (node.nodeType === Node.TEXT_NODE && (!node.textContent || node.textContent.trim() === '')) {
+              node.remove()
+            }
+          }
+
+          cleanupEmptyNode(listElement.previousSibling)
+          cleanupEmptyNode(listElement.nextSibling)
+
           console.log('[insertList] List inserted into DOM:', listElement)
 
           const firstItem = listElement.firstElementChild as HTMLLIElement | null

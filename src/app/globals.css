@@ -230,6 +230,28 @@
     margin-bottom: 0.25rem;
   }
 
+  /* Prose list styling for read-only mode */
+  /* Apply same list styles to prose class used in JournalStream read-only view */
+  .prose ul {
+    list-style: disc;
+    margin-left: 1.5rem;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .prose ol {
+    list-style: decimal;
+    margin-left: 1.5rem;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .prose li {
+    margin-bottom: 0.25rem;
+  }
+
   /* Accessibility: Respect user's motion preferences */
   @media (prefers-reduced-motion: reduce) {
     .expanded-content {
