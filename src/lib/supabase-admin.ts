@@ -47,6 +47,7 @@ export function getSupabaseAdmin(): SupabaseClient {
   return _supabaseAdmin
 }
 
+
 // Legacy export for backward compatibility
 // @deprecated Use getSupabaseAdmin() instead
 export const supabaseAdmin = new Proxy({} as SupabaseClient, {
