@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
 import { NoteViewer } from '@/components/notes/NoteViewer'
+import { sanitizeHtml } from '@/utils/sanitizeHtml'
 
 interface AimsContent {
   todos: string
@@ -223,7 +224,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                   {content ? (
                     <div
                       className="text-base leading-relaxed prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: content }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
                       onClick={(e) => {
                         // Handle link clicks in read-only mode
                         const target = e.target as HTMLElement

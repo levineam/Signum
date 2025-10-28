@@ -9,6 +9,7 @@ import { Note } from '@/types/note'
 import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
 import { Calendar, Edit, Save, X, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { sanitizeHtml } from '@/utils/sanitizeHtml'
 
 interface NoteViewerProps {
   isOpen: boolean
@@ -244,7 +245,7 @@ export function NoteViewer({
               {note.content ? (
                 <div
                   className="text-base leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: note.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
                 />
               ) : (
                 <p className="text-muted-foreground italic">This note has no content.</p>

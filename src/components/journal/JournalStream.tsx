@@ -15,6 +15,7 @@ import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
+import { sanitizeHtml } from '@/utils/sanitizeHtml'
 
 interface JournalEntry {
   id: string
@@ -688,7 +689,7 @@ export function JournalStream() {
                     {entry.content ? (
                       <div
                         className="text-base leading-relaxed prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: entry.content }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.content) }}
                         onClick={(e) => {
                           // Handle link clicks in read-only mode
                           const target = e.target as HTMLElement
