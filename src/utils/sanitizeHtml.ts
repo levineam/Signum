@@ -32,6 +32,36 @@ const sanitizeConfig: Config = {
   ALLOW_DATA_ATTR: false,
 }
 
+// Style filtering hook - registered once globally to avoid race conditions
+// This hook filters style attributes to only allow text-align with safe values
+const styleFilterHook = (node: Element, data: { attrName: string; attrValue: string; keepAttr?: boolean }) => {
+  if (data.attrName === 'style' && data.attrValue) {
+    // Parse the style attribute and filter to only allow text-align
+    const styles = data.attrValue.split(';').map(s => s.trim()).filter(Boolean)
+    const allowedStyles = styles.filter(style => {
+      const [prop, value] = style.split(':').map(s => s.trim())
+      // Only allow text-align with safe values
+      if (prop === 'text-align') {
+        return /^(left|right|center|justify)$/i.test(value)
+      }
+      return false
+    })
+
+    // Update the style attribute with only allowed styles
+    data.attrValue = allowedStyles.join('; ')
+
+    // If no allowed styles, remove the attribute
+    if (!data.attrValue) {
+      data.keepAttr = false
+    }
+  }
+}
+
+// Register the hook once at module initialization
+// Since isomorphic-dompurify returns a singleton, we register the hook globally
+// This avoids race conditions from adding/removing hooks on every sanitize call
+DOMPurify.addHook('uponSanitizeAttribute', styleFilterHook)
+
 /**
  * Sanitizes HTML content to prevent XSS attacks
  *
@@ -49,37 +79,7 @@ const sanitizeConfig: Config = {
  * ```
  */
 export function sanitizeHtml(html: string): string {
-  // Clone DOMPurify to avoid affecting global hooks
-  const purify = DOMPurify
-
-  // Add a hook to filter style attributes to only allow text-align
-  purify.addHook('uponSanitizeAttribute', (node, data) => {
-    if (data.attrName === 'style' && data.attrValue) {
-      // Parse the style attribute and filter to only allow text-align
-      const styles = data.attrValue.split(';').map(s => s.trim()).filter(Boolean)
-      const allowedStyles = styles.filter(style => {
-        const [prop, value] = style.split(':').map(s => s.trim())
-        // Only allow text-align with safe values
-        if (prop === 'text-align') {
-          return /^(left|right|center|justify)$/i.test(value)
-        }
-        return false
-      })
-
-      // Update the style attribute with only allowed styles
-      data.attrValue = allowedStyles.join('; ')
-
-      // If no allowed styles, remove the attribute
-      if (!data.attrValue) {
-        data.keepAttr = false
-      }
-    }
-  })
-
-  const sanitized = purify.sanitize(html, sanitizeConfig)
-
-  // Remove the hook after use to avoid affecting other calls
-  purify.removeAllHooks()
-
-  return sanitized
+  // Use the singleton DOMPurify with the globally registered hook
+  // No need to add/remove hooks on each call - the hook is safe and idempotent
+  return DOMPurify.sanitize(html, sanitizeConfig)
 }
