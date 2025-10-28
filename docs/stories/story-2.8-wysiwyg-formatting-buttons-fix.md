@@ -180,6 +180,8 @@ None
 - **2025-10-27 (a219f02)**: Implemented custom list functionality to replace broken `execCommand`
 - **2025-10-27 (e2a3277)**: Codex enhancement for multi-line list handling with proper caret positioning
 - **2025-10-27 (747d933)**: Fixed TypeScript lint error in test file
+- **2025-10-28 (af67476)**: Added detailed useEffect logging to diagnose list insertion race condition
+- **2025-10-28 (a9373a4)**: Implemented note link insertion in note editor's Make Note feature (PR #94 review fix)
 
 ---
 
