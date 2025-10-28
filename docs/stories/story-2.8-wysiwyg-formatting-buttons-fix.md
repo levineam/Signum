@@ -186,6 +186,8 @@ None
 - **2025-10-28 (ed895ef)**: Clear pending autosave before creating note links to prevent race condition (PR #94 review fix)
 - **2025-10-28 (4d1e65c)**: Updated story changelog with autosave race condition fix
 - **2025-10-28 (5022e41)**: Cache editor element before modal opens to prevent 'editor not found' error (PR #94 review fix)
+- **2025-10-28 (cebe953)**: Updated story changelog with editor caching fix
+- **2025-10-28 (14ec18e)**: Preserve selection context when creating note links to handle duplicate text (PR #94 review fix)
 
 ---
 
