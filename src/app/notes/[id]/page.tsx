@@ -90,8 +90,9 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
         const latestUser = userRef.current
 
         if (latestNote && latestUser) {
-          // Get the latest content from the DOM or ref (not stale closure variable)
-          const currentContent = document.querySelector('[contenteditable="true"]')?.innerHTML || contentRef.current
+          // Get the latest content from the specific editor ref (not generic querySelector)
+          // This ensures we read from the correct editor if multiple exist (e.g., NoteViewer modal)
+          const currentContent = editorRef.current?.innerHTML || contentRef.current
           if (currentContent !== latestNote.content) {
             updateNote(latestNote.id, { content: currentContent }, latestUser.id).catch(error => {
               console.error('Error flushing autosave on unmount:', error)
@@ -113,8 +114,9 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
         const latestNote = noteRef.current
         const latestUser = userRef.current
 
-        // Get the latest content from the DOM or ref (not stale closure variable)
-        const currentContent = document.querySelector('[contenteditable="true"]')?.innerHTML || contentRef.current
+        // Get the latest content from the specific editor ref (not generic querySelector)
+        // This ensures we read from the correct editor if multiple exist (e.g., NoteViewer modal)
+        const currentContent = editorRef.current?.innerHTML || contentRef.current
         if (latestNote && latestUser && currentContent !== latestNote.content) {
           // Attempt to save before page unloads
           updateNote(latestNote.id, { content: currentContent }, latestUser.id).catch(error => {
