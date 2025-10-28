@@ -52,6 +52,43 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     loadNote()
   }, [params, user])
 
+  // Cleanup: Flush pending autosave before unmount
+  useEffect(() => {
+    return () => {
+      // If there's a pending save when component unmounts, execute it immediately
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+
+        // Flush the save immediately if there's unsaved content
+        if (note && user && content !== note.content) {
+          updateNote(note.id, { content }, user.id).catch(error => {
+            console.error('Error flushing autosave on unmount:', error)
+          })
+        }
+      }
+    }
+  }, [note, user, content])
+
+  // Handle browser close/navigation: Flush pending save before page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // If there's a pending save timeout, clear it and save immediately
+      if (saveTimeoutRef.current && note && user && content !== note.content) {
+        clearTimeout(saveTimeoutRef.current)
+
+        // Attempt to save before page unloads
+        // Note: This may not complete if the browser closes too quickly,
+        // but it gives the best chance for the data to be saved
+        updateNote(note.id, { content }, user.id).catch(error => {
+          console.error('Error flushing autosave on page unload:', error)
+        })
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [note, user, content])
+
   // Auto-save with debounce (like JournalStream.tsx:266-282)
   const handleContentChange = (newContent: string) => {
     if (!note || !user) return
