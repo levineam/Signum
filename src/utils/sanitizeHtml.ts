@@ -10,8 +10,29 @@
 
 'use client'
 
-import DOMPurify from 'dompurify'
 import type { Config } from 'dompurify'
+
+// Dynamically import DOMPurify to avoid SSR issues
+// Use isomorphic-dompurify for SSR safety when available
+let DOMPurify: typeof import('dompurify').default | null = null
+
+// Lazy-load DOMPurify only on client side
+async function loadDOMPurify() {
+  if (typeof window === 'undefined') return null
+  if (DOMPurify) return DOMPurify
+
+  try {
+    // Try isomorphic-dompurify first (SSR-safe)
+    const module = await import('isomorphic-dompurify')
+    DOMPurify = module.default
+    return DOMPurify
+  } catch {
+    // Fallback to regular dompurify if isomorphic version fails
+    const module = await import('dompurify')
+    DOMPurify = module.default
+    return DOMPurify
+  }
+}
 
 const sanitizeConfig: Config = {
   // Allow common formatting tags used in rich text editor
