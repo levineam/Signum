@@ -212,6 +212,24 @@
     border-width: 0;
   }
 
+  /* Rich text editor list styling */
+  /* Override Tailwind's preflight reset to show bullets/numbers in contentEditable */
+  .rich-editor-body ul {
+    list-style: disc;
+    margin-left: 1.5rem;
+    padding-left: 1.5rem;
+  }
+
+  .rich-editor-body ol {
+    list-style: decimal;
+    margin-left: 1.5rem;
+    padding-left: 1.5rem;
+  }
+
+  .rich-editor-body li {
+    margin-bottom: 0.25rem;
+  }
+
   /* Accessibility: Respect user's motion preferences */
   @media (prefers-reduced-motion: reduce) {
     .expanded-content {

@@ -8,7 +8,9 @@
  * since it relies on browser APIs through DOMPurify.
  */
 
-import DOMPurify from 'isomorphic-dompurify'
+'use client'
+
+import DOMPurify from 'dompurify'
 import type { Config } from 'dompurify'
 
 const sanitizeConfig: Config = {
@@ -57,10 +59,17 @@ const styleFilterHook = (node: Element, data: { attrName: string; attrValue: str
   }
 }
 
-// Register the hook once at module initialization
-// Since isomorphic-dompurify returns a singleton, we register the hook globally
+// Track if hook is registered to avoid duplicate registration
+let hookRegistered = false
+
+// Register the hook once on first use (client-side only)
 // This avoids race conditions from adding/removing hooks on every sanitize call
-DOMPurify.addHook('uponSanitizeAttribute', styleFilterHook)
+function ensureHookRegistered() {
+  if (typeof window !== 'undefined' && !hookRegistered) {
+    DOMPurify.addHook('uponSanitizeAttribute', styleFilterHook)
+    hookRegistered = true
+  }
+}
 
 /**
  * Sanitizes HTML content to prevent XSS attacks
@@ -79,7 +88,10 @@ DOMPurify.addHook('uponSanitizeAttribute', styleFilterHook)
  * ```
  */
 export function sanitizeHtml(html: string): string {
-  // Use the singleton DOMPurify with the globally registered hook
+  // Ensure hook is registered on first use (client-side only)
+  ensureHookRegistered()
+
+  // Use DOMPurify with the globally registered hook
   // No need to add/remove hooks on each call - the hook is safe and idempotent
   return DOMPurify.sanitize(html, sanitizeConfig)
 }

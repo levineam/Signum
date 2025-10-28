@@ -663,7 +663,7 @@ export function SimpleRichEditor({
           onFocus={onFocus}
           onBlur={onBlur}
           onPaste={handlePaste}
-          className="min-h-[120px] w-full resize-none border-0 bg-transparent p-4 text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed"
+          className="rich-editor-body min-h-[120px] w-full resize-none border-0 bg-transparent p-4 text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed"
           style={{ whiteSpace: 'pre-wrap' }}
         />
         {/* Placeholder */}
