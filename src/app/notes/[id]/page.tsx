@@ -28,6 +28,19 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const editorRef = useRef<HTMLElement | null>(null)
   const selectionMetadataRef = useRef<ReturnType<typeof captureSelectionMetadata> | null>(null)
 
+  // Refs to track latest values for cleanup effects
+  const noteRef = useRef<Note | null>(null)
+  const userRef = useRef(user)
+
+  // Sync refs with latest state values
+  useEffect(() => {
+    noteRef.current = note
+  }, [note])
+
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
+
   // Make Note functionality
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [selectedText, setSelectedText] = useState('')
@@ -67,12 +80,15 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
         clearTimeout(saveTimeoutRef.current)
 
         // Flush the save immediately if there's unsaved content
-        // Access latest values via closure - they're captured when cleanup runs
-        if (note && user) {
+        // Access latest values via refs (not closure) to get current state at cleanup time
+        const latestNote = noteRef.current
+        const latestUser = userRef.current
+
+        if (latestNote && latestUser) {
           // Get the latest content from the DOM or state
           const currentContent = document.querySelector('[contenteditable="true"]')?.innerHTML || content
-          if (currentContent !== note.content) {
-            updateNote(note.id, { content: currentContent }, user.id).catch(error => {
+          if (currentContent !== latestNote.content) {
+            updateNote(latestNote.id, { content: currentContent }, latestUser.id).catch(error => {
               console.error('Error flushing autosave on unmount:', error)
             })
           }
@@ -89,11 +105,15 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
 
+        // Access latest values via refs (not closure) to get current state at unload time
+        const latestNote = noteRef.current
+        const latestUser = userRef.current
+
         // Get the latest content from the DOM
         const currentContent = document.querySelector('[contenteditable="true"]')?.innerHTML || content
-        if (note && user && currentContent !== note.content) {
+        if (latestNote && latestUser && currentContent !== latestNote.content) {
           // Attempt to save before page unloads
-          updateNote(note.id, { content: currentContent }, user.id).catch(error => {
+          updateNote(latestNote.id, { content: currentContent }, latestUser.id).catch(error => {
             console.error('Error flushing autosave on page unload:', error)
           })
         }
