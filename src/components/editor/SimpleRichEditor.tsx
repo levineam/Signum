@@ -394,16 +394,16 @@ export function SimpleRichEditor({
 
           // Clean up empty adjacent nodes that may be left after extraction
           const cleanupEmptyNode = (node: Node | null) => {
-            if (!node) return
+            if (!node || !node.parentNode) return
             if (node.nodeType === Node.ELEMENT_NODE) {
               const el = node as HTMLElement
               // Remove if empty div/p/br or just whitespace
               if ((el.tagName === 'DIV' || el.tagName === 'P' || el.tagName === 'BR') &&
                   (!el.textContent || el.textContent.trim() === '')) {
-                el.remove()
+                node.parentNode.removeChild(node)
               }
             } else if (node.nodeType === Node.TEXT_NODE && (!node.textContent || node.textContent.trim() === '')) {
-              node.remove()
+              node.parentNode.removeChild(node)
             }
           }
 
