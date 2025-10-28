@@ -114,6 +114,17 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   // Make Note functionality
   const handleMakeNote = (text: string) => {
     setSelectedText(text)
+
+    // Cache editor element BEFORE opening modal to prevent "editor not found" error
+    // Modal opening causes editor to blur (onBlur sets isEditing=false), removing contenteditable from DOM
+    const editorElement = document.querySelector('[contenteditable="true"]') as HTMLElement
+    if (editorElement) {
+      editorRef.current = editorElement
+      console.log('💾 Cached editor element before modal open')
+    } else {
+      console.warn('⚠️ No contenteditable element found when caching')
+    }
+
     setShowNoteModal(true)
   }
 
@@ -140,19 +151,18 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     // Set flag to prevent content change interference
     setCreatingLink(true)
 
-    // Get the editor element
-    const editorElement = document.querySelector('[contenteditable="true"]') as HTMLElement
+    // Use cached editor element (cached in handleMakeNote before modal opened)
+    const editorElement = editorRef.current
 
-    // Hard fail with toast if editor missing
+    // Hard fail with toast if editor missing (shouldn't happen if properly cached)
     if (!editorElement) {
-      console.error('❌ Could not find editor element')
+      console.error('❌ No cached editor element - modal may have opened before caching')
       toast.error('Failed to create link: editor not found. Please try again.')
       setCreatingLink(false)
       return
     }
 
-    // Store reference for later use
-    editorRef.current = editorElement
+    console.log('✅ Using cached editor element')
 
     try {
       // Capture metadata BEFORE DOM manipulation
