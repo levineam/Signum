@@ -37,16 +37,17 @@ interface GoodThing {
   whyItHappened: string
 }
 
-export function GratitudeHelper({ entryId, userId, onInsert }: GratitudeHelperProps) {
+/**
+ * GratitudeContent Component
+ * Story 2.9: Extracted content for use in dialog (without HelperContainer wrapper)
+ */
+export function GratitudeContent({ entryId, userId, onInsert }: GratitudeHelperProps) {
   const [goodThings, setGoodThings] = useState<[GoodThing, GoodThing, GoodThing]>([
     { title: '', whatHappened: '', howIFelt: '', whyItHappened: '' },
     { title: '', whatHappened: '', howIFelt: '', whyItHappened: '' },
     { title: '', whatHappened: '', howIFelt: '', whyItHappened: '' }
   ])
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
-
-  // Ref to access HelperContainer's collapse function
-  const collapseHelperRef = useRef<(() => void) | null>(null)
 
   // Track events for usage logging
   const eventsRef = useRef<HelperEvent[]>([])
@@ -61,21 +62,6 @@ export function GratitudeHelper({ entryId, userId, onInsert }: GratitudeHelperPr
     setLiveRegionMessage(message)
     // Clear after announcement
     setTimeout(() => setLiveRegionMessage(''), 1000)
-  }
-
-  // Handle expand/collapse from HelperContainer
-  const handleExpandChange = (isExpanded: boolean) => {
-    if (isExpanded) {
-      // Track helper opened event
-      addEvent({
-        type: 'helper_opened',
-        timestamp: new Date().toISOString(),
-        data: { triggerSource: 'manual' }
-      })
-      announce('Three Good Things helper expanded. Fill in at least one good thing.')
-    } else {
-      announce('Three Good Things helper collapsed')
-    }
   }
 
   // Update a specific field in a good thing
@@ -222,11 +208,6 @@ export function GratitudeHelper({ entryId, userId, onInsert }: GratitudeHelperPr
       { title: '', whatHappened: '', howIFelt: '', whyItHappened: '' }
     ])
     eventsRef.current = []
-
-    // Collapse the helper after insertion
-    if (collapseHelperRef.current) {
-      collapseHelperRef.current()
-    }
   }
 
   // Handle clear all fields
@@ -260,25 +241,14 @@ export function GratitudeHelper({ entryId, userId, onInsert }: GratitudeHelperPr
         {liveRegionMessage}
       </div>
 
-      <HelperContainer
-        helperType="gratitude"
-        headerText="What went well today?"
-        descriptionText="Reflect on three good things that happened today. They can be big or small!"
-        variant="green"
-        onExpandChange={handleExpandChange}
-        collapseRef={collapseHelperRef}
-        showDismiss={false}
-        defaultExpanded={false}
-        testId="gratitude"
-        infoContent={{
-          title: "Three Good Things",
-          description: "A gratitude practice where you identify three positive events from your day and reflect on why they happened. Regular practice strengthens well-being and life satisfaction.",
-          effectSize: "d=0.31 for well-being improvements",
-          citation: "Dickens, L. (2017). Using gratitude to promote positive change. Journal of Positive Psychology.",
-          learnMoreUrl: "https://ggia.berkeley.edu/practice/three-good-things"
-        }}
-      >
-        {/* Good Things Form */}
+      {/* Header */}
+      <div className="mb-4">
+        <p className="text-gray-700 dark:text-gray-300">
+          What went well today? Reflect on three good things that happened today. They can be big or small!
+        </p>
+      </div>
+
+      {/* Good Things Form */}
         <div className="space-y-6">
           {goodThings.map((thing, index) => (
             <div
@@ -386,6 +356,61 @@ export function GratitudeHelper({ entryId, userId, onInsert }: GratitudeHelperPr
             Clear All
           </Button>
         </div>
+    </>
+  )
+}
+
+/**
+ * GratitudeHelper Component (Original with HelperContainer)
+ * Kept for backward compatibility
+ */
+export function GratitudeHelper({ entryId, userId, onInsert }: GratitudeHelperProps) {
+  const collapseHelperRef = useRef<(() => void) | null>(null)
+  const [liveRegionMessage, setLiveRegionMessage] = useState('')
+
+  const announce = (message: string) => {
+    setLiveRegionMessage(message)
+    setTimeout(() => setLiveRegionMessage(''), 1000)
+  }
+
+  const handleExpandChange = (isExpanded: boolean) => {
+    if (isExpanded) {
+      announce('Three Good Things helper expanded. Fill in at least one good thing.')
+    } else {
+      announce('Three Good Things helper collapsed')
+    }
+  }
+
+  return (
+    <>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveRegionMessage}
+      </div>
+
+      <HelperContainer
+        helperType="gratitude"
+        headerText="What went well today?"
+        descriptionText="Reflect on three good things that happened today. They can be big or small!"
+        variant="green"
+        onExpandChange={handleExpandChange}
+        collapseRef={collapseHelperRef}
+        showDismiss={false}
+        defaultExpanded={false}
+        testId="gratitude"
+        infoContent={{
+          title: "Three Good Things",
+          description: "A gratitude practice where you identify three positive events from your day and reflect on why they happened. Regular practice strengthens well-being and life satisfaction.",
+          effectSize: "d=0.31 for well-being improvements",
+          citation: "Dickens, L. (2017). Using gratitude to promote positive change. Journal of Positive Psychology.",
+          learnMoreUrl: "https://ggia.berkeley.edu/practice/three-good-things"
+        }}
+      >
+        <GratitudeContent entryId={entryId} userId={userId} onInsert={onInsert} />
       </HelperContainer>
     </>
   )
