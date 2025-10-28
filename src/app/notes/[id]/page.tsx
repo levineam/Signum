@@ -130,6 +130,13 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
 
     console.log('📝 Creating note link', { selectedText, noteId: newNote.id, sourceNoteId: note.id })
 
+    // Clear any pending autosave to prevent stale content from overwriting the link
+    if (saveTimeoutRef.current) {
+      console.log('🛑 Clearing pending autosave timeout before link creation')
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+
     // Set flag to prevent content change interference
     setCreatingLink(true)
 
