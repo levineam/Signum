@@ -514,8 +514,35 @@ export function SimpleRichEditor({
             parent.replaceChild(fragment, existingBlockquote)
           }
         } else {
-          // Not in list, not in blockquote: add blockquote using formatBlock
-          document.execCommand('formatBlock', false, 'blockquote')
+          // Create blockquote with custom logic (similar to list insertion)
+          const wasCollapsed = selection.isCollapsed
+
+          // If selection is collapsed (just cursor), expand to include current block
+          if (wasCollapsed && range.commonAncestorContainer.nodeType === Node.TEXT_NODE) {
+            const textNode = range.commonAncestorContainer as Text
+            const parentBlock = textNode.parentElement
+
+            if (parentBlock && editorRef.current.contains(parentBlock)) {
+              // Expand range to select the entire parent block content
+              range.selectNodeContents(parentBlock)
+            }
+          }
+
+          // Extract the selected content
+          const fragment = range.extractContents()
+
+          // Create blockquote element
+          const blockquote = document.createElement('blockquote')
+          blockquote.appendChild(fragment)
+
+          // Insert blockquote at the range position
+          range.insertNode(blockquote)
+
+          // Place cursor at the end of the blockquote
+          range.selectNodeContents(blockquote)
+          range.collapse(false)
+          selection.removeAllRanges()
+          selection.addRange(range)
         }
 
         // Trigger change event

@@ -230,6 +230,17 @@
     margin-bottom: 0.25rem;
   }
 
+  /* Blockquote styling for edit mode */
+  .rich-editor-body blockquote {
+    border-left: 4px solid hsl(var(--border));
+    padding-left: 1rem;
+    margin-left: 0;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-style: italic;
+    color: hsl(var(--muted-foreground));
+  }
+
   /* Prose list styling for read-only mode */
   /* Apply same list styles to prose class used in JournalStream read-only view */
   .prose ul {
@@ -250,6 +261,17 @@
 
   .prose li {
     margin-bottom: 0.25rem;
+  }
+
+  /* Blockquote styling for read-only mode */
+  .prose blockquote {
+    border-left: 4px solid hsl(var(--border));
+    padding-left: 1rem;
+    margin-left: 0;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-style: italic;
+    color: hsl(var(--muted-foreground));
   }
 
   /* Accessibility: Respect user's motion preferences */
