@@ -20,20 +20,12 @@ const sanitizeConfig: Config = {
     'a', 'span', 'div',
     'blockquote', 'code', 'pre'
   ],
-  // Allow safe attributes
+  // Allow safe attributes (style will be filtered via hook)
   ALLOWED_ATTR: [
     'href', 'title', 'class', 'style',
     'data-note-id', // For internal note links
     'data-target', // For Obsidian wikilinks
   ],
-  // Allow only safe CSS properties in style attributes
-  // This preserves text alignment from the editor while blocking dangerous CSS
-  ALLOWED_STYLE: {
-    '*': {
-      // Allow text alignment (set by editor's alignment buttons)
-      'text-align': [/^(left|right|center|justify)$/],
-    }
-  },
   // Allow only safe protocols for links
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
   // Keep relative links safe
@@ -46,6 +38,8 @@ const sanitizeConfig: Config = {
  * This function MUST be called before rendering user-generated HTML with dangerouslySetInnerHTML.
  * It removes potentially malicious HTML/JS while preserving safe formatting.
  *
+ * Filters style attributes to only allow text-align property with safe values.
+ *
  * @param html - The HTML string to sanitize
  * @returns Sanitized HTML safe for rendering with dangerouslySetInnerHTML
  *
@@ -55,5 +49,37 @@ const sanitizeConfig: Config = {
  * ```
  */
 export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, sanitizeConfig)
+  // Clone DOMPurify to avoid affecting global hooks
+  const purify = DOMPurify
+
+  // Add a hook to filter style attributes to only allow text-align
+  purify.addHook('uponSanitizeAttribute', (node, data) => {
+    if (data.attrName === 'style' && data.attrValue) {
+      // Parse the style attribute and filter to only allow text-align
+      const styles = data.attrValue.split(';').map(s => s.trim()).filter(Boolean)
+      const allowedStyles = styles.filter(style => {
+        const [prop, value] = style.split(':').map(s => s.trim())
+        // Only allow text-align with safe values
+        if (prop === 'text-align') {
+          return /^(left|right|center|justify)$/i.test(value)
+        }
+        return false
+      })
+
+      // Update the style attribute with only allowed styles
+      data.attrValue = allowedStyles.join('; ')
+
+      // If no allowed styles, remove the attribute
+      if (!data.attrValue) {
+        data.keepAttr = false
+      }
+    }
+  })
+
+  const sanitized = purify.sanitize(html, sanitizeConfig)
+
+  // Remove the hook after use to avoid affecting other calls
+  purify.removeAllHooks()
+
+  return sanitized
 }
