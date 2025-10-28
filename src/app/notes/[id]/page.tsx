@@ -12,6 +12,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
 import { NoteViewer } from '@/components/notes/NoteViewer'
+import { createLink } from '@/lib/supabase/notes'
+import { convertTextToLink, captureSelectionMetadata } from '@/utils/textToLink'
+import { toast } from 'sonner'
 
 interface AimsContent {
   todos: string
@@ -27,10 +30,12 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const editorRef = useRef<HTMLElement | null>(null)
 
   // Make Note functionality
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [selectedText, setSelectedText] = useState('')
+  const [creatingLink, setCreatingLink] = useState(false)
 
   // Note Viewer functionality
   const [showNoteViewer, setShowNoteViewer] = useState(false)
@@ -72,6 +77,11 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const handleContentChange = (newContent: string) => {
     if (!note || !user) return
 
+    // Don't override content changes while we're creating a link
+    if (creatingLink) {
+      return
+    }
+
     // Clear existing timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
@@ -112,9 +122,88 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     setSelectedText('')
   }
 
-  const handleNoteCreated = (newNote: Note) => {
-    // Note created successfully - could show toast notification here
-    console.log('Sub-note created:', newNote)
+  const handleNoteCreated = async (newNote: Note) => {
+    if (!note || !selectedText || !user) {
+      console.log('❌ Missing note, selectedText, or user', { note, selectedText, user: !!user })
+      return
+    }
+
+    console.log('📝 Creating note link', { selectedText, noteId: newNote.id, sourceNoteId: note.id })
+
+    // Set flag to prevent content change interference
+    setCreatingLink(true)
+
+    // Get the editor element
+    const editorElement = document.querySelector('[contenteditable="true"]') as HTMLElement
+
+    // Hard fail with toast if editor missing
+    if (!editorElement) {
+      console.error('❌ Could not find editor element')
+      toast.error('Failed to create link: editor not found. Please try again.')
+      setCreatingLink(false)
+      return
+    }
+
+    // Store reference for later use
+    editorRef.current = editorElement
+
+    try {
+      // Capture metadata BEFORE DOM manipulation
+      const metadata = captureSelectionMetadata(editorElement, selectedText)
+      console.log('📊 Captured selection metadata:', metadata)
+
+      // Create link in Supabase with metadata
+      const link = await createLink({
+        sourceNoteId: note.id,
+        targetNoteId: newNote.id,
+        linkType: 'created_from',
+        metadata: metadata || undefined
+      }, user.id)
+      console.log('💾 Link created in Supabase:', link)
+
+      // Convert the selected text to a link in the DOM with linkId
+      const linkCreated = convertTextToLink(editorElement, selectedText, newNote.id, link.id, handleLinkClick)
+
+      if (!linkCreated) {
+        console.error('❌ Failed to create link in editor')
+        toast.error('Failed to create link in editor. Please try again.')
+        setCreatingLink(false)
+        return
+      }
+
+      console.log('🔗 Created link in editor DOM')
+
+      // Read the updated HTML from the editor after the link was created
+      // Wait for DOM to settle, then read the actual content
+      setTimeout(() => {
+        const updatedContent = editorElement.innerHTML
+        console.log('📄 Read updated content from editor after link creation')
+
+        // Update state with the content that includes the link
+        setContent(updatedContent)
+        setNote(prev => prev ? { ...prev, content: updatedContent } : null)
+
+        // Persist the linked content to Supabase
+        updateNote(note.id, { content: updatedContent }, user.id)
+          .then(() => {
+            console.log('💾 Persisted link to Supabase')
+            toast.success('Note created and linked successfully!')
+          })
+          .catch(error => {
+            console.error('Error persisting link to Supabase:', error)
+            toast.error('Failed to save link. Please try again.')
+          })
+
+        // Reset the creating link flag after a brief delay to ensure state updates complete
+        setTimeout(() => {
+          setCreatingLink(false)
+        }, 100)
+      }, 50)
+    } catch (error) {
+      console.error('❌ Error in handleNoteCreated:', error)
+      toast.error('Failed to create linked note. Please try again.')
+      setCreatingLink(false)
+    }
   }
 
   // Note Viewer functionality
