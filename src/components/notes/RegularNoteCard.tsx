@@ -3,7 +3,7 @@
 import { Note } from '@/types/note'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { deleteNote } from '@/lib/notes'
@@ -16,7 +16,6 @@ interface RegularNoteCardProps {
 
 export function RegularNoteCard({ note, onDeleted }: RegularNoteCardProps) {
   const { user } = useAuth()
-  const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -45,11 +44,6 @@ export function RegularNoteCard({ note, onDeleted }: RegularNoteCardProps) {
                          note.noteType === 'ontology-belief' ||
                          note.noteType === 'ontology-aim'
 
-  const handleCardClick = () => {
-    // Navigate to note detail page
-    router.push(`/notes/${note.id}`)
-  }
-
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -73,41 +67,43 @@ export function RegularNoteCard({ note, onDeleted }: RegularNoteCardProps) {
   }
 
   return (
-    <div className="block mb-4 relative group">
-      <Card
-        className="hover:bg-accent/50 transition-colors cursor-pointer"
-        onClick={handleCardClick}
+    <div className="mb-4 relative group">
+      <Link href={`/notes/${note.id}`} className="block">
+        <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium mb-1 truncate">{note.title}</h4>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {isOntologyCard
+                    ? getOntologyPreview()
+                    : note.content
+                      ? getPreview(note.content)
+                      : 'No content'}
+                </p>
+              </div>
+              <div className="flex items-start gap-2">
+                <time className="text-xs text-muted-foreground whitespace-nowrap">
+                  {formatDate(note.createdAt)}
+                </time>
+                {/* Spacer for delete button to prevent layout shift */}
+                <div className="h-8 w-8" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+      {/* Delete button positioned absolutely outside the link to avoid nested interactive elements */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-4 right-4 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        onClick={handleDelete}
+        disabled={isDeleting}
+        aria-label={`Delete note: ${note.title}`}
       >
-        <CardContent className="p-4">
-          <div className="flex justify-between items-start gap-4">
-            <div className="flex-1 min-w-0">
-              <h4 className="font-medium mb-1 truncate">{note.title}</h4>
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {isOntologyCard
-                  ? getOntologyPreview()
-                  : note.content
-                    ? getPreview(note.content)
-                    : 'No content'}
-              </p>
-            </div>
-            <div className="flex items-start gap-2">
-              <time className="text-xs text-muted-foreground whitespace-nowrap">
-                {formatDate(note.createdAt)}
-              </time>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                aria-label="Delete note"
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
     </div>
   )
 }
