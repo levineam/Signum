@@ -3,7 +3,7 @@
 **Issue:** #95
 **Epic:** 2.x Accessibility & Polish
 **Story Points:** 3
-**Status:** Ready for Testing
+**Status:** Complete
 
 ---
 
