@@ -94,14 +94,14 @@ export function RegularNoteCard({ note, onDeleted }: RegularNoteCardProps) {
         </Card>
       </Link>
       {/* Delete button positioned absolutely outside the link to avoid nested interactive elements */}
+      {/* Always interactive (no pointer-events-none) to support touch devices */}
       <Button
         variant="ghost"
         size="icon"
-        className="absolute top-4 right-4 h-8 w-8 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity z-10 pointer-events-none group-hover:pointer-events-auto focus:pointer-events-auto"
+        className="absolute top-4 right-4 h-8 w-8 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity z-10"
         onClick={handleDelete}
         disabled={isDeleting}
         aria-label={`Delete note: ${note.title}`}
-        tabIndex={0}
       >
         <Trash2 className="h-4 w-4 text-destructive" />
       </Button>
