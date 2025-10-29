@@ -172,7 +172,7 @@ export function HelperTileGrid({
           <span>
             {isExpanded
               ? 'Show fewer helpers'
-              : `Show more helpers (${hiddenCount} hidden)`}
+              : 'Show more helpers'}
           </span>
         </button>
       )}
