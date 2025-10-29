@@ -22,7 +22,6 @@ export type HelperType =
   | 'woop'                // WOOP Goal-Setting (Story 2.5.8)
   | 'best-possible-self'  // Best Possible Self Helper (Story 2.5.9)
   | 'savoring'            // Savoring Helper (Story 2.5.10)
-  | 'pmr'                 // Progressive Muscle Relaxation (Story 2.5.11)
   | 'loving-kindness'     // Loving-Kindness Meditation (Story 2.5.12)
 
 // ============================================================================
@@ -169,15 +168,6 @@ export interface HelperUsageMetadata {
   reflectionCharacterCount?: number
   hasReflection?: boolean
 
-  // =================================================
-  // Story 2.5.11 — Progressive Muscle Relaxation helper
-  // =================================================
-  // Telemetry for completed muscle groups and reflection
-  muscleGroupCount?: number
-  muscleGroupNames?: string[]
-  completedFullSequence?: boolean
-  pmrReflectionLength?: number
-
   // ========================================================
   // Story 2.5.12 — Loving-Kindness Meditation helper
   // ========================================================
@@ -323,7 +313,6 @@ export const HELPER_TYPES: HelperType[] = [
   'woop',
   'best-possible-self',
   'savoring',
-  'pmr',
   'loving-kindness'
 ]
 
@@ -339,6 +328,5 @@ export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
   'woop': 'WOOP Goal Planning',
   'best-possible-self': 'Best Possible Self',
   'savoring': 'Savoring Practice',
-  'pmr': 'Progressive Muscle Relaxation',
   'loving-kindness': 'Loving-Kindness Meditation'
 }
