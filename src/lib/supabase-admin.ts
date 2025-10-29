@@ -11,6 +11,13 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 let _supabaseAdmin: SupabaseClient | null = null
 
 /**
+ * Check if admin key is available
+ */
+export function hasAdminKey(): boolean {
+  return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL)
+}
+
+/**
  * Get Supabase admin client (lazy initialization)
  * This prevents build-time errors when SUPABASE_SERVICE_ROLE_KEY is not set
  */
@@ -40,11 +47,15 @@ export function getSupabaseAdmin(): SupabaseClient {
   return _supabaseAdmin
 }
 
+
 // Legacy export for backward compatibility
 // @deprecated Use getSupabaseAdmin() instead
 export const supabaseAdmin = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
+    const client = getSupabaseAdmin()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (getSupabaseAdmin() as any)[prop]
+    const value = (client as any)[prop]
+    // Bind methods to preserve 'this' context
+    return typeof value === 'function' ? value.bind(client) : value
   }
 })

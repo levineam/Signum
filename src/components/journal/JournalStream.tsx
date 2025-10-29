@@ -14,7 +14,12 @@ import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata
 import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
-import { CbtDistortions } from '@/components/journal/helpers/CbtDistortions'
+import { HelperTileGrid } from '@/components/journal/helpers/HelperTileGrid'
+import { HelperInfoDialog } from '@/components/journal/helpers/HelperInfoDialog'
+import { HelperDialogContent } from '@/components/journal/helpers/HelperDialogContent'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { HelperType } from '@/types/helper'
+import { HELPER_TILES } from '@/constants/helperTitles'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskEditDialog } from '@/components/tasks/TaskEditDialog'
@@ -66,6 +71,13 @@ export function JournalStream() {
   const [creatingLink, setCreatingLink] = useState(false)
   const [entryTasks, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
   const [editingTask, setEditingTask] = useState<{ id: string; title: string; dueAt: string | null } | null>(null)
+
+  // Story 2.8: Helper tile UI state
+  const [activeHelper, setActiveHelper] = useState<HelperType | null>(null)
+  const [activeEntryId, setActiveEntryId] = useState<string | null>(null)
+
+  // Story 2.9: Helper mode state (info vs use)
+  const [activeHelperMode, setActiveHelperMode] = useState<'info' | 'use' | null>(null)
 
   // Cache editor element reference before opening modal (Phase 1 bug fix)
   const cachedEditorRef = useRef<HTMLElement | null>(null)
@@ -304,6 +316,25 @@ export function JournalStream() {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]) // Only re-run when user ID changes (login/logout), not on user object updates
+
+  // Story 2.8: Deep linking support - check URL for ?helper=type on mount
+  // Story 2.9: Updated to set mode to 'use' for deep links
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const helperParam = params.get('helper') as HelperType | null
+    if (helperParam && helperParam in HELPER_TILES) {
+      setActiveHelper(helperParam)
+      setActiveHelperMode('use')
+      // Set activeEntryId to today's entry when it's available
+      const today = getLocalDateString()
+      const todayEntry = entries.find(e => e.date === today)
+      if (todayEntry) {
+        setActiveEntryId(todayEntry.id)
+      }
+      // Preserve existing scroll position - do NOT auto-scroll to helpers
+      // User may have deep link but still want to see their entry
+    }
+  }, [entries])
 
   // Track previous entryTasks state to detect which entries actually changed
   const prevEntryTasksRef = useRef<Map<string, ParsedTask[]>>(new Map())
@@ -680,6 +711,35 @@ export function JournalStream() {
     setViewingNoteId(null)
   }
 
+  // Story 2.9: Handler for info icon clicks
+  const handleInfoClick = (helperType: HelperType) => {
+    setActiveHelper(helperType)
+    setActiveHelperMode('info')
+    // No need to set activeEntryId for info mode
+  }
+
+  // Story 2.9: Handler for closing helper dialog
+  const handleHelperClose = () => {
+    setActiveHelper(null)
+    setActiveHelperMode(null)
+    setActiveEntryId(null)
+  }
+
+  // Story 2.9: URL management for helper state
+  useEffect(() => {
+    if (activeHelper && activeHelperMode) {
+      // Update URL with ?helper=type when dialog opens
+      const url = new URL(window.location.href)
+      url.searchParams.set('helper', activeHelper)
+      window.history.replaceState({}, '', url)
+    } else {
+      // Clear URL parameter when closing
+      const url = new URL(window.location.href)
+      url.searchParams.delete('helper')
+      window.history.replaceState({}, '', url)
+    }
+  }, [activeHelper, activeHelperMode])
+
   const handleHelperInsertion = async (entryId: string, helperText: string) => {
     if (!user) {
       return
@@ -887,12 +947,25 @@ export function JournalStream() {
                 )}
               </div>
 
-              {/* CBT Distortions Helper (only on today's entry) */}
+              {/* Helpers (only on today's entry) - Story 2.8: Tile-based UI */}
               {isTodayEntry && user && (
-                <CbtDistortions
-                  entryId={entry.id}
-                  userId={user.id}
-                  onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
+                <HelperTileGrid
+                  helperTypes={[
+                    'cbt-distortions',
+                    'gratitude',
+                    'values-affirmation',
+                    'self-compassion',
+                    'woop',
+                    'best-possible-self',
+                    'savoring',
+                    'loving-kindness',
+                  ]}
+                  onTileClick={(helperType) => {
+                    setActiveHelper(helperType)
+                    setActiveEntryId(entry.id)
+                    setActiveHelperMode('use')
+                  }}
+                  onInfoClick={handleInfoClick}
                 />
               )}
 
@@ -1153,6 +1226,35 @@ export function JournalStream() {
           initialDueAt={editingTask.dueAt}
           onSave={handleTaskSave}
         />
+      )}
+
+      {/* Story 2.9: Helper Dialog (rendered once, outside entry loop) */}
+      {activeHelper && user && (activeHelperMode === 'info' || activeEntryId) && (
+        <Dialog open={true} onOpenChange={(open) => !open && handleHelperClose()}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            {activeHelperMode === 'info' ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{HELPER_TILES[activeHelper].fullTitle}</DialogTitle>
+                </DialogHeader>
+                <HelperInfoDialog helperType={activeHelper} />
+              </>
+            ) : activeHelperMode === 'use' ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{HELPER_TILES[activeHelper].fullTitle}</DialogTitle>
+                </DialogHeader>
+                <HelperDialogContent
+                  helperType={activeHelper}
+                  entryId={activeEntryId!}
+                  userId={user.id}
+                  onInsert={(helperText) => handleHelperInsertion(activeEntryId!, helperText)}
+                  onClose={handleHelperClose}
+                />
+              </>
+            ) : null}
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )

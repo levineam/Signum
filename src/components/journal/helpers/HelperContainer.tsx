@@ -19,6 +19,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, ChevronUp, X } from 'lucide-react'
 import { HelperType } from '@/types/helper'
+import { HelperInfo, HelperInfoContent } from './HelperInfo'
 
 export interface HelperContainerProps {
   /** Unique identifier for the helper type */
@@ -43,7 +44,7 @@ export interface HelperContainerProps {
   collapseRef?: React.MutableRefObject<(() => void) | null>
 
   /** Visual theme variant */
-  variant?: 'default' | 'blue' | 'green' | 'purple'
+  variant?: 'default' | 'blue' | 'green' | 'purple' | 'pink'
 
   /** Optional CSS class name for customization */
   className?: string
@@ -56,6 +57,9 @@ export interface HelperContainerProps {
 
   /** Whether to start in expanded state */
   defaultExpanded?: boolean
+
+  /** Optional info content to display in popover */
+  infoContent?: HelperInfoContent
 }
 
 /** Theme color mappings for different helper types */
@@ -84,6 +88,12 @@ const THEME_COLORS = {
     subtext: 'text-purple-800 dark:text-purple-200',
     button: 'text-purple-700 hover:text-purple-900 hover:bg-purple-100 dark:text-purple-300 dark:hover:text-purple-100 dark:hover:bg-purple-900/50',
   },
+  pink: {
+    card: 'bg-gradient-to-r from-pink-50 to-rose-50 border-pink-200 dark:from-pink-950/30 dark:to-rose-950/30 dark:border-pink-800',
+    text: 'text-pink-900 dark:text-pink-100',
+    subtext: 'text-pink-800 dark:text-pink-200',
+    button: 'text-pink-700 hover:text-pink-900 hover:bg-pink-100 dark:text-pink-300 dark:hover:text-pink-100 dark:hover:bg-pink-900/50',
+  },
 }
 
 export function HelperContainer({
@@ -99,6 +109,7 @@ export function HelperContainer({
   testId,
   showDismiss = true,
   defaultExpanded = false,
+  infoContent,
 }: HelperContainerProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
@@ -190,7 +201,12 @@ export function HelperContainer({
               {headerText}
             </span>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              {/* Info Icon */}
+              {infoContent && (
+                <HelperInfo content={infoContent} variant={variant} />
+              )}
+
               <Button
                 ref={exploreButtonRef}
                 onClick={handleExpand}

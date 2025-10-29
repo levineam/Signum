@@ -3,6 +3,13 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 let _supabase: SupabaseClient | null = null
 
 /**
+ * Check if public Supabase credentials are available
+ */
+export function hasPublicSupabase(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+}
+
+/**
  * Get Supabase client (lazy initialization)
  * This prevents build-time errors when env vars are not set
  */
@@ -32,7 +39,10 @@ function getSupabase(): SupabaseClient {
 // Export a Proxy that lazily initializes the client
 export const supabase = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
+    const client = getSupabase()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (getSupabase() as any)[prop]
+    const value = (client as any)[prop]
+    // Bind methods to preserve 'this' context
+    return typeof value === 'function' ? value.bind(client) : value
   }
 })

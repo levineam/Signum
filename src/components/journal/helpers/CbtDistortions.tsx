@@ -30,12 +30,13 @@ interface CbtDistortionsProps {
   onInsert: (text: string) => void
 }
 
-export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProps) {
+/**
+ * CbtDistortionsContent Component (Content only, no container)
+ * Extracted for use in standalone contexts like NotesPage
+ */
+export function CbtDistortionsContent({ entryId, userId, onInsert }: CbtDistortionsProps) {
   const [selectedDistortions, setSelectedDistortions] = useState<Set<string>>(new Set())
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
-
-  // Ref to access HelperContainer's collapse function
-  const collapseHelperRef = useRef<(() => void) | null>(null)
 
   // Track events for usage logging
   const eventsRef = useRef<HelperEvent[]>([])
@@ -50,21 +51,6 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
     setLiveRegionMessage(message)
     // Clear after announcement
     setTimeout(() => setLiveRegionMessage(''), 1000)
-  }
-
-  // Handle expand/collapse from HelperContainer
-  const handleExpandChange = (isExpanded: boolean) => {
-    if (isExpanded) {
-      // Track helper opened event
-      addEvent({
-        type: 'helper_opened',
-        timestamp: new Date().toISOString(),
-        data: { triggerSource: 'manual' }
-      })
-      announce('CBT Distortions helper expanded. 10 distortions available.')
-    } else {
-      announce('CBT Distortions helper collapsed')
-    }
   }
 
   // Handle checkbox selection
@@ -153,16 +139,114 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
     // Reset state
     setSelectedDistortions(new Set())
     eventsRef.current = []
-
-    // Collapse the helper after insertion
-    if (collapseHelperRef.current) {
-      collapseHelperRef.current()
-    }
   }
 
   return (
     <>
       {/* Screen reader live region for announcements */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveRegionMessage}
+      </div>
+
+      {/* Description */}
+      <div className="mb-4">
+        <p className="text-gray-700 dark:text-gray-300">
+          Select one or more and click &quot;Continue&quot; to add them to your journal.
+        </p>
+      </div>
+
+      {/* Distortion checkboxes */}
+      <div className="space-y-3 pr-2">
+        {CBT_DISTORTIONS.map((distortion) => (
+          <div
+            key={distortion.id}
+            className="flex items-start gap-3 p-3 rounded-md bg-white/50 dark:bg-gray-900/50 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-colors"
+          >
+            <Checkbox
+              id={`distortion-${distortion.id}`}
+              checked={selectedDistortions.has(distortion.id)}
+              onCheckedChange={() => handleSelect(distortion.id, distortion.name)}
+              aria-label={`Select ${distortion.name}`}
+              className="mt-1"
+              data-testid={`distortion-${distortion.id}-checkbox`}
+            />
+            <label
+              htmlFor={`distortion-${distortion.id}`}
+              className="flex-1 cursor-pointer"
+            >
+              <div className="font-medium text-base text-blue-900 dark:text-blue-100 mb-1">
+                {distortion.name}
+              </div>
+              <div className="text-sm text-blue-700/80 dark:text-blue-300/80 mb-1">
+                {distortion.description}
+              </div>
+              <div className="text-sm text-blue-600/60 dark:text-blue-400/60 italic">
+                Example: {distortion.example}
+              </div>
+            </label>
+          </div>
+        ))}
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-2 pt-4 border-t border-blue-200 dark:border-blue-800">
+        <Button
+          onClick={handleInsert}
+          disabled={selectedDistortions.size === 0}
+          className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600"
+          size="sm"
+          data-testid="cbt-continue-button"
+        >
+          Continue
+          {selectedDistortions.size > 0 && (
+            <span className="ml-2 px-1.5 py-0.5 bg-blue-500 dark:bg-blue-800 rounded text-xs">
+              {selectedDistortions.size}
+            </span>
+          )}
+        </Button>
+        <Button
+          onClick={handleClear}
+          disabled={selectedDistortions.size === 0}
+          variant="ghost"
+          size="sm"
+          className="text-blue-700 hover:text-blue-900 hover:bg-blue-100 dark:text-blue-300 dark:hover:text-blue-100 dark:hover:bg-blue-900/50"
+          data-testid="cbt-clear-button"
+        >
+          Clear
+        </Button>
+      </div>
+    </>
+  )
+}
+
+/**
+ * CbtDistortions Component (Original with HelperContainer)
+ * Kept for backward compatibility
+ */
+export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProps) {
+  const collapseHelperRef = useRef<(() => void) | null>(null)
+  const [liveRegionMessage, setLiveRegionMessage] = useState('')
+
+  const announce = (message: string) => {
+    setLiveRegionMessage(message)
+    setTimeout(() => setLiveRegionMessage(''), 1000)
+  }
+
+  const handleExpandChange = (isExpanded: boolean) => {
+    if (isExpanded) {
+      announce('CBT Distortions helper expanded. 10 distortions available.')
+    } else {
+      announce('CBT Distortions helper collapsed')
+    }
+  }
+
+  return (
+    <>
       <div
         role="status"
         aria-live="polite"
@@ -182,67 +266,14 @@ export function CbtDistortions({ entryId, userId, onInsert }: CbtDistortionsProp
         showDismiss={false}
         defaultExpanded={false}
         testId="cbt"
+        infoContent={{
+          title: "CBT Cognitive Distortions",
+          description: "Cognitive Behavioral Therapy identifies patterns of distorted thinking that contribute to emotional distress. Recognizing and reframing these patterns can reduce anxiety and depression.",
+          effectSize: "d=0.80-1.00 for depression and anxiety",
+          citation: "Hofmann, S. G., et al. (2012). The efficacy of cognitive behavioral therapy: A review of meta-analyses. Cognitive Therapy and Research, 36(5), 427-440."
+        }}
       >
-        {/* Distortion checkboxes */}
-        <div className="space-y-3 pr-2">
-          {CBT_DISTORTIONS.map((distortion) => (
-            <div
-              key={distortion.id}
-              className="flex items-start gap-3 p-3 rounded-md bg-white/50 dark:bg-gray-900/50 hover:bg-white/80 dark:hover:bg-gray-900/80 transition-colors"
-            >
-              <Checkbox
-                id={`distortion-${distortion.id}`}
-                checked={selectedDistortions.has(distortion.id)}
-                onCheckedChange={() => handleSelect(distortion.id, distortion.name)}
-                aria-label={`Select ${distortion.name}`}
-                className="mt-1"
-                data-testid={`distortion-${distortion.id}-checkbox`}
-              />
-              <label
-                htmlFor={`distortion-${distortion.id}`}
-                className="flex-1 cursor-pointer"
-              >
-                <div className="font-medium text-base text-blue-900 dark:text-blue-100 mb-1">
-                  {distortion.name}
-                </div>
-                <div className="text-sm text-blue-700/80 dark:text-blue-300/80 mb-1">
-                  {distortion.description}
-                </div>
-                <div className="text-sm text-blue-600/60 dark:text-blue-400/60 italic">
-                  Example: {distortion.example}
-                </div>
-              </label>
-            </div>
-          ))}
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-2 pt-4 border-t border-blue-200 dark:border-blue-800">
-          <Button
-            onClick={handleInsert}
-            disabled={selectedDistortions.size === 0}
-            className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600"
-            size="sm"
-            data-testid="cbt-continue-button"
-          >
-            Continue
-            {selectedDistortions.size > 0 && (
-              <span className="ml-2 px-1.5 py-0.5 bg-blue-500 dark:bg-blue-800 rounded text-xs">
-                {selectedDistortions.size}
-              </span>
-            )}
-          </Button>
-          <Button
-            onClick={handleClear}
-            disabled={selectedDistortions.size === 0}
-            variant="ghost"
-            size="sm"
-            className="text-blue-700 hover:text-blue-900 hover:bg-blue-100 dark:text-blue-300 dark:hover:text-blue-100 dark:hover:bg-blue-900/50"
-            data-testid="cbt-clear-button"
-          >
-            Clear
-          </Button>
-        </div>
+        <CbtDistortionsContent entryId={entryId} userId={userId} onInsert={onInsert} />
       </HelperContainer>
     </>
   )

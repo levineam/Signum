@@ -23,6 +23,7 @@ import {
   type AnalysisRunSummary
 } from '@/lib/ontology/state'
 import { runIncrementalExtraction } from '@/lib/ontology/extractor'
+import { hasAdminKey } from '@/lib/supabase-admin'
 
 // Feature flag - server-side control
 const INCREMENTAL_ENABLED =
@@ -60,6 +61,18 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Incremental analysis is currently disabled',
           details: 'Feature flag ONTOLOGY_INCREMENTAL_ENABLED is off'
+        },
+        { status: 503 }
+      )
+    }
+
+    // 1b. Ensure admin key is present for server-side operations
+    if (!hasAdminKey()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Server configuration incomplete',
+          details: 'Missing SUPABASE_SERVICE_ROLE_KEY'
         },
         { status: 503 }
       )
@@ -172,11 +185,20 @@ export async function POST(request: NextRequest) {
 
     // 7. Calculate run count for rate limiting
     // SECURITY FIX: Only increment for manual runs to prevent scheduled jobs from blocking users
-    // SECURITY FIX: Scheduled runs MUST preserve existing manual run count to prevent rate limit bypass
+    // SECURITY FIX: Scheduled runs preserve manual count ONLY if within active window
     // SECURITY FIX: Declare outside try block so error handler can preserve count
     const runCountInWindow = triggeredBy === 'manual'
       ? (state ? countRecentRuns(state) + 1 : 1)
-      : (state?.lastRunSummary as AnalysisRunSummary & { runCountInWindow?: number })?.runCountInWindow // Preserve existing count for scheduled runs
+      : (() => {
+          // For scheduled runs: only preserve count if last run was within the window
+          if (!state?.lastRunSummary?.timestamp) return undefined
+          const lastRunTime = new Date(state.lastRunSummary.timestamp).getTime()
+          const timeSinceLastRun = Date.now() - lastRunTime
+          // If outside window, reset count so cooldown can expire
+          if (timeSinceLastRun >= RATE_LIMIT_WINDOW) return undefined
+          // Otherwise preserve the count
+          return (state.lastRunSummary as AnalysisRunSummary & { runCountInWindow?: number })?.runCountInWindow
+        })()
 
     let notesToAnalyze: Note[] = [] // Declare outside try block for error handler access
 
