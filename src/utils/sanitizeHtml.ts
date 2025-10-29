@@ -29,7 +29,8 @@ const sanitizeConfig: Config = {
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'ul', 'ol', 'li',
     'a', 'span', 'div',
-    'blockquote', 'code', 'pre'
+    'blockquote', 'code', 'pre',
+    'mark' // Allow highlight tags from Obsidian imports
   ],
   // Allow safe attributes (style will be filtered via hook)
   ALLOWED_ATTR: [

@@ -3,6 +3,23 @@
  *
  * Converts Obsidian-flavored Markdown to Signum HTML format
  * Handles WikiLinks, frontmatter, tags, and standard Markdown
+ *
+ * Supported Markdown Syntax:
+ * - Standard markdown: **bold**, *italic*, [links](url), # headings, lists, etc.
+ * - ==Highlight== syntax (Obsidian) → <mark> tags
+ * - [[WikiLinks]] (Obsidian) → converted to internal links post-import
+ * - Frontmatter (YAML) → extracted to note metadata
+ * - #tags → extracted to note tags
+ *
+ * Known Limitations (not currently supported):
+ * - Obsidian callouts (> [!note] Title)
+ * - Subscript (H~2~O) and superscript (x^2^) - not standard markdown
+ * - Mermaid diagrams
+ * - Math equations (LaTeX)
+ * - Embedded files (![[image.png]])
+ *
+ * If you need support for additional syntax, check for remark plugins:
+ * https://github.com/remarkjs/remark/blob/main/doc/plugins.md
  */
 
 import matter from 'gray-matter';
@@ -175,14 +192,27 @@ export class ObsidianParser {
       placeholderIndex++;
     }
 
+    // Second pass: Replace ==highlight== syntax with <mark> tags
+    // This is Obsidian's highlight syntax that needs to be converted to HTML
+    processedMarkdown = processedMarkdown.replace(/==([^=]+)==/g, '<mark>$1</mark>');
+
+    // Third pass: Add space after markdown links followed immediately by text
+    // Example: [02:22](url)we → [02:22](url) we
+    processedMarkdown = processedMarkdown.replace(/\]\([^)]+\)([a-zA-Z])/g, (match, letter) => {
+      return match.slice(0, -1) + ' ' + letter;
+    });
+
     // Convert markdown to HTML
     // SECURITY: Use rehype-sanitize to prevent XSS attacks
     // This strips dangerous protocols (javascript:, data:) and unsafe HTML
     const file = await unified()
       .use(remarkParse)
       .use(remarkFrontmatter)
-      .use(remarkRehype) // Convert to rehype (HTML AST)
-      .use(rehypeSanitize) // Sanitize HTML with safe defaults
+      .use(remarkRehype, { allowDangerousHtml: true }) // Convert to rehype (HTML AST), allow <mark> tags
+      .use(rehypeSanitize, {
+        // Extend default schema to allow mark tag for highlights
+        tagNames: ['mark'],
+      }) // Sanitize HTML with safe defaults + mark tag
       .use(rehypeStringify) // Convert back to HTML string
       .process(processedMarkdown);
 
