@@ -22,13 +22,13 @@ So that I can easily navigate to other sections without using the browser back b
 ## Acceptance Criteria
 
 - [ ] Sidebar is visible on individual note pages (`/notes/[id]`)
-- [ ] Sidebar displays all navigation items (Journal, Notes, Ontology, Feedback, Articles, Meets, Karma)
+- [ ] Sidebar displays all 7 navigation items matching the existing Sidebar component (Journal, Notes, Ontology, Feedback, Articles, Meets, Karma)
 - [ ] Sidebar shows user info and Sign Out button at bottom
-- [ ] Sidebar styling and behavior match the Notes list page
+- [ ] Sidebar styling and behavior match the Notes list page exactly
 - [ ] No layout shift or flickering when navigating between Notes list and individual note
-- [ ] Active section highlighting works correctly (Notes should be active)
-- [ ] Sidebar navigation works from individual note page
-- [ ] Mobile responsive behavior maintained (if sidebar collapses/toggles on mobile)
+- [ ] Active section highlighting works correctly (Notes should be active on individual note pages)
+- [ ] Sidebar navigation works from individual note page (clicking any section navigates correctly)
+- [ ] Mobile responsive behavior maintained (drawer opens/closes correctly on mobile)
 
 ---
 
@@ -63,15 +63,24 @@ So that I can easily navigate to other sections without using the browser back b
 5. Ensure existing note functionality (editing, linking, modals) remains unchanged
 
 **Technical context:**
-- Sidebar component: `/src/components/layout/Sidebar.tsx`
+- Sidebar component: `/src/components/layout/Sidebar.tsx` (defines all 7 nav sections at lines 43-51)
 - AppHeader component: `/src/components/layout/AppHeader.tsx`
 - Layout uses Tailwind `lg:pl-64` to offset content for sidebar width
-- Pattern already established in Notes list, Journal, and Ontology pages
+- Pattern already established in:
+  - Notes list page: `/src/app/notes/page.tsx:26` ✅
+  - Ontology page: `/src/app/ontology/page.tsx:26` ✅
+  - Journal page: `/src/app/page.tsx` (root route) ✅
 
 **Risk assessment:**
 - Low risk - following established pattern
 - Existing note functionality should be unaffected (only wrapping in layout)
 - May need to verify z-index stacking for modals (NoteCreationModal, NoteViewer)
+
+**Out of Scope:**
+- This story does NOT modify the Sidebar component itself (`/src/components/layout/Sidebar.tsx`)
+- The Sidebar component already defines all 7 navigation sections (lines 43-51)
+- This story only adds the existing Sidebar to the individual note page layout
+- No routing changes needed - Sidebar navigation handlers already defined
 
 ---
 
@@ -93,12 +102,12 @@ So that I can easily navigate to other sections without using the browser back b
 - [ ] Verify no layout shift when navigating notes → note detail → notes
 
 ### Regression Testing
-- [ ] Notes list page sidebar unchanged
-- [ ] Journal page sidebar unchanged
-- [ ] Ontology page sidebar unchanged
-- [ ] Note auto-save still works
-- [ ] Note linking still works
-- [ ] Back button navigation still works
+- [ ] Notes list page (`/notes`) sidebar unchanged
+- [ ] Ontology page (`/ontology`) sidebar unchanged
+- [ ] Journal page (`/` root) sidebar unchanged
+- [ ] Note auto-save still works (2-second debounce)
+- [ ] Note linking still works (Make Note feature + convertTextToLink)
+- [ ] Back button navigation still works (Back to Notes / Back to Ontology)
 
 ---
 
