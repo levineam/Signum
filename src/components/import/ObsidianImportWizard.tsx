@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 import { FileUploadZone, type UploadedFile } from './FileUploadZone';
 import { ImportPreview } from './ImportPreview';
 import { ImportProgress } from './ImportProgress';
@@ -149,11 +150,19 @@ export function ObsidianImportWizard() {
           },
         });
 
+        // Get access token for Authorization header (fallback for Vercel previews)
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+
         const response = await fetch('/api/import/obsidian', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
+          credentials: 'include', // Required for cookies (auth session)
           body: payload,
         });
 

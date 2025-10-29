@@ -75,6 +75,18 @@ export interface NoteMetadata {
   isSample?: boolean            // True for demo/sample data
   legacyId?: string             // Original localStorage ID (for migration)
 
+  // Import metadata (for Obsidian imports)
+  importedFrom?: 'obsidian'     // Source of imported note
+  importDate?: string           // ISO timestamp of import
+  originalFileName?: string     // Original file name from import
+  relativePath?: string         // Original folder path from import
+  wikiLinks?: Array<{           // Original WikiLinks before resolution
+    target: string
+    text?: string
+    alias?: string
+    isEmbed?: boolean
+  }>
+
   // Legacy type mapping (for migration)
   legacyType?: 'values' | 'beliefs' | 'aims' | 'regular'
 }

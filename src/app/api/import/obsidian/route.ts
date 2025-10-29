@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { obsidianParser } from '@/lib/import/obsidian-parser';
 import { BatchImporter } from '@/lib/import/batch-importer';
 import { LinkResolver } from '@/lib/import/link-resolver';
@@ -51,24 +52,69 @@ export interface ImportResponse {
 export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
-    const supabase = createServerClient(
+    const cookieStore = await cookies();
+    let supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value;
+          getAll() {
+            return cookieStore.getAll();
           },
-          set() {},
-          remove() {},
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          },
         },
       }
     );
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // Try to get user from cookies first
+    let user = null;
+    let authError = null;
+
+    const cookieAuth = await supabase.auth.getUser();
+    user = cookieAuth.data.user;
+    authError = cookieAuth.error;
+
+    // Fallback: Check Authorization header (for Vercel previews where cookies don't work)
+    if (authError || !user) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const { data, error } = await supabase.auth.getUser(token);
+        user = data.user;
+        authError = error;
+
+        // CRITICAL: Create a new client with the bearer token in global headers
+        // so BatchImporter/LinkResolver can authenticate their DB operations under RLS.
+        // We can't use setSession() because it requires a refresh_token.
+        if (!error && data.user) {
+          supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+              cookies: {
+                getAll() {
+                  return cookieStore.getAll();
+                },
+                setAll(cookiesToSet) {
+                  cookiesToSet.forEach(({ name, value, options }) =>
+                    cookieStore.set(name, value, options)
+                  );
+                },
+              },
+              global: {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              },
+            }
+          );
+        }
+      }
+    }
 
     if (authError || !user) {
       return NextResponse.json(

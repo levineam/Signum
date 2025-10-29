@@ -167,7 +167,7 @@ export class ObsidianParser {
     let placeholderIndex = 0;
 
     while ((match = wikiLinkRegex.exec(markdown)) !== null) {
-      const placeholder = `__WIKILINK_${placeholderIndex}__`;
+      const placeholder = `%%%WIKILINK_${placeholderIndex}%%%`;
       const wikiLink = match[1];
 
       wikiLinkPlaceholders.push({ placeholder, wikiLink });
