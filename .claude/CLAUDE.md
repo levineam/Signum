@@ -68,4 +68,43 @@ Next.js 15.5.3 (Turbopack) • Supabase (Auth, DB, RLS) • shadcn/ui • TypeSc
 - `/src/components/editor/SimpleRichEditor.tsx` - Rich text editor
 - `/src/components/journal/JournalStream.tsx` - Main journal UI
 - `/src/utils/journalPrompts.ts` - ACT-inspired prompts
+- `/src/utils/sanitizeHtml.ts` - HTML sanitization for security
 - `/docs/prd.md` - Product requirements
+
+## CRITICAL: HTML Formatting in Edit & Read-Only Modes
+
+When adding new HTML formatting features to SimpleRichEditor, you MUST ensure they work in BOTH modes:
+
+### Edit Mode (SimpleRichEditor)
+1. Add formatting button and logic to `SimpleRichEditor.tsx`
+2. Add CSS styling in `globals.css` under `.rich-editor-body` class
+3. Test formatting applies correctly in contentEditable
+
+### Read-Only Mode (JournalStream)
+1. **Add HTML tag to whitelist**: Update `ALLOWED_TAGS` in `/src/utils/sanitizeHtml.ts` - DOMPurify strips unlisted tags!
+2. **Allow style attributes**: If using inline styles, update `styleFilterHook` in `sanitizeHtml.ts` to allow the specific CSS property
+3. **Add CSS styling**: Add identical styling in `globals.css` under `.prose` class
+4. Test formatted content displays correctly in read-only view
+
+### Common Mistakes to Avoid
+❌ Adding formatting without updating `sanitizeHtml.ts` → content stripped in read-only mode
+❌ Only styling `.rich-editor-body` → no styling in read-only mode
+❌ Using inline styles without whitelisting in `styleFilterHook` → styles stripped by DOMPurify
+
+### Example: Adding Highlight Feature
+```typescript
+// 1. Edit mode: SimpleRichEditor.tsx - add button/logic
+// 2. Edit mode: globals.css
+.rich-editor-body mark { background-color: #fef08a; }
+
+// 3. Read-only: sanitizeHtml.ts
+ALLOWED_TAGS: [..., 'mark']
+
+// 4. Read-only: sanitizeHtml.ts (if using inline styles)
+if (prop === 'background-color' && node.tagName === 'MARK') {
+  return /^#[0-9A-Fa-f]{6}$/i.test(value)
+}
+
+// 5. Read-only: globals.css
+.prose mark { background-color: #fef08a; }
+```

@@ -30,7 +30,7 @@ const sanitizeConfig: Config = {
     'ul', 'ol', 'li',
     'a', 'span', 'div',
     'blockquote', 'code', 'pre',
-    'mark' // Allow highlight tags from Obsidian imports
+    'mark' // For text highlighting (including Obsidian imports)
   ],
   // Allow safe attributes (style will be filtered via hook)
   ALLOWED_ATTR: [
@@ -45,17 +45,24 @@ const sanitizeConfig: Config = {
 }
 
 // Style filtering hook - registered once globally to avoid race conditions
-// This hook filters style attributes to only allow text-align with safe values
+// This hook filters style attributes to only allow safe styling properties
 const styleFilterHook = (node: Element, data: { attrName: string; attrValue: string; keepAttr?: boolean }) => {
   if (data.attrName === 'style' && data.attrValue) {
-    // Parse the style attribute and filter to only allow text-align
+    // Parse the style attribute and filter to only allow safe properties
     const styles = data.attrValue.split(';').map(s => s.trim()).filter(Boolean)
     const allowedStyles = styles.filter(style => {
       const [prop, value] = style.split(':').map(s => s.trim())
-      // Only allow text-align with safe values
+
+      // Allow text-align with safe values
       if (prop === 'text-align') {
         return /^(left|right|center|justify)$/i.test(value)
       }
+
+      // Allow background-color on mark tags for highlighting (hex colors only)
+      if (prop === 'background-color' && node.tagName === 'MARK') {
+        return /^#[0-9A-Fa-f]{6}$/i.test(value)
+      }
+
       return false
     })
 

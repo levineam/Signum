@@ -2,7 +2,7 @@
 
 import React, { useRef, useCallback, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Quote, AlignLeft, AlignCenter, AlignRight, FileText } from 'lucide-react'
+import { Bold, Italic, Underline, Highlighter, List, ListOrdered, Heading1, Heading2, Quote, AlignLeft, AlignCenter, AlignRight, FileText } from 'lucide-react'
 import { VoiceRecordButton } from '@/components/editor/VoiceRecordButton'
 
 interface SimpleRichEditorProps {
@@ -36,6 +36,7 @@ export function SimpleRichEditor({
     bold: false,
     italic: false,
     underline: false,
+    highlight: false,
     h1: false,
     h2: false,
     ul: false,
@@ -65,6 +66,7 @@ export function SimpleRichEditor({
       bold: document.queryCommandState('bold'),
       italic: document.queryCommandState('italic'),
       underline: document.queryCommandState('underline'),
+      highlight: false,
       h1: false,
       h2: false,
       ul: false,
@@ -72,7 +74,7 @@ export function SimpleRichEditor({
       blockquote: false
     }
 
-    // Check for block-level formats by traversing up the DOM
+    // Check for block-level formats and highlight by traversing up the DOM
     let currentEl: HTMLElement | null = element
     while (currentEl && editorRef.current.contains(currentEl)) {
       const tagName = currentEl.tagName?.toLowerCase()
@@ -81,6 +83,7 @@ export function SimpleRichEditor({
       if (tagName === 'ul') formats.ul = true
       if (tagName === 'ol') formats.ol = true
       if (tagName === 'blockquote') formats.blockquote = true
+      if (tagName === 'mark') formats.highlight = true
       currentEl = currentEl.parentElement
     }
 
@@ -101,6 +104,76 @@ export function SimpleRichEditor({
 
       // Update active format states
       setTimeout(updateActiveFormats, 10)
+    }
+  }, [onChange, updateActiveFormats])
+
+  const toggleHighlight = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.focus()
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0)
+        let node: Node | null = range.commonAncestorContainer
+
+        // If text node, get parent element
+        if (node.nodeType === Node.TEXT_NODE) {
+          node = node.parentElement
+        }
+
+        // Check if already in a <mark> tag
+        let currentEl: HTMLElement | null = node as HTMLElement
+        let existingMark: HTMLElement | null = null
+
+        while (currentEl && editorRef.current.contains(currentEl)) {
+          if (currentEl.tagName === 'MARK') {
+            existingMark = currentEl
+            break
+          }
+          currentEl = currentEl.parentElement
+        }
+
+        if (existingMark) {
+          // Remove highlight: unwrap contents back to parent
+          const parent = existingMark.parentElement
+          if (parent) {
+            const fragment = document.createDocumentFragment()
+            while (existingMark.firstChild) {
+              fragment.appendChild(existingMark.firstChild)
+            }
+            parent.replaceChild(fragment, existingMark)
+          }
+        } else {
+          // Add highlight
+          const markElement = document.createElement('mark')
+          markElement.style.backgroundColor = '#fef08a' // yellow-200 from Tailwind
+
+          try {
+            // Try to wrap the selection (preserves HTML content)
+            range.surroundContents(markElement)
+          } catch {
+            // If surroundContents fails (e.g., selection spans multiple elements),
+            // extract contents as document fragment to preserve HTML
+            const fragment = range.extractContents()
+            markElement.appendChild(fragment)
+            range.insertNode(markElement)
+          }
+
+          // Restore selection to highlight the marked text
+          range.selectNodeContents(markElement)
+          selection.removeAllRanges()
+          selection.addRange(range)
+        }
+
+        // Trigger change event
+        if (onChange) {
+          const content = editorRef.current.innerHTML || ''
+          isInternalChangeRef.current = true
+          onChange(content)
+        }
+
+        // Update active format states
+        setTimeout(updateActiveFormats, 10)
+      }
     }
   }, [onChange, updateActiveFormats])
 
@@ -793,6 +866,19 @@ export function SimpleRichEditor({
             title="Underline"
           >
             <Underline className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant={activeFormats.highlight ? "secondary" : "ghost"}
+            onMouseDown={(e) => {
+              e.preventDefault()
+            }}
+            onClick={toggleHighlight}
+            className="h-8 w-8 p-0"
+            type="button"
+            title="Highlight"
+          >
+            <Highlighter className="h-4 w-4" />
           </Button>
         </div>
 

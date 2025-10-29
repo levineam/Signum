@@ -49,8 +49,8 @@ export function HelperTileGrid({
         Need help journaling? Check out our helpers.
       </h2>
 
-      {/* Grid: 4 cols (xl), 3 cols (lg), 2 cols (md), 1 col (sm) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* Grid: 3 cols (lg+), 2 cols (sm), 1 col (mobile) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {helperTypes.map((helperType) => {
           const tileData = HELPER_TILES[helperType]
           if (!tileData) return null
