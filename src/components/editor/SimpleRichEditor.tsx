@@ -275,6 +275,18 @@ export function SimpleRichEditor({
         }
 
         try {
+          // If selection is collapsed (just cursor), expand to include current block
+          if (wasCollapsed && range.commonAncestorContainer.nodeType === Node.TEXT_NODE) {
+            const textNode = range.commonAncestorContainer as Text
+            const parentBlock = textNode.parentElement
+
+            if (parentBlock && editorRef.current.contains(parentBlock)) {
+              // Expand range to select the entire parent block content
+              range.selectNodeContents(parentBlock)
+              console.log('[insertList] Expanded collapsed range to parent block:', parentBlock)
+            }
+          }
+
           const fragment = range.extractContents()
           const nodes = Array.from(fragment.childNodes)
 
@@ -372,6 +384,44 @@ export function SimpleRichEditor({
           console.log('[insertList] Created list with', listItems.length, 'items')
           range.insertNode(listElement)
           listElement.normalize()
+
+          // Clean up empty list items (items with only <br> or whitespace)
+          Array.from(listElement.children).forEach(child => {
+            if (child instanceof HTMLLIElement) {
+              const hasContent = Array.from(child.childNodes).some(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                  return node.textContent && node.textContent.trim() !== ''
+                }
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                  const el = node as HTMLElement
+                  return el.tagName !== 'BR'
+                }
+                return false
+              })
+              if (!hasContent && listElement.children.length > 1) {
+                child.remove()
+              }
+            }
+          })
+
+          // Clean up empty adjacent nodes that may be left after extraction
+          const cleanupEmptyNode = (node: Node | null) => {
+            if (!node || !node.parentNode) return
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const el = node as HTMLElement
+              // Remove if empty div/p/br or just whitespace
+              if ((el.tagName === 'DIV' || el.tagName === 'P' || el.tagName === 'BR') &&
+                  (!el.textContent || el.textContent.trim() === '')) {
+                node.parentNode.removeChild(node)
+              }
+            } else if (node.nodeType === Node.TEXT_NODE && (!node.textContent || node.textContent.trim() === '')) {
+              node.parentNode.removeChild(node)
+            }
+          }
+
+          cleanupEmptyNode(listElement.previousSibling)
+          cleanupEmptyNode(listElement.nextSibling)
+
           console.log('[insertList] List inserted into DOM:', listElement)
 
           const firstItem = listElement.firstElementChild as HTMLLIElement | null
@@ -464,8 +514,35 @@ export function SimpleRichEditor({
             parent.replaceChild(fragment, existingBlockquote)
           }
         } else {
-          // Not in list, not in blockquote: add blockquote using formatBlock
-          document.execCommand('formatBlock', false, 'blockquote')
+          // Create blockquote with custom logic (similar to list insertion)
+          const wasCollapsed = selection.isCollapsed
+
+          // If selection is collapsed (just cursor), expand to include current block
+          if (wasCollapsed && range.commonAncestorContainer.nodeType === Node.TEXT_NODE) {
+            const textNode = range.commonAncestorContainer as Text
+            const parentBlock = textNode.parentElement
+
+            if (parentBlock && editorRef.current.contains(parentBlock)) {
+              // Expand range to select the entire parent block content
+              range.selectNodeContents(parentBlock)
+            }
+          }
+
+          // Extract the selected content
+          const fragment = range.extractContents()
+
+          // Create blockquote element
+          const blockquote = document.createElement('blockquote')
+          blockquote.appendChild(fragment)
+
+          // Insert blockquote at the range position
+          range.insertNode(blockquote)
+
+          // Place cursor at the end of the blockquote
+          range.selectNodeContents(blockquote)
+          range.collapse(false)
+          selection.removeAllRanges()
+          selection.addRange(range)
         }
 
         // Trigger change event
@@ -663,7 +740,7 @@ export function SimpleRichEditor({
           onFocus={onFocus}
           onBlur={onBlur}
           onPaste={handlePaste}
-          className="min-h-[120px] w-full resize-none border-0 bg-transparent p-4 text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed"
+          className="rich-editor-body min-h-[120px] w-full resize-none border-0 bg-transparent p-4 text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed"
           style={{ whiteSpace: 'pre-wrap' }}
         />
         {/* Placeholder */}
