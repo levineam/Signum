@@ -1223,7 +1223,7 @@ export function JournalStream() {
       )}
 
       {/* Story 2.9: Helper Dialog (rendered once, outside entry loop) */}
-      {activeHelper && activeEntryId && user && (
+      {activeHelper && user && (activeHelperMode === 'info' || activeEntryId) && (
         <Dialog open={true} onOpenChange={(open) => !open && handleHelperClose()}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             {activeHelperMode === 'info' ? (
@@ -1240,9 +1240,9 @@ export function JournalStream() {
                 </DialogHeader>
                 <HelperDialogContent
                   helperType={activeHelper}
-                  entryId={activeEntryId}
+                  entryId={activeEntryId!}
                   userId={user.id}
-                  onInsert={(helperText) => handleHelperInsertion(activeEntryId, helperText)}
+                  onInsert={(helperText) => handleHelperInsertion(activeEntryId!, helperText)}
                   onClose={handleHelperClose}
                 />
               </>
