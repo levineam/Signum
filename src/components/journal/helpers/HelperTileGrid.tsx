@@ -48,17 +48,25 @@ export function HelperTileGrid({
   onTileFocus,
   className,
 }: HelperTileGridProps) {
-  // Load initial state from localStorage, default to collapsed (false)
-  const [isExpanded, setIsExpanded] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
-    const stored = localStorage.getItem(HELPERS_EXPANDED_KEY)
-    return stored ? JSON.parse(stored) : false
-  })
+  // Default to collapsed state (false) on initial render
+  const [isExpanded, setIsExpanded] = useState<boolean>(false)
+  const [hasHydrated, setHasHydrated] = useState(false)
 
-  // Persist state to localStorage when it changes
+  // Load preference from localStorage after mount (client-side only)
   useEffect(() => {
-    localStorage.setItem(HELPERS_EXPANDED_KEY, JSON.stringify(isExpanded))
-  }, [isExpanded])
+    const stored = localStorage.getItem(HELPERS_EXPANDED_KEY)
+    if (stored !== null) {
+      setIsExpanded(JSON.parse(stored))
+    }
+    setHasHydrated(true)
+  }, [])
+
+  // Persist state to localStorage when it changes (only after hydration)
+  useEffect(() => {
+    if (hasHydrated) {
+      localStorage.setItem(HELPERS_EXPANDED_KEY, JSON.stringify(isExpanded))
+    }
+  }, [isExpanded, hasHydrated])
 
   // Determine which helpers to show based on expanded state
   const visibleHelpers = isExpanded ? helperTypes : helperTypes.slice(0, 3)
