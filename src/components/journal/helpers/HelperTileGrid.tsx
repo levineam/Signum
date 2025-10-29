@@ -3,17 +3,20 @@
 /**
  * HelperTileGrid Component
  * Story 2.8: Tile-based helper UI
+ * Issue #105: Collapsible helpers section
  *
  * Displays helpers as compact button tiles in responsive grid.
  * Each tile is a <button> element with proper ARIA attributes.
  * Clicking tile opens sheet/dialog with full helper content.
+ * Collapsible: Shows 3 helpers by default, expandable to all 8.
  */
 
+import { useState, useEffect } from 'react'
 import { HelperType } from '@/types/helper'
 import { HELPER_TILES } from '@/constants/helperTitles'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { Info } from 'lucide-react'
+import { Info, ChevronDown } from 'lucide-react'
 
 interface HelperTileGridProps {
   helperTypes: HelperType[]
@@ -35,6 +38,9 @@ const HELPER_VARIANTS: Record<HelperType, string> = {
   'loving-kindness': 'from-rose-50 to-pink-50 border-rose-200 hover:shadow-rose-100 dark:from-rose-950/30 dark:to-pink-950/30 dark:border-rose-800',
 }
 
+// LocalStorage key for persisting collapsed/expanded state
+const HELPERS_EXPANDED_KEY = 'signum-helpers-expanded'
+
 export function HelperTileGrid({
   helperTypes,
   onTileClick,
@@ -42,6 +48,22 @@ export function HelperTileGrid({
   onTileFocus,
   className,
 }: HelperTileGridProps) {
+  // Load initial state from localStorage, default to collapsed (false)
+  const [isExpanded, setIsExpanded] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    const stored = localStorage.getItem(HELPERS_EXPANDED_KEY)
+    return stored ? JSON.parse(stored) : false
+  })
+
+  // Persist state to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem(HELPERS_EXPANDED_KEY, JSON.stringify(isExpanded))
+  }, [isExpanded])
+
+  // Determine which helpers to show based on expanded state
+  const visibleHelpers = isExpanded ? helperTypes : helperTypes.slice(0, 3)
+  const hiddenCount = helperTypes.length - visibleHelpers.length
+
   return (
     <div className={cn('mb-6', className)}>
       {/* Semantic header */}
@@ -51,7 +73,7 @@ export function HelperTileGrid({
 
       {/* Grid: 3 cols (lg+), 2 cols (sm), 1 col (mobile) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {helperTypes.map((helperType) => {
+        {visibleHelpers.map((helperType) => {
           const tileData = HELPER_TILES[helperType]
           if (!tileData) return null
 
@@ -124,6 +146,36 @@ export function HelperTileGrid({
           )
         })}
       </div>
+
+      {/* Expand/Collapse Control */}
+      {helperTypes.length > 3 && (
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          aria-expanded={isExpanded}
+          aria-controls="helper-tile-grid"
+          className={cn(
+            'mt-4 mx-auto flex items-center gap-2',
+            'text-sm text-muted-foreground hover:text-foreground',
+            'transition-colors duration-200',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            'rounded-md px-3 py-2'
+          )}
+        >
+          <ChevronDown
+            className={cn(
+              'w-4 h-4 transition-transform duration-200',
+              isExpanded && 'rotate-180'
+            )}
+            aria-hidden="true"
+          />
+          <span>
+            {isExpanded
+              ? 'Show fewer helpers'
+              : `Show more helpers (${hiddenCount} hidden)`}
+          </span>
+        </button>
+      )}
     </div>
   )
 }
