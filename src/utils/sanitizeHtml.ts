@@ -12,26 +12,24 @@
 
 import type { Config } from 'dompurify'
 
-// Dynamically import DOMPurify to avoid SSR issues
-// Use isomorphic-dompurify for SSR safety when available
+// Lazy-loaded DOMPurify instance
 let DOMPurify: typeof import('dompurify').default | null = null
+let loadingPromise: Promise<typeof import('dompurify').default> | null = null
 
-// Lazy-load DOMPurify only on client side
-async function loadDOMPurify() {
-  if (typeof window === 'undefined') return null
-  if (DOMPurify) return DOMPurify
-
-  try {
-    // Try isomorphic-dompurify first (SSR-safe)
-    const purifyModule = await import('isomorphic-dompurify')
-    DOMPurify = purifyModule.default
-    return DOMPurify
-  } catch {
-    // Fallback to regular dompurify if isomorphic version fails
-    const purifyModule = await import('dompurify')
-    DOMPurify = purifyModule.default
-    return DOMPurify
+// Load DOMPurify module (cached after first call)
+function loadDOMPurify(): Promise<typeof import('dompurify').default> {
+  if (DOMPurify) {
+    return Promise.resolve(DOMPurify)
   }
+
+  if (!loadingPromise) {
+    loadingPromise = import('dompurify').then(module => {
+      DOMPurify = module.default
+      return module.default
+    })
+  }
+
+  return loadingPromise
 }
 
 const sanitizeConfig: Config = {
@@ -82,26 +80,35 @@ const styleFilterHook = (node: Element, data: { attrName: string; attrValue: str
 
 // Track if hook is registered to avoid duplicate registration
 let hookRegistered = false
-let initializationPromise: Promise<void> | null = null
 
-// Initialize DOMPurify and register hooks (client-side only)
-async function initializeDOMPurify() {
-  if (initializationPromise) return initializationPromise
+// Initialize DOMPurify and register hooks (blocks until ready)
+// Uses React Suspense pattern - throws promise to suspend rendering until loaded
+function ensureDOMPurifyReady(): typeof import('dompurify').default {
+  if (typeof window === 'undefined') {
+    // During SSR, throw error to prevent rendering
+    // This should never happen since this is a 'use client' module
+    throw new Error('sanitizeHtml() cannot be called during server-side rendering')
+  }
 
-  initializationPromise = (async () => {
-    const purify = await loadDOMPurify()
-    if (purify && !hookRegistered) {
+  if (DOMPurify) {
+    // Already loaded, register hook if needed
+    if (!hookRegistered) {
+      DOMPurify.addHook('uponSanitizeAttribute', styleFilterHook)
+      hookRegistered = true
+    }
+    return DOMPurify
+  }
+
+  // Not loaded yet - throw promise to trigger Suspense
+  // React will catch this promise and suspend rendering until it resolves
+  throw loadDOMPurify().then(purify => {
+    // Register hook after loading
+    if (!hookRegistered) {
       purify.addHook('uponSanitizeAttribute', styleFilterHook)
       hookRegistered = true
     }
-  })()
-
-  return initializationPromise
-}
-
-// Auto-initialize on client side
-if (typeof window !== 'undefined') {
-  initializeDOMPurify()
+    return purify
+  })
 }
 
 /**
@@ -112,8 +119,16 @@ if (typeof window !== 'undefined') {
  *
  * Filters style attributes to only allow text-align property with safe values.
  *
- * During SSR, this returns the raw HTML (safe since it won't be rendered server-side).
- * On the client, it uses DOMPurify to sanitize the HTML.
+ * IMPORTANT: This function uses React Suspense. If DOMPurify isn't loaded yet, it will
+ * throw a promise to suspend rendering until DOMPurify is ready. This ensures XSS
+ * protection is ALWAYS applied before HTML is rendered - never returns unsanitized HTML.
+ *
+ * Components using this function should be wrapped in a Suspense boundary:
+ * ```tsx
+ * <Suspense fallback={<div>Loading...</div>}>
+ *   <ComponentUsingS anitizeHtml />
+ * </Suspense>
+ * ```
  *
  * @param html - The HTML string to sanitize
  * @returns Sanitized HTML safe for rendering with dangerouslySetInnerHTML
@@ -124,12 +139,11 @@ if (typeof window !== 'undefined') {
  * ```
  */
 export function sanitizeHtml(html: string): string {
-  // During SSR, return raw HTML (it won't be rendered anyway)
-  if (typeof window === 'undefined' || !DOMPurify) {
-    return html
-  }
+  // Ensure DOMPurify is loaded and hooks are registered
+  // Throws promise for Suspense if not ready yet
+  const purify = ensureDOMPurifyReady()
 
   // Use DOMPurify with the globally registered hook
-  // Hook is registered during initialization, so it's safe to use
-  return DOMPurify.sanitize(html, sanitizeConfig)
+  // At this point we're guaranteed DOMPurify is loaded
+  return purify.sanitize(html, sanitizeConfig)
 }
