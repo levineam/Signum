@@ -9,7 +9,7 @@ import { Note } from '@/types/note'
 import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
 import { Calendar, Edit, Save, X, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { sanitizeHtml } from '@/utils/sanitizeHtml'
+import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
 
 interface NoteViewerProps {
   isOpen: boolean
@@ -27,6 +27,7 @@ export function NoteViewer({
   onNoteDeleted
 }: NoteViewerProps) {
   const { user } = useAuth()
+  const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState('')
@@ -243,10 +244,14 @@ export function NoteViewer({
           ) : (
             <div className="prose prose-sm max-w-none">
               {note.content ? (
-                <div
-                  className="text-base leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
-                />
+                isDOMPurifyReady ? (
+                  <div
+                    className="text-base leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
+                  />
+                ) : (
+                  <div className="text-muted-foreground">Loading content...</div>
+                )
               ) : (
                 <p className="text-muted-foreground italic">This note has no content.</p>
               )}

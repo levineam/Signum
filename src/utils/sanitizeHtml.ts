@@ -10,12 +10,17 @@
 
 'use client'
 
+import { useEffect, useState } from 'react'
 import type { Config } from 'dompurify'
 
 // DOMPurify instance - eagerly loaded on client side to avoid race conditions
 let DOMPurify: typeof import('dompurify').default | null = null
 let isLoading = false
 let hookRegistered = false
+
+// Subscribers to notify when DOMPurify loads
+type Subscriber = () => void
+const subscribers = new Set<Subscriber>()
 
 const sanitizeConfig: Config = {
   // Allow common formatting tags used in rich text editor
@@ -74,9 +79,60 @@ if (typeof window !== 'undefined' && !DOMPurify && !isLoading) {
       DOMPurify.addHook('uponSanitizeAttribute', styleFilterHook)
       hookRegistered = true
     }
+    // Notify all subscribers that DOMPurify is ready
+    subscribers.forEach(callback => callback())
   }).catch(error => {
     console.error('Failed to load DOMPurify:', error)
   })
+}
+
+/**
+ * React hook to track DOMPurify loading state
+ *
+ * Returns true when DOMPurify is loaded and ready to use.
+ * Causes component to re-render when DOMPurify finishes loading.
+ *
+ * @returns boolean indicating whether DOMPurify is ready
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const isDOMPurifyReady = useDOMPurifyReady()
+ *
+ *   if (!isDOMPurifyReady) {
+ *     return <div>Loading...</div>
+ *   }
+ *
+ *   return <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />
+ * }
+ * ```
+ */
+export function useDOMPurifyReady(): boolean {
+  const [isReady, setIsReady] = useState(() => DOMPurify !== null)
+
+  useEffect(() => {
+    // If already loaded, no need to subscribe
+    if (DOMPurify) {
+      setIsReady(true)
+      return
+    }
+
+    // Subscribe to be notified when DOMPurify loads
+    const handleReady = () => setIsReady(true)
+    subscribers.add(handleReady)
+
+    // Check again in case it loaded between initial render and effect
+    if (DOMPurify) {
+      setIsReady(true)
+    }
+
+    // Cleanup: unsubscribe on unmount
+    return () => {
+      subscribers.delete(handleReady)
+    }
+  }, [])
+
+  return isReady
 }
 
 /**
@@ -87,25 +143,46 @@ if (typeof window !== 'undefined' && !DOMPurify && !isLoading) {
  *
  * Filters style attributes to only allow text-align property with safe values.
  *
- * IMPORTANT: DOMPurify is loaded eagerly when this module initializes. If called before
- * DOMPurify finishes loading (rare edge case), returns empty string as a safe fallback.
- * In practice, DOMPurify loads so quickly that components will have it available by
- * first render. This approach avoids the complexity of Suspense boundaries while
- * maintaining security.
+ * IMPORTANT: DOMPurify is loaded eagerly when this module initializes. On slow networks,
+ * it may not be ready during first render. Use the useDOMPurifyReady() hook to ensure
+ * your component re-renders once DOMPurify loads:
+ *
+ * ```tsx
+ * function MyComponent({ content }: { content: string }) {
+ *   const isDOMPurifyReady = useDOMPurifyReady()
+ *
+ *   return (
+ *     <div dangerouslySetInnerHTML={{
+ *       __html: isDOMPurifyReady ? sanitizeHtml(content) : ''
+ *     }} />
+ *   )
+ * }
+ * ```
+ *
+ * If called before DOMPurify loads, returns empty string as a safe fallback.
+ * Components using useDOMPurifyReady() will automatically re-render with sanitized content
+ * once DOMPurify finishes loading.
  *
  * @param html - The HTML string to sanitize
  * @returns Sanitized HTML safe for rendering with dangerouslySetInnerHTML, or empty string if DOMPurify not loaded yet
  *
  * @example
  * ```tsx
- * <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />
+ * function MyComponent({ content }: { content: string }) {
+ *   const isDOMPurifyReady = useDOMPurifyReady()
+ *
+ *   if (!isDOMPurifyReady) {
+ *     return <div className="text-muted-foreground">Loading...</div>
+ *   }
+ *
+ *   return <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />
+ * }
  * ```
  */
 export function sanitizeHtml(html: string): string {
   // If DOMPurify not loaded yet, return empty string as safe fallback
-  // This is a rare edge case - DOMPurify loads imperatively on module init
+  // Components should use useDOMPurifyReady() hook to re-render when ready
   if (!DOMPurify) {
-    console.warn('DOMPurify not loaded yet, returning empty string. Content will render when loaded.')
     return ''
   }
 

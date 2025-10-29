@@ -15,7 +15,7 @@ import { NoteViewer } from '@/components/notes/NoteViewer'
 import { createLink } from '@/lib/supabase/notes'
 import { convertTextToLink, captureSelectionMetadata } from '@/utils/textToLink'
 import { toast } from 'sonner'
-import { sanitizeHtml } from '@/utils/sanitizeHtml'
+import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { AppHeader } from '@/components/layout/AppHeader'
 
@@ -27,6 +27,7 @@ interface AimsContent {
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { user } = useAuth()
+  const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
   const [content, setContent] = useState('')
   const [aimsContent, setAimsContent] = useState<AimsContent>({ todos: '', goals: '' })
@@ -456,24 +457,28 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
               ) : (
                 <div className="min-h-[100px]">
                   {content ? (
-                    <div
-                      className="text-base leading-relaxed prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
-                      onClick={(e) => {
-                        // Handle link clicks in read-only mode
-                        const target = e.target as HTMLElement
-                        const linkElement = target.closest('a[data-note-id]') as HTMLElement
+                    isDOMPurifyReady ? (
+                      <div
+                        className="text-base leading-relaxed prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
+                        onClick={(e) => {
+                          // Handle link clicks in read-only mode
+                          const target = e.target as HTMLElement
+                          const linkElement = target.closest('a[data-note-id]') as HTMLElement
 
-                        if (linkElement) {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          const noteId = linkElement.getAttribute('data-note-id')
-                          if (noteId) {
-                            handleLinkClick(noteId)
+                          if (linkElement) {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const noteId = linkElement.getAttribute('data-note-id')
+                            if (noteId) {
+                              handleLinkClick(noteId)
+                            }
                           }
-                        }
-                      }}
-                    />
+                        }}
+                      />
+                    ) : (
+                      <div className="text-muted-foreground">Loading content...</div>
+                    )
                   ) : (
                     <p className="text-muted-foreground italic">
                       Click here to start writing...
