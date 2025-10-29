@@ -75,13 +75,14 @@ interface SavoringHelperProps {
   onInsert: (text: string) => void
 }
 
-export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProps) {
+/**
+ * SavoringContent Component (Content only, no container)
+ * Extracted for use in standalone contexts like NotesPage
+ */
+export function SavoringContent({ entryId, userId, onInsert }: SavoringHelperProps) {
   const [selectedStrategy, setSelectedStrategy] = useState<SavoringStrategy | ''>('')
   const [reflection, setReflection] = useState('')
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
-
-  // Ref to access HelperContainer's collapse function
-  const collapseHelperRef = useRef<(() => void) | null>(null)
 
   // Track events for usage logging
   const eventsRef = useRef<HelperEvent[]>([])
@@ -96,21 +97,6 @@ export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProp
     setLiveRegionMessage(message)
     // Clear after announcement
     setTimeout(() => setLiveRegionMessage(''), 1000)
-  }
-
-  // Handle expand/collapse from HelperContainer
-  const handleExpandChange = (isExpanded: boolean) => {
-    if (isExpanded) {
-      // Track helper opened event
-      addEvent({
-        type: 'helper_opened',
-        timestamp: new Date().toISOString(),
-        data: { triggerSource: 'manual' }
-      })
-      announce('Savoring helper expanded. Choose a strategy to amplify positive experiences.')
-    } else {
-      announce('Savoring helper collapsed')
-    }
   }
 
   // Handle strategy selection
@@ -205,32 +191,10 @@ export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProp
 
     // Clear events for next usage
     eventsRef.current = []
-
-    // Collapse helper
-    if (collapseHelperRef.current) {
-      collapseHelperRef.current()
-    }
   }
 
   return (
-    <HelperContainer
-      helperType="savoring"
-      headerText="Amplify a positive moment"
-      descriptionText="Savor a good experience you recently had."
-      variant="pink"
-      onExpandChange={handleExpandChange}
-      collapseRef={collapseHelperRef}
-      showDismiss={false}
-      defaultExpanded={false}
-      testId="savoring"
-      infoContent={{
-        title: "Savoring Practice",
-        description: "Research-based strategies to amplify positive experiences and extract more joy from good moments.",
-        effectSize: "d = 0.32 (Bryant meta-analysis)",
-        citation: "Bryant, F. B., & Veroff, J. (2007). Savoring: A new model of positive experience. Psychology Press.",
-        learnMoreUrl: "https://psycnet.apa.org/record/2007-01113-000"
-      }}
-    >
+    <>
       {/* Live region for screen reader announcements */}
       <div
         className="sr-only"
@@ -239,6 +203,13 @@ export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProp
         aria-atomic="true"
       >
         {liveRegionMessage}
+      </div>
+
+      {/* Description */}
+      <div className="mb-4">
+        <p className="text-gray-700 dark:text-gray-300">
+          Savor a good experience you recently had.
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -310,6 +281,62 @@ export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProp
           Add to Journal Entry
         </Button>
       </div>
-    </HelperContainer>
+    </>
+  )
+}
+
+/**
+ * SavoringHelper Component (Original with HelperContainer)
+ * Kept for backward compatibility
+ */
+export function SavoringHelper({ entryId, userId, onInsert }: SavoringHelperProps) {
+  const collapseHelperRef = useRef<(() => void) | null>(null)
+  const [liveRegionMessage, setLiveRegionMessage] = useState('')
+
+  const announce = (message: string) => {
+    setLiveRegionMessage(message)
+    setTimeout(() => setLiveRegionMessage(''), 1000)
+  }
+
+  const handleExpandChange = (isExpanded: boolean) => {
+    if (isExpanded) {
+      announce('Savoring helper expanded. Choose a strategy to amplify positive experiences.')
+    } else {
+      announce('Savoring helper collapsed')
+    }
+  }
+
+  return (
+    <>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveRegionMessage}
+      </div>
+
+      <HelperContainer
+        helperType="savoring"
+        headerText="Amplify a positive moment"
+        descriptionText="Savor a good experience you recently had."
+        variant="pink"
+        onExpandChange={handleExpandChange}
+        collapseRef={collapseHelperRef}
+        showDismiss={false}
+        defaultExpanded={false}
+        testId="savoring"
+        infoContent={{
+          title: "Savoring Practice",
+          description: "Research-based strategies to amplify positive experiences and extract more joy from good moments.",
+          effectSize: "d = 0.32 (Bryant meta-analysis)",
+          citation: "Bryant, F. B., & Veroff, J. (2007). Savoring: A new model of positive experience. Psychology Press.",
+          learnMoreUrl: "https://psycnet.apa.org/record/2007-01113-000"
+        }}
+      >
+        <SavoringContent entryId={entryId} userId={userId} onInsert={onInsert} />
+      </HelperContainer>
+    </>
   )
 }

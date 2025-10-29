@@ -9,16 +9,16 @@
 
 import { HelperType } from '@/types/helper'
 import { HELPER_TILES } from '@/constants/helperTitles'
+// Story 2.9: Import *Content components (without HelperContainer wrappers)
 import { GratitudeContent } from './GratitudeHelper'
-// Import other helpers (with HelperContainer wrappers) - TODO: Extract *Content components
-import { CbtDistortions } from './CbtDistortions'
-import { ValuesAffirmationHelper } from './ValuesAffirmationHelper'
-import { SelfCompassionHelper } from './SelfCompassionHelper'
-import { WoopHelper } from './WoopHelper'
-import { BestPossibleSelfHelper } from './BestPossibleSelfHelper'
-import { SavoringHelper } from './SavoringHelper'
-import { ProgressiveMuscleRelaxationHelper } from './ProgressiveMuscleRelaxationHelper'
-import { LovingKindnessHelper } from './LovingKindnessHelper'
+import { CbtDistortionsContent } from './CbtDistortions'
+import { ValuesAffirmationContent } from './ValuesAffirmationHelper'
+import { SelfCompassionContent } from './SelfCompassionHelper'
+import { WoopContent } from './WoopHelper'
+import { BestPossibleSelfContent } from './BestPossibleSelfHelper'
+import { SavoringContent } from './SavoringHelper'
+import { PMRContent } from './ProgressiveMuscleRelaxationHelper'
+import { LovingKindnessContent } from './LovingKindnessHelper'
 
 interface HelperDialogContentProps {
   helperType: HelperType
@@ -52,9 +52,9 @@ export function HelperDialogContent({
   }
 
   // Route to appropriate helper content component
+  // Story 2.9: All helpers now use *Content components (no HelperContainer)
   switch (helperType) {
     case 'gratitude':
-      // Story 2.9 Phase 3: Gratitude extracted as *Content component (no HelperContainer)
       return (
         <GratitudeContent
           entryId={entryId}
@@ -63,10 +63,9 @@ export function HelperDialogContent({
         />
       )
 
-    // Story 2.9: Other helpers still use HelperContainer wrappers (TODO: extract *Content)
     case 'cbt-distortions':
       return (
-        <CbtDistortions
+        <CbtDistortionsContent
           entryId={entryId}
           userId={userId}
           onInsert={handleInsert}
@@ -75,7 +74,7 @@ export function HelperDialogContent({
 
     case 'values-affirmation':
       return (
-        <ValuesAffirmationHelper
+        <ValuesAffirmationContent
           entryId={entryId}
           userId={userId}
           onInsert={handleInsert}
@@ -84,7 +83,7 @@ export function HelperDialogContent({
 
     case 'self-compassion':
       return (
-        <SelfCompassionHelper
+        <SelfCompassionContent
           entryId={entryId}
           userId={userId}
           onInsert={handleInsert}
@@ -93,7 +92,7 @@ export function HelperDialogContent({
 
     case 'woop':
       return (
-        <WoopHelper
+        <WoopContent
           entryId={entryId}
           userId={userId}
           onInsert={handleInsert}
@@ -102,7 +101,7 @@ export function HelperDialogContent({
 
     case 'best-possible-self':
       return (
-        <BestPossibleSelfHelper
+        <BestPossibleSelfContent
           entryId={entryId}
           userId={userId}
           onInsert={handleInsert}
@@ -111,7 +110,7 @@ export function HelperDialogContent({
 
     case 'savoring':
       return (
-        <SavoringHelper
+        <SavoringContent
           entryId={entryId}
           userId={userId}
           onInsert={handleInsert}
@@ -120,7 +119,7 @@ export function HelperDialogContent({
 
     case 'pmr':
       return (
-        <ProgressiveMuscleRelaxationHelper
+        <PMRContent
           entryId={entryId}
           userId={userId}
           onInsert={handleInsert}
@@ -129,7 +128,7 @@ export function HelperDialogContent({
 
     case 'loving-kindness':
       return (
-        <LovingKindnessHelper
+        <LovingKindnessContent
           entryId={entryId}
           userId={userId}
           onInsert={handleInsert}

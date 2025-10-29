@@ -34,12 +34,13 @@ interface BestPossibleSelfHelperProps {
   onInsert: (text: string) => void
 }
 
-export function BestPossibleSelfHelper({ entryId, userId, onInsert }: BestPossibleSelfHelperProps) {
+/**
+ * BestPossibleSelfContent Component
+ * Story 2.9: Extracted content for use in dialog (without HelperContainer wrapper)
+ */
+export function BestPossibleSelfContent({ entryId, userId, onInsert }: BestPossibleSelfHelperProps) {
   const [vision, setVision] = useState('')
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
-
-  // Ref to access HelperContainer's collapse function
-  const collapseHelperRef = useRef<(() => void) | null>(null)
 
   // Track events for usage logging
   const eventsRef = useRef<HelperEvent[]>([])
@@ -54,21 +55,6 @@ export function BestPossibleSelfHelper({ entryId, userId, onInsert }: BestPossib
     setLiveRegionMessage(message)
     // Clear after announcement
     setTimeout(() => setLiveRegionMessage(''), 1000)
-  }
-
-  // Handle expand/collapse from HelperContainer
-  const handleExpandChange = (isExpanded: boolean) => {
-    if (isExpanded) {
-      // Track helper opened event
-      addEvent({
-        type: 'helper_opened',
-        timestamp: new Date().toISOString(),
-        data: { triggerSource: 'manual' }
-      })
-      announce('Best Possible Self helper expanded. Imagine your ideal future.')
-    } else {
-      announce('Best Possible Self helper collapsed')
-    }
   }
 
   // Check if form can be submitted
@@ -143,11 +129,6 @@ export function BestPossibleSelfHelper({ entryId, userId, onInsert }: BestPossib
     // Reset state
     setVision('')
     eventsRef.current = []
-
-    // Collapse the helper after insertion
-    if (collapseHelperRef.current) {
-      collapseHelperRef.current()
-    }
   }
 
   // Handle clear field
@@ -176,6 +157,113 @@ export function BestPossibleSelfHelper({ entryId, userId, onInsert }: BestPossib
         {liveRegionMessage}
       </div>
 
+      {/* Header */}
+      <div className="mb-4">
+        <p className="text-gray-700 dark:text-gray-300">
+          Visualize yourself 5-10 years from now, having achieved your most important goals.
+        </p>
+      </div>
+
+      {/* Best Possible Self Form */}
+      <div className="space-y-4">
+        {/* Instructions */}
+        <div className="p-4 rounded-md bg-yellow-50/50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800">
+          <p className="text-sm text-yellow-900 dark:text-yellow-100 mb-2">
+            <strong>Instructions:</strong>
+          </p>
+          <p className="text-xs text-yellow-800 dark:text-yellow-200 mb-2">
+            Imagine yourself 5-10 years from now. Everything has gone as well as it realistically could.
+            You&apos;ve worked toward your goals and made meaningful progress.
+          </p>
+          <p className="text-xs text-yellow-800 dark:text-yellow-200">
+            Consider: <strong>Personal growth</strong> (What have you learned?),
+            <strong> Professional life</strong> (What are you doing?), and
+            <strong> Relationships</strong> (Who are you close to?). Write in detail about what you see.
+          </p>
+        </div>
+
+        {/* Vision Text Area */}
+        <div>
+          <label
+            htmlFor="best-self-vision"
+            className="block text-sm font-medium text-green-800 dark:text-green-200 mb-2"
+          >
+            Your best possible self
+          </label>
+          <Textarea
+            id="best-self-vision"
+            value={vision}
+            onChange={(e) => setVision(e.target.value)}
+            placeholder="In 5-10 years, I see myself..."
+            className="bg-white dark:bg-gray-950 min-h-[200px]"
+            data-testid="best-self-vision"
+          />
+          {vision.length > 0 && (
+            <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+              {getWordCount()} words
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-2 pt-4 border-t border-green-200 dark:border-green-800 mt-4">
+        <Button
+          onClick={handleInsert}
+          disabled={!canSubmit()}
+          className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+          size="sm"
+          data-testid="best-self-insert-button"
+        >
+          Add to Journal Entry
+        </Button>
+        <Button
+          onClick={handleClear}
+          disabled={!vision}
+          variant="ghost"
+          size="sm"
+          className="text-green-700 hover:text-green-900 hover:bg-green-100 dark:text-green-300 dark:hover:text-green-100 dark:hover:bg-green-900/50"
+          data-testid="best-self-clear-button"
+        >
+          Clear
+        </Button>
+      </div>
+    </>
+  )
+}
+
+/**
+ * BestPossibleSelfHelper Component (Original with HelperContainer)
+ * Kept for backward compatibility
+ */
+export function BestPossibleSelfHelper({ entryId, userId, onInsert }: BestPossibleSelfHelperProps) {
+  const collapseHelperRef = useRef<(() => void) | null>(null)
+  const [liveRegionMessage, setLiveRegionMessage] = useState('')
+
+  const announce = (message: string) => {
+    setLiveRegionMessage(message)
+    setTimeout(() => setLiveRegionMessage(''), 1000)
+  }
+
+  const handleExpandChange = (isExpanded: boolean) => {
+    if (isExpanded) {
+      announce('Best Possible Self helper expanded. Imagine your ideal future.')
+    } else {
+      announce('Best Possible Self helper collapsed')
+    }
+  }
+
+  return (
+    <>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveRegionMessage}
+      </div>
+
       <HelperContainer
         helperType="best-possible-self"
         headerText="Imagine your best possible future"
@@ -193,70 +281,7 @@ export function BestPossibleSelfHelper({ entryId, userId, onInsert }: BestPossib
           citation: "King, L. A. (2001). The health benefits of writing about life goals. Personality and Social Psychology Bulletin, 27(7), 798-807."
         }}
       >
-        {/* Best Possible Self Form */}
-        <div className="space-y-4">
-          {/* Instructions */}
-          <div className="p-4 rounded-md bg-yellow-50/50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800">
-            <p className="text-sm text-yellow-900 dark:text-yellow-100 mb-2">
-              <strong>Instructions:</strong>
-            </p>
-            <p className="text-xs text-yellow-800 dark:text-yellow-200 mb-2">
-              Imagine yourself 5-10 years from now. Everything has gone as well as it realistically could.
-              You&apos;ve worked toward your goals and made meaningful progress.
-            </p>
-            <p className="text-xs text-yellow-800 dark:text-yellow-200">
-              Consider: <strong>Personal growth</strong> (What have you learned?),
-              <strong> Professional life</strong> (What are you doing?), and
-              <strong> Relationships</strong> (Who are you close to?). Write in detail about what you see.
-            </p>
-          </div>
-
-          {/* Vision Text Area */}
-          <div>
-            <label
-              htmlFor="best-self-vision"
-              className="block text-sm font-medium text-green-800 dark:text-green-200 mb-2"
-            >
-              Your best possible self
-            </label>
-            <Textarea
-              id="best-self-vision"
-              value={vision}
-              onChange={(e) => setVision(e.target.value)}
-              placeholder="In 5-10 years, I see myself..."
-              className="bg-white dark:bg-gray-950 min-h-[200px]"
-              data-testid="best-self-vision"
-            />
-            {vision.length > 0 && (
-              <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                {getWordCount()} words
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-2 pt-4 border-t border-green-200 dark:border-green-800 mt-4">
-          <Button
-            onClick={handleInsert}
-            disabled={!canSubmit()}
-            className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
-            size="sm"
-            data-testid="best-self-insert-button"
-          >
-            Add to Journal Entry
-          </Button>
-          <Button
-            onClick={handleClear}
-            disabled={!vision}
-            variant="ghost"
-            size="sm"
-            className="text-green-700 hover:text-green-900 hover:bg-green-100 dark:text-green-300 dark:hover:text-green-100 dark:hover:bg-green-900/50"
-            data-testid="best-self-clear-button"
-          >
-            Clear
-          </Button>
-        </div>
+        <BestPossibleSelfContent entryId={entryId} userId={userId} onInsert={onInsert} />
       </HelperContainer>
     </>
   )

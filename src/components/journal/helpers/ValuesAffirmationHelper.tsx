@@ -52,14 +52,15 @@ interface ValuesAffirmationHelperProps {
   onInsert: (text: string) => void
 }
 
-export function ValuesAffirmationHelper({ entryId, userId, onInsert }: ValuesAffirmationHelperProps) {
+/**
+ * ValuesAffirmationContent Component
+ * Story 2.9: Extracted content for use in dialog (without HelperContainer wrapper)
+ */
+export function ValuesAffirmationContent({ entryId, userId, onInsert }: ValuesAffirmationHelperProps) {
   const [selectedValue, setSelectedValue] = useState<ValueOption | ''>('')
   const [whyImportant, setWhyImportant] = useState('')
   const [specificTime, setSpecificTime] = useState('')
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
-
-  // Ref to access HelperContainer's collapse function
-  const collapseHelperRef = useRef<(() => void) | null>(null)
 
   // Track events for usage logging
   const eventsRef = useRef<HelperEvent[]>([])
@@ -74,21 +75,6 @@ export function ValuesAffirmationHelper({ entryId, userId, onInsert }: ValuesAff
     setLiveRegionMessage(message)
     // Clear after announcement
     setTimeout(() => setLiveRegionMessage(''), 1000)
-  }
-
-  // Handle expand/collapse from HelperContainer
-  const handleExpandChange = (isExpanded: boolean) => {
-    if (isExpanded) {
-      // Track helper opened event
-      addEvent({
-        type: 'helper_opened',
-        timestamp: new Date().toISOString(),
-        data: { triggerSource: 'manual' }
-      })
-      announce('Values Affirmation helper expanded. Select a core value to explore.')
-    } else {
-      announce('Values Affirmation helper collapsed')
-    }
   }
 
   // Handle value selection
@@ -186,11 +172,6 @@ export function ValuesAffirmationHelper({ entryId, userId, onInsert }: ValuesAff
     setWhyImportant('')
     setSpecificTime('')
     eventsRef.current = []
-
-    // Collapse the helper after insertion
-    if (collapseHelperRef.current) {
-      collapseHelperRef.current()
-    }
   }
 
   // Handle clear all fields
@@ -221,25 +202,15 @@ export function ValuesAffirmationHelper({ entryId, userId, onInsert }: ValuesAff
         {liveRegionMessage}
       </div>
 
-      <HelperContainer
-        helperType="values-affirmation"
-        headerText="What matters most to you?"
-        descriptionText="Reflect on a core personal value and why it's important to you."
-        variant="purple"
-        onExpandChange={handleExpandChange}
-        collapseRef={collapseHelperRef}
-        showDismiss={false}
-        defaultExpanded={false}
-        testId="values"
-        infoContent={{
-          title: "Values Self-Affirmation",
-          description: "Reflecting on your core values strengthens your sense of self-integrity and acts as a psychological buffer against stress. This practice is foundational to ACT (Acceptance and Commitment Therapy).",
-          effectSize: "d=0.20-0.40 for stress buffering",
-          citation: "Sherman, D. K., & Cohen, G. L. (2006). The psychology of self-defense: Self-affirmation theory. Advances in Experimental Social Psychology, 38, 183-242."
-        }}
-      >
-        {/* Values Selection Form */}
-        <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4">
+        <p className="text-gray-700 dark:text-gray-300">
+          Reflect on a core personal value and why it&apos;s important to you.
+        </p>
+      </div>
+
+      {/* Values Selection Form */}
+      <div className="space-y-4">
           {/* Value Dropdown */}
           <div>
             <label
@@ -316,28 +287,82 @@ export function ValuesAffirmationHelper({ entryId, userId, onInsert }: ValuesAff
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-2 pt-4 border-t border-purple-200 dark:border-purple-800 mt-4">
-          <Button
-            onClick={handleInsert}
-            disabled={!canSubmit()}
-            className="bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-700 dark:hover:bg-purple-600"
-            size="sm"
-            data-testid="values-insert-button"
-          >
-            Add to Journal Entry
-          </Button>
-          <Button
-            onClick={handleClear}
-            disabled={!selectedValue && !whyImportant && !specificTime}
-            variant="ghost"
-            size="sm"
-            className="text-purple-700 hover:text-purple-900 hover:bg-purple-100 dark:text-purple-300 dark:hover:text-purple-100 dark:hover:bg-purple-900/50"
-            data-testid="values-clear-button"
-          >
-            Clear All
-          </Button>
-        </div>
+      {/* Action buttons */}
+      <div className="flex gap-2 pt-4 border-t border-purple-200 dark:border-purple-800 mt-4">
+        <Button
+          onClick={handleInsert}
+          disabled={!canSubmit()}
+          className="bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-700 dark:hover:bg-purple-600"
+          size="sm"
+          data-testid="values-insert-button"
+        >
+          Add to Journal Entry
+        </Button>
+        <Button
+          onClick={handleClear}
+          disabled={!selectedValue && !whyImportant && !specificTime}
+          variant="ghost"
+          size="sm"
+          className="text-purple-700 hover:text-purple-900 hover:bg-purple-100 dark:text-purple-300 dark:hover:text-purple-100 dark:hover:bg-purple-900/50"
+          data-testid="values-clear-button"
+        >
+          Clear All
+        </Button>
+      </div>
+    </>
+  )
+}
+
+/**
+ * ValuesAffirmationHelper Component (Original with HelperContainer)
+ * Kept for backward compatibility
+ */
+export function ValuesAffirmationHelper({ entryId, userId, onInsert }: ValuesAffirmationHelperProps) {
+  const collapseHelperRef = useRef<(() => void) | null>(null)
+  const [liveRegionMessage, setLiveRegionMessage] = useState('')
+
+  const announce = (message: string) => {
+    setLiveRegionMessage(message)
+    setTimeout(() => setLiveRegionMessage(''), 1000)
+  }
+
+  const handleExpandChange = (isExpanded: boolean) => {
+    if (isExpanded) {
+      announce('Values Affirmation helper expanded. Select a core value to explore.')
+    } else {
+      announce('Values Affirmation helper collapsed')
+    }
+  }
+
+  return (
+    <>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveRegionMessage}
+      </div>
+
+      <HelperContainer
+        helperType="values-affirmation"
+        headerText="What matters most to you?"
+        descriptionText="Reflect on a core personal value and why it's important to you."
+        variant="purple"
+        onExpandChange={handleExpandChange}
+        collapseRef={collapseHelperRef}
+        showDismiss={false}
+        defaultExpanded={false}
+        testId="values"
+        infoContent={{
+          title: "Values Self-Affirmation",
+          description: "Reflecting on your core values strengthens your sense of self-integrity and acts as a psychological buffer against stress. This practice is foundational to ACT (Acceptance and Commitment Therapy).",
+          effectSize: "d=0.20-0.40 for stress buffering",
+          citation: "Sherman, D. K., & Cohen, G. L. (2006). The psychology of self-defense: Self-affirmation theory. Advances in Experimental Social Psychology, 38, 183-242."
+        }}
+      >
+        <ValuesAffirmationContent entryId={entryId} userId={userId} onInsert={onInsert} />
       </HelperContainer>
     </>
   )

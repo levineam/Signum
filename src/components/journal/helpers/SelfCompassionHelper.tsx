@@ -36,13 +36,14 @@ interface SelfCompassionHelperProps {
   onInsert: (text: string) => void
 }
 
-export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassionHelperProps) {
+/**
+ * SelfCompassionContent Component
+ * Story 2.9: Extracted content for use in dialog (without HelperContainer wrapper)
+ */
+export function SelfCompassionContent({ entryId, userId, onInsert }: SelfCompassionHelperProps) {
   const [situation, setSituation] = useState('')
   const [completedSteps, setCompletedSteps] = useState(false)
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
-
-  // Ref to access HelperContainer's collapse function
-  const collapseHelperRef = useRef<(() => void) | null>(null)
 
   // Track events for usage logging
   const eventsRef = useRef<HelperEvent[]>([])
@@ -57,21 +58,6 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
     setLiveRegionMessage(message)
     // Clear after announcement
     setTimeout(() => setLiveRegionMessage(''), 1000)
-  }
-
-  // Handle expand/collapse from HelperContainer
-  const handleExpandChange = (isExpanded: boolean) => {
-    if (isExpanded) {
-      // Track helper opened event
-      addEvent({
-        type: 'helper_opened',
-        timestamp: new Date().toISOString(),
-        data: { triggerSource: 'manual' }
-      })
-      announce('Self-Compassion Break helper expanded. Describe a difficult moment.')
-    } else {
-      announce('Self-Compassion Break helper collapsed')
-    }
   }
 
   // Check if form can be submitted
@@ -151,11 +137,6 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
     setSituation('')
     setCompletedSteps(false)
     eventsRef.current = []
-
-    // Collapse the helper after insertion
-    if (collapseHelperRef.current) {
-      collapseHelperRef.current()
-    }
   }
 
   // Handle clear field
@@ -185,26 +166,15 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
         {liveRegionMessage}
       </div>
 
-      <HelperContainer
-        helperType="self-compassion"
-        headerText="Need some self-compassion?"
-        descriptionText="Take a moment to acknowledge a difficult situation with kindness."
-        variant="default"
-        onExpandChange={handleExpandChange}
-        collapseRef={collapseHelperRef}
-        showDismiss={false}
-        defaultExpanded={false}
-        testId="self-compassion"
-        infoContent={{
-          title: "Self-Compassion Break",
-          description: "Kristin Neff's three-step practice for responding to difficult moments with kindness instead of self-criticism. Combines mindfulness, common humanity, and self-kindness to reduce suffering.",
-          effectSize: "d=0.47 for well-being improvements",
-          citation: "Neff, K. D., & Germer, C. K. (2013). A pilot study and randomized controlled trial of the mindful self-compassion program. Journal of Clinical Psychology, 69(1), 28-44.",
-          learnMoreUrl: "https://self-compassion.org/exercise-2-self-compassion-break/"
-        }}
-      >
-        {/* Self-Compassion Form */}
-        <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4">
+        <p className="text-gray-700 dark:text-gray-300">
+          Take a moment to acknowledge a difficult situation with kindness.
+        </p>
+      </div>
+
+      {/* Self-Compassion Form */}
+      <div className="space-y-4">
           {/* Situation Description */}
           <div>
             <label
@@ -260,28 +230,83 @@ export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassi
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-800 mt-4">
-          <Button
-            onClick={handleInsert}
-            disabled={!canSubmit}
-            className="bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-700 dark:hover:bg-amber-600"
-            size="sm"
-            data-testid="compassion-insert-button"
-          >
-            Add to Journal Entry
-          </Button>
-          <Button
-            onClick={handleClear}
-            disabled={!situation}
-            variant="ghost"
-            size="sm"
-            className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 dark:text-amber-300 dark:hover:text-amber-100 dark:hover:bg-amber-900/50"
-            data-testid="compassion-clear-button"
-          >
-            Clear
-          </Button>
-        </div>
+      {/* Action buttons */}
+      <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-800 mt-4">
+        <Button
+          onClick={handleInsert}
+          disabled={!canSubmit}
+          className="bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-700 dark:hover:bg-amber-600"
+          size="sm"
+          data-testid="compassion-insert-button"
+        >
+          Add to Journal Entry
+        </Button>
+        <Button
+          onClick={handleClear}
+          disabled={!situation}
+          variant="ghost"
+          size="sm"
+          className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 dark:text-amber-300 dark:hover:text-amber-100 dark:hover:bg-amber-900/50"
+          data-testid="compassion-clear-button"
+        >
+          Clear
+        </Button>
+      </div>
+    </>
+  )
+}
+
+/**
+ * SelfCompassionHelper Component (Original with HelperContainer)
+ * Kept for backward compatibility
+ */
+export function SelfCompassionHelper({ entryId, userId, onInsert }: SelfCompassionHelperProps) {
+  const collapseHelperRef = useRef<(() => void) | null>(null)
+  const [liveRegionMessage, setLiveRegionMessage] = useState('')
+
+  const announce = (message: string) => {
+    setLiveRegionMessage(message)
+    setTimeout(() => setLiveRegionMessage(''), 1000)
+  }
+
+  const handleExpandChange = (isExpanded: boolean) => {
+    if (isExpanded) {
+      announce('Self-Compassion Break helper expanded. Describe a difficult moment.')
+    } else {
+      announce('Self-Compassion Break helper collapsed')
+    }
+  }
+
+  return (
+    <>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveRegionMessage}
+      </div>
+
+      <HelperContainer
+        helperType="self-compassion"
+        headerText="Need some self-compassion?"
+        descriptionText="Take a moment to acknowledge a difficult situation with kindness."
+        variant="default"
+        onExpandChange={handleExpandChange}
+        collapseRef={collapseHelperRef}
+        showDismiss={false}
+        defaultExpanded={false}
+        testId="self-compassion"
+        infoContent={{
+          title: "Self-Compassion Break",
+          description: "Kristin Neff's three-step practice for responding to difficult moments with kindness instead of self-criticism. Combines mindfulness, common humanity, and self-kindness to reduce suffering.",
+          effectSize: "d=0.47 for well-being improvements",
+          citation: "Neff, K. D., & Germer, C. K. (2013). A pilot study and randomized controlled trial of the mindful self-compassion program. Journal of Clinical Psychology, 69(1), 28-44.",
+          learnMoreUrl: "https://self-compassion.org/exercise-2-self-compassion-break/"
+        }}
+      >
+        <SelfCompassionContent entryId={entryId} userId={userId} onInsert={onInsert} />
       </HelperContainer>
     </>
   )

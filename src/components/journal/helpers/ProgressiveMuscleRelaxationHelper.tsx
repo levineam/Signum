@@ -49,13 +49,14 @@ interface PMRHelperProps {
   onInsert: (text: string) => void
 }
 
-export function ProgressiveMuscleRelaxationHelper({ entryId, userId, onInsert }: PMRHelperProps) {
+/**
+ * PMRContent Component (Content only, no container)
+ * Extracted for use in standalone contexts like NotesPage
+ */
+export function PMRContent({ entryId, userId, onInsert }: PMRHelperProps) {
   const [completedGroups, setCompletedGroups] = useState<Set<string>>(new Set())
   const [reflection, setReflection] = useState('')
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
-
-  // Ref to access HelperContainer's collapse function
-  const collapseHelperRef = useRef<(() => void) | null>(null)
 
   // Track events for usage logging
   const eventsRef = useRef<HelperEvent[]>([])
@@ -70,21 +71,6 @@ export function ProgressiveMuscleRelaxationHelper({ entryId, userId, onInsert }:
     setLiveRegionMessage(message)
     // Clear after announcement
     setTimeout(() => setLiveRegionMessage(''), 1000)
-  }
-
-  // Handle expand/collapse from HelperContainer
-  const handleExpandChange = (isExpanded: boolean) => {
-    if (isExpanded) {
-      // Track helper opened event
-      addEvent({
-        type: 'helper_opened',
-        timestamp: new Date().toISOString(),
-        data: { triggerSource: 'manual' }
-      })
-      announce('Progressive Muscle Relaxation helper expanded. Check muscle groups as you complete them.')
-    } else {
-      announce('Progressive Muscle Relaxation helper collapsed')
-    }
   }
 
   // Handle muscle group toggle
@@ -204,32 +190,10 @@ export function ProgressiveMuscleRelaxationHelper({ entryId, userId, onInsert }:
 
     // Clear events for next usage
     eventsRef.current = []
-
-    // Collapse helper
-    if (collapseHelperRef.current) {
-      collapseHelperRef.current()
-    }
   }
 
   return (
-    <HelperContainer
-      helperType="pmr"
-      headerText="Release physical tension"
-      descriptionText="Systematically tense and relax muscle groups to reduce stress and anxiety."
-      variant="default"
-      onExpandChange={handleExpandChange}
-      collapseRef={collapseHelperRef}
-      showDismiss={false}
-      defaultExpanded={false}
-      testId="pmr"
-      infoContent={{
-        title: "Progressive Muscle Relaxation",
-        description: "Edmund Jacobson's evidence-based technique for reducing physical tension and anxiety through systematic muscle relaxation.",
-        effectSize: "d = 0.38 for anxiety reduction (Manzoni et al., 2008)",
-        citation: "Manzoni, G. M., et al. (2008). Relaxation training for anxiety: A ten-years systematic review. BMC Psychiatry, 8(1), 41.",
-        learnMoreUrl: "https://www.apa.org/topics/mindfulness/meditation-relaxation"
-      }}
-    >
+    <>
       {/* Live region for screen reader announcements */}
       <div
         className="sr-only"
@@ -238,6 +202,13 @@ export function ProgressiveMuscleRelaxationHelper({ entryId, userId, onInsert }:
         aria-atomic="true"
       >
         {liveRegionMessage}
+      </div>
+
+      {/* Description */}
+      <div className="mb-4">
+        <p className="text-gray-700 dark:text-gray-300">
+          Systematically tense and relax muscle groups to reduce stress and anxiety.
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -308,6 +279,62 @@ export function ProgressiveMuscleRelaxationHelper({ entryId, userId, onInsert }:
           Add to Journal Entry
         </Button>
       </div>
-    </HelperContainer>
+    </>
+  )
+}
+
+/**
+ * ProgressiveMuscleRelaxationHelper Component (Original with HelperContainer)
+ * Kept for backward compatibility
+ */
+export function ProgressiveMuscleRelaxationHelper({ entryId, userId, onInsert }: PMRHelperProps) {
+  const collapseHelperRef = useRef<(() => void) | null>(null)
+  const [liveRegionMessage, setLiveRegionMessage] = useState('')
+
+  const announce = (message: string) => {
+    setLiveRegionMessage(message)
+    setTimeout(() => setLiveRegionMessage(''), 1000)
+  }
+
+  const handleExpandChange = (isExpanded: boolean) => {
+    if (isExpanded) {
+      announce('Progressive Muscle Relaxation helper expanded. Check muscle groups as you complete them.')
+    } else {
+      announce('Progressive Muscle Relaxation helper collapsed')
+    }
+  }
+
+  return (
+    <>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveRegionMessage}
+      </div>
+
+      <HelperContainer
+        helperType="pmr"
+        headerText="Release physical tension"
+        descriptionText="Systematically tense and relax muscle groups to reduce stress and anxiety."
+        variant="default"
+        onExpandChange={handleExpandChange}
+        collapseRef={collapseHelperRef}
+        showDismiss={false}
+        defaultExpanded={false}
+        testId="pmr"
+        infoContent={{
+          title: "Progressive Muscle Relaxation",
+          description: "Edmund Jacobson's evidence-based technique for reducing physical tension and anxiety through systematic muscle relaxation.",
+          effectSize: "d = 0.38 for anxiety reduction (Manzoni et al., 2008)",
+          citation: "Manzoni, G. M., et al. (2008). Relaxation training for anxiety: A ten-years systematic review. BMC Psychiatry, 8(1), 41.",
+          learnMoreUrl: "https://www.apa.org/topics/mindfulness/meditation-relaxation"
+        }}
+      >
+        <PMRContent entryId={entryId} userId={userId} onInsert={onInsert} />
+      </HelperContainer>
+    </>
   )
 }

@@ -42,7 +42,11 @@ interface WoopSteps {
   plan: string
 }
 
-export function WoopHelper({ entryId, userId, onInsert }: WoopHelperProps) {
+/**
+ * WoopContent Component (Content only, no container)
+ * Extracted for use in standalone contexts like NotesPage
+ */
+export function WoopContent({ entryId, userId, onInsert }: WoopHelperProps) {
   const [steps, setSteps] = useState<WoopSteps>({
     wish: '',
     outcome: '',
@@ -50,9 +54,6 @@ export function WoopHelper({ entryId, userId, onInsert }: WoopHelperProps) {
     plan: ''
   })
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
-
-  // Ref to access HelperContainer's collapse function
-  const collapseHelperRef = useRef<(() => void) | null>(null)
 
   // Track events for usage logging
   const eventsRef = useRef<HelperEvent[]>([])
@@ -67,21 +68,6 @@ export function WoopHelper({ entryId, userId, onInsert }: WoopHelperProps) {
     setLiveRegionMessage(message)
     // Clear after announcement
     setTimeout(() => setLiveRegionMessage(''), 1000)
-  }
-
-  // Handle expand/collapse from HelperContainer
-  const handleExpandChange = (isExpanded: boolean) => {
-    if (isExpanded) {
-      // Track helper opened event
-      addEvent({
-        type: 'helper_opened',
-        timestamp: new Date().toISOString(),
-        data: { triggerSource: 'manual' }
-      })
-      announce('WOOP Goal Planning helper expanded. Start with your wish.')
-    } else {
-      announce('WOOP Goal Planning helper collapsed')
-    }
   }
 
   // Update a specific step
@@ -202,11 +188,6 @@ export function WoopHelper({ entryId, userId, onInsert }: WoopHelperProps) {
       plan: ''
     })
     eventsRef.current = []
-
-    // Collapse the helper after insertion
-    if (collapseHelperRef.current) {
-      collapseHelperRef.current()
-    }
   }
 
   // Handle clear all fields
@@ -240,6 +221,158 @@ export function WoopHelper({ entryId, userId, onInsert }: WoopHelperProps) {
         {liveRegionMessage}
       </div>
 
+      {/* Description */}
+      <div className="mb-4">
+        <p className="text-gray-700 dark:text-gray-300">
+          Use mental contrasting to set realistic goals and prepare for obstacles.
+        </p>
+      </div>
+
+      {/* WOOP Form */}
+      <div className="space-y-4">
+        {/* Wish */}
+        <div>
+          <label
+            htmlFor="woop-wish"
+            className="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-1"
+          >
+            W - Wish <span className="text-red-500">*</span>
+          </label>
+          <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
+            What do you want to accomplish? Be specific and realistic.
+          </p>
+          <Textarea
+            id="woop-wish"
+            value={steps.wish}
+            onChange={(e) => updateStep('wish', e.target.value)}
+            placeholder="I want to..."
+            className="bg-white dark:bg-gray-950 min-h-[80px]"
+            data-testid="woop-wish"
+          />
+        </div>
+
+        {/* Outcome */}
+        <div>
+          <label
+            htmlFor="woop-outcome"
+            className="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-1"
+          >
+            O - Outcome
+          </label>
+          <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
+            What&apos;s the best result if you achieve it? How will you feel?
+          </p>
+          <Textarea
+            id="woop-outcome"
+            value={steps.outcome}
+            onChange={(e) => updateStep('outcome', e.target.value)}
+            placeholder="The best outcome would be..."
+            className="bg-white dark:bg-gray-950 min-h-[80px]"
+            data-testid="woop-outcome"
+          />
+        </div>
+
+        {/* Obstacle */}
+        <div>
+          <label
+            htmlFor="woop-obstacle"
+            className="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-1"
+          >
+            O - Obstacle
+          </label>
+          <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
+            What internal obstacle might prevent this? (Your thoughts, feelings, or behaviors)
+          </p>
+          <Textarea
+            id="woop-obstacle"
+            value={steps.obstacle}
+            onChange={(e) => updateStep('obstacle', e.target.value)}
+            placeholder="The main obstacle in me is..."
+            className="bg-white dark:bg-gray-950 min-h-[80px]"
+            data-testid="woop-obstacle"
+          />
+        </div>
+
+        {/* Plan */}
+        <div>
+          <label
+            htmlFor="woop-plan"
+            className="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-1"
+          >
+            P - Plan
+          </label>
+          <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
+            If-then plan: &quot;If [obstacle], then I will [specific action]&quot;
+          </p>
+          <Textarea
+            id="woop-plan"
+            value={steps.plan}
+            onChange={(e) => updateStep('plan', e.target.value)}
+            placeholder="If [obstacle occurs], then I will..."
+            className="bg-white dark:bg-gray-950 min-h-[80px]"
+            data-testid="woop-plan"
+          />
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-2 pt-4 border-t border-blue-200 dark:border-blue-800 mt-4">
+        <Button
+          onClick={handleInsert}
+          disabled={!canSubmit()}
+          className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600"
+          size="sm"
+          data-testid="woop-insert-button"
+        >
+          Add to Journal Entry
+        </Button>
+        <Button
+          onClick={handleClear}
+          disabled={!steps.wish && !steps.outcome && !steps.obstacle && !steps.plan}
+          variant="ghost"
+          size="sm"
+          className="text-blue-700 hover:text-blue-900 hover:bg-blue-100 dark:text-blue-300 dark:hover:text-blue-100 dark:hover:bg-blue-900/50"
+          data-testid="woop-clear-button"
+        >
+          Clear All
+        </Button>
+      </div>
+    </>
+  )
+}
+
+/**
+ * WoopHelper Component (Original with HelperContainer)
+ * Kept for backward compatibility
+ */
+export function WoopHelper({ entryId, userId, onInsert }: WoopHelperProps) {
+  const collapseHelperRef = useRef<(() => void) | null>(null)
+  const [liveRegionMessage, setLiveRegionMessage] = useState('')
+
+  const announce = (message: string) => {
+    setLiveRegionMessage(message)
+    setTimeout(() => setLiveRegionMessage(''), 1000)
+  }
+
+  const handleExpandChange = (isExpanded: boolean) => {
+    if (isExpanded) {
+      announce('WOOP Goal Planning helper expanded. Start with your wish.')
+    } else {
+      announce('WOOP Goal Planning helper collapsed')
+    }
+  }
+
+  return (
+    <>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveRegionMessage}
+      </div>
+
       <HelperContainer
         helperType="woop"
         headerText="Ready to plan a goal?"
@@ -258,115 +391,7 @@ export function WoopHelper({ entryId, userId, onInsert }: WoopHelperProps) {
           learnMoreUrl: "https://woopmylife.org/"
         }}
       >
-        {/* WOOP Form */}
-        <div className="space-y-4">
-          {/* Wish */}
-          <div>
-            <label
-              htmlFor="woop-wish"
-              className="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-1"
-            >
-              W - Wish <span className="text-red-500">*</span>
-            </label>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
-              What do you want to accomplish? Be specific and realistic.
-            </p>
-            <Textarea
-              id="woop-wish"
-              value={steps.wish}
-              onChange={(e) => updateStep('wish', e.target.value)}
-              placeholder="I want to..."
-              className="bg-white dark:bg-gray-950 min-h-[80px]"
-              data-testid="woop-wish"
-            />
-          </div>
-
-          {/* Outcome */}
-          <div>
-            <label
-              htmlFor="woop-outcome"
-              className="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-1"
-            >
-              O - Outcome
-            </label>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
-              What&apos;s the best result if you achieve it? How will you feel?
-            </p>
-            <Textarea
-              id="woop-outcome"
-              value={steps.outcome}
-              onChange={(e) => updateStep('outcome', e.target.value)}
-              placeholder="The best outcome would be..."
-              className="bg-white dark:bg-gray-950 min-h-[80px]"
-              data-testid="woop-outcome"
-            />
-          </div>
-
-          {/* Obstacle */}
-          <div>
-            <label
-              htmlFor="woop-obstacle"
-              className="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-1"
-            >
-              O - Obstacle
-            </label>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
-              What internal obstacle might prevent this? (Your thoughts, feelings, or behaviors)
-            </p>
-            <Textarea
-              id="woop-obstacle"
-              value={steps.obstacle}
-              onChange={(e) => updateStep('obstacle', e.target.value)}
-              placeholder="The main obstacle in me is..."
-              className="bg-white dark:bg-gray-950 min-h-[80px]"
-              data-testid="woop-obstacle"
-            />
-          </div>
-
-          {/* Plan */}
-          <div>
-            <label
-              htmlFor="woop-plan"
-              className="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-1"
-            >
-              P - Plan
-            </label>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
-              If-then plan: &quot;If [obstacle], then I will [specific action]&quot;
-            </p>
-            <Textarea
-              id="woop-plan"
-              value={steps.plan}
-              onChange={(e) => updateStep('plan', e.target.value)}
-              placeholder="If [obstacle occurs], then I will..."
-              className="bg-white dark:bg-gray-950 min-h-[80px]"
-              data-testid="woop-plan"
-            />
-          </div>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-2 pt-4 border-t border-blue-200 dark:border-blue-800 mt-4">
-          <Button
-            onClick={handleInsert}
-            disabled={!canSubmit()}
-            className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600"
-            size="sm"
-            data-testid="woop-insert-button"
-          >
-            Add to Journal Entry
-          </Button>
-          <Button
-            onClick={handleClear}
-            disabled={!steps.wish && !steps.outcome && !steps.obstacle && !steps.plan}
-            variant="ghost"
-            size="sm"
-            className="text-blue-700 hover:text-blue-900 hover:bg-blue-100 dark:text-blue-300 dark:hover:text-blue-100 dark:hover:bg-blue-900/50"
-            data-testid="woop-clear-button"
-          >
-            Clear All
-          </Button>
-        </div>
+        <WoopContent entryId={entryId} userId={userId} onInsert={onInsert} />
       </HelperContainer>
     </>
   )

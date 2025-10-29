@@ -54,13 +54,14 @@ interface LovingKindnessHelperProps {
   onInsert: (text: string) => void
 }
 
-export function LovingKindnessHelper({ entryId, userId, onInsert }: LovingKindnessHelperProps) {
+/**
+ * LovingKindnessContent Component (Content only, no container)
+ * Extracted for use in standalone contexts like NotesPage
+ */
+export function LovingKindnessContent({ entryId, userId, onInsert }: LovingKindnessHelperProps) {
   const [selectedRecipient, setSelectedRecipient] = useState<Recipient | ''>('')
   const [personName, setPersonName] = useState('')
   const [liveRegionMessage, setLiveRegionMessage] = useState('')
-
-  // Ref to access HelperContainer's collapse function
-  const collapseHelperRef = useRef<(() => void) | null>(null)
 
   // Track events for usage logging
   const eventsRef = useRef<HelperEvent[]>([])
@@ -75,21 +76,6 @@ export function LovingKindnessHelper({ entryId, userId, onInsert }: LovingKindne
     setLiveRegionMessage(message)
     // Clear after announcement
     setTimeout(() => setLiveRegionMessage(''), 1000)
-  }
-
-  // Handle expand/collapse from HelperContainer
-  const handleExpandChange = (isExpanded: boolean) => {
-    if (isExpanded) {
-      // Track helper opened event
-      addEvent({
-        type: 'helper_opened',
-        timestamp: new Date().toISOString(),
-        data: { triggerSource: 'manual' }
-      })
-      announce('Loving-Kindness Meditation helper expanded. Choose a recipient for compassion practice.')
-    } else {
-      announce('Loving-Kindness Meditation helper collapsed')
-    }
   }
 
   // Handle recipient selection
@@ -221,32 +207,10 @@ export function LovingKindnessHelper({ entryId, userId, onInsert }: LovingKindne
 
     // Clear events for next usage
     eventsRef.current = []
-
-    // Collapse helper
-    if (collapseHelperRef.current) {
-      collapseHelperRef.current()
-    }
   }
 
   return (
-    <HelperContainer
-      helperType="loving-kindness"
-      headerText="Cultivate compassion"
-      descriptionText="Direct loving-kindness toward yourself or others using traditional metta meditation."
-      variant="pink"
-      onExpandChange={handleExpandChange}
-      collapseRef={collapseHelperRef}
-      showDismiss={false}
-      defaultExpanded={false}
-      testId="loving-kindness"
-      infoContent={{
-        title: "Loving-Kindness Meditation",
-        description: "Traditional Buddhist metta practice for cultivating compassion and positive emotions toward self and others.",
-        effectSize: "d = 0.33 for positive emotions (Galante et al., 2014)",
-        citation: "Galante, J., et al. (2014). Loving-kindness meditation for chronic pain. Journal of Clinical Psychology, 70(9), 794-807.",
-        learnMoreUrl: "https://www.mindful.org/a-guide-to-loving-kindness-meditation/"
-      }}
-    >
+    <>
       {/* Live region for screen reader announcements */}
       <div
         className="sr-only"
@@ -255,6 +219,13 @@ export function LovingKindnessHelper({ entryId, userId, onInsert }: LovingKindne
         aria-atomic="true"
       >
         {liveRegionMessage}
+      </div>
+
+      {/* Description */}
+      <div className="mb-4">
+        <p className="text-gray-700 dark:text-gray-300">
+          Direct loving-kindness toward yourself or others using traditional metta meditation.
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -337,6 +308,62 @@ export function LovingKindnessHelper({ entryId, userId, onInsert }: LovingKindne
           Add to Journal Entry
         </Button>
       </div>
-    </HelperContainer>
+    </>
+  )
+}
+
+/**
+ * LovingKindnessHelper Component (Original with HelperContainer)
+ * Kept for backward compatibility
+ */
+export function LovingKindnessHelper({ entryId, userId, onInsert }: LovingKindnessHelperProps) {
+  const collapseHelperRef = useRef<(() => void) | null>(null)
+  const [liveRegionMessage, setLiveRegionMessage] = useState('')
+
+  const announce = (message: string) => {
+    setLiveRegionMessage(message)
+    setTimeout(() => setLiveRegionMessage(''), 1000)
+  }
+
+  const handleExpandChange = (isExpanded: boolean) => {
+    if (isExpanded) {
+      announce('Loving-Kindness Meditation helper expanded. Choose a recipient for compassion practice.')
+    } else {
+      announce('Loving-Kindness Meditation helper collapsed')
+    }
+  }
+
+  return (
+    <>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveRegionMessage}
+      </div>
+
+      <HelperContainer
+        helperType="loving-kindness"
+        headerText="Cultivate compassion"
+        descriptionText="Direct loving-kindness toward yourself or others using traditional metta meditation."
+        variant="pink"
+        onExpandChange={handleExpandChange}
+        collapseRef={collapseHelperRef}
+        showDismiss={false}
+        defaultExpanded={false}
+        testId="loving-kindness"
+        infoContent={{
+          title: "Loving-Kindness Meditation",
+          description: "Traditional Buddhist metta practice for cultivating compassion and positive emotions toward self and others.",
+          effectSize: "d = 0.33 for positive emotions (Galante et al., 2014)",
+          citation: "Galante, J., et al. (2014). Loving-kindness meditation for chronic pain. Journal of Clinical Psychology, 70(9), 794-807.",
+          learnMoreUrl: "https://www.mindful.org/a-guide-to-loving-kindness-meditation/"
+        }}
+      >
+        <LovingKindnessContent entryId={entryId} userId={userId} onInsert={onInsert} />
+      </HelperContainer>
+    </>
   )
 }
