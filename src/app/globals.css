@@ -243,9 +243,12 @@
 
   /* Highlight styling for edit mode */
   .rich-editor-body mark {
-    background-color: #fef08a; /* yellow-200 */
+    display: inline;
+    background-color: #fef08a !important; /* yellow-200 */
+    color: inherit;
     padding: 0.125rem 0.25rem;
     border-radius: 0.125rem;
+    line-height: inherit;
   }
 
   /* Prose list styling for read-only mode */
@@ -283,9 +286,12 @@
 
   /* Highlight styling for read-only mode */
   .prose mark {
-    background-color: #fef08a; /* yellow-200 */
+    display: inline;
+    background-color: #fef08a !important; /* yellow-200 */
+    color: inherit;
     padding: 0.125rem 0.25rem;
     border-radius: 0.125rem;
+    line-height: inherit;
   }
 
   /* Accessibility: Respect user's motion preferences */
