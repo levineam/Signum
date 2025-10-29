@@ -20,6 +20,7 @@ import { HelperDialogContent } from '@/components/journal/helpers/HelperDialogCo
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { HelperType } from '@/types/helper'
 import { HELPER_TILES } from '@/constants/helperTitles'
+import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskEditDialog } from '@/components/tasks/TaskEditDialog'
 
@@ -55,6 +56,7 @@ function getLocalDateString(): string {
 export function JournalStream() {
   const router = useRouter()
   const { user, session } = useAuth()
+  const isDOMPurifyReady = useDOMPurifyReady()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
@@ -1019,15 +1021,16 @@ export function JournalStream() {
                 ) : (
                   <div className="min-h-[100px]">
                     {entry.content ? (
-                      <div
-                        className="text-base leading-relaxed prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: entry.content }}
-                        onClick={(e) => {
-                          // Handle link clicks in read-only mode
-                          const target = e.target as HTMLElement
+                      isDOMPurifyReady ? (
+                        <div
+                          className="text-base leading-relaxed prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.content) }}
+                          onClick={(e) => {
+                            // Handle link clicks in read-only mode
+                            const target = e.target as HTMLElement
 
-                          // Find the closest link element (in case click is on nested content)
-                          const linkElement = target.closest('a[data-note-id]') as HTMLElement
+                            // Find the closest link element (in case click is on nested content)
+                            const linkElement = target.closest('a[data-note-id]') as HTMLElement
 
                           console.log('🖱️ Read-only click:', {
                             targetTag: target.tagName,
@@ -1047,6 +1050,9 @@ export function JournalStream() {
                           }
                         }}
                       />
+                      ) : (
+                        <div className="text-muted-foreground">Loading content...</div>
+                      )
                     ) : (
                       <p className="text-muted-foreground italic">
                         {isTodayEntry ? "Click here to start today's entry..." : "Click to add to this day's entry..."}

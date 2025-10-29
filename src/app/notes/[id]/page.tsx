@@ -15,6 +15,9 @@ import { NoteViewer } from '@/components/notes/NoteViewer'
 import { createLink } from '@/lib/supabase/notes'
 import { convertTextToLink, captureSelectionMetadata } from '@/utils/textToLink'
 import { toast } from 'sonner'
+import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
+import { Sidebar } from '@/components/layout/Sidebar'
+import { AppHeader } from '@/components/layout/AppHeader'
 
 interface AimsContent {
   todos: string
@@ -24,6 +27,7 @@ interface AimsContent {
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { user } = useAuth()
+  const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
   const [content, setContent] = useState('')
   const [aimsContent, setAimsContent] = useState<AimsContent>({ todos: '', goals: '' })
@@ -32,6 +36,27 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const editorRef = useRef<HTMLElement | null>(null)
   const selectionMetadataRef = useRef<ReturnType<typeof captureSelectionMetadata> | null>(null)
+
+  // Refs to track latest values for cleanup effects
+  const noteRef = useRef<Note | null>(null)
+  const userRef = useRef(user)
+  const contentRef = useRef(content)
+
+  // Sync refs with latest state values
+  useEffect(() => {
+    noteRef.current = note
+  }, [note])
+
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
+
+  useEffect(() => {
+    contentRef.current = content
+  }, [content])
+
+  // Sidebar state
+  const [activeSection, setActiveSection] = useState('notes')
 
   // Make Note functionality
   const [showNoteModal, setShowNoteModal] = useState(false)
@@ -73,6 +98,60 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     }
     loadNote()
   }, [params, user])
+
+  // Cleanup: Flush pending autosave before unmount
+  // Use empty dependency array so cleanup only runs on unmount, not on every keystroke
+  useEffect(() => {
+    return () => {
+      // If there's a pending save when component unmounts, execute it immediately
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+
+        // Flush the save immediately if there's unsaved content
+        // Access latest values via refs (not closure) to get current state at cleanup time
+        const latestNote = noteRef.current
+        const latestUser = userRef.current
+
+        if (latestNote && latestUser) {
+          // Get the latest content from the specific editor ref (not generic querySelector)
+          // This ensures we read from the correct editor if multiple exist (e.g., NoteViewer modal)
+          const currentContent = editorRef.current?.innerHTML || contentRef.current
+          if (currentContent !== latestNote.content) {
+            updateNote(latestNote.id, { content: currentContent }, latestUser.id).catch(error => {
+              console.error('Error flushing autosave on unmount:', error)
+            })
+          }
+        }
+      }
+    }
+  }, []) // Empty array - cleanup only runs on unmount
+
+  // Handle browser close/navigation: Flush pending save before page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // If there's a pending save timeout, clear it and save immediately
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+
+        // Access latest values via refs (not closure) to get current state at unload time
+        const latestNote = noteRef.current
+        const latestUser = userRef.current
+
+        // Get the latest content from the specific editor ref (not generic querySelector)
+        // This ensures we read from the correct editor if multiple exist (e.g., NoteViewer modal)
+        const currentContent = editorRef.current?.innerHTML || contentRef.current
+        if (latestNote && latestUser && currentContent !== latestNote.content) {
+          // Attempt to save before page unloads
+          updateNote(latestNote.id, { content: currentContent }, latestUser.id).catch(error => {
+            console.error('Error flushing autosave on page unload:', error)
+          })
+        }
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, []) // Empty array - register once on mount
 
   // Auto-save with debounce (like JournalStream.tsx:266-282)
   const handleContentChange = (newContent: string) => {
@@ -246,6 +325,19 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     setViewingNoteId(null)
   }
 
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section)
+    if (section === 'journal') {
+      router.push('/')
+    } else if (section === 'ontology') {
+      router.push('/ontology')
+    } else if (section === 'notes') {
+      router.push('/notes')
+    } else {
+      router.push('/')
+    }
+  }
+
   const handleBack = () => {
     // Return to Ontology page for ontology notes, Notes page for others
     const noteType = 'type' in note! ? (note as { type: string }).type : note!.noteType
@@ -261,25 +353,45 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
 
   if (isLoading) {
     return (
-      <div className="max-w-3xl mx-auto p-6">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen bg-background">
+        <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
+        <main className="lg:pl-64">
+          <div className="flex min-h-screen flex-col">
+            <AppHeader />
+            <div className="flex-1">
+              <div className="max-w-3xl mx-auto p-6">
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
 
   if (!note) {
     return (
-      <div className="max-w-3xl mx-auto p-6">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.push('/notes')} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Notes
-          </Button>
-        </div>
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-semibold mb-2">Note Not Found</h2>
-          <p className="text-muted-foreground">This note could not be found.</p>
-        </div>
+      <div className="min-h-screen bg-background">
+        <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
+        <main className="lg:pl-64">
+          <div className="flex min-h-screen flex-col">
+            <AppHeader />
+            <div className="flex-1">
+              <div className="max-w-3xl mx-auto p-6">
+                <div className="mb-6">
+                  <Button variant="ghost" onClick={() => router.push('/notes')} className="gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Notes
+                  </Button>
+                </div>
+                <div className="text-center py-12">
+                  <h2 className="text-2xl font-semibold mb-2">Note Not Found</h2>
+                  <p className="text-muted-foreground">This note could not be found.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
@@ -292,7 +404,13 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const backButtonLabel = isOntologyNote ? 'Back to Ontology' : 'Back to Notes'
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div className="min-h-screen bg-background">
+      <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
+      <main className="lg:pl-64">
+        <div className="flex min-h-screen flex-col">
+          <AppHeader />
+          <div className="flex-1">
+            <div className="max-w-3xl mx-auto p-6">
       {/* Header with Back Button */}
       <div className="mb-6">
         <Button variant="ghost" onClick={handleBack} className="gap-2">
@@ -339,24 +457,28 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
               ) : (
                 <div className="min-h-[100px]">
                   {content ? (
-                    <div
-                      className="text-base leading-relaxed prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: content }}
-                      onClick={(e) => {
-                        // Handle link clicks in read-only mode
-                        const target = e.target as HTMLElement
-                        const linkElement = target.closest('a[data-note-id]') as HTMLElement
+                    isDOMPurifyReady ? (
+                      <div
+                        className="text-base leading-relaxed prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
+                        onClick={(e) => {
+                          // Handle link clicks in read-only mode
+                          const target = e.target as HTMLElement
+                          const linkElement = target.closest('a[data-note-id]') as HTMLElement
 
-                        if (linkElement) {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          const noteId = linkElement.getAttribute('data-note-id')
-                          if (noteId) {
-                            handleLinkClick(noteId)
+                          if (linkElement) {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const noteId = linkElement.getAttribute('data-note-id')
+                            if (noteId) {
+                              handleLinkClick(noteId)
+                            }
                           }
-                        }
-                      }}
-                    />
+                        }}
+                      />
+                    ) : (
+                      <div className="text-muted-foreground">Loading content...</div>
+                    )
                   ) : (
                     <p className="text-muted-foreground italic">
                       Click here to start writing...
@@ -390,6 +512,10 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
         onClose={handleCloseNoteViewer}
         noteId={viewingNoteId}
       />
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   )
 }

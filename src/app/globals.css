@@ -212,6 +212,68 @@
     border-width: 0;
   }
 
+  /* Rich text editor list styling */
+  /* Override Tailwind's preflight reset to show bullets/numbers in contentEditable */
+  .rich-editor-body ul {
+    list-style: disc;
+    margin-left: 1.5rem;
+    padding-left: 1.5rem;
+  }
+
+  .rich-editor-body ol {
+    list-style: decimal;
+    margin-left: 1.5rem;
+    padding-left: 1.5rem;
+  }
+
+  .rich-editor-body li {
+    margin-bottom: 0.25rem;
+  }
+
+  /* Blockquote styling for edit mode */
+  .rich-editor-body blockquote {
+    border-left: 4px solid hsl(var(--border));
+    padding-left: 1rem;
+    margin-left: 0;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-style: italic;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Prose list styling for read-only mode */
+  /* Apply same list styles to prose class used in JournalStream read-only view */
+  .prose ul {
+    list-style: disc;
+    margin-left: 1.5rem;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .prose ol {
+    list-style: decimal;
+    margin-left: 1.5rem;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .prose li {
+    margin-bottom: 0.25rem;
+  }
+
+  /* Blockquote styling for read-only mode */
+  .prose blockquote {
+    border-left: 4px solid hsl(var(--border));
+    padding-left: 1rem;
+    margin-left: 0;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-style: italic;
+    color: hsl(var(--muted-foreground));
+  }
+
   /* Accessibility: Respect user's motion preferences */
   @media (prefers-reduced-motion: reduce) {
     .expanded-content {

@@ -10,7 +10,7 @@
  *   TEST_URL=https://your-preview.vercel.app npx playwright test story-1.2.1
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 // Use environment variable or skip tests
 const TEST_URL = process.env.TEST_URL || process.env.PLAYWRIGHT_BASE_URL;
@@ -29,7 +29,7 @@ if (skipTests) {
 }
 
 // Helper to authenticate user
-async function authenticateUser(page: any) {
+async function authenticateUser(page: Page) {
   if (!TEST_URL) {
     throw new Error('TEST_URL is not set');
   }
@@ -54,7 +54,7 @@ async function authenticateUser(page: any) {
 }
 
 // Helper to get journal editor and wait for it to be ready
-async function getJournalEditor(page: any) {
+async function getJournalEditor(page: Page) {
   // Wait for journal entries to load
   await page.waitForSelector('[data-entry-id]', { timeout: 10000 });
 
