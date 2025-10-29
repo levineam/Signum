@@ -26,7 +26,7 @@ import matter from 'gray-matter';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
-import rehypeSanitize from 'rehype-sanitize';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import remarkFrontmatter from 'remark-frontmatter';
 
@@ -211,7 +211,9 @@ export class ObsidianParser {
       .use(remarkRehype, { allowDangerousHtml: true }) // Convert to rehype (HTML AST), allow <mark> tags
       .use(rehypeSanitize, {
         // Extend default schema to allow mark tag for highlights
-        tagNames: ['mark'],
+        // Must spread defaultSchema to preserve all safe tags (p, h1, ul, li, a, etc.)
+        ...defaultSchema,
+        tagNames: [...(defaultSchema.tagNames || []), 'mark'],
       }) // Sanitize HTML with safe defaults + mark tag
       .use(rehypeStringify) // Convert back to HTML string
       .process(processedMarkdown);
