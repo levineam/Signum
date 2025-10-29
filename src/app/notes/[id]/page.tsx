@@ -16,12 +16,20 @@ import { createLink } from '@/lib/supabase/notes'
 import { convertTextToLink, captureSelectionMetadata } from '@/utils/textToLink'
 import { toast } from 'sonner'
 import { sanitizeHtml } from '@/utils/sanitizeHtml'
+import { Sidebar } from '@/components/layout/Sidebar'
+import { AppHeader } from '@/components/layout/AppHeader'
+
+interface AimsContent {
+  todos: string
+  goals: string
+}
 
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { user } = useAuth()
   const [note, setNote] = useState<Note | null>(null)
   const [content, setContent] = useState('')
+  const [aimsContent, setAimsContent] = useState<AimsContent>({ todos: '', goals: '' })
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -46,6 +54,9 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     contentRef.current = content
   }, [content])
 
+  // Sidebar state
+  const [activeSection, setActiveSection] = useState('notes')
+
   // Make Note functionality
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [selectedText, setSelectedText] = useState('')
@@ -68,8 +79,19 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
 
       if (loadedNote) {
         setNote(loadedNote)
-        // Set content for all note types
-        setContent(loadedNote.content)
+
+        // Support both old (type) and new (noteType) field names during migration
+        const noteType = 'type' in loadedNote ? (loadedNote as { type: string }).type : loadedNote.noteType
+        if (noteType === 'aims' || noteType === 'ontology-aim') {
+          try {
+            const parsed = JSON.parse(loadedNote.content)
+            setAimsContent(parsed)
+          } catch {
+            setAimsContent({ todos: '', goals: '' })
+          }
+        } else {
+          setContent(loadedNote.content)
+        }
       }
       setIsLoading(false)
     }
@@ -302,6 +324,19 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     setViewingNoteId(null)
   }
 
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section)
+    if (section === 'journal') {
+      router.push('/')
+    } else if (section === 'ontology') {
+      router.push('/ontology')
+    } else if (section === 'notes') {
+      router.push('/notes')
+    } else {
+      router.push('/')
+    }
+  }
+
   const handleBack = () => {
     // Return to Ontology page for ontology notes, Notes page for others
     const noteType = 'type' in note! ? (note as { type: string }).type : note!.noteType
@@ -317,25 +352,45 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
 
   if (isLoading) {
     return (
-      <div className="max-w-3xl mx-auto p-6">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen bg-background">
+        <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
+        <main className="lg:pl-64">
+          <div className="flex min-h-screen flex-col">
+            <AppHeader />
+            <div className="flex-1">
+              <div className="max-w-3xl mx-auto p-6">
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
 
   if (!note) {
     return (
-      <div className="max-w-3xl mx-auto p-6">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.push('/notes')} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Notes
-          </Button>
-        </div>
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-semibold mb-2">Note Not Found</h2>
-          <p className="text-muted-foreground">This note could not be found.</p>
-        </div>
+      <div className="min-h-screen bg-background">
+        <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
+        <main className="lg:pl-64">
+          <div className="flex min-h-screen flex-col">
+            <AppHeader />
+            <div className="flex-1">
+              <div className="max-w-3xl mx-auto p-6">
+                <div className="mb-6">
+                  <Button variant="ghost" onClick={() => router.push('/notes')} className="gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Notes
+                  </Button>
+                </div>
+                <div className="text-center py-12">
+                  <h2 className="text-2xl font-semibold mb-2">Note Not Found</h2>
+                  <p className="text-muted-foreground">This note could not be found.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
@@ -348,7 +403,13 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const backButtonLabel = isOntologyNote ? 'Back to Ontology' : 'Back to Notes'
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div className="min-h-screen bg-background">
+      <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
+      <main className="lg:pl-64">
+        <div className="flex min-h-screen flex-col">
+          <AppHeader />
+          <div className="flex-1">
+            <div className="max-w-3xl mx-auto p-6">
       {/* Header with Back Button */}
       <div className="mb-6">
         <Button variant="ghost" onClick={handleBack} className="gap-2">
@@ -446,6 +507,10 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
         onClose={handleCloseNoteViewer}
         noteId={viewingNoteId}
       />
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   )
 }
