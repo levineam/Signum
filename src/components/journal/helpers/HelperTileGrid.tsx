@@ -62,7 +62,6 @@ export function HelperTileGrid({
 
   // Determine which helpers to show based on expanded state
   const visibleHelpers = isExpanded ? helperTypes : helperTypes.slice(0, 3)
-  const hiddenCount = helperTypes.length - visibleHelpers.length
 
   return (
     <div className={cn('mb-6', className)}>
