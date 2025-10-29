@@ -161,6 +161,7 @@ export function HelperTileGrid({
           onClick={() => setIsExpanded(!isExpanded)}
           aria-expanded={isExpanded}
           aria-controls="helper-tile-grid"
+          data-helper-toggle
           className={cn(
             'mt-4 mx-auto flex items-center gap-2',
             'text-sm text-muted-foreground hover:text-foreground',
