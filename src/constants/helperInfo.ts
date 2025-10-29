@@ -89,16 +89,6 @@ export const HELPER_INFO: Record<HelperType, HelperResearchInfo> = {
     learnMoreUrl: 'https://psycnet.apa.org/record/2007-01113-000',
   },
 
-  pmr: {
-    title: 'Progressive Muscle Relaxation',
-    description:
-      "Edmund Jacobson's evidence-based technique for reducing physical tension and anxiety through systematic muscle relaxation.",
-    effectSize: 'd = 0.38 for anxiety reduction (Manzoni et al., 2008)',
-    citation:
-      'Manzoni, G. M., et al. (2008). Relaxation training for anxiety: A ten-years systematic review. BMC Psychiatry, 8(1), 41.',
-    learnMoreUrl: 'https://www.apa.org/topics/mindfulness/meditation-relaxation',
-  },
-
   'loving-kindness': {
     title: 'Loving-Kindness Meditation',
     description:

@@ -32,7 +32,6 @@ const HELPER_VARIANTS: Record<HelperType, string> = {
   woop: 'from-orange-50 to-amber-50 border-orange-200 hover:shadow-orange-100 dark:from-orange-950/30 dark:to-amber-950/30 dark:border-orange-800',
   'best-possible-self': 'from-yellow-50 to-lime-50 border-yellow-200 hover:shadow-yellow-100 dark:from-yellow-950/30 dark:to-lime-950/30 dark:border-yellow-800',
   savoring: 'from-pink-50 to-rose-50 border-pink-200 hover:shadow-pink-100 dark:from-pink-950/30 dark:to-rose-950/30 dark:border-pink-800',
-  pmr: 'from-cyan-50 to-teal-50 border-cyan-200 hover:shadow-cyan-100 dark:from-cyan-950/30 dark:to-teal-950/30 dark:border-cyan-800',
   'loving-kindness': 'from-rose-50 to-pink-50 border-rose-200 hover:shadow-rose-100 dark:from-rose-950/30 dark:to-pink-950/30 dark:border-rose-800',
 }
 

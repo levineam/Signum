@@ -17,7 +17,6 @@ import { SelfCompassionContent } from './SelfCompassionHelper'
 import { WoopContent } from './WoopHelper'
 import { BestPossibleSelfContent } from './BestPossibleSelfHelper'
 import { SavoringContent } from './SavoringHelper'
-import { PMRContent } from './ProgressiveMuscleRelaxationHelper'
 import { LovingKindnessContent } from './LovingKindnessHelper'
 
 interface HelperDialogContentProps {
@@ -111,15 +110,6 @@ export function HelperDialogContent({
     case 'savoring':
       return (
         <SavoringContent
-          entryId={entryId}
-          userId={userId}
-          onInsert={handleInsert}
-        />
-      )
-
-    case 'pmr':
-      return (
-        <PMRContent
           entryId={entryId}
           userId={userId}
           onInsert={handleInsert}

@@ -61,12 +61,6 @@ export const HELPER_TILES: Record<HelperType, HelperTileData> = {
     fullTitle: 'Savoring Practice',
     icon: '🌸',
   },
-  pmr: {
-    shortTitle: 'Muscle Relaxation',
-    description: 'Release tension with guided relaxation',
-    fullTitle: 'Progressive Muscle Relaxation',
-    icon: '🧘',
-  },
   'loving-kindness': {
     shortTitle: 'Loving-Kindness',
     description: 'Cultivate compassion for yourself and others',

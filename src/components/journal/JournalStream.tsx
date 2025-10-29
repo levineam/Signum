@@ -956,7 +956,6 @@ export function JournalStream() {
                     'woop',
                     'best-possible-self',
                     'savoring',
-                    'pmr',
                     'loving-kindness',
                   ]}
                   onTileClick={(helperType) => {
