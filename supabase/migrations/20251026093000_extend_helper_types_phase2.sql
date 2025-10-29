@@ -1,8 +1,9 @@
--- Migration: Extend helper_usage.helper_type with remaining helpers (Stories 2.5.9–2.5.13)
+-- Migration: Extend helper_usage.helper_type with remaining helpers (Stories 2.5.9–2.5.12)
 -- Stories: 2.5.9 Best Possible Self, 2.5.10 Savoring, 2.5.11 Progressive Muscle Relaxation,
---          2.5.12 Loving-Kindness, 2.5.13 Mental Contrasting
+--          2.5.12 Loving-Kindness
 -- Created: 2025-10-26
 -- Description: Adds remaining helper types required for the journaling helpers roadmap.
+-- Note: Mental Contrasting (originally Story 2.5.13) was deemed redundant and not implemented.
 
 -- ============================================================================
 -- SAFETY CHECKS
@@ -35,14 +36,13 @@ ADD CONSTRAINT valid_helper_type CHECK (
     'best-possible-self',
     'savoring',
     'pmr',
-    'loving-kindness',
-    'mental-contrasting'
+    'loving-kindness'
   )
 );
 
 -- Refresh column comment to reflect expanded types
 COMMENT ON COLUMN helper_usage.helper_type IS
-  'Type of helper used (cbt-distortions, gentle-prompt, gratitude, values-affirmation, self-compassion, woop, best-possible-self, savoring, pmr, loving-kindness, mental-contrasting)';
+  'Type of helper used (cbt-distortions, gentle-prompt, gratitude, values-affirmation, self-compassion, woop, best-possible-self, savoring, pmr, loving-kindness)';
 
 -- ============================================================================
 -- ROLLBACK INSTRUCTIONS
