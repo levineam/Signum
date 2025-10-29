@@ -947,56 +947,25 @@ export function JournalStream() {
 
               {/* Helpers (only on today's entry) - Story 2.8: Tile-based UI */}
               {isTodayEntry && user && (
-                <>
-                  <HelperTileGrid
-                    helperTypes={[
-                      'cbt-distortions',
-                      'gratitude',
-                      'values-affirmation',
-                      'self-compassion',
-                      'woop',
-                      'best-possible-self',
-                      'savoring',
-                      'pmr',
-                      'loving-kindness',
-                    ]}
-                    onTileClick={(helperType) => {
-                      setActiveHelper(helperType)
-                      setActiveEntryId(entry.id)
-                      setActiveHelperMode('use')
-                    }}
-                    onInfoClick={handleInfoClick}
-                  />
-
-                  {/* Story 2.9: Render helper in dialog (info or use mode) */}
-                  {activeHelper && (
-                    <Dialog open={true} onOpenChange={(open) => !open && handleHelperClose()}>
-                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                        {activeHelperMode === 'info' ? (
-                          <>
-                            <DialogHeader>
-                              <DialogTitle>{HELPER_TILES[activeHelper].fullTitle}</DialogTitle>
-                            </DialogHeader>
-                            <HelperInfoDialog helperType={activeHelper} />
-                          </>
-                        ) : activeHelperMode === 'use' && activeEntryId === entry.id ? (
-                          <>
-                            <DialogHeader>
-                              <DialogTitle>{HELPER_TILES[activeHelper].fullTitle}</DialogTitle>
-                            </DialogHeader>
-                            <HelperDialogContent
-                              helperType={activeHelper}
-                              entryId={entry.id}
-                              userId={user.id}
-                              onInsert={(helperText) => handleHelperInsertion(entry.id, helperText)}
-                              onClose={handleHelperClose}
-                            />
-                          </>
-                        ) : null}
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                </>
+                <HelperTileGrid
+                  helperTypes={[
+                    'cbt-distortions',
+                    'gratitude',
+                    'values-affirmation',
+                    'self-compassion',
+                    'woop',
+                    'best-possible-self',
+                    'savoring',
+                    'pmr',
+                    'loving-kindness',
+                  ]}
+                  onTileClick={(helperType) => {
+                    setActiveHelper(helperType)
+                    setActiveEntryId(entry.id)
+                    setActiveHelperMode('use')
+                  }}
+                  onInfoClick={handleInfoClick}
+                />
               )}
 
               <div
@@ -1252,6 +1221,35 @@ export function JournalStream() {
           initialDueAt={editingTask.dueAt}
           onSave={handleTaskSave}
         />
+      )}
+
+      {/* Story 2.9: Helper Dialog (rendered once, outside entry loop) */}
+      {activeHelper && activeEntryId && user && (
+        <Dialog open={true} onOpenChange={(open) => !open && handleHelperClose()}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            {activeHelperMode === 'info' ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{HELPER_TILES[activeHelper].fullTitle}</DialogTitle>
+                </DialogHeader>
+                <HelperInfoDialog helperType={activeHelper} />
+              </>
+            ) : activeHelperMode === 'use' ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{HELPER_TILES[activeHelper].fullTitle}</DialogTitle>
+                </DialogHeader>
+                <HelperDialogContent
+                  helperType={activeHelper}
+                  entryId={activeEntryId}
+                  userId={user.id}
+                  onInsert={(helperText) => handleHelperInsertion(activeEntryId, helperText)}
+                  onClose={handleHelperClose}
+                />
+              </>
+            ) : null}
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )
