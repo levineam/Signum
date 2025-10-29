@@ -60,13 +60,14 @@ so that I can see all available helpers at once without excessive scrolling.
    - Touch-friendly (>=44x44px targets)
 
 3. **Title & Description Pairs**
-   - "Thinking Traps" + "Identify unhelpful thought patterns" (icon: 🧠)
-   - "3 Good Things" + "Reflect on what went well today" (icon: ✨)
-   - "Values" + "Clarify what matters most to you" (icon: 🎯)
-   - "Self-Compassion" + "Give yourself kindness when struggling" (icon: 💚)
-   - "WOOP Goals" + "Plan goals with evidence-based strategy" (icon: 🎯)
-   - "Best Possible Self" + "Envision your ideal future" (icon: 🌟)
+   - "Bad Thinking" + "Identify unhelpful thought patterns" (icon: 🧠)
+   - "Gratitude" + "Reflect on what went well today" (icon: ✨)
+   - "Values Affirmation" + "Clarify what matters most to you" (icon: 🎯)
+   - "Self Compassion" + "Give yourself kindness when struggling" (icon: 💚)
+   - "Goal Planning" + "Plan goals with evidence-based strategy" (icon: 🚀)
+   - "Best Self" + "Envision your ideal future" (icon: 🌟)
    - "Savoring" + "Amplify positive experiences" (icon: 🌸)
+   - "Loving Kindness" + "Cultivate compassion for yourself and others" (icon: 💝)
 
 4. **Sheet/Dialog Implementation**
    - **Desktop (>=lg)**: Sheet component (right-side panel) keeps journal context visible
@@ -228,37 +229,37 @@ export interface HelperTileData {
 
 export const HELPER_TILES: Record<HelperType, HelperTileData> = {
   'cbt-distortions': {
-    shortTitle: 'Thinking Traps',
+    shortTitle: 'Bad Thinking',
     description: 'Identify unhelpful thought patterns',
     fullTitle: 'Cognitive Distortions',
     icon: '🧠',
   },
   'gratitude': {
-    shortTitle: '3 Good Things',
+    shortTitle: 'Gratitude',
     description: 'Reflect on what went well today',
     fullTitle: 'Gratitude Practice',
     icon: '✨',
   },
   'values-affirmation': {
-    shortTitle: 'Values',
+    shortTitle: 'Values Affirmation',
     description: 'Clarify what matters most to you',
     fullTitle: 'Values Affirmation',
     icon: '🎯',
   },
   'self-compassion': {
-    shortTitle: 'Self-Compassion',
+    shortTitle: 'Self Compassion',
     description: 'Give yourself kindness when struggling',
     fullTitle: 'Self-Compassion Break',
     icon: '💚',
   },
   'woop': {
-    shortTitle: 'WOOP Goals',
+    shortTitle: 'Goal Planning',
     description: 'Plan goals with evidence-based strategy',
     fullTitle: 'WOOP Goal Planning',
-    icon: '🎯',
+    icon: '🚀',
   },
   'best-possible-self': {
-    shortTitle: 'Best Possible Self',
+    shortTitle: 'Best Self',
     description: 'Envision your ideal future',
     fullTitle: 'Best Possible Self Exercise',
     icon: '🌟',
@@ -268,6 +269,12 @@ export const HELPER_TILES: Record<HelperType, HelperTileData> = {
     description: 'Amplify positive experiences',
     fullTitle: 'Savoring Practice',
     icon: '🌸',
+  },
+  'loving-kindness': {
+    shortTitle: 'Loving Kindness',
+    description: 'Cultivate compassion for yourself and others',
+    fullTitle: 'Loving-Kindness Meditation',
+    icon: '💝',
   },
 }
 ```

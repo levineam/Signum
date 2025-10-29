@@ -20,19 +20,19 @@ export interface HelperTileData {
 
 export const HELPER_TILES: Record<HelperType, HelperTileData> = {
   'cbt-distortions': {
-    shortTitle: 'Thinking Traps',
+    shortTitle: 'Bad Thinking',
     description: 'Identify unhelpful thought patterns',
     fullTitle: 'Cognitive Distortions',
     icon: '🧠',
   },
   gratitude: {
-    shortTitle: '3 Good Things',
+    shortTitle: 'Gratitude',
     description: 'Reflect on what went well today',
     fullTitle: 'Gratitude Practice',
     icon: '✨',
   },
   'values-affirmation': {
-    shortTitle: 'Values',
+    shortTitle: 'Values Affirmation',
     description: 'Clarify what matters most to you',
     fullTitle: 'Values Affirmation',
     icon: '🎯',
@@ -44,13 +44,13 @@ export const HELPER_TILES: Record<HelperType, HelperTileData> = {
     icon: '💚',
   },
   woop: {
-    shortTitle: 'WOOP Goals',
+    shortTitle: 'Goal Planning',
     description: 'Plan goals with evidence-based strategy',
     fullTitle: 'WOOP Goal Planning',
     icon: '🚀',
   },
   'best-possible-self': {
-    shortTitle: 'Best Possible Self',
+    shortTitle: 'Best Self',
     description: 'Envision your ideal future',
     fullTitle: 'Best Possible Self Exercise',
     icon: '🌟',
@@ -62,7 +62,7 @@ export const HELPER_TILES: Record<HelperType, HelperTileData> = {
     icon: '🌸',
   },
   'loving-kindness': {
-    shortTitle: 'Loving-Kindness',
+    shortTitle: 'Loving Kindness',
     description: 'Cultivate compassion for yourself and others',
     fullTitle: 'Loving-Kindness Meditation',
     icon: '💝',
