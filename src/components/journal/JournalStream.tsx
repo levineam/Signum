@@ -238,6 +238,13 @@ export function JournalStream() {
         setIsLoading(false)
         console.log('[JournalStream] Load complete')
 
+        // Auto-enter edit mode for today's entry
+        const todayEntryInList = initialEntries.find(e => e.date === today)
+        if (todayEntryInList) {
+          console.log('[JournalStream] Auto-entering edit mode for today\'s entry')
+          setEditingEntryId(todayEntryInList.id)
+        }
+
         // Phase 2: Link rehydration - run after DOM updates
         // Use setTimeout to ensure entries are rendered in DOM before rehydration
         setTimeout(async () => {
