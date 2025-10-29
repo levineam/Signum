@@ -52,7 +52,10 @@ export function getSupabaseAdmin(): SupabaseClient {
 // @deprecated Use getSupabaseAdmin() instead
 export const supabaseAdmin = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
+    const client = getSupabaseAdmin()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (getSupabaseAdmin() as any)[prop]
+    const value = (client as any)[prop]
+    // Bind methods to preserve 'this' context
+    return typeof value === 'function' ? value.bind(client) : value
   }
 })
