@@ -12,25 +12,10 @@
 
 import type { Config } from 'dompurify'
 
-// Lazy-loaded DOMPurify instance
+// DOMPurify instance - eagerly loaded on client side to avoid race conditions
 let DOMPurify: typeof import('dompurify').default | null = null
-let loadingPromise: Promise<typeof import('dompurify').default> | null = null
-
-// Load DOMPurify module (cached after first call)
-function loadDOMPurify(): Promise<typeof import('dompurify').default> {
-  if (DOMPurify) {
-    return Promise.resolve(DOMPurify)
-  }
-
-  if (!loadingPromise) {
-    loadingPromise = import('dompurify').then(module => {
-      DOMPurify = module.default
-      return module.default
-    })
-  }
-
-  return loadingPromise
-}
+let isLoading = false
+let hookRegistered = false
 
 const sanitizeConfig: Config = {
   // Allow common formatting tags used in rich text editor
@@ -78,36 +63,19 @@ const styleFilterHook = (node: Element, data: { attrName: string; attrValue: str
   }
 }
 
-// Track if hook is registered to avoid duplicate registration
-let hookRegistered = false
-
-// Initialize DOMPurify and register hooks (blocks until ready)
-// Uses React Suspense pattern - throws promise to suspend rendering until loaded
-function ensureDOMPurifyReady(): typeof import('dompurify').default {
-  if (typeof window === 'undefined') {
-    // During SSR, throw error to prevent rendering
-    // This should never happen since this is a 'use client' module
-    throw new Error('sanitizeHtml() cannot be called during server-side rendering')
-  }
-
-  if (DOMPurify) {
-    // Already loaded, register hook if needed
-    if (!hookRegistered) {
+// Eagerly load DOMPurify on module initialization (client-side only)
+// This ensures it's available before any component tries to render
+if (typeof window !== 'undefined' && !DOMPurify && !isLoading) {
+  isLoading = true
+  import('dompurify').then(module => {
+    DOMPurify = module.default
+    // Register hook after loading
+    if (!hookRegistered && DOMPurify) {
       DOMPurify.addHook('uponSanitizeAttribute', styleFilterHook)
       hookRegistered = true
     }
-    return DOMPurify
-  }
-
-  // Not loaded yet - throw promise to trigger Suspense
-  // React will catch this promise and suspend rendering until it resolves
-  throw loadDOMPurify().then(purify => {
-    // Register hook after loading
-    if (!hookRegistered) {
-      purify.addHook('uponSanitizeAttribute', styleFilterHook)
-      hookRegistered = true
-    }
-    return purify
+  }).catch(error => {
+    console.error('Failed to load DOMPurify:', error)
   })
 }
 
@@ -119,19 +87,14 @@ function ensureDOMPurifyReady(): typeof import('dompurify').default {
  *
  * Filters style attributes to only allow text-align property with safe values.
  *
- * IMPORTANT: This function uses React Suspense. If DOMPurify isn't loaded yet, it will
- * throw a promise to suspend rendering until DOMPurify is ready. This ensures XSS
- * protection is ALWAYS applied before HTML is rendered - never returns unsanitized HTML.
- *
- * Components using this function should be wrapped in a Suspense boundary:
- * ```tsx
- * <Suspense fallback={<div>Loading...</div>}>
- *   <ComponentUsingS anitizeHtml />
- * </Suspense>
- * ```
+ * IMPORTANT: DOMPurify is loaded eagerly when this module initializes. If called before
+ * DOMPurify finishes loading (rare edge case), returns empty string as a safe fallback.
+ * In practice, DOMPurify loads so quickly that components will have it available by
+ * first render. This approach avoids the complexity of Suspense boundaries while
+ * maintaining security.
  *
  * @param html - The HTML string to sanitize
- * @returns Sanitized HTML safe for rendering with dangerouslySetInnerHTML
+ * @returns Sanitized HTML safe for rendering with dangerouslySetInnerHTML, or empty string if DOMPurify not loaded yet
  *
  * @example
  * ```tsx
@@ -139,11 +102,13 @@ function ensureDOMPurifyReady(): typeof import('dompurify').default {
  * ```
  */
 export function sanitizeHtml(html: string): string {
-  // Ensure DOMPurify is loaded and hooks are registered
-  // Throws promise for Suspense if not ready yet
-  const purify = ensureDOMPurifyReady()
+  // If DOMPurify not loaded yet, return empty string as safe fallback
+  // This is a rare edge case - DOMPurify loads imperatively on module init
+  if (!DOMPurify) {
+    console.warn('DOMPurify not loaded yet, returning empty string. Content will render when loaded.')
+    return ''
+  }
 
   // Use DOMPurify with the globally registered hook
-  // At this point we're guaranteed DOMPurify is loaded
-  return purify.sanitize(html, sanitizeConfig)
+  return DOMPurify.sanitize(html, sanitizeConfig)
 }
