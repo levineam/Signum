@@ -104,7 +104,7 @@ export function VoiceRecordButton({
       return status.errorMessage || 'Recording error'
     }
     if (status.state === 'idle') {
-      return `Transcribe${codecInfo ? ` (${codecInfo})` : ''}`
+      return 'Transcribe'
     }
     if (status.state === 'recording') {
       return 'Stop recording'
