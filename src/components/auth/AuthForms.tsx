@@ -22,31 +22,51 @@ export function AuthForms({ mode, onToggleMode }: AuthFormsProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
+    
+    // Capture current values before any async operations
+    const currentEmail = email.trim()
+    const currentPassword = password
+    
+    console.log('Form submitted with:', { 
+      email: currentEmail, 
+      password: currentPassword ? '***' : 'missing',
+      emailLength: currentEmail.length,
+      passwordLength: currentPassword.length
+    })
+    
+    if (!currentEmail || !currentPassword) {
+      setMessage('Email and password are required')
+      return
+    }
+    
     setLoading(true)
     setMessage('')
 
     try {
       if (showResetPassword) {
-        const { error } = await resetPassword(email)
+        const { error } = await resetPassword(currentEmail)
         if (error && typeof error === 'object' && 'message' in error) {
           setMessage((error as { message: string }).message)
         } else {
           setMessage('Password reset email sent! Check your inbox.')
         }
       } else if (mode === 'signup') {
-        const { error } = await signUp(email, password)
+        const { error } = await signUp(currentEmail, currentPassword)
         if (error && typeof error === 'object' && 'message' in error) {
           setMessage((error as { message: string }).message)
         } else {
           setMessage('Check your email for the confirmation link!')
         }
       } else {
-        const { error } = await signIn(email, password)
+        console.log('Attempting sign in with:', { email: currentEmail, password: currentPassword ? '***' : 'missing' })
+        const { error } = await signIn(currentEmail, currentPassword)
         if (error && typeof error === 'object' && 'message' in error) {
           setMessage((error as { message: string }).message)
         }
       }
-    } catch {
+    } catch (error) {
+      console.error('Auth form error:', error)
       setMessage('An unexpected error occurred')
     } finally {
       setLoading(false)
@@ -113,7 +133,7 @@ export function AuthForms({ mode, onToggleMode }: AuthFormsProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -123,6 +143,8 @@ export function AuthForms({ mode, onToggleMode }: AuthFormsProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
+              autoFocus
             />
           </div>
 
@@ -136,6 +158,7 @@ export function AuthForms({ mode, onToggleMode }: AuthFormsProps) {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
+              autoComplete="current-password"
             />
           </div>
 
