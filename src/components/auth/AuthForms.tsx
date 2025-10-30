@@ -28,15 +28,22 @@ export function AuthForms({ mode, onToggleMode }: AuthFormsProps) {
     const currentEmail = email.trim()
     const currentPassword = password
     
-    console.log('Form submitted with:', { 
-      email: currentEmail, 
+    console.log('Form submitted with:', {
+      email: currentEmail,
       password: currentPassword ? '***' : 'missing',
       emailLength: currentEmail.length,
       passwordLength: currentPassword.length
     })
-    
-    if (!currentEmail || !currentPassword) {
-      setMessage('Email and password are required')
+
+    // Validate email is always required
+    if (!currentEmail) {
+      setMessage('Email is required')
+      return
+    }
+
+    // Password is only required for sign in/up, not for password reset
+    if (!showResetPassword && !currentPassword) {
+      setMessage('Password is required')
       return
     }
     
