@@ -1016,6 +1016,10 @@ export function JournalStream() {
                       if (relatedTarget && relatedTarget.closest('[data-task-card]')) {
                         return
                       }
+                      // Don't exit edit mode if the user clicked on the helper expand/collapse toggle
+                      if (relatedTarget && relatedTarget.closest('[data-helper-toggle]')) {
+                        return
+                      }
                       setEditingEntryId(null)
                     }}
                     onMakeNote={handleMakeNote}
