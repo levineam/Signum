@@ -30,8 +30,6 @@ import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import remarkFrontmatter from 'remark-frontmatter';
-import { visit } from 'unist-util-visit';
-import type { Root, Text } from 'mdast';
 
 export interface ParsedNote {
   title: string;
@@ -52,69 +50,6 @@ export interface WikiLink {
   position?: { start: number; end: number };
 }
 
-/**
- * Remark plugin to convert Obsidian ==highlight== syntax to <mark> tags
- *
- * This plugin runs AFTER markdown parsing, so markdown inside highlights
- * (like ==**bold**== or ==[link](url)==) is preserved and formatted correctly.
- *
- * The plugin walks the markdown AST and finds text nodes containing ==...==,
- * then replaces them with HTML nodes that will be parsed by rehype-raw.
- */
-function remarkObsidianHighlight() {
-  return (tree: Root) => {
-    visit(tree, 'text', (node: Text, index, parent) => {
-      if (!parent || index === undefined) return;
-
-      const text = node.value;
-      const highlightRegex = /==([^=]+)==/g;
-
-      // Check if this text node contains highlight syntax
-      if (!highlightRegex.test(text)) return;
-
-      // Reset regex
-      highlightRegex.lastIndex = 0;
-
-      // Split the text into parts: plain text and highlights
-      const parts: Array<{ type: 'text' | 'highlight'; value: string }> = [];
-      let lastIndex = 0;
-      let match;
-
-      while ((match = highlightRegex.exec(text)) !== null) {
-        // Add plain text before the highlight
-        if (match.index > lastIndex) {
-          parts.push({ type: 'text', value: text.slice(lastIndex, match.index) });
-        }
-
-        // Add the highlight (without the == markers)
-        parts.push({ type: 'highlight', value: match[1] });
-
-        lastIndex = match.index + match[0].length;
-      }
-
-      // Add remaining plain text after last highlight
-      if (lastIndex < text.length) {
-        parts.push({ type: 'text', value: text.slice(lastIndex) });
-      }
-
-      // Replace the text node with a mix of text and html nodes
-      const newNodes = parts.map(part => {
-        if (part.type === 'text') {
-          return { type: 'text' as const, value: part.value };
-        } else {
-          // Create an html node that will be parsed by rehype-raw
-          return {
-            type: 'html' as const,
-            value: `<mark>${part.value}</mark>`
-          };
-        }
-      });
-
-      // Replace the original node with the new nodes
-      parent.children.splice(index, 1, ...newNodes);
-    });
-  };
-}
 
 export class ObsidianParser {
   /**
@@ -259,7 +194,21 @@ export class ObsidianParser {
       placeholderIndex++;
     }
 
-    // Second pass: Add space after markdown links followed immediately by text
+    // Second pass: Replace ==highlight== with placeholders to preserve the markers
+    // We'll wrap the content with <mark> tags after markdown parsing
+    const highlightPlaceholders: { openPlaceholder: string; closePlaceholder: string }[] = [];
+    let highlightIndex = 0;
+
+    processedMarkdown = processedMarkdown.replace(/==([^=]+)==/g, (_match, content) => {
+      const openPlaceholder = `%%%HIGHLIGHT_OPEN_${highlightIndex}%%%`;
+      const closePlaceholder = `%%%HIGHLIGHT_CLOSE_${highlightIndex}%%%`;
+      highlightPlaceholders.push({ openPlaceholder, closePlaceholder });
+      highlightIndex++;
+      // Return the content with placeholders around it (markdown inside will be parsed)
+      return openPlaceholder + content + closePlaceholder;
+    });
+
+    // Third pass: Add space after markdown links followed immediately by text
     // Example: [02:22](url)we → [02:22](url) we
     processedMarkdown = processedMarkdown.replace(/\]\([^)]+\)([a-zA-Z])/g, (match, letter) => {
       return match.slice(0, -1) + ' ' + letter;
@@ -271,7 +220,6 @@ export class ObsidianParser {
     const file = await unified()
       .use(remarkParse)
       .use(remarkFrontmatter)
-      .use(remarkObsidianHighlight) // Convert ==highlight== after markdown parsing (preserves nested markdown)
       .use(remarkRehype, { allowDangerousHtml: true }) // Convert to rehype (HTML AST), allow raw HTML
       .use(rehypeRaw) // Parse raw HTML strings (like <mark>) into proper AST nodes
       .use(rehypeSanitize, {
@@ -284,6 +232,13 @@ export class ObsidianParser {
       .process(processedMarkdown);
 
     let html = String(file);
+
+    // Replace highlight placeholders with <mark> tags
+    // This must be done after HTML generation to preserve nested markdown
+    highlightPlaceholders.forEach(({ openPlaceholder, closePlaceholder }) => {
+      html = html.replace(openPlaceholder, '<mark>');
+      html = html.replace(closePlaceholder, '</mark>');
+    });
 
     // Second pass: Replace placeholders with WikiLink spans
     wikiLinkPlaceholders.forEach(({ placeholder, wikiLink }) => {
