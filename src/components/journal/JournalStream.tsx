@@ -56,10 +56,8 @@ function getLocalDateString(): string {
 // Helper function to check if content is truly empty (handles HTML markup)
 function isContentEmpty(html: string): boolean {
   if (!html || html.trim() === '') return true
-  // Create a temporary element to parse HTML and extract text
-  const tempDiv = document.createElement('div')
-  tempDiv.innerHTML = html
-  const text = tempDiv.textContent || tempDiv.innerText || ''
+  // Use regex to strip HTML tags for SSR-safe text extraction
+  const text = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
   return text.trim() === ''
 }
 
