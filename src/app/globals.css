@@ -249,7 +249,7 @@
     padding: 0.125rem 0.25rem;
     border-radius: 0.125rem;
     line-height: inherit;
-    white-space: normal; /* Prevent block-like behavior */
+    white-space: inherit; /* Preserve parent whitespace formatting */
   }
 
   /* Dark mode: Make highlighted text dark grey for readability */
@@ -298,7 +298,7 @@
     padding: 0.125rem 0.25rem;
     border-radius: 0.125rem;
     line-height: inherit;
-    white-space: normal; /* Prevent block-like behavior */
+    white-space: inherit; /* Preserve parent whitespace formatting */
   }
 
   /* Dark mode: Make highlighted text dark grey for readability */
