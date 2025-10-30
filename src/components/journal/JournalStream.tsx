@@ -53,6 +53,14 @@ function getLocalDateString(): string {
   return `${year}-${month}-${day}`
 }
 
+// Helper function to check if content is truly empty (handles HTML markup)
+function isContentEmpty(html: string): boolean {
+  if (!html || html.trim() === '') return true
+  // Use regex to strip HTML tags for SSR-safe text extraction
+  const text = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
+  return text.trim() === ''
+}
+
 export function JournalStream() {
   const router = useRouter()
   const { user, session } = useAuth()
@@ -107,16 +115,6 @@ export function JournalStream() {
         // Clean up empty journal entries older than 24 hours (Issue #10, #67)
         const now = new Date()
         const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-
-        // Helper function to check if content is truly empty (handles HTML markup)
-        const isContentEmpty = (html: string): boolean => {
-          if (!html || html.trim() === '') return true
-          // Create a temporary element to parse HTML and extract text
-          const tempDiv = document.createElement('div')
-          tempDiv.innerHTML = html
-          const text = tempDiv.textContent || tempDiv.innerText || ''
-          return text.trim() === ''
-        }
 
         const emptyJournalEntries = allNotes.filter(note =>
           note.noteType === 'journal-entry' &&
@@ -1031,7 +1029,7 @@ export function JournalStream() {
                   />
                 ) : (
                   <div className="min-h-[100px]">
-                    {entry.content ? (
+                    {!isContentEmpty(entry.content) ? (
                       isDOMPurifyReady ? (
                         <div
                           className="text-base leading-relaxed prose prose-sm max-w-none"
@@ -1066,7 +1064,7 @@ export function JournalStream() {
                       )
                     ) : (
                       <p className="text-muted-foreground italic">
-                        {isTodayEntry ? "Click here to start today's entry..." : "Click to add to this day's entry..."}
+                        {isTodayEntry ? "What's on your mind today? Start writing..." : "What's on your mind today? Start writing..."}
                       </p>
                     )}
                   </div>
