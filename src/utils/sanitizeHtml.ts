@@ -30,7 +30,7 @@ const sanitizeConfig: Config = {
     'ul', 'ol', 'li',
     'a', 'span', 'div',
     'blockquote', 'code', 'pre',
-    'mark' // For text highlighting
+    'mark' // For text highlighting (including Obsidian imports)
   ],
   // Allow safe attributes (style will be filtered via hook)
   ALLOWED_ATTR: [
