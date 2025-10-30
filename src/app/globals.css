@@ -251,6 +251,11 @@
     line-height: inherit;
   }
 
+  /* Dark mode: Make highlighted text dark grey for readability */
+  .dark .rich-editor-body mark {
+    color: #374151 !important; /* gray-700 */
+  }
+
   /* Prose list styling for read-only mode */
   /* Apply same list styles to prose class used in JournalStream read-only view */
   .prose ul {
@@ -292,6 +297,11 @@
     padding: 0.125rem 0.25rem;
     border-radius: 0.125rem;
     line-height: inherit;
+  }
+
+  /* Dark mode: Make highlighted text dark grey for readability */
+  .dark .prose mark {
+    color: #374151 !important; /* gray-700 */
   }
 
   /* Accessibility: Respect user's motion preferences */
