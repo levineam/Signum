@@ -1064,7 +1064,7 @@ export function JournalStream() {
                       )
                     ) : (
                       <p className="text-muted-foreground italic">
-                        {isTodayEntry ? "Click here to start writing in today's journal..." : "Click to add to this day's entry..."}
+                        {isTodayEntry ? "What's on your mind today? Start writing..." : "What's on your mind today? Start writing..."}
                       </p>
                     )}
                   </div>
