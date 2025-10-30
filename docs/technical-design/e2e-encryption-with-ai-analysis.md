@@ -257,8 +257,9 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
 ALTER TABLE notes
 ADD COLUMN encryption_version INTEGER DEFAULT NULL,
 ADD COLUMN encrypted_title TEXT DEFAULT NULL,
+ADD COLUMN title_iv TEXT DEFAULT NULL, -- IV for title encryption
 ADD COLUMN encrypted_content TEXT DEFAULT NULL,
-ADD COLUMN iv TEXT DEFAULT NULL; -- Initialization vector
+ADD COLUMN content_iv TEXT DEFAULT NULL; -- IV for content encryption
 
 -- Create index for encrypted notes query
 CREATE INDEX idx_notes_encryption_version ON notes(user_id, encryption_version);
@@ -266,6 +267,12 @@ CREATE INDEX idx_notes_encryption_version ON notes(user_id, encryption_version);
 -- Comment for documentation
 COMMENT ON COLUMN notes.encryption_version IS
   'NULL = plain text (legacy), 1 = AES-256-GCM, future versions for algorithm updates';
+
+COMMENT ON COLUMN notes.title_iv IS
+  'Initialization vector for title encryption (base64-encoded)';
+
+COMMENT ON COLUMN notes.content_iv IS
+  'Initialization vector for content encryption (base64-encoded)';
 
 -- New table: User encryption metadata
 CREATE TABLE user_encryption_keys (
@@ -316,6 +323,11 @@ CREATE POLICY "Users can read their own audit log"
   ON ai_analysis_audit
   FOR SELECT
   USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert their own audit log entries"
+  ON ai_analysis_audit
+  FOR INSERT
+  WITH CHECK (user_id = auth.uid());
 ```
 
 #### Backward Compatibility Strategy
@@ -325,20 +337,25 @@ CREATE POLICY "Users can read their own audit log"
 
 export async function migrateNoteToEncrypted(
   noteId: string,
+  plainTextTitle: string,
   plainTextContent: string,
   encryptionKey: CryptoKey
 ): Promise<void> {
-  // Encrypt existing plain text content
-  const encrypted = await encryptNote(plainTextContent, encryptionKey)
+  // Encrypt both title and content with separate IVs
+  const encryptedTitle = await encryptNote(plainTextTitle, encryptionKey)
+  const encryptedContent = await encryptNote(plainTextContent, encryptionKey)
 
   // Update database
   await supabase
     .from('notes')
     .update({
-      encrypted_content: encrypted.ciphertext,
-      iv: encrypted.iv,
+      encrypted_title: encryptedTitle.ciphertext,
+      title_iv: encryptedTitle.iv,
+      encrypted_content: encryptedContent.ciphertext,
+      content_iv: encryptedContent.iv,
       encryption_version: 1,
-      content: null, // Clear plain text
+      title: null, // Clear plain text title
+      content: null, // Clear plain text content
     })
     .eq('id', noteId)
 }
@@ -347,10 +364,10 @@ export async function migrateAllUserNotes(userId: string): Promise<void> {
   // Get user's encryption key
   const key = await getUserEncryptionKey(userId)
 
-  // Get all plain text notes
+  // Get all plain text notes (include both title and content)
   const { data: notes } = await supabase
     .from('notes')
-    .select('id, content')
+    .select('id, title, content')
     .eq('user_id', userId)
     .is('encryption_version', null)
 
@@ -358,7 +375,7 @@ export async function migrateAllUserNotes(userId: string): Promise<void> {
 
   // Migrate in batches
   for (const note of notes) {
-    await migrateNoteToEncrypted(note.id, note.content, key)
+    await migrateNoteToEncrypted(note.id, note.title, note.content, key)
   }
 }
 ```
@@ -384,9 +401,9 @@ export async function saveEncryptedNote(
   // Get user's encryption key
   const key = await getUserEncryptionKey(userId)
 
-  // Encrypt content
-  const encryptedContent = await encryptNote(note.content, key)
+  // Encrypt title and content separately (different IVs)
   const encryptedTitle = await encryptNote(note.title, key)
+  const encryptedContent = await encryptNote(note.content, key)
 
   // Save to database
   const { data, error } = await supabase
@@ -394,9 +411,10 @@ export async function saveEncryptedNote(
     .upsert({
       id: note.id,
       user_id: userId,
-      encrypted_title: encryptedContent.ciphertext,
+      encrypted_title: encryptedTitle.ciphertext,
+      title_iv: encryptedTitle.iv,
       encrypted_content: encryptedContent.ciphertext,
-      iv: encryptedContent.iv,
+      content_iv: encryptedContent.iv,
       encryption_version: 1,
       note_type: note.noteType,
       updated_at: new Date().toISOString(),
@@ -435,17 +453,17 @@ export async function getDecryptedNote(noteId: string, userId: string): Promise<
     }
   }
 
-  // Decrypt
+  // Decrypt with separate IVs for title and content
   const key = await getUserEncryptionKey(userId)
   const title = await decryptNote({
     ciphertext: note.encrypted_title,
-    iv: note.iv,
+    iv: note.title_iv,
     version: note.encryption_version,
   }, key)
 
   const content = await decryptNote({
     ciphertext: note.encrypted_content,
-    iv: note.iv,
+    iv: note.content_iv,
     version: note.encryption_version,
   }, key)
 
@@ -659,7 +677,7 @@ export async function POST(req: Request) {
     const prompt = buildOntologyExtractionPrompt(title, content)
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o', // Using GPT-4o; update to 'o3-mini' or latest model as available
       messages: [
         {
           role: 'system',
