@@ -107,89 +107,195 @@ export function SimpleRichEditor({
     }
   }, [onChange, updateActiveFormats])
 
+  // Helper: Get text nodes intersecting a range, skipping contenteditable=false
+  const getTextNodesInRange = useCallback((range: Range): Text[] => {
+    const textNodes: Text[] = []
+    const container = range.commonAncestorContainer
+    const walker = document.createTreeWalker(
+      container.nodeType === Node.TEXT_NODE ? container.parentNode! : container,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node) => {
+          // Skip nodes inside contenteditable="false"
+          let parent = node.parentElement
+          while (parent) {
+            if (parent.contentEditable === 'false') return NodeFilter.FILTER_REJECT
+            if (parent === editorRef.current) break
+            parent = parent.parentElement
+          }
+          // Check if node intersects range
+          if (range.intersectsNode(node)) {
+            return NodeFilter.FILTER_ACCEPT
+          }
+          return NodeFilter.FILTER_REJECT
+        }
+      }
+    )
+
+    let node: Node | null
+    while ((node = walker.nextNode())) {
+      textNodes.push(node as Text)
+    }
+    return textNodes
+  }, [])
+
+  // Helper: Check if node is fully inside a mark
+  const isFullyInMark = useCallback((node: Node): HTMLElement | null => {
+    let parent = node.parentElement
+    while (parent && editorRef.current?.contains(parent)) {
+      if (parent.tagName === 'MARK') return parent
+      parent = parent.parentElement
+    }
+    return null
+  }, [])
+
+  // Helper: Wrap node with mark
+  const wrapNodeWithMark = useCallback((node: Node) => {
+    const mark = document.createElement('mark')
+    // Don't set inline styles - rely on CSS
+    node.parentNode?.insertBefore(mark, node)
+    mark.appendChild(node)
+  }, [])
+
+  // Helper: Unwrap node from mark, preserving siblings
+  const unwrapNodeFromMark = useCallback((node: Node, mark: HTMLElement) => {
+    mark.parentNode?.insertBefore(node, mark)
+    // If mark is now empty, remove it
+    if (!mark.hasChildNodes()) {
+      mark.remove()
+    }
+  }, [])
+
+  // Helper: Merge adjacent mark siblings
+  const mergeAdjacentMarks = useCallback((container: Node) => {
+    if (!container.parentElement) return
+    const marks = Array.from(container.parentElement.querySelectorAll('mark'))
+    marks.forEach(mark => {
+      let next = mark.nextSibling
+      while (next && next.nodeName === 'MARK') {
+        // Merge next mark into current
+        while (next.firstChild) {
+          mark.appendChild(next.firstChild)
+        }
+        const toRemove = next
+        next = next.nextSibling
+        toRemove.remove()
+      }
+    })
+  }, [])
+
   const toggleHighlight = useCallback(() => {
-    if (editorRef.current) {
-      editorRef.current.focus()
-      const selection = window.getSelection()
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0)
-        let node: Node | null = range.commonAncestorContainer
+    if (!editorRef.current) return
 
-        // If text node, get parent element
-        if (node.nodeType === Node.TEXT_NODE) {
-          node = node.parentElement
-        }
+    editorRef.current.focus()
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+    if (selection.isCollapsed) return // Don't highlight empty selection
 
-        // Check if already in a <mark> tag
-        let currentEl: HTMLElement | null = node as HTMLElement
-        let existingMark: HTMLElement | null = null
+    const range = selection.getRangeAt(0).cloneRange()
 
-        while (currentEl && editorRef.current.contains(currentEl)) {
-          if (currentEl.tagName === 'MARK') {
-            existingMark = currentEl
-            break
-          }
-          currentEl = currentEl.parentElement
-        }
+    // Trim whitespace from selection boundaries
+    const startContainer = range.startContainer
+    let startOffset = range.startOffset
+    const endContainer = range.endContainer
+    let endOffset = range.endOffset
 
-        if (existingMark) {
-          // Remove highlight: unwrap contents back to parent
-          const parent = existingMark.parentElement
-          if (parent) {
-            const fragment = document.createDocumentFragment()
-            while (existingMark.firstChild) {
-              fragment.appendChild(existingMark.firstChild)
-            }
-            parent.replaceChild(fragment, existingMark)
-          }
-        } else {
-          // Add highlight
-          const markElement = document.createElement('mark')
-          markElement.style.backgroundColor = '#fef08a' // yellow-200 from Tailwind
-          markElement.style.display = 'inline' // Force inline display to prevent stacking
-
-          try {
-            // Try to wrap the selection (preserves HTML content)
-            range.surroundContents(markElement)
-          } catch {
-            // If surroundContents fails (e.g., selection spans multiple elements),
-            // extract contents as document fragment to preserve HTML
-            const fragment = range.extractContents()
-
-            // Check if fragment contains any mark elements and unwrap them to prevent nesting
-            const marks = fragment.querySelectorAll('mark')
-            marks.forEach(mark => {
-              const parent = mark.parentNode
-              if (parent) {
-                while (mark.firstChild) {
-                  parent.insertBefore(mark.firstChild, mark)
-                }
-                parent.removeChild(mark)
-              }
-            })
-
-            markElement.appendChild(fragment)
-            range.insertNode(markElement)
-          }
-
-          // Restore selection to highlight the marked text
-          range.selectNodeContents(markElement)
-          selection.removeAllRanges()
-          selection.addRange(range)
-        }
-
-        // Trigger change event
-        if (onChange) {
-          const content = editorRef.current.innerHTML || ''
-          isInternalChangeRef.current = true
-          onChange(content)
-        }
-
-        // Update active format states
-        setTimeout(updateActiveFormats, 10)
+    // Trim leading whitespace
+    if (startContainer.nodeType === Node.TEXT_NODE) {
+      const text = (startContainer as Text).data
+      while (startOffset < text.length && /\s/.test(text[startOffset])) {
+        startOffset++
       }
     }
-  }, [onChange, updateActiveFormats])
+
+    // Trim trailing whitespace
+    if (endContainer.nodeType === Node.TEXT_NODE) {
+      const text = (endContainer as Text).data
+      while (endOffset > 0 && /\s/.test(text[endOffset - 1])) {
+        endOffset--
+      }
+    }
+
+    // Update range with trimmed boundaries
+    range.setStart(startContainer, startOffset)
+    range.setEnd(endContainer, endOffset)
+
+    if (range.collapsed) return // Nothing to highlight after trimming
+
+    // Get all text nodes in range
+    const textNodes = getTextNodesInRange(range)
+    if (textNodes.length === 0) return
+
+    // Check if all text nodes are fully highlighted
+    const allHighlighted = textNodes.every(node => isFullyInMark(node))
+
+    // Save selection for restoration
+    const savedSelection = {
+      startContainer: range.startContainer,
+      startOffset: range.startOffset,
+      endContainer: range.endContainer,
+      endOffset: range.endOffset
+    }
+
+    textNodes.forEach(textNode => {
+      const nodeRange = document.createRange()
+      nodeRange.selectNodeContents(textNode)
+
+      // Calculate intersection with selection range
+      const start = textNode === range.startContainer ? range.startOffset : 0
+      const end = textNode === range.endContainer ? range.endOffset : textNode.length
+
+      // Split text node to isolate selected portion
+      let targetNode = textNode
+      if (end < textNode.length) {
+        targetNode = textNode.splitText(end)
+        targetNode = targetNode.previousSibling as Text
+      }
+      if (start > 0) {
+        targetNode = (targetNode as Text).splitText(start) as Text
+      }
+
+      const existingMark = isFullyInMark(targetNode)
+
+      if (allHighlighted && existingMark) {
+        // Unhighlight: remove from mark
+        unwrapNodeFromMark(targetNode, existingMark)
+      } else if (!allHighlighted && !existingMark) {
+        // Highlight: wrap with mark
+        wrapNodeWithMark(targetNode)
+      }
+    })
+
+    // Merge adjacent marks to reduce fragmentation
+    textNodes.forEach(node => {
+      if (node.parentElement) {
+        mergeAdjacentMarks(node.parentElement)
+        node.parentElement.normalize()
+      }
+    })
+
+    // Restore selection (approximate - nodes may have changed)
+    try {
+      const newRange = document.createRange()
+      newRange.setStart(savedSelection.startContainer, savedSelection.startOffset)
+      newRange.setEnd(savedSelection.endContainer, savedSelection.endOffset)
+      selection.removeAllRanges()
+      selection.addRange(newRange)
+    } catch {
+      // If restoration fails, just collapse at end
+      selection.collapseToEnd()
+    }
+
+    // Trigger change event
+    if (onChange) {
+      const content = editorRef.current.innerHTML || ''
+      isInternalChangeRef.current = true
+      onChange(content)
+    }
+
+    // Update active format states
+    setTimeout(updateActiveFormats, 10)
+  }, [onChange, updateActiveFormats, getTextNodesInRange, isFullyInMark, wrapNodeWithMark, unwrapNodeFromMark, mergeAdjacentMarks])
 
   const insertHeading = useCallback((level: number) => {
     if (editorRef.current) {
