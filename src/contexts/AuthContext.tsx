@@ -50,10 +50,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
+    console.log('SignIn called with:', { email: email ? 'present' : 'missing', password: password ? 'present' : 'missing' })
+    
+    if (!email || !password) {
+      console.error('Missing email or password:', { email, password })
+      return { 
+        data: null, 
+        error: { message: 'Email and password are required' } 
+      }
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
+    
+    if (error) {
+      console.error('SignIn error:', error)
+    }
+    
     return { data, error }
   }
 

@@ -243,12 +243,20 @@
 
   /* Highlight styling for edit mode */
   .rich-editor-body mark {
-    display: inline;
+    display: inline !important; /* Force inline to prevent stacking */
     background-color: #fef08a !important; /* yellow-200 */
     color: inherit;
-    padding: 0.125rem 0.25rem;
-    border-radius: 0.125rem;
+    padding: 0 0.1em; /* Minimal horizontal padding only - no vertical to prevent slivers */
+    border-radius: 0; /* Remove rounding that bleeds outside line box */
     line-height: inherit;
+    white-space: inherit;
+    box-decoration-break: clone; /* Better multi-line wrapping */
+    -webkit-box-decoration-break: clone; /* Safari support */
+  }
+
+  /* Dark mode: Make highlighted text dark grey for readability */
+  .dark .rich-editor-body mark {
+    color: #374151 !important; /* gray-700 */
   }
 
   /* Prose list styling for read-only mode */
@@ -286,12 +294,20 @@
 
   /* Highlight styling for read-only mode */
   .prose mark {
-    display: inline;
+    display: inline !important; /* Force inline to prevent stacking */
     background-color: #fef08a !important; /* yellow-200 */
     color: inherit;
-    padding: 0.125rem 0.25rem;
-    border-radius: 0.125rem;
+    padding: 0 0.1em; /* Minimal horizontal padding only - no vertical to prevent slivers */
+    border-radius: 0; /* Remove rounding that bleeds outside line box */
     line-height: inherit;
+    white-space: inherit;
+    box-decoration-break: clone; /* Better multi-line wrapping */
+    -webkit-box-decoration-break: clone; /* Safari support */
+  }
+
+  /* Dark mode: Make highlighted text dark grey for readability */
+  .dark .prose mark {
+    color: #374151 !important; /* gray-700 */
   }
 
   /* Accessibility: Respect user's motion preferences */
