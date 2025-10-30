@@ -677,7 +677,7 @@ export async function POST(req: Request) {
     const prompt = buildOntologyExtractionPrompt(title, content)
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o', // Using GPT-4o; update to 'o3-mini' or latest model as available
+      model: 'gpt-5-mini',
       messages: [
         {
           role: 'system',
@@ -840,49 +840,187 @@ export default function PrivacySettingsPage() {
 
 ## Implementation Roadmap
 
-### Phase 1: Core Encryption (Week 1-2)
+### 🚀 FAST TRACK: Encryption-Only Release (Recommended)
+
+**Goal**: Get encryption live ASAP so users know their notes are private, add AI features later.
+
+**Timeline**: 2-3 weeks
+
+#### Phase 1A: Core Encryption (Week 1)
 
 - [ ] Implement encryption utilities (`encryption.ts`, `keyManagement.ts`)
-- [ ] Add database schema migrations
+- [ ] Add database schema migrations (encryption columns only)
 - [ ] Update note CRUD operations to use encryption
 - [ ] Test encryption/decryption performance
 - [ ] Write unit tests for crypto functions
 
-### Phase 2: Migration & Backward Compatibility (Week 2-3)
+#### Phase 1B: Migration & UI (Week 2)
 
 - [ ] Implement migration script for existing plain text notes
+- [ ] Add "🔒 Encrypted" indicator in UI
+- [ ] Build simple privacy settings page showing encryption status
 - [ ] Add feature flag for gradual rollout
 - [ ] Test with real production data (staging environment)
-- [ ] Handle edge cases (partial migrations, failures)
 
-### Phase 3: AI Consent Flow (Week 3-4)
+#### Phase 1C: Polish & Launch (Week 3)
+
+- [ ] End-to-end testing of encryption flow
+- [ ] Performance testing (encrypt/decrypt 1000 notes)
+- [ ] Update privacy policy: "Your notes are encrypted end-to-end"
+- [ ] Deploy to production
+- [ ] Monitor for issues
+
+**At this point**: ✅ Users can trust their notes are private. Developer cannot read them.
+
+---
+
+### Phase 2: AI Analysis Features (Later - 3-4 weeks)
+
+**Add AI features once encryption is stable.**
+
+#### Phase 2A: Consent Flow (Week 4-5)
 
 - [ ] Build consent dialog UI component
 - [ ] Implement consent state management
-- [ ] Update `/api/ontology-extract` to log audit trail
+- [ ] Add "Analyze with AI" button to UI
 - [ ] Test user flows (accept, decline, remember choice)
 
-### Phase 4: Privacy Dashboard (Week 4)
+#### Phase 2B: API Integration (Week 5-6)
 
-- [ ] Build privacy settings page
-- [ ] Display encryption status
-- [ ] Show AI analysis audit log
-- [ ] Add export/delete data features (GDPR)
+- [ ] Create audit logging table and policies
+- [ ] Update `/api/ontology-extract` to accept plain text
+- [ ] Implement client-side decryption before API call
+- [ ] Test OpenAI integration with gpt-5-mini
+- [ ] Add AI analysis history to privacy dashboard
 
-### Phase 5: Key Recovery (Week 5)
+#### Phase 2C: Testing & Launch (Week 6-7)
+
+- [ ] End-to-end testing of AI analysis flow
+- [ ] Security review of consent flow
+- [ ] Update privacy policy with OpenAI disclosure
+- [ ] Gradual rollout of AI features
+
+---
+
+### Phase 3: Advanced Features (Future)
+
+#### Key Recovery (Optional)
 
 - [ ] Implement password-wrapped key backup
 - [ ] Build key recovery flow for new devices
 - [ ] Test account recovery scenarios
 - [ ] Document recovery process for support
 
-### Phase 6: Testing & Launch (Week 6)
+#### GDPR Compliance (Required before EU launch)
 
-- [ ] End-to-end testing of full encryption flow
-- [ ] Performance testing (encrypt/decrypt 1000 notes)
-- [ ] Security audit by third party
-- [ ] Update privacy policy and user documentation
-- [ ] Gradual rollout to users
+- [ ] Add data export feature
+- [ ] Add data deletion feature
+- [ ] Create privacy audit log
+- [ ] Compliance documentation
+
+---
+
+## Why Split Into Two Phases?
+
+### Benefits of Encryption-First Approach
+
+1. **Faster Time to Privacy**: Users get privacy guarantees in 2-3 weeks instead of 6-7 weeks
+2. **Reduced Risk**: Encryption is simpler to implement and test than AI integration
+3. **User Trust**: Shows commitment to privacy before adding controversial AI features
+4. **Easier Rollback**: If issues arise, only encryption needs to be fixed (not AI integration)
+5. **Iterative Development**: Can gather user feedback on encryption UX before adding AI
+
+### Phase 1 (Encryption-Only) User Experience
+
+**What users can do:**
+- ✅ Write notes (automatically encrypted)
+- ✅ Read their own notes (automatically decrypted)
+- ✅ See "🔒 Encrypted" indicator
+- ✅ Trust that developer cannot read their notes
+
+**What users cannot do yet:**
+- ❌ AI ontology extraction (coming in Phase 2)
+- ❌ View AI analysis history
+- ❌ Bulk analyze notes
+
+**UI Message**: "Your notes are now encrypted end-to-end. AI analysis features coming soon!"
+
+### Technical Differences Between Phases
+
+| Feature | Phase 1 (Encryption) | Phase 2 (AI) |
+|---------|---------------------|--------------|
+| Encryption | ✅ Enabled | ✅ Enabled |
+| Decryption | ✅ Automatic | ✅ Automatic + On-demand for AI |
+| AI Analysis | ❌ Disabled | ✅ With consent |
+| Consent Dialog | ❌ Not needed | ✅ Required |
+| Audit Logging | ❌ Optional | ✅ Required |
+| OpenAI Integration | ❌ Not used | ✅ Active |
+
+---
+
+## Minimal Phase 1 Implementation
+
+### What's Included
+
+1. **Encryption Layer** (`/src/lib/crypto/`)
+   - `encryption.ts` - AES-256-GCM functions
+   - `keyManagement.ts` - Key generation and storage
+
+2. **Database Schema** (simplified for Phase 1)
+   ```sql
+   ALTER TABLE notes
+   ADD COLUMN encryption_version INTEGER DEFAULT NULL,
+   ADD COLUMN encrypted_title TEXT DEFAULT NULL,
+   ADD COLUMN title_iv TEXT DEFAULT NULL,
+   ADD COLUMN encrypted_content TEXT DEFAULT NULL,
+   ADD COLUMN content_iv TEXT DEFAULT NULL;
+   ```
+
+3. **Updated Note Operations**
+   - `saveEncryptedNote()` - Encrypt before saving
+   - `getDecryptedNote()` - Decrypt after fetching
+   - Migration script for existing notes
+
+4. **Simple UI Indicator**
+   ```tsx
+   {note.encryption_version && (
+     <Badge variant="secondary" className="gap-1">
+       <LockIcon className="h-3 w-3" />
+       Encrypted
+     </Badge>
+   )}
+   ```
+
+### What's NOT Included (Phase 2)
+
+- ❌ Consent dialog component
+- ❌ AI analysis button
+- ❌ `/api/ontology-extract` route modifications
+- ❌ Audit logging table
+- ❌ Privacy dashboard with AI history
+- ❌ OpenAI integration
+
+### Phase 1 Privacy Policy Update
+
+**Before**:
+> "Your notes are stored securely in our database."
+
+**After Phase 1**:
+> "Your notes are encrypted end-to-end using AES-256-GCM encryption. Only you hold the decryption key. We cannot read your notes. AI analysis features are currently disabled while we ensure your privacy is protected."
+
+**After Phase 2**:
+> "Your notes are encrypted end-to-end. When you choose to use AI analysis, you'll be asked for explicit consent to temporarily decrypt specific notes for processing."
+
+---
+
+## Recommended Next Steps
+
+1. **Approve Fast Track**: Agree to split into encryption-first (Phase 1) and AI-later (Phase 2)
+2. **Start Phase 1 Implementation**: I can begin building the encryption layer now
+3. **Timeline Decision**: Aim for 2-3 week Phase 1 deployment?
+4. **Feature Flag**: Enable encryption for alpha users first, then broader rollout?
+
+This approach gets you to "developer cannot read notes" in weeks instead of months, while preserving the full AI vision for later.
 
 ---
 
