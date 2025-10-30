@@ -243,12 +243,13 @@
 
   /* Highlight styling for edit mode */
   .rich-editor-body mark {
-    display: inline;
+    display: inline !important; /* Force inline to prevent stacking */
     background-color: #fef08a !important; /* yellow-200 */
     color: inherit;
     padding: 0.125rem 0.25rem;
     border-radius: 0.125rem;
     line-height: inherit;
+    white-space: normal; /* Prevent block-like behavior */
   }
 
   /* Dark mode: Make highlighted text dark grey for readability */
@@ -291,12 +292,13 @@
 
   /* Highlight styling for read-only mode */
   .prose mark {
-    display: inline;
+    display: inline !important; /* Force inline to prevent stacking */
     background-color: #fef08a !important; /* yellow-200 */
     color: inherit;
     padding: 0.125rem 0.25rem;
     border-radius: 0.125rem;
     line-height: inherit;
+    white-space: normal; /* Prevent block-like behavior */
   }
 
   /* Dark mode: Make highlighted text dark grey for readability */

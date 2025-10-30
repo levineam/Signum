@@ -146,6 +146,7 @@ export function SimpleRichEditor({
           // Add highlight
           const markElement = document.createElement('mark')
           markElement.style.backgroundColor = '#fef08a' // yellow-200 from Tailwind
+          markElement.style.display = 'inline' // Force inline display to prevent stacking
 
           try {
             // Try to wrap the selection (preserves HTML content)
@@ -154,6 +155,19 @@ export function SimpleRichEditor({
             // If surroundContents fails (e.g., selection spans multiple elements),
             // extract contents as document fragment to preserve HTML
             const fragment = range.extractContents()
+
+            // Check if fragment contains any mark elements and unwrap them to prevent nesting
+            const marks = fragment.querySelectorAll('mark')
+            marks.forEach(mark => {
+              const parent = mark.parentNode
+              if (parent) {
+                while (mark.firstChild) {
+                  parent.insertBefore(mark.firstChild, mark)
+                }
+                parent.removeChild(mark)
+              }
+            })
+
             markElement.appendChild(fragment)
             range.insertNode(markElement)
           }
