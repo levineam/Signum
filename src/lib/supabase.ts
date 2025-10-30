@@ -25,45 +25,12 @@ function getSupabase(): SupabaseClient {
     throw new Error('Missing Supabase environment variables')
   }
 
-  // Clean up URL (remove trailing slash if present)
-  const cleanUrl = supabaseUrl.replace(/\/$/, '')
-  
-  // Validate URL format
-  try {
-    const url = new URL(cleanUrl)
-    if (!url.protocol.startsWith('https')) {
-      console.warn('Supabase URL should use https:// protocol')
-    }
-  } catch (error) {
-    console.error('Invalid Supabase URL format:', cleanUrl)
-    throw new Error(`Invalid Supabase URL format: ${cleanUrl}`)
-  }
-
-  console.log('Initializing Supabase client with URL:', cleanUrl.substring(0, 30) + '...')
-
-  _supabase = createClient(cleanUrl, supabaseAnonKey, {
+  _supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true
-    },
-    global: {
-      fetch: (url, options = {}) => {
-        return fetch(url, {
-          ...options,
-          headers: {
-            ...options.headers,
-          },
-        }).catch((error) => {
-          console.error('Supabase fetch error:', {
-            url,
-            error: error.message,
-            supabaseUrl: cleanUrl,
-          })
-          throw error
-        })
-      },
-    },
+    }
   })
 
   return _supabase
