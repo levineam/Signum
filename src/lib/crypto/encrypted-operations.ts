@@ -76,6 +76,9 @@ export async function saveEncryptedNote(
       note_type: note.noteType,
       is_pinned: note.isPinned ?? false,
       metadata: note.metadata ?? {},
+      // Explicitly clear plaintext columns to prevent leakage
+      title: null,
+      content: null,
       updated_at: new Date().toISOString(),
     })
     .select('id')
@@ -228,6 +231,12 @@ async function savePlainTextNote(
       note_type: note.noteType,
       is_pinned: note.isPinned ?? false,
       metadata: note.metadata ?? {},
+      // Clear encrypted columns to keep row consistent
+      encrypted_title: null,
+      title_iv: null,
+      encrypted_content: null,
+      content_iv: null,
+      encryption_version: null,
       updated_at: new Date().toISOString(),
     })
     .select('id')

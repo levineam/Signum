@@ -3,7 +3,7 @@
  * Story 2.10 AC5: Test encryption/decryption functionality
  */
 
-import { describe, it, expect, beforeAll } from '@jest/globals'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { encryptNote, decryptNote } from '../encryption'
 import { generateUserKey } from '../keyManagement'
 
