@@ -9,7 +9,13 @@
     "lint": "eslint",
     "bmad:refresh": "bmad-method install -f -i codex",
     "bmad:list": "bmad-method list:agents",
-    "bmad:validate": "bmad-method status"
+    "bmad:validate": "bmad-method status",
+    "bmad-progress": "node tools/progress-tracking/update-progress.js 2>/dev/null || node .bmad-core/utils/update-progress.js",
+    "bmad-progress:watch": "node tools/progress-tracking/progress-watcher.js 2>/dev/null || node .bmad-core/utils/progress-watcher.js",
+    "bmad-progress:trigger": "node tools/progress-tracking/trigger-progress-update.js 2>/dev/null || node .bmad-core/utils/trigger-progress-update.js",
+    "bmad-progress:terminal": "node tools/progress-tracking/progress-terminal.js 2>/dev/null || node .bmad-core/utils/progress-terminal.js",
+    "bmad-progress:live": "node tools/progress-tracking/progress-terminal.js --auto 30 2>/dev/null || node .bmad-core/utils/progress-terminal.js --auto 30",
+    "bmad-progress:help": "echo \"\n📊 BMAD Progress Dashboard Commands:\n\n  npm run bmad-progress .............. Update dashboard once\n  npm run bmad-progress:terminal ..... Interactive terminal view\n  npm run bmad-progress:watch ........ Auto-update on file changes\n  npm run bmad-progress:live ......... Terminal with auto-refresh\n  npm run bmad-progress:help ......... Show this help\n\n📚 Documentation: https://github.com/ibadmore/bmad-progress-dashboard\n\""
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
@@ -67,7 +73,8 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4",
     "unified": "^11.0.5",
-    "unist-util-visit": "^5.0.0"
+    "unist-util-visit": "^5.0.0",
+    "js-yaml": "^4.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

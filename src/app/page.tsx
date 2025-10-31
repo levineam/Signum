@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { JournalStream } from '@/components/journal/JournalStream'
 import { AppHeader } from '@/components/layout/AppHeader'
 
 export default function Home() {
+  const { user, loading: authLoading } = useAuth()
   const [activeSection, setActiveSection] = useState('journal')
   const router = useRouter()
 
@@ -29,9 +31,11 @@ export default function Home() {
   }
 
   const renderContent = () => {
+    const isGuest = !user && !authLoading
+
     switch (activeSection) {
       case 'journal':
-        return <JournalStream />
+        return <JournalStream isGuest={isGuest} />
       case 'feedback':
         return <div className="p-6 text-center text-muted-foreground">Feedback feature coming soon...</div>
       case 'articles':
@@ -41,7 +45,7 @@ export default function Home() {
       case 'karma':
         return <div className="p-6 text-center text-muted-foreground">Karma feature coming soon...</div>
       default:
-        return <JournalStream />
+        return <JournalStream isGuest={isGuest} />
     }
   }
 
