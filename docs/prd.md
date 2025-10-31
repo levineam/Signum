@@ -384,6 +384,60 @@ so that I can begin with intention and provide higher quality input for future A
 - **Storage**: localStorage for rotation state, sessionStorage for dismissal (cleared on page load)
 - **Icons**: Lucide React (RefreshCw, X icons)
 
+#### Story 1.8: Guest Journaling Before Sign-Up 📋 PLANNED
+
+As a potential user visiting Signum for the first time,
+I want to immediately start using the full journal interface without signing up,
+so that I can experience the product's core value before committing to creating an account.
+
+##### Related Issue
+**GitHub Issue:** [#111](https://github.com/levineam/Signum/issues/111)
+
+##### Problem Statement
+Currently, the landing page shows a "Sign in to start journaling" message that creates friction before users can experience the product. This gate prevents potential users from discovering whether Signum provides value to them, reducing conversion rates.
+
+##### Business Value
+- **Reduce Friction to First Value:** Let users experience journaling immediately
+- **Increase Conversion:** Users more likely to sign up after experiencing value
+- **Demonstrate Product:** Show helpers and rich text features before signup
+- **Build Trust:** "Try before you buy" approach
+
+##### Acceptance Criteria (Summary)
+1. Non-authenticated users see full journal interface on landing page
+2. Rich text editor with all formatting toolbar buttons functional
+3. Helper tiles visible and clickable for guests
+4. Guest content stored in localStorage (client-side only)
+5. After 2 seconds of typing inactivity, auth modal appears
+6. Modal includes sign-in and sign-up options
+7. Modal can be dismissed with 60-second cooldown
+8. After sign-up/sign-in, guest content transfers to user account
+9. No hydration errors or SSR issues
+10. Guest content sanitized before saving to prevent XSS
+
+##### Technical Implementation (High-Level)
+- **New Hooks:**
+  - `useGuestDraft` - Manage localStorage draft content
+  - `useIdleTimer` - Detect 2s typing inactivity
+- **New Components:**
+  - `GuestAuthModal` - Sign-in/sign-up modal overlay
+- **Modified Components:**
+  - `JournalStream` - Support guest mode
+  - Landing page - Show guest journal to unauthenticated users
+- **Security:**
+  - HTML sanitization via existing `sanitizeHtml.ts`
+  - No server writes until authentication
+
+##### Status
+**Status:** 📋 Planned
+**Priority:** High
+**Estimated Effort:** 5-7 days
+**Documentation:** Complete story document available at `docs/stories/story-1.8-guest-journaling.md`
+
+##### Prerequisites
+- Story 1.3 (User Authentication) ✅ Complete
+- Story 2.0 (Rich Text Toolbar) ✅ Complete
+- Story 1.7 (Gentle Prompts) ✅ Complete
+
 ### Epic 2: Intelligent Note Linking & Knowledge Graph
 
 **Epic Goal:** Implement rich text formatting controls and the intuitive "Make Note" functionality that allows users to highlight formatted text in journal entries and seamlessly create linked notes. Establish the bidirectional linking system and knowledge graph foundation that transforms isolated thoughts into a connected knowledge base, enabling users to build meaningful relationships between their ideas over time.

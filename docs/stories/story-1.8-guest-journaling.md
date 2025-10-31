@@ -1,6 +1,6 @@
-# Story 1.3: Guest Journaling Before Sign-Up
+# Story 1.8: Guest Journaling Before Sign-Up
 
-**Story ID:** 1.3
+**Story ID:** 1.8
 **Epic:** Epic 1 - Clean Slate & Fresh Foundation
 **Status:** Planned
 **Priority:** High
