@@ -3,6 +3,19 @@
  * Implements AES-256-GCM encryption for note content
  */
 
+// Polyfills for btoa/atob to support Node.js test environment
+// In browser: use native btoa/atob
+// In Node.js: use Buffer-based conversion
+const base64Encode =
+  typeof btoa !== 'undefined'
+    ? btoa
+    : (str: string) => Buffer.from(str, 'binary').toString('base64')
+
+const base64Decode =
+  typeof atob !== 'undefined'
+    ? atob
+    : (str: string) => Buffer.from(str, 'base64').toString('binary')
+
 export interface EncryptedData {
   ciphertext: string // Base64-encoded encrypted data
   iv: string // Base64-encoded initialization vector
@@ -75,6 +88,7 @@ export async function decryptNote(
 
 /**
  * Converts ArrayBuffer to base64 string
+ * Works in both browser and Node.js environments
  * @param buffer - ArrayBuffer to convert
  * @returns Base64 string
  */
@@ -84,16 +98,17 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i])
   }
-  return btoa(binary)
+  return base64Encode(binary)
 }
 
 /**
  * Converts base64 string to ArrayBuffer
+ * Works in both browser and Node.js environments
  * @param base64 - Base64 string to convert
  * @returns ArrayBuffer
  */
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binary = atob(base64)
+  const binary = base64Decode(base64)
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i)

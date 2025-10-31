@@ -10,10 +10,12 @@
 
 import { Metadata } from 'next'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { ArrowLeft, Lock, Shield, Key, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EnableEncryptionButton } from '@/components/settings/EnableEncryptionButton'
 import { featureFlags } from '@/lib/feature-flags'
+import { supabase } from '@/lib/supabase'
 
 export const metadata: Metadata = {
   title: 'Privacy & Security | Signum',
@@ -23,7 +25,15 @@ export const metadata: Metadata = {
 // Force dynamic rendering - this page requires authentication
 export const dynamic = 'force-dynamic'
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  // Get authenticated user
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  // Redirect to login if not authenticated
+  if (error || !user) {
+    redirect('/auth/login')
+  }
+
   // Check if encryption feature is enabled via feature flag
   const encryptionEnabled = featureFlags.encryption
 
@@ -78,7 +88,7 @@ export default function PrivacyPage() {
                     can't access your encrypted content. Your encryption key is stored
                     locally on your device and never leaves your browser.
                   </p>
-                  <EnableEncryptionButton />
+                  <EnableEncryptionButton userId={user.id} />
                 </div>
               </div>
             </div>
