@@ -74,10 +74,12 @@ Users must have confidence that their personal reflections, journal entries, and
 
 **AC2:** Key management system functional
 - `src/lib/crypto/keyManagement.ts` created
-- `generateUserKey()` creates 256-bit AES-GCM key on signup
+- `generateUserKey()` creates 256-bit AES-GCM key
+- `initializeEncryptionForUser(userId)` auto-called on signup to generate and store key
 - `getUserEncryptionKey(userId)` retrieves key from IndexedDB
 - `storeUserKey(userId, key)` persists key in browser
 - Keys stored as JWK (JSON Web Key) format
+- Signup flow integration: key auto-generated after successful registration
 
 **AC3:** Database schema updated
 - Migration `20251101000000_add_encryption_fields.sql` created
@@ -303,6 +305,79 @@ export async function getUserEncryptionKey(userId: string): Promise<CryptoKey> {
     ['encrypt', 'decrypt']
   )
 }
+
+export async function initializeEncryptionForUser(userId: string): Promise<void> {
+  // Generate new encryption key
+  const key = await generateUserKey()
+
+  // Store in IndexedDB
+  await storeUserKey(userId, key)
+}
+```
+
+#### Signup Flow Integration
+
+```typescript
+// /src/app/api/auth/signup/route.ts (or wherever signup is handled)
+
+export async function POST(req: Request) {
+  const { email, password } = await req.json()
+
+  // Create Supabase auth user
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  })
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 })
+  }
+
+  // Auto-generate encryption key after successful signup
+  if (data.user) {
+    try {
+      await initializeEncryptionForUser(data.user.id)
+    } catch (encryptionError) {
+      console.error('Failed to initialize encryption:', encryptionError)
+      // Don't fail signup if encryption setup fails - user can enable later
+    }
+  }
+
+  return NextResponse.json({ user: data.user })
+}
+```
+
+Or for client-side signup:
+
+```typescript
+// /src/components/auth/SignupForm.tsx
+
+async function handleSignup(email: string, password: string) {
+  // Create Supabase auth user
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  })
+
+  if (error) {
+    toast.error(error.message)
+    return
+  }
+
+  // Auto-generate encryption key after successful signup
+  if (data.user) {
+    try {
+      await initializeEncryptionForUser(data.user.id)
+      toast.success('Account created! Your notes will be encrypted end-to-end.')
+    } catch (encryptionError) {
+      console.error('Failed to initialize encryption:', encryptionError)
+      toast.warning('Account created, but encryption setup failed. Please enable it in settings.')
+    }
+  }
+
+  // Redirect to app
+  router.push('/journal')
+}
 ```
 
 ### Database Migration
@@ -450,32 +525,69 @@ export async function migrateAllUserNotes(
   if (error) throw error
   if (!notes || notes.length === 0) return
 
-  // Migrate in batches
-  for (let i = 0; i < notes.length; i++) {
-    const note = notes[i]
+  // Store original values for rollback
+  const originalNotes = notes.map(n => ({
+    id: n.id,
+    title: n.title,
+    content: n.content
+  }))
 
-    // Encrypt both title and content
-    const encryptedTitle = await encryptNote(note.title, key)
-    const encryptedContent = await encryptNote(note.content, key)
+  try {
+    // Migrate in batches (with rollback capability)
+    for (let i = 0; i < notes.length; i++) {
+      const note = notes[i]
 
-    // Update database
-    await supabase
-      .from('notes')
-      .update({
-        encrypted_title: encryptedTitle.ciphertext,
-        title_iv: encryptedTitle.iv,
-        encrypted_content: encryptedContent.ciphertext,
-        content_iv: encryptedContent.iv,
-        encryption_version: 1,
-        title: null, // Clear plain text
-        content: null,
-      })
-      .eq('id', note.id)
+      // Guard against null/undefined - coalesce to empty string
+      const title = note.title ?? ''
+      const content = note.content ?? ''
 
-    // Report progress
-    if (onProgress) {
-      onProgress(i + 1, notes.length)
+      // Encrypt both title and content
+      const encryptedTitle = await encryptNote(title, key)
+      const encryptedContent = await encryptNote(content, key)
+
+      // Update database
+      const { error: updateError } = await supabase
+        .from('notes')
+        .update({
+          encrypted_title: encryptedTitle.ciphertext,
+          title_iv: encryptedTitle.iv,
+          encrypted_content: encryptedContent.ciphertext,
+          content_iv: encryptedContent.iv,
+          encryption_version: 1,
+          title: null, // Clear plain text
+          content: null,
+        })
+        .eq('id', note.id)
+
+      if (updateError) {
+        throw new Error(`Failed to encrypt note ${note.id}: ${updateError.message}`)
+      }
+
+      // Report progress
+      if (onProgress) {
+        onProgress(i + 1, notes.length)
+      }
     }
+  } catch (error) {
+    console.error('Migration failed, rolling back...', error)
+
+    // Rollback: restore original plain text values
+    for (const original of originalNotes) {
+      await supabase
+        .from('notes')
+        .update({
+          title: original.title,
+          content: original.content,
+          encrypted_title: null,
+          title_iv: null,
+          encrypted_content: null,
+          content_iv: null,
+          encryption_version: null,
+        })
+        .eq('id', original.id)
+    }
+
+    throw error // Re-throw to notify caller
   }
 }
 ```
@@ -487,7 +599,7 @@ export async function migrateAllUserNotes(
 
 export function EnableEncryptionButton() {
   const [isEncrypting, setIsEncrypting] = useState(false)
-  const [progress, setProgress] = useState({ current: 0, total: 0 })
+  const [progress, setProgress] = useState({ current: 0, total: 1 }) // Initialize total to 1 to avoid NaN
 
   const handleEnableEncryption = async () => {
     const confirmed = await showConfirmDialog({
@@ -519,14 +631,19 @@ export function EnableEncryptionButton() {
     }
   }
 
+  // Calculate progress percentage safely (avoid NaN)
+  const progressPercent = progress.total > 0
+    ? (progress.current / progress.total) * 100
+    : 0
+
   return (
     <div>
       <Button onClick={handleEnableEncryption} disabled={isEncrypting}>
         {isEncrypting ? 'Encrypting...' : 'Enable Encryption'}
       </Button>
-      {isEncrypting && (
+      {isEncrypting && progress.total > 0 && (
         <Progress
-          value={(progress.current / progress.total) * 100}
+          value={progressPercent}
           className="mt-2"
         />
       )}
