@@ -4,7 +4,7 @@ import { useRef, useCallback, useEffect } from 'react'
 import { AUTH_MODAL_DISMISSED_KEY, COOLDOWN_MS, type AuthModalState } from '@/types/guest'
 
 export const useIdleTimer = (callback: () => void, delay: number) => {
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const checkCooldown = useCallback((): boolean => {
     if (typeof window === 'undefined') return false

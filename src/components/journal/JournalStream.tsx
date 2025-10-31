@@ -23,6 +23,10 @@ import { HELPER_TILES } from '@/constants/helperTitles'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskEditDialog } from '@/components/tasks/TaskEditDialog'
+import { useGuestDraft } from '@/hooks/useGuestDraft'
+import { useIdleTimer } from '@/hooks/useIdleTimer'
+import { GuestAuthModal } from '@/components/auth/GuestAuthModal'
+import { IDLE_TIMER_MS } from '@/types/guest'
 
 // Debug logging flag (disable in production for performance)
 const DEBUG_TASK_DETECTION = process.env.NODE_ENV === 'development'
@@ -61,7 +65,11 @@ function isContentEmpty(html: string): boolean {
   return text.trim() === ''
 }
 
-export function JournalStream() {
+interface JournalStreamProps {
+  isGuest?: boolean
+}
+
+export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const router = useRouter()
   const { user, session } = useAuth()
   const isDOMPurifyReady = useDOMPurifyReady()
@@ -80,6 +88,19 @@ export function JournalStream() {
   const [entryTasks, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
   const [editingTask, setEditingTask] = useState<{ id: string; title: string; dueAt: string | null } | null>(null)
 
+  // Guest mode state
+  const { draft: guestDraft, saveDraft: saveGuestDraft, clearDraft: clearGuestDraft, isLoading: isGuestDraftLoading } = useGuestDraft()
+  const [showAuthModal, setShowAuthModal] = useState(false)
+
+  // Idle timer callback: show auth modal after 2s idle (only for guests)
+  const handleIdle = () => {
+    if (isGuest) {
+      setShowAuthModal(true)
+    }
+  }
+
+  const { reset: resetIdleTimer, setDismissed: setAuthModalDismissed } = useIdleTimer(handleIdle, IDLE_TIMER_MS)
+
   // Story 2.8: Helper tile UI state
   const [activeHelper, setActiveHelper] = useState<HelperType | null>(null)
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null)
@@ -91,8 +112,24 @@ export function JournalStream() {
   const cachedEditorRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
-    // Load journal entries from Supabase
+    // Load journal entries from Supabase or create guest entry
     async function loadEntries() {
+      // Guest mode: create a single local entry with guest draft
+      if (isGuest) {
+        console.log('[JournalStream] Guest mode: creating local guest entry')
+        const today = getLocalDateString()
+        const guestEntry: JournalEntry = {
+          id: 'guest-entry',
+          date: today,
+          content: guestDraft || '',
+          lastModified: new Date().toISOString()
+        }
+        setEntries([guestEntry])
+        setEditingEntryId('guest-entry') // Auto-enter edit mode
+        setIsLoading(false)
+        return
+      }
+
       if (!user) {
         console.log('[JournalStream] No user, clearing entries')
         // Clear entries and reset loading state when user signs out
@@ -320,7 +357,7 @@ export function JournalStream() {
       setIsLoading(false)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]) // Only re-run when user ID changes (login/logout), not on user object updates
+  }, [user?.id, isGuest, guestDraft]) // Re-run when user ID, guest mode, or guest draft changes
 
   // Story 2.8: Deep linking support - check URL for ?helper=type on mount
   // Story 2.9: Updated to set mode to 'use' for deep links
@@ -431,6 +468,13 @@ export function JournalStream() {
         ? { ...entry, content: newContent, lastModified: new Date().toISOString() }
         : entry
     ))
+
+    // Guest mode: save to localStorage and reset idle timer
+    if (isGuest) {
+      saveGuestDraft(newContent)
+      resetIdleTimer() // Reset idle timer on every content change
+      return // Skip Supabase saves and task detection for guests
+    }
 
     // Debounce task detection to avoid duplicate tasks while typing (Story 1.2)
     // Wait 3 seconds after user stops typing before detecting tasks
@@ -714,6 +758,85 @@ export function JournalStream() {
   const handleCloseNoteViewer = () => {
     setShowNoteViewer(false)
     setViewingNoteId(null)
+  }
+
+  // Guest auth modal handlers
+  const handleAuthModalClose = () => {
+    setShowAuthModal(false)
+    setAuthModalDismissed() // Record dismissal for cooldown
+  }
+
+  const handleAuthSuccess = async (userId: string) => {
+    console.log('[GuestJournal] Auth success, transferring content for user:', userId)
+
+    // Get the current guest draft content
+    const currentContent = guestDraft || ''
+
+    if (!currentContent.trim()) {
+      console.log('[GuestJournal] No content to transfer, clearing draft')
+      clearGuestDraft()
+      setShowAuthModal(false)
+      // Router will redirect after auth context updates
+      return
+    }
+
+    try {
+      // Wait for session to be available (up to 5 seconds)
+      let accessToken: string | null = null
+      const maxWaitTime = 5000
+      const startTime = Date.now()
+
+      while (!accessToken && (Date.now() - startTime) < maxWaitTime) {
+        // Import supabase client dynamically to get session
+        const { supabase } = await import('@/lib/supabase')
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+
+        if (currentSession?.access_token) {
+          accessToken = currentSession.access_token
+          break
+        }
+
+        // Wait 200ms before trying again
+        await new Promise(resolve => setTimeout(resolve, 200))
+      }
+
+      if (!accessToken) {
+        throw new Error('Failed to get authentication token')
+      }
+
+      // Call transfer API with auth token
+      const response = await fetch('/api/transfer-guest-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ content: currentContent })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Transfer failed')
+      }
+
+      const { entryId } = await response.json()
+      console.log('[GuestJournal] Content transferred successfully to entry:', entryId)
+
+      // Clear local draft after successful transfer
+      clearGuestDraft()
+
+      // Close modal
+      setShowAuthModal(false)
+
+      // Show success toast
+      toast.success('Welcome! Your journal entry has been saved.')
+
+      // Navigation will happen automatically when auth context updates
+    } catch (error) {
+      console.error('[GuestJournal] Transfer failed:', error)
+      toast.error('Failed to save your entry. Please try again.')
+      // Keep modal open and draft preserved for retry
+    }
   }
 
   // Story 2.9: Handler for info icon clicks
@@ -1264,6 +1387,15 @@ export function JournalStream() {
             ) : null}
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Story 1.8: Guest Auth Modal */}
+      {isGuest && (
+        <GuestAuthModal
+          isOpen={showAuthModal}
+          onClose={handleAuthModalClose}
+          onAuthSuccess={handleAuthSuccess}
+        />
       )}
     </div>
   )
