@@ -86,7 +86,8 @@ export function AuthForms({ mode, onToggleMode }: AuthFormsProps) {
         <CardHeader>
           <CardTitle>Reset Password</CardTitle>
           <CardDescription>
-            Enter your email address and we&apos;ll send you a link to reset your password.
+            {/* eslint-disable-next-line react/no-unescaped-entities */}
+            Enter your email address and we'll send you a link to reset your password.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -193,7 +194,7 @@ export function AuthForms({ mode, onToggleMode }: AuthFormsProps) {
           </div>
 
           <div className="text-center text-sm text-muted-foreground">
-            {mode === 'signup' ? 'Already have an account?' : "Don&apos;t have an account?"}{' '}
+            {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}{' '}
             <Button variant="link" onClick={onToggleMode} className="p-0 h-auto">
               {mode === 'signup' ? 'Sign in' : 'Sign up'}
             </Button>
