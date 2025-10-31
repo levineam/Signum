@@ -917,3 +917,166 @@ export async function verifyLocalStorage(page: Page, key: string, expectedValue:
 - `/src/components/editor/SimpleRichEditor.tsx` - Rich text editor
 - `/src/components/journal/JournalStream.tsx` - Main journal UI
 - `/src/utils/sanitizeHtml.ts` - HTML sanitization
+
+---
+
+## Tasks / Subtasks
+
+### Task 1: Phase 0 - Foundation (Hooks & Types)
+- [ ] Create `/src/types/guest.ts` with GuestDraft interface
+- [ ] Create `/src/hooks/useGuestDraft.ts` hook
+  - [ ] Implement client-side localStorage loading (useEffect guard)
+  - [ ] Implement saveDraft with 50KB size limit check
+  - [ ] Implement clearDraft function
+  - [ ] Add QuotaExceededError handling with sessionStorage fallback
+- [ ] Create `/src/hooks/useIdleTimer.ts` hook
+  - [ ] Implement trailing debounce with reset/cancel functions
+  - [ ] Add cleanup in useEffect return
+  - [ ] Integrate with sessionStorage for cooldown tracking
+- [ ] Write unit tests for useGuestDraft
+- [ ] Write unit tests for useIdleTimer
+
+### Task 2: Phase 1 - Guest Journal UI
+- [ ] Examine current landing page (`/src/app/page.tsx`)
+  - [ ] Identify auth state detection mechanism
+  - [ ] Document current "Sign in to start journaling" implementation
+- [ ] Modify `/src/app/page.tsx` for guest mode
+  - [ ] Add auth state check (authenticated vs guest)
+  - [ ] Render JournalStream for guests
+  - [ ] Pass `isGuest={true}` prop to JournalStream
+- [ ] Modify `/src/components/journal/JournalStream.tsx`
+  - [ ] Accept `isGuest?: boolean` prop
+  - [ ] Integrate useGuestDraft hook when isGuest=true
+  - [ ] Disable Supabase auto-save when isGuest=true
+  - [ ] Wire guest draft to editor onChange
+  - [ ] Test localStorage persistence
+- [ ] Test SSR hydration (no errors in console)
+- [ ] Test helper tiles work for guests
+- [ ] Test formatting toolbar works for guests
+- [ ] Test content persists across page refresh
+
+### Task 3: Phase 2 - Auth Modal Component
+- [ ] Create `/src/components/auth/GuestAuthModal.tsx`
+  - [ ] Use shadcn Dialog component as base
+  - [ ] Add email input field with validation
+  - [ ] Add password input field
+  - [ ] Add "Sign In" button (primary action)
+  - [ ] Add "Forgot password?" link
+  - [ ] Add "Don't have an account? Sign up" link
+  - [ ] Implement X close button
+  - [ ] Implement Escape key handler
+- [ ] Implement accessibility features
+  - [ ] Add focus trap (react-focus-lock or Radix primitive)
+  - [ ] Add ARIA labels (role="dialog", aria-labelledby, aria-describedby)
+  - [ ] Implement keyboard navigation (Tab/Shift+Tab)
+  - [ ] Add focus management (focus on open, return on close)
+  - [ ] Test with screen reader
+- [ ] Integrate idle timer in JournalStream
+  - [ ] Call useIdleTimer with 2000ms delay
+  - [ ] Reset timer on editor onChange
+  - [ ] Show modal on timer callback
+  - [ ] Check sessionStorage cooldown before showing
+- [ ] Implement modal dismissal logic
+  - [ ] Store dismissedAt in sessionStorage
+  - [ ] Set cooldown to 60000ms (60 seconds)
+  - [ ] Respect cooldown on subsequent idle events
+- [ ] Test modal timing (use manual timers, not fake timers yet)
+- [ ] Test modal can be dismissed with X and Escape
+- [ ] Test cooldown period works correctly
+
+### Task 4: Phase 3 - Content Transfer
+- [ ] Create `/src/app/api/transfer-guest-content/route.ts`
+  - [ ] Accept POST with { content: string, userId: string }
+  - [ ] Verify user authentication via Supabase session
+  - [ ] Import and use sanitizeHtml from `/src/utils/sanitizeHtml.ts`
+  - [ ] Sanitize guest content before insert
+  - [ ] Create journal entry in notes table (note_type='journal-entry')
+  - [ ] Set proper timestamp (created_at, updated_at)
+  - [ ] Return success/failure with entry ID
+- [ ] Implement auth success handler in GuestAuthModal
+  - [ ] Detect successful sign-in (check Supabase session)
+  - [ ] Detect successful sign-up (check Supabase session)
+  - [ ] Get guest draft content from useGuestDraft
+  - [ ] Check navigator.onLine before transfer
+  - [ ] Call /api/transfer-guest-content with content
+  - [ ] Handle success: clearDraft, show success toast, redirect
+  - [ ] Handle errors: show error toast, keep draft, offer retry
+- [ ] Implement offline detection
+  - [ ] Check navigator.onLine before transfer
+  - [ ] Show offline warning toast
+  - [ ] Queue transfer (store flag in sessionStorage)
+  - [ ] Retry when online (listen to 'online' event)
+- [ ] Implement error handling
+  - [ ] Content transfer failure: exponential backoff (1s, 2s, 4s)
+  - [ ] Auth API failure: show user-friendly messages
+  - [ ] Network timeout: 10s timeout with retry
+  - [ ] Partial transfer: verify entry created before clearing
+- [ ] Test sign-up flow with content transfer
+- [ ] Test sign-in flow with content transfer
+- [ ] Test error scenarios (offline, API failure, timeout)
+- [ ] Test content is cleared from localStorage after success
+
+### Task 5: Phase 4 - E2E Tests & Polish
+- [ ] Create `/tests/e2e/guest-journaling.spec.ts`
+  - [ ] Test 1: Guest can type and use editor
+  - [ ] Test 2: Helper tiles work for guests
+  - [ ] Test 3: Toolbar formatting works
+  - [ ] Test 4: Auth modal appears after 2s idle (Playwright clock API)
+  - [ ] Test 5: Modal can be dismissed (X button and Escape)
+  - [ ] Test 6: Modal reappears after cooldown (60s fast-forward)
+  - [ ] Test 7: Content transfer on sign-up
+  - [ ] Test 8: Content transfer on sign-in
+  - [ ] Test 9: No network writes for guests
+  - [ ] Test 10: SSR hydration works correctly
+  - [ ] Test 11: localStorage quota exceeded handling
+  - [ ] Test 12: Offline content transfer
+  - [ ] Test 13: Accessibility focus trap
+  - [ ] Test 14: Accessibility keyboard navigation
+- [ ] Create `/tests/helpers/guest-journaling.ts` with test utilities
+- [ ] Run all E2E tests and fix any failures
+- [ ] Manual testing checklist
+  - [ ] Test on Chrome, Firefox, Safari
+  - [ ] Test on mobile (iOS Safari, Android Chrome)
+  - [ ] Test on tablet
+  - [ ] Verify no console errors
+  - [ ] Verify auth modal timing feels natural
+  - [ ] Test full sign-up flow end-to-end
+  - [ ] Test full sign-in flow end-to-end
+- [ ] Performance optimization
+  - [ ] Verify page load < 2s to interactive
+  - [ ] Check bundle size impact
+  - [ ] Optimize images/assets if needed
+- [ ] Error handling polish
+  - [ ] Review all error messages for clarity
+  - [ ] Test all error scenarios
+  - [ ] Ensure errors are logged appropriately
+- [ ] Run `npm run lint` and fix any issues
+- [ ] Run `npm run build` and verify successful build
+
+---
+
+## Dev Agent Record
+
+### Agent Model Used
+- Model: [To be filled by dev agent]
+- Started: [To be filled by dev agent]
+- Completed: [To be filled by dev agent]
+
+### Debug Log References
+- [To be filled by dev agent as issues arise]
+
+### Completion Notes
+- [To be filled by dev agent upon completion]
+
+### File List
+**New Files Created:**
+- [To be filled by dev agent]
+
+**Modified Files:**
+- [To be filled by dev agent]
+
+**Deleted Files:**
+- [To be filled by dev agent]
+
+### Change Log
+- [To be filled by dev agent with summary of changes]
