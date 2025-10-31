@@ -2,7 +2,7 @@
 
 **Story ID:** 1.8
 **Epic:** Epic 1 - Clean Slate & Fresh Foundation
-**Status:** Planned
+**Status:** In Progress
 **Priority:** High
 **Estimated Effort:** 5-7 days
 **Related Issue:** [#111](https://github.com/levineam/Signum/issues/111)
