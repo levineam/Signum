@@ -10,12 +10,10 @@
 
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import { ArrowLeft, Lock, Shield, Key, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EnableEncryptionButton } from '@/components/settings/EnableEncryptionButton'
 import { featureFlags } from '@/lib/feature-flags'
-import { supabase } from '@/lib/supabase'
 
 export const metadata: Metadata = {
   title: 'Privacy & Security | Signum',
@@ -25,15 +23,7 @@ export const metadata: Metadata = {
 // Force dynamic rendering - this page requires authentication
 export const dynamic = 'force-dynamic'
 
-export default async function PrivacyPage() {
-  // Get authenticated user
-  const { data: { user }, error } = await supabase.auth.getUser()
-
-  // Redirect to login if not authenticated
-  if (error || !user) {
-    redirect('/auth/login')
-  }
-
+export default function PrivacyPage() {
   // Check if encryption feature is enabled via feature flag
   const encryptionEnabled = featureFlags.encryption
 
