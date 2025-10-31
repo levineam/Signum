@@ -8,52 +8,57 @@
  * - See count of encrypted vs plain text notes
  */
 
-import { Metadata } from 'next'
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Lock, Shield, Key, Database } from 'lucide-react'
+import { Lock, Shield, Key, Database } from 'lucide-react'
+import { Sidebar } from '@/components/layout/Sidebar'
+import { AppHeader } from '@/components/layout/AppHeader'
 import { Button } from '@/components/ui/button'
 import { EnableEncryptionButton } from '@/components/settings/EnableEncryptionButton'
 import { featureFlags } from '@/lib/feature-flags'
 
-export const metadata: Metadata = {
-  title: 'Privacy & Security | Signum',
-  description: 'Manage your privacy settings and end-to-end encryption',
-}
-
-// Force dynamic rendering - this page requires authentication
-export const dynamic = 'force-dynamic'
-
 export default function PrivacyPage() {
+  const [activeSection, setActiveSection] = useState('settings')
+  const router = useRouter()
+
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section)
+    if (section === 'journal') {
+      router.push('/')
+    } else if (section === 'notes') {
+      router.push('/notes')
+    } else if (section === 'ontology') {
+      router.push('/ontology')
+    }
+  }
+
   // Check if encryption feature is enabled via feature flag
   const encryptionEnabled = featureFlags.encryption
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to App
-              </Button>
-            </Link>
-
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                Privacy & Security
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Manage your data encryption and privacy settings
-              </p>
+    <div className="min-h-screen bg-background">
+      <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
+      <main className="lg:pl-64">
+        <div className="flex min-h-screen flex-col">
+          <AppHeader />
+          <div className="flex-1">
+            {/* Page Header */}
+            <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  Privacy & Security
+                </h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Manage your data encryption and privacy settings
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            {/* Main Content */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Encryption Section */}
         {encryptionEnabled ? (
           <div className="mb-8">
@@ -249,7 +254,10 @@ export default function PrivacyPage() {
             </div>
           </div>
         </div>
-      </div>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   )
 }
