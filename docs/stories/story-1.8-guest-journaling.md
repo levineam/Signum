@@ -191,22 +191,162 @@ Phase 4 – E2E
 
 ---
 
+## Tasks / Subtasks
+
+### Task 1: Phase 0 - Foundation (Hooks & Types)
+- [x] Create `/src/types/guest.ts` with GuestDraft, AuthModalState interfaces
+- [x] Create `/src/hooks/useGuestDraft.ts`
+  - [x] Client-side localStorage loading with useEffect guard
+  - [x] saveDraft with size limit and QuotaExceededError handling
+  - [x] clearDraft function
+  - [x] getDraftSize utility
+- [x] Create `/src/hooks/useIdleTimer.ts`
+  - [x] Trailing debounce with reset/cancel
+  - [x] Cooldown checking via sessionStorage
+  - [x] setDismissed for cooldown tracking
+  - [x] Cleanup in useEffect
+
+### Task 2: Phase 1 - Auth Modal Component
+- [ ] Create `/src/components/auth/GuestAuthModal.tsx`
+  - [ ] Use shadcn Dialog as base
+  - [ ] Email + password inputs with validation
+  - [ ] Sign in button (primary action)
+  - [ ] Forgot password link
+  - [ ] Sign up link toggle
+  - [ ] X close button
+  - [ ] ESC key handler
+- [ ] Implement accessibility
+  - [ ] Focus trap (via Radix Dialog or react-focus-lock)
+  - [ ] ARIA labels (role="dialog", aria-labelledby, aria-describedby)
+  - [ ] Keyboard navigation (Tab/Shift+Tab)
+  - [ ] Focus management (focus on open, return on close)
+- [ ] Add auto-dismiss after 30s inactivity
+- [ ] Test modal in isolation
+
+### Task 3: Phase 2 - Guest Journal Integration
+- [ ] Examine current landing page
+  - [ ] Read `/src/app/page.tsx` to understand auth detection
+  - [ ] Identify where "Sign in to start journaling" message is rendered
+- [ ] Modify landing page for guest mode
+  - [ ] Detect auth state (use existing auth context/hook)
+  - [ ] Render JournalStream for unauthenticated users
+  - [ ] Pass isGuest prop or similar signal
+- [ ] Modify `/src/components/journal/JournalStream.tsx`
+  - [ ] Accept isGuest boolean prop
+  - [ ] Integrate useGuestDraft when isGuest=true
+  - [ ] Integrate useIdleTimer
+  - [ ] Wire editor onChange to saveDraft + timer reset
+  - [ ] Show GuestAuthModal when idle timer fires
+  - [ ] Disable Supabase auto-save when isGuest=true
+- [ ] Test guest typing and localStorage persistence
+- [ ] Verify SSR hydration (no console errors)
+- [ ] Verify helpers work for guests
+- [ ] Verify formatting toolbar works for guests
+
+### Task 4: Phase 3 - Content Transfer API
+- [ ] Create `/src/app/api/transfer-guest-content/route.ts`
+  - [ ] Accept POST with { content: string }
+  - [ ] Verify authentication via Supabase session
+  - [ ] Import sanitizeHtml from utils
+  - [ ] Sanitize guest HTML content
+  - [ ] Create journal entry (note_type='journal-entry')
+  - [ ] Set proper timestamps
+  - [ ] Return success { entryId } or error
+- [ ] Implement transfer in GuestAuthModal
+  - [ ] On successful auth, get draft from useGuestDraft
+  - [ ] Check navigator.onLine
+  - [ ] Call /api/transfer-guest-content
+  - [ ] On success: clearDraft, show toast, redirect
+  - [ ] On error: show error, keep draft, offer retry
+- [ ] Handle offline mode
+  - [ ] Detect offline before transfer
+  - [ ] Show offline warning
+  - [ ] Queue transfer for when online (listen to 'online' event)
+- [ ] Handle errors
+  - [ ] Transfer failure: exponential backoff retry
+  - [ ] Network timeout: 10s with retry
+  - [ ] Auth failures: user-friendly messages
+- [ ] Test sign-up flow with content transfer
+- [ ] Test sign-in flow with content transfer
+
+### Task 5: Phase 4 - E2E Tests & Polish
+- [ ] Create `/tests/e2e/guest-journaling.spec.ts`
+  - [ ] Test: Guest can type and use editor
+  - [ ] Test: Helper tiles work
+  - [ ] Test: Toolbar formatting works
+  - [ ] Test: Auth modal appears after 2s (use Playwright clock)
+  - [ ] Test: Modal dismissible (X and ESC)
+  - [ ] Test: Modal reappears after cooldown
+  - [ ] Test: Content transfer on sign-up
+  - [ ] Test: Content transfer on sign-in
+  - [ ] Test: No network writes pre-auth
+  - [ ] Test: SSR hydration correct
+  - [ ] Test: Offline handling
+  - [ ] Test: Focus trap accessibility
+  - [ ] Test: Keyboard navigation
+- [ ] Create test utilities in `/tests/helpers/guest-journaling.ts`
+- [ ] Run all E2E tests, fix failures
+- [ ] Manual testing
+  - [ ] Chrome, Firefox, Safari
+  - [ ] Mobile (iOS Safari, Android Chrome)
+  - [ ] Tablet
+  - [ ] No console errors
+- [ ] Run `npm run lint` and fix issues
+- [ ] Run `npm run build` and verify success
+
+---
+
 ## Definition of Done
 
-- [ ] All acceptance criteria pass locally.  
-- [ ] `npm run lint` passes with no errors.  
-- [ ] Playwright E2E tests for guest journaling are green.  
-- [ ] Security checks: no pre-auth writes; sanitization confirmed.  
-- [ ] Documentation updated (this story + any README notes if needed).  
-- [ ] Optional: feature flag toggle plan documented for staged rollout.
+- [ ] All acceptance criteria pass locally
+- [ ] `npm run lint` passes with no errors
+- [ ] Playwright E2E tests for guest journaling are green
+- [ ] Security checks: no pre-auth writes; sanitization confirmed
+- [ ] Documentation updated (this story + any README notes if needed)
+- [ ] Optional: feature flag toggle plan documented for staged rollout
+
+---
+
+## Dev Agent Record
+
+### Agent Model Used
+- Model: Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)
+- Started: October 31, 2025 1:20 PM
+- Completed: [In Progress]
+
+### Debug Log References
+- [None yet]
+
+### Completion Notes
+**Phase 0 Complete:**
+- Created guest types with interfaces and constants
+- Implemented useGuestDraft with QuotaExceededError handling and sessionStorage fallback
+- Implemented useIdleTimer with cooldown checking via sessionStorage
+- All hooks include proper TypeScript typing and error handling
+
+### File List
+
+**New Files Created:**
+- `/src/types/guest.ts` (769 bytes)
+- `/src/hooks/useGuestDraft.ts` (2,826 bytes)
+- `/src/hooks/useIdleTimer.ts` (1,955 bytes)
+
+**Modified Files:**
+- [None yet]
+
+**Deleted Files:**
+- [None]
+
+### Change Log
+- **2025-10-31 1:20 PM**: Created Phase 0 foundation files (types + hooks)
 
 ---
 
 ## References
 
-- Issue #111 discussion and technical notes  
-- Existing editor and journal components:  
-  - `src/components/journal/JournalStream.tsx`  
-  - `src/components/editor/SimpleRichEditor.tsx`  
+- Issue #111 discussion and technical notes
+- Existing editor and journal components:
+  - `src/components/journal/JournalStream.tsx`
+  - `src/components/editor/SimpleRichEditor.tsx`
 - Sanitization util: `src/utils/sanitizeHtml.ts` (or equivalent)
 
