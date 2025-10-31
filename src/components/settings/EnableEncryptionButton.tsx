@@ -17,32 +17,37 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useAuth } from '@/contexts/AuthContext'
 import { initializeEncryptionForUser } from '@/lib/crypto/keyManagement'
 import { migrateAllUserNotes } from '@/lib/crypto/migration'
 
 interface EnableEncryptionButtonProps {
-  userId: string
   onEncryptionEnabled?: () => void
 }
 
 export function EnableEncryptionButton({
-  userId,
   onEncryptionEnabled,
 }: EnableEncryptionButtonProps) {
+  const { user } = useAuth()
   const [isEncrypting, setIsEncrypting] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
   const [progress, setProgress] = useState({ current: 0, total: 1 }) // Initialize total to 1 to avoid NaN
 
   const handleEnableEncryption = async () => {
+    if (!user?.id) {
+      toast.error('You must be logged in to enable encryption.')
+      return
+    }
+
     setShowDialog(false)
     setIsEncrypting(true)
 
     try {
       // Generate encryption key
-      await initializeEncryptionForUser(userId)
+      await initializeEncryptionForUser(user.id)
 
       // Migrate all notes
-      await migrateAllUserNotes(userId, (current, total) => {
+      await migrateAllUserNotes(user.id, (current, total) => {
         setProgress({ current, total })
       })
 
@@ -55,6 +60,11 @@ export function EnableEncryptionButton({
     } finally {
       setIsEncrypting(false)
     }
+  }
+
+  // Don't render if no user is authenticated
+  if (!user) {
+    return null
   }
 
   // Calculate progress percentage safely (avoid NaN)

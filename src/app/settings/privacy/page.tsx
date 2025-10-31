@@ -78,7 +78,7 @@ export default function PrivacyPage() {
                     can&apos;t access your encrypted content. Your encryption key is stored
                     locally on your device and never leaves your browser.
                   </p>
-                  <EnableEncryptionButton userId={user.id} />
+                  <EnableEncryptionButton />
                 </div>
               </div>
             </div>
