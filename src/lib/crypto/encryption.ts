@@ -52,7 +52,7 @@ export async function encryptNote(
   // Return as base64 strings for storage
   return {
     ciphertext: arrayBufferToBase64(ciphertext),
-    iv: arrayBufferToBase64(iv),
+    iv: arrayBufferToBase64(iv.buffer),
     version: 1,
   }
 }

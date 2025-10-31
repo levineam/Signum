@@ -8,17 +8,15 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { initializeEncryptionForUser } from '@/lib/crypto/keyManagement'
 import { migrateAllUserNotes } from '@/lib/crypto/migration'
 
@@ -34,7 +32,6 @@ export function EnableEncryptionButton({
   const [isEncrypting, setIsEncrypting] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
   const [progress, setProgress] = useState({ current: 0, total: 1 }) // Initialize total to 1 to avoid NaN
-  const { toast } = useToast()
 
   const handleEnableEncryption = async () => {
     setShowDialog(false)
@@ -49,20 +46,12 @@ export function EnableEncryptionButton({
         setProgress({ current, total })
       })
 
-      toast({
-        title: 'Encryption Enabled',
-        description:
-          '✅ All notes encrypted. Your privacy is now protected.',
-      })
+      toast.success('✅ All notes encrypted. Your privacy is now protected.')
 
       onEncryptionEnabled?.()
     } catch (error) {
       console.error('Encryption failed:', error)
-      toast({
-        title: 'Encryption Failed',
-        description: 'Failed to enable encryption. Please try again.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to enable encryption. Please try again.')
     } finally {
       setIsEncrypting(false)
     }
@@ -91,11 +80,11 @@ export function EnableEncryptionButton({
         </div>
       )}
 
-      <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Enable End-to-End Encryption</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enable End-to-End Encryption</DialogTitle>
+            <DialogDescription className="space-y-3">
               <p>
                 This will encrypt all your notes using AES-256-GCM encryption.
                 Only you will be able to read them.
@@ -113,16 +102,18 @@ export function EnableEncryptionButton({
                 ⚠️ Important: This action cannot be undone. Make sure you have a
                 backup if needed.
               </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleEnableEncryption}>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEnableEncryption}>
               Enable Encryption
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

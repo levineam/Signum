@@ -85,7 +85,7 @@ export default async function PrivacyPage() {
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     Enable encryption to ensure that only you can read your notes. Even we
-                    can't access your encrypted content. Your encryption key is stored
+                    can&apos;t access your encrypted content. Your encryption key is stored
                     locally on your device and never leaves your browser.
                   </p>
                   <EnableEncryptionButton userId={user.id} />
@@ -158,14 +158,14 @@ export default async function PrivacyPage() {
                   <span className="text-amber-600 dark:text-amber-500">⚠️</span>
                   <span>
                     <strong>Key Storage</strong>: Your encryption key is stored in your
-                    browser's IndexedDB. Clearing browser data will delete your key.
+                    browser&apos;s IndexedDB. Clearing browser data will delete your key.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-amber-600 dark:text-amber-500">⚠️</span>
                   <span>
                     <strong>Device-Specific</strong>: Each device has its own encryption key.
-                    Encrypted notes from one device won't be readable on another.
+                    Encrypted notes from one device won&apos;t be readable on another.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
