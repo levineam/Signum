@@ -317,37 +317,14 @@ export async function initializeEncryptionForUser(userId: string): Promise<void>
 
 #### Signup Flow Integration
 
-```typescript
-// /src/app/api/auth/signup/route.ts (or wherever signup is handled)
+**CRITICAL: Key generation MUST happen client-side only.**
 
-export async function POST(req: Request) {
-  const { email, password } = await req.json()
+The encryption key is generated using browser-only APIs (Web Crypto API) and stored in IndexedDB. This code cannot run on the server because:
+1. IndexedDB is not available in server-side API routes
+2. Keys generated on the server would be visible to the operator (defeating end-to-end encryption)
+3. The Web Crypto API behavior differs between Node.js and browsers
 
-  // Create Supabase auth user
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  })
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
-  }
-
-  // Auto-generate encryption key after successful signup
-  if (data.user) {
-    try {
-      await initializeEncryptionForUser(data.user.id)
-    } catch (encryptionError) {
-      console.error('Failed to initialize encryption:', encryptionError)
-      // Don't fail signup if encryption setup fails - user can enable later
-    }
-  }
-
-  return NextResponse.json({ user: data.user })
-}
-```
-
-Or for client-side signup:
+**Correct implementation (client-side):**
 
 ```typescript
 // /src/components/auth/SignupForm.tsx
@@ -364,7 +341,7 @@ async function handleSignup(email: string, password: string) {
     return
   }
 
-  // Auto-generate encryption key after successful signup
+  // Auto-generate encryption key after successful signup (CLIENT-SIDE ONLY)
   if (data.user) {
     try {
       await initializeEncryptionForUser(data.user.id)
