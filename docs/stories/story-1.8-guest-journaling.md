@@ -96,6 +96,185 @@ Currently, the landing page shows a "Sign in to start journaling" message that c
 3. ✅ No security vulnerabilities from guest content injection
 4. ✅ Rate limiting considerations for auth modal API calls
 
+### Accessibility (WCAG AA)
+
+1. ✅ Auth modal has focus trap (focus stays within modal when open)
+2. ✅ Modal has proper ARIA labels:
+   - `role="dialog"`
+   - `aria-labelledby` pointing to modal heading
+   - `aria-describedby` for modal description
+3. ✅ Full keyboard navigation support:
+   - Tab/Shift+Tab cycles through modal controls
+   - Escape key dismisses modal
+   - Enter key submits form
+4. ✅ Focus management:
+   - Focus moves to modal on open
+   - Focus returns to trigger element on close
+5. ✅ Screen reader announcements for:
+   - Modal opening
+   - Form validation errors
+   - Content transfer success/failure
+6. ✅ Color contrast meets WCAG AA (4.5:1 for text)
+7. ✅ All interactive elements have visible focus indicators
+
+### Error Handling & Offline Support
+
+1. ✅ **Content Transfer Failure:**
+   - Show error toast: "Unable to save your entry. Please try again."
+   - Retry button with exponential backoff (1s, 2s, 4s)
+   - Content remains in localStorage until successful transfer
+   - Manual retry option in settings/profile
+
+2. ✅ **Offline Detection:**
+   - Detect navigator.onLine before transfer attempt
+   - Show warning: "You're offline. Your entry is saved locally and will sync when online."
+   - Queue transfer for when connection restored
+   - Visual indicator (offline badge)
+
+3. ✅ **localStorage Quota Exceeded:**
+   - Catch `QuotaExceededError` exception
+   - Show warning: "Local storage full. Sign up now to save your entry."
+   - Offer immediate auth modal (bypass cooldown)
+   - Fallback to sessionStorage if available
+
+4. ✅ **Auth API Failure:**
+   - 500/503 errors: "Service temporarily unavailable. Try again in a moment."
+   - 401/403 errors: "Authentication failed. Please check your credentials."
+   - Network timeout: 10-second timeout with retry option
+   - Maintain guest content during all error states
+
+5. ✅ **Partial Transfer:**
+   - Atomic transaction: rollback if any step fails
+   - Verify journal entry created before clearing localStorage
+   - Log transfer errors for debugging
+
+### Analytics & Funnel Tracking
+
+**Event Schema:**
+```typescript
+interface GuestJournalingEvent {
+  event: string
+  timestamp: number
+  sessionId: string
+  properties?: {
+    contentLength?: number
+    errorType?: string
+    retryCount?: number
+  }
+}
+```
+
+**Events to Track:**
+
+1. **`guest_typing_started`**
+   - Trigger: First character typed in guest editor
+   - Properties: `{ sessionId, timestamp }`
+
+2. **`auth_modal_shown`**
+   - Trigger: Modal appears after 2s idle
+   - Properties: `{ sessionId, contentLength, triggerType: 'idle' | 'manual' }`
+
+3. **`auth_modal_dismissed`**
+   - Trigger: User clicks X or presses Escape
+   - Properties: `{ sessionId, contentLength, dismissMethod: 'button' | 'escape' }`
+
+4. **`auth_attempt_started`**
+   - Trigger: User submits sign-in/sign-up form
+   - Properties: `{ sessionId, authType: 'signin' | 'signup' }`
+
+5. **`auth_success`**
+   - Trigger: Successful authentication
+   - Properties: `{ sessionId, authType, contentLength }`
+
+6. **`content_transfer_started`**
+   - Trigger: Begin transfer to Supabase
+   - Properties: `{ sessionId, contentLength }`
+
+7. **`content_transfer_success`**
+   - Trigger: Journal entry created successfully
+   - Properties: `{ sessionId, contentLength, transferDuration }`
+
+8. **`content_transfer_failed`**
+   - Trigger: Transfer error
+   - Properties: `{ sessionId, errorType, errorMessage, retryCount }`
+
+9. **`guest_session_abandoned`**
+   - Trigger: User leaves without auth
+   - Properties: `{ sessionId, contentLength, sessionDuration }`
+
+**Funnel Metrics:**
+- Typing start → Auth modal shown (modal appearance rate)
+- Auth modal shown → Auth attempt (engagement rate)
+- Auth attempt → Auth success (conversion rate)
+- Auth success → Transfer success (technical success rate)
+
+### Content Format & Constraints
+
+**System of Record:** HTML
+
+**Format Specification:**
+```typescript
+interface GuestDraft {
+  content: string        // HTML string (system of record)
+  lastModified: string   // ISO 8601 timestamp
+  version: number        // Schema version (current: 1)
+}
+```
+
+**HTML Constraints:**
+1. **Allowed Tags:** Per `sanitizeHtml.ts` whitelist
+   - Text formatting: `<b>`, `<i>`, `<u>`, `<mark>`, `<s>`
+   - Structure: `<p>`, `<br>`, `<h1>`, `<h2>`, `<ul>`, `<ol>`, `<li>`, `<blockquote>`
+   - Links: `<a>` (with `data-note-id` for internal links)
+
+2. **Conversion Rules:**
+   - **No conversion needed:** HTML is native format for journal entries
+   - **Sanitization:** Always run through `sanitizeHtml()` before Supabase insert
+   - **Validation:** Ensure no `<script>`, `<iframe>`, or other XSS vectors
+
+3. **Size Limits:**
+   - Maximum draft size: 50 KB (approximately 50,000 characters)
+   - Warning at 40 KB: "Your entry is getting long. Consider signing up to ensure it's saved."
+   - Hard limit: Reject localStorage write if exceeds 50 KB
+
+4. **Backward Compatibility:**
+   - Version 1 (current): HTML format
+   - Future versions: Add version field to GuestDraft for migration support
+
+**Edge Cases:**
+- Empty content (`""` or `<p><br></p>`): Don't create journal entry, just clear localStorage
+- Whitespace-only: Treat as empty
+- Malformed HTML: Sanitizer will clean, but log for debugging
+
+### Cooldown Persistence Behavior
+
+**Decision:** Cooldown does NOT survive page reload
+
+**Implementation:**
+```typescript
+// Store dismissal in sessionStorage (cleared on page close)
+sessionStorage.setItem('auth_modal_dismissed_at', Date.now().toString())
+sessionStorage.setItem('auth_modal_cooldown_ms', '60000')
+
+// Check cooldown on idle timer trigger
+const dismissedAt = sessionStorage.getItem('auth_modal_dismissed_at')
+const cooldownMs = parseInt(sessionStorage.getItem('auth_modal_cooldown_ms') || '60000')
+const now = Date.now()
+
+if (dismissedAt && (now - parseInt(dismissedAt)) < cooldownMs) {
+  // Still in cooldown, don't show modal
+  return
+}
+```
+
+**Rationale:**
+- **Fresh start on reload:** Each session gets fresh auth prompts
+- **Prevents bypass:** Users can't permanently dismiss by clearing sessionStorage
+- **Better conversion:** Users who return (reload) likely more engaged
+- **Simpler state:** No localStorage cleanup needed
+
+**Cooldown Duration:** 60 seconds (configurable via environment variable)
+
 ---
 
 ## Technical Implementation
@@ -362,67 +541,221 @@ interface AuthModalState {
 
 **Test File:** `/tests/e2e/guest-journaling.spec.ts`
 
-**Test Cases:**
+#### Playwright Configuration for Timer Tests
+
+**CRITICAL:** Use fake timers to avoid test flakiness and enable deterministic timing tests.
+
+```typescript
+// tests/e2e/guest-journaling.spec.ts
+import { test, expect } from '@playwright/test'
+
+test.describe('Guest Journaling', () => {
+  test.beforeEach(async ({ page, context }) => {
+    // Install fake timers before each test
+    await context.addInitScript(() => {
+      // Use sinon or jest fake timers
+      window.__timers = {
+        setTimeout: window.setTimeout,
+        clearTimeout: window.clearTimeout,
+        Date: window.Date
+      }
+    })
+  })
+
+  test('auth modal appears after 2s idle', async ({ page }) => {
+    await page.goto('/')
+
+    // Type content
+    await page.fill('[data-testid="guest-editor"]', 'Test content')
+
+    // Fast-forward time by 2000ms using Playwright's clock API
+    await page.clock.fastForward(2000)
+
+    // Verify modal appears
+    await expect(page.locator('[data-testid="guest-auth-modal"]')).toBeVisible()
+  })
+})
+```
+
+**Timer Control Strategies:**
+
+1. **Playwright Clock API** (recommended):
+   ```typescript
+   await page.clock.install({ time: new Date('2025-01-01') })
+   await page.clock.fastForward(2000) // Skip 2 seconds
+   ```
+
+2. **Custom Timer Mocks:**
+   - Use `page.addInitScript()` to override `setTimeout`/`setInterval`
+   - Inject controllable timer implementation
+
+3. **Test Isolation:**
+   - Reset timers between tests
+   - Clear all timeouts in `afterEach` hooks
+
+#### Test Cases
 
 1. **Guest can type and use editor**
    - Visit landing page unauthenticated
    - Type in journal editor
-   - Verify content persists
-   - Refresh page, verify content reloads
+   - Verify content persists in localStorage
+   - Refresh page, verify content reloads from localStorage
+   - **Timer consideration:** No timers involved
 
 2. **Helper tiles work for guests**
    - Click helper tile
    - Verify prompt inserts into editor
    - Test multiple helpers
+   - **Timer consideration:** No timers involved
 
 3. **Toolbar formatting works**
    - Test bold, italic, underline
    - Test lists (bullet, numbered)
    - Test headings
    - Verify formatting persists after refresh
+   - **Timer consideration:** No timers involved
 
-4. **Auth modal appears after 2s idle**
+4. **Auth modal appears after 2s idle** ⏱️
    - Type in editor
    - Stop typing
-   - Wait 2 seconds
+   - **Use `page.clock.fastForward(2000)`**
    - Verify modal appears
    - Modal shows sign-in and sign-up options
+   - **Timer consideration:** CRITICAL - use fake timers
 
 5. **Modal can be dismissed**
-   - Show auth modal
-   - Click X button (or press Escape)
+   - Show auth modal (fast-forward 2s)
+   - Click X button (test separately from Escape)
+   - Press Escape key (test separately from X button)
    - Verify modal closes
    - Verify content still accessible
+   - **Timer consideration:** Modal appearance uses fake timers
 
-6. **Modal reappears after cooldown**
+6. **Modal reappears after cooldown** ⏱️
    - Dismiss modal
-   - Wait 60 seconds
+   - **Use `page.clock.fastForward(60000)` for 60s cooldown**
    - Type more content
-   - Stop typing for 2s
+   - **Use `page.clock.fastForward(2000)` for 2s idle**
    - Verify modal reappears
+   - **Timer consideration:** CRITICAL - two timer interactions
 
 7. **Content transfer on sign-up**
-   - Type guest content
-   - Sign up with new account
+   - Type guest content (≥100 characters for meaningful test)
+   - Trigger auth modal (fast-forward 2s)
+   - Fill sign-up form
+   - Submit
+   - **Wait for API response** (use `page.waitForResponse('/api/auth/signup')`)
    - Verify content saved as journal entry
    - Verify guest localStorage cleared
    - Verify redirected to authenticated journal
+   - **Timer consideration:** Auth modal trigger only
 
 8. **Content transfer on sign-in**
    - Type guest content
-   - Sign in with existing account
-   - Verify content appended to today's entry (or new entry)
+   - Trigger auth modal
+   - Fill sign-in form
+   - Submit
+   - Verify content saved/appended
    - Verify guest localStorage cleared
+   - **Timer consideration:** Auth modal trigger only
 
 9. **No network writes for guests**
-   - Monitor network tab
+   - Monitor network tab via `page.on('request', ...)`
    - Type as guest
    - Verify no POST/PUT requests to Supabase
-   - Verify only localStorage used
+   - Verify only localStorage operations
+   - **Timer consideration:** None
 
-10. **SSR hydration works correctly**
-    - Check console for hydration errors
-    - Verify smooth transition from SSR to client-side
+10. **SSR hydration works correctly** 🔍
+    - **Pre-test setup:** Enable React DevTools in Playwright
+    - Check console for hydration warnings:
+      ```typescript
+      const errors = []
+      page.on('console', msg => {
+        if (msg.type() === 'error' && msg.text().includes('Hydration')) {
+          errors.push(msg.text())
+        }
+      })
+      await page.goto('/')
+      expect(errors).toHaveLength(0)
+      ```
+    - Verify guest editor renders on server (check initial HTML)
+    - Verify smooth transition from SSR to client-side draft loading
+    - Check for flash of wrong content
+    - **Timer consideration:** None
+
+11. **Error handling: localStorage quota exceeded**
+    - Fill localStorage to near-quota
+    - Type large content (>50KB)
+    - Verify quota warning appears
+    - Verify fallback to sessionStorage
+    - Verify auth modal bypass offered
+    - **Timer consideration:** None
+
+12. **Error handling: Offline content transfer**
+    - Type guest content
+    - Set `navigator.onLine = false` via `page.context().setOffline(true)`
+    - Attempt sign-up
+    - Verify offline warning
+    - Verify content remains in localStorage
+    - Set online, verify auto-retry
+    - **Timer consideration:** None
+
+13. **Accessibility: Focus trap**
+    - Open auth modal
+    - Press Tab repeatedly
+    - Verify focus stays within modal
+    - Verify focus order: heading → email → password → sign in → forgot → sign up → close button
+    - **Timer consideration:** Modal trigger uses fake timers
+
+14. **Accessibility: Keyboard navigation**
+    - Test Enter key submits form
+    - Test Escape key closes modal
+    - Test Tab/Shift+Tab cycles through elements
+    - Verify focus indicators visible
+    - **Timer consideration:** None
+
+#### Test Data
+
+**Sample Guest Content:**
+```typescript
+const GUEST_CONTENT = {
+  short: 'Quick thought',
+  medium: 'Today I reflected on... '.repeat(20), // ~500 chars
+  long: 'A detailed journal entry... '.repeat(100), // ~2500 chars
+  formatted: '<p>With <b>bold</b> and <i>italic</i> <mark>highlights</mark></p>',
+  withHelpers: 'I practiced gratitude today by...',
+  maxSize: 'x'.repeat(50000) // Test 50KB limit
+}
+```
+
+#### Test Utilities
+
+```typescript
+// tests/helpers/guest-journaling.ts
+export async function typeAsGuest(page: Page, content: string) {
+  await page.fill('[data-testid="guest-editor"]', content)
+}
+
+export async function triggerAuthModal(page: Page) {
+  await page.clock.fastForward(2000)
+  await expect(page.locator('[data-testid="guest-auth-modal"]')).toBeVisible()
+}
+
+export async function dismissModal(page: Page, method: 'button' | 'escape' = 'button') {
+  if (method === 'button') {
+    await page.click('[data-testid="modal-close-button"]')
+  } else {
+    await page.keyboard.press('Escape')
+  }
+  await expect(page.locator('[data-testid="guest-auth-modal"]')).not.toBeVisible()
+}
+
+export async function verifyLocalStorage(page: Page, key: string, expectedValue: string) {
+  const value = await page.evaluate((k) => localStorage.getItem(k), key)
+  expect(value).toBe(expectedValue)
+}
+```
 
 ### Manual Testing Checklist
 
