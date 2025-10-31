@@ -4,7 +4,7 @@
 <!-- Context: Security enhancement - End-to-end encryption for user notes -->
 <!-- Issue: https://github.com/levineam/Signum/issues/110 -->
 
-## Status: Draft
+## Status: Approved
 
 ## Story
 
