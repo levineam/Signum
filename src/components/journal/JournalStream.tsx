@@ -1025,7 +1025,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
       {/* Journal Entries - One per day */}
       <div className="space-y-4">
-        {!user ? (
+        {!user && !isGuest ? (
           <Card className="p-6">
             <div className="text-center">
               <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
@@ -1076,7 +1076,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               </div>
 
               {/* Helpers (only on today's entry) - Story 2.8: Tile-based UI */}
-              {isTodayEntry && user && (
+              {isTodayEntry && (user || isGuest) && (
                 <HelperTileGrid
                   helperTypes={[
                     'cbt-distortions',
@@ -1361,7 +1361,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       )}
 
       {/* Story 2.9: Helper Dialog (rendered once, outside entry loop) */}
-      {activeHelper && user && (activeHelperMode === 'info' || activeEntryId) && (
+      {activeHelper && (user || isGuest) && (activeHelperMode === 'info' || activeEntryId) && (
         <Dialog open={true} onOpenChange={(open) => !open && handleHelperClose()}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             {activeHelperMode === 'info' ? (
@@ -1379,7 +1379,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                 <HelperDialogContent
                   helperType={activeHelper}
                   entryId={activeEntryId!}
-                  userId={user.id}
+                  userId={user?.id || 'guest'}
                   onInsert={(helperText) => handleHelperInsertion(activeEntryId!, helperText)}
                   onClose={handleHelperClose}
                 />
