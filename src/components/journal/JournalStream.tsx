@@ -89,7 +89,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const [editingTask, setEditingTask] = useState<{ id: string; title: string; dueAt: string | null } | null>(null)
 
   // Guest mode state
-  const { draft: guestDraft, saveDraft: saveGuestDraft, clearDraft: clearGuestDraft, isLoading: isGuestDraftLoading } = useGuestDraft()
+  const { draft: guestDraft, saveDraft: saveGuestDraft, clearDraft: clearGuestDraft } = useGuestDraft()
   const [showAuthModal, setShowAuthModal] = useState(false)
 
   // Idle timer callback: show auth modal after 2s idle (only for guests)

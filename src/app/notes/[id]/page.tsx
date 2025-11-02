@@ -19,18 +19,12 @@ import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { AppHeader } from '@/components/layout/AppHeader'
 
-interface AimsContent {
-  todos: string
-  goals: string
-}
-
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { user } = useAuth()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
   const [content, setContent] = useState('')
-  const [aimsContent, setAimsContent] = useState<AimsContent>({ todos: '', goals: '' })
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -82,18 +76,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       if (loadedNote) {
         setNote(loadedNote)
 
-        // Support both old (type) and new (noteType) field names during migration
-        const noteType = 'type' in loadedNote ? (loadedNote as { type: string }).type : loadedNote.noteType
-        if (noteType === 'aims' || noteType === 'ontology-aim') {
-          try {
-            const parsed = JSON.parse(loadedNote.content)
-            setAimsContent(parsed)
-          } catch {
-            setAimsContent({ todos: '', goals: '' })
-          }
-        } else {
-          setContent(loadedNote.content)
-        }
+        // Always set content (including for ontology notes which display via OntologyCardViewer)
+        setContent(loadedNote.content)
       }
       setIsLoading(false)
     }
