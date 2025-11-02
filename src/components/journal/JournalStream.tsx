@@ -174,7 +174,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
         // Convert Note format to JournalEntry format and restore tasks
         const tasksMap = new Map<string, ParsedTask[]>()
-        const journalEntries: JournalEntry[] = journalNotes.map(note => {
+        const journalEntriesWithDuplicates: JournalEntry[] = journalNotes.map(note => {
           // Safely handle metadata (can be null for legacy notes)
           const meta = note.metadata || {}
           const journalDate = (meta as { journalDate?: string }).journalDate
@@ -201,6 +201,19 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             isSample: Boolean(isSample)
           }
         })
+
+        // Deduplicate entries by date (keep most recent if duplicates exist)
+        // This handles legacy notes that may not have journalDate metadata
+        const dateMap = new Map<string, JournalEntry>()
+        for (const entry of journalEntriesWithDuplicates) {
+          const existing = dateMap.get(entry.date)
+          if (!existing || new Date(entry.lastModified) > new Date(existing.lastModified)) {
+            dateMap.set(entry.date, entry)
+          }
+        }
+        const journalEntries = Array.from(dateMap.values()).sort((a, b) =>
+          b.date.localeCompare(a.date)
+        )
 
         // Restore tasks from metadata and fetch full details
         if (tasksMap.size > 0 && session?.access_token) {
