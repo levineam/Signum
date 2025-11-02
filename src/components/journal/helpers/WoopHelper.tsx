@@ -86,26 +86,34 @@ export function WoopContent({ entryId, userId, onInsert }: WoopHelperProps) {
     return plan.includes('if') && plan.includes('then')
   }
 
+  // Helper function to lowercase first character for prose flow
+  const lowercaseFirst = (text: string): string => {
+    if (!text) return text
+    return text.charAt(0).toLowerCase() + text.slice(1)
+  }
+
   // Format WOOP plan as HTML paragraphs (prose format)
   const formatWoopPlan = (): string => {
     const parts: string[] = []
     const sentences: string[] = []
 
     // Build prose sentence with wish (required)
-    sentences.push(`I wish to ${escapeHtml(steps.wish)}`)
+    sentences.push(`I wish to ${escapeHtml(lowercaseFirst(steps.wish))}`)
 
     // Add outcome if provided
     if (steps.outcome.trim()) {
-      sentences.push(`The best outcome would be to ${escapeHtml(steps.outcome)}`)
+      // Don't add "to" - user's text should flow naturally
+      sentences.push(`The best outcome would be ${escapeHtml(lowercaseFirst(steps.outcome))}`)
     }
 
     // Add obstacle if provided
     if (steps.obstacle.trim()) {
-      sentences.push(`The main obstacle is ${escapeHtml(steps.obstacle)}`)
+      sentences.push(`The main obstacle is ${escapeHtml(lowercaseFirst(steps.obstacle))}`)
     }
 
     // Add plan if provided
     if (steps.plan.trim()) {
+      // Keep plan capitalization as-is since it's often a complete sentence (If...then...)
       sentences.push(`${escapeHtml(steps.plan)}`)
     }
 
