@@ -86,35 +86,31 @@ export function WoopContent({ entryId, userId, onInsert }: WoopHelperProps) {
     return plan.includes('if') && plan.includes('then')
   }
 
-  // Format WOOP plan as HTML paragraphs
+  // Format WOOP plan as HTML paragraphs (prose format)
   const formatWoopPlan = (): string => {
     const parts: string[] = []
+    const sentences: string[] = []
 
-    // Header
-    parts.push('<p><strong>WOOP Goal Plan</strong></p>')
-    parts.push('<p><br></p>')
+    // Build prose sentence with wish (required)
+    sentences.push(`I wish to ${escapeHtml(steps.wish)}`)
 
-    // Wish (always included, it's required)
-    parts.push(`<p><strong>Wish:</strong> ${escapeHtml(steps.wish)}</p>`)
-    parts.push('<p><br></p>')
-
-    // Outcome (optional)
+    // Add outcome if provided
     if (steps.outcome.trim()) {
-      parts.push(`<p><strong>Outcome:</strong> ${escapeHtml(steps.outcome)}</p>`)
-      parts.push('<p><br></p>')
+      sentences.push(`The best outcome would be to ${escapeHtml(steps.outcome)}`)
     }
 
-    // Obstacle (optional)
+    // Add obstacle if provided
     if (steps.obstacle.trim()) {
-      parts.push(`<p><strong>Obstacle:</strong> ${escapeHtml(steps.obstacle)}</p>`)
-      parts.push('<p><br></p>')
+      sentences.push(`The main obstacle is ${escapeHtml(steps.obstacle)}`)
     }
 
-    // Plan (optional)
+    // Add plan if provided
     if (steps.plan.trim()) {
-      parts.push(`<p><strong>Plan:</strong> ${escapeHtml(steps.plan)}</p>`)
-      parts.push('<p><br></p>')
+      sentences.push(`${escapeHtml(steps.plan)}`)
     }
+
+    // Join all sentences into one paragraph
+    parts.push(`<p>${sentences.join('. ')}.</p>`)
 
     return parts.join('')
   }
