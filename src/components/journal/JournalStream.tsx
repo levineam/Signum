@@ -869,11 +869,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   }, [activeHelper, activeHelperMode])
 
   const handleHelperInsertion = async (entryId: string, helperText: string) => {
-    if (!user) {
-      return
-    }
-
-    console.log('📝 Inserting helper text', { entryId, helperText })
+    console.log('📝 Inserting helper text', { entryId, helperText, isGuest })
 
     // Clear any pending auto-save timeout to prevent race condition
     // If user typed then quickly inserted helper, pending timeout would overwrite helper text
@@ -928,10 +924,17 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
           return entry
         }))
 
-        // Persist to Supabase
-        updateNoteInDb(entryId, { content: finalContent }, user.id)
-          .then(() => console.log('💾 Persisted helper insertion to Supabase'))
-          .catch(error => console.error('Error persisting helper insertion:', error))
+        // Persist based on mode
+        if (isGuest) {
+          // Guest mode: save to localStorage
+          console.log('💾 Saving helper insertion to guest draft')
+          saveGuestDraft(finalContent)
+        } else if (user) {
+          // Authenticated mode: persist to Supabase
+          updateNoteInDb(entryId, { content: finalContent }, user.id)
+            .then(() => console.log('💾 Persisted helper insertion to Supabase'))
+            .catch(error => console.error('Error persisting helper insertion:', error))
+        }
 
         setCreatingLink(false)
       }, 50)
