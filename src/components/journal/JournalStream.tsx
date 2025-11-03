@@ -37,6 +37,17 @@ interface JournalEntry {
   content: string
   lastModified: string
   isSample?: boolean
+  metadata?: {
+    tasks?: Array<{
+      id: string
+      paragraphHash: string
+      status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
+    }>
+    rejectedTaskHashes?: string[]
+    journalDate?: string
+    prompt?: string
+    [key: string]: unknown  // Allow other metadata fields
+  } | null
 }
 
 interface ParsedTask {
@@ -87,6 +98,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const [creatingLink, setCreatingLink] = useState(false)
   const [entryTasks, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
   const [editingTask, setEditingTask] = useState<{ id: string; title: string; dueAt: string | null } | null>(null)
+
+  // Story 1.2.2: Store rejected task hashes per entry (entryId -> Set<paragraphHash>)
+  const [rejectedTaskHashes, setRejectedTaskHashes] = useState<Map<string, Set<string>>>(new Map())
 
   // Guest mode state
   const { draft: guestDraft, saveDraft: saveGuestDraft, clearDraft: clearGuestDraft, isLoading: isGuestDraftLoading } = useGuestDraft()
@@ -174,12 +188,17 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
         // Convert Note format to JournalEntry format and restore tasks
         const tasksMap = new Map<string, ParsedTask[]>()
+        // Story 1.2.2: Load rejected task hashes from metadata
+        const rejectedHashesMap = new Map<string, Set<string>>()
+
         const journalEntries: JournalEntry[] = journalNotes.map(note => {
           // Safely handle metadata (can be null for legacy notes)
           const meta = note.metadata || {}
           const journalDate = (meta as { journalDate?: string }).journalDate
           const isSample = (meta as { isSample?: boolean }).isSample
           const tasks = (meta as { tasks?: Array<{ id: string; paragraphHash: string; status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled' }> }).tasks
+          // Story 1.2.2: Load rejected hashes for this entry
+          const rejectedHashes = (meta as { rejectedTaskHashes?: string[] }).rejectedTaskHashes
 
           // Restore tasks for this entry
           if (tasks && tasks.length > 0) {
@@ -193,12 +212,18 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             })))
           }
 
+          // Story 1.2.2: Store rejected hashes in state
+          if (rejectedHashes && Array.isArray(rejectedHashes) && rejectedHashes.length > 0) {
+            rejectedHashesMap.set(note.id, new Set(rejectedHashes))
+          }
+
           return {
             id: note.id,
             date: journalDate || note.createdAt.split('T')[0],
             content: note.content,
             lastModified: note.updatedAt,
-            isSample: Boolean(isSample)
+            isSample: Boolean(isSample),
+            metadata: note.metadata as JournalEntry['metadata']  // Preserve original metadata for autosave merge
           }
         })
 
@@ -254,6 +279,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         }
 
         setEntryTasks(tasksMap)
+        // Story 1.2.2: Set rejected hashes in state
+        setRejectedTaskHashes(rejectedHashesMap)
 
         // Check if today's entry exists
         const todayEntry = journalEntries.find(e => e.date === today)
@@ -410,20 +437,35 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       // Only update entries that actually changed
       for (const entryId of entriesToUpdate) {
         const tasks = entryTasks.get(entryId)!
+        const entry = entries.find(e => e.id === entryId)
+        // Story 1.2.2: Merge current rejected hashes from state
+        const currentRejectedHashes = rejectedTaskHashes.get(entryId)
+        const rejectedHashesArray = currentRejectedHashes ? Array.from(currentRejectedHashes) : undefined
+
+        const updatedMetadata = {
+          ...(entry?.metadata || {}),
+          tasks: tasks.map(t => ({
+            id: t.id,
+            paragraphHash: t.paragraphHash,
+            status: t.status
+          })),
+          // Include rejected hashes if any exist in state
+          ...(rejectedHashesArray && rejectedHashesArray.length > 0
+            ? { rejectedTaskHashes: rejectedHashesArray }
+            : {})
+        }
+
         try {
           await updateNoteInDb(
             entryId,
-            {
-              metadata: {
-                tasks: tasks.map(t => ({
-                  id: t.id,
-                  paragraphHash: t.paragraphHash,
-                  status: t.status
-                }))
-              }
-            },
+            { metadata: updatedMetadata },
             user.id
           )
+
+          // Update entries state to keep it in sync with DB after successful save
+          setEntries(prev => prev.map(e =>
+            e.id === entryId ? { ...e, metadata: updatedMetadata } : e
+          ))
         } catch (error) {
           console.error(`Failed to save task metadata for entry ${entryId}:`, error)
         }
@@ -504,8 +546,25 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   // Task detection from journal paragraphs (Story 1.2)
   const processedParagraphs = useRef<Set<string>>(new Set())
 
+  // Story 1.2.2: Normalize paragraph text for consistent hashing
+  // Handles punctuation, whitespace, and case variations
+  const normalizeParagraphText = (text: string): string => {
+    return text
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ') // Collapse multiple spaces
+      .replace(/[.,;!?]+$/, '') // Remove trailing punctuation
+  }
+
   const detectTasksInContent = async (content: string, entryId: string) => {
     if (!user || !session?.access_token) return
+
+    // Story 1.2.2: Get rejected task hashes from state
+    const rejectedHashes = rejectedTaskHashes.get(entryId) || new Set<string>()
+
+    if (DEBUG_TASK_DETECTION && rejectedHashes.size > 0) {
+      console.log(`[Task Detection] Loaded ${rejectedHashes.size} rejected task hashes for entry ${entryId}`)
+    }
 
     // Extract paragraphs from HTML content
     const tempDiv = document.createElement('div')
@@ -533,16 +592,40 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
     for (const para of paragraphs) {
       const paragraphText = para.textContent?.trim() || ''
-      const paraHash = `${entryId}-${paragraphText}`
+
+      // Story 1.2.2: Use normalized text for hashing
+      const normalizedText = normalizeParagraphText(paragraphText)
+      const paraHash = `${entryId}-${normalizedText}`
 
       if (DEBUG_TASK_DETECTION) {
-        console.log('[Task Detection] Examining paragraph:', { paragraphText, isEmpty: !paragraphText, paraHash })
+        console.log('[Task Detection] Examining paragraph:', {
+          paragraphText: paragraphText.substring(0, 50),
+          normalizedText: normalizedText.substring(0, 50),
+          isEmpty: !paragraphText,
+          paraHash
+        })
       }
 
       // Skip empty paragraphs
       if (!paragraphText) {
         if (DEBUG_TASK_DETECTION) {
           console.log('[Task Detection] Skipping empty paragraph')
+        }
+        continue
+      }
+
+      // Story 1.2.2: Skip paragraphs that are too long (API limit is 1000 chars)
+      if (paragraphText.length > 1000) {
+        if (DEBUG_TASK_DETECTION) {
+          console.log('[Task Detection] Skipping paragraph too long:', paragraphText.length, 'chars')
+        }
+        continue
+      }
+
+      // Story 1.2.2: Check if this paragraph was rejected
+      if (rejectedHashes.has(paraHash)) {
+        if (DEBUG_TASK_DETECTION) {
+          console.log('[Task Detection] Skipping rejected paragraph:', paragraphText.substring(0, 50))
         }
         continue
       }
@@ -586,10 +669,17 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               const updated = new Map(prev)
               const existing = updated.get(entryId) || []
 
-              // Skip if task with this ID already exists in this entry
-              const taskExists = existing.some(t => t.id === task.id)
-              if (taskExists) {
-                console.log('⏭️ Task already exists in entryTasks, skipping:', task.id)
+              // Story 1.2.2: Check for duplicates by both ID and paragraphHash
+              const taskExistsById = existing.some(t => t.id === task.id)
+              const taskExistsByHash = existing.some(t => t.paragraphHash === paraHash)
+
+              if (taskExistsById) {
+                console.log('⏭️ Task already exists in entryTasks (by ID), skipping:', task.id)
+                return prev
+              }
+
+              if (taskExistsByHash) {
+                console.log('⏭️ Task already exists in entryTasks (by hash), skipping:', paraHash)
                 return prev
               }
 
@@ -1233,7 +1323,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                     }
                   }}
                   onReject={async () => {
-                    // Reject task - remove from list and delete from database
+                    // Story 1.2.2: Reject task - remove from list, delete from database, and persist rejection
                     try {
                       const response = await fetch(`/api/tasks/${task.id}`, {
                         method: 'DELETE',
@@ -1243,12 +1333,52 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                       })
 
                       if (response.ok) {
+                        // Remove from UI
                         setEntryTasks(prev => {
                           const updated = new Map(prev)
                           const tasks = updated.get(entry.id) || []
                           updated.set(entry.id, tasks.filter(t => t.id !== task.id))
                           return updated
                         })
+
+                        // Story 1.2.2: Update rejected hashes in state AND persist to DB
+                        if (user) {
+                          try {
+                            // Update state immediately for instant filtering
+                            setRejectedTaskHashes(prev => {
+                              const updated = new Map(prev)
+                              const existing = updated.get(entry.id) || new Set<string>()
+                              existing.add(task.paragraphHash)
+                              updated.set(entry.id, existing)
+                              return updated
+                            })
+
+                            // Get current entry to access existing metadata
+                            const currentEntry = entries.find(e => e.id === entry.id)
+                            if (currentEntry) {
+                              // Get existing rejected hashes from state (already updated above)
+                              const updatedRejectedSet = rejectedTaskHashes.get(entry.id) || new Set<string>()
+                              updatedRejectedSet.add(task.paragraphHash)
+                              const updatedRejected = Array.from(updatedRejectedSet)
+
+                              // Persist to database using in-memory metadata to avoid race conditions
+                              await updateNoteInDb(entry.id, {
+                                metadata: {
+                                  ...(currentEntry.metadata || {}),
+                                  rejectedTaskHashes: updatedRejected
+                                }
+                              }, user.id)
+
+                              if (DEBUG_TASK_DETECTION) {
+                                console.log('[Task Rejection] Persisted rejection:', task.paragraphHash)
+                              }
+                            }
+                          } catch (metadataError) {
+                            console.error('[Task Rejection] Failed to persist rejection:', metadataError)
+                            // State is already updated, so filtering will still work for this session
+                          }
+                        }
+
                         toast.success('Task rejected and deleted')
                       } else {
                         toast.error('Failed to delete task')

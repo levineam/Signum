@@ -35,6 +35,14 @@ Brownfield enhancement stories for NLP, tasks, and analytics
 
 **Location:** `docs/stories/story-1.3-paragraph-suggestions.md`
 
+### 🚧 In Progress
+
+| Story | Title | Status | Issue |
+|-------|-------|--------|-------|
+| 1.2.2 | Fix Duplicate Task Creation & Rejected Task Re-appearance | In Progress | #130 |
+
+**Location:** `docs/stories/story-1.2.2-fix-duplicate-task-creation.md`
+
 ### 📋 Planned
 
 | Story | Title | Status | Epic |
