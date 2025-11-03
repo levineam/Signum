@@ -411,9 +411,10 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
           <AppHeader />
           <div className="flex-1">
             <div className="max-w-3xl mx-auto p-6">
-      {/* Header with Delete Button */}
-      {!isOntologyNote && (
-        <div className="mb-6 flex justify-end">
+      {/* Note Title with Delete Button */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">{getNoteDisplayTitle(note)}</h1>
+        {!isOntologyNote && (
           <Button
             variant="ghost"
             size="icon"
@@ -424,11 +425,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
           >
             <Trash2 className="h-5 w-5" />
           </Button>
-        </div>
-      )}
-
-      {/* Note Title */}
-      <h1 className="text-3xl font-bold mb-6">{getNoteDisplayTitle(note)}</h1>
+        )}
+      </div>
 
       {/* Ontology note description */}
       {isOntologyNote && (
