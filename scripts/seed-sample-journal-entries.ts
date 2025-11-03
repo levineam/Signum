@@ -1,20 +1,46 @@
 /**
  * Seed script: Load sample journal entries into Supabase
- * Story 2.4: Supabase Migration
+ * Story 2.4.6: Updated to require authenticated user ID
  *
  * ⚠️ DEVELOPMENT ONLY - DO NOT USE IN PRODUCTION
- * This script uses a fixed prototype user ID for local testing.
- * In production, use authenticated user IDs from Supabase Auth.
+ * This script requires a valid user ID from Supabase Auth.
  *
- * Usage: source .env.local && npx tsx scripts/seed-sample-journal-entries.ts
+ * Usage:
+ *   # Set USER_ID environment variable to authenticated user's UUID
+ *   source .env.local && USER_ID="your-user-uuid" npx tsx scripts/seed-sample-journal-entries.ts
+ *
+ *   # Or pass as argument
+ *   source .env.local && npx tsx scripts/seed-sample-journal-entries.ts your-user-uuid
+ *
+ * To get your user ID:
+ *   1. Sign up/login to the app
+ *   2. Open browser console
+ *   3. Run: supabase.auth.getUser().then(r => console.log(r.data.user.id))
  */
 
 import { sampleJournalEntries } from '../src/data/sampleEntries'
 import { createClient } from '@supabase/supabase-js'
 
-// Fixed user ID for prototype phase (DEVELOPMENT ONLY)
-// TODO Story 2.4.1: Update this script to accept user_id as parameter
-const PROTOTYPE_USER_ID = '00000000-0000-0000-0000-000000000000'
+// Get user ID from environment variable or command-line argument
+const USER_ID = process.argv[2] || process.env.USER_ID
+
+if (!USER_ID) {
+  console.error('❌ Missing USER_ID')
+  console.error('\nUsage:')
+  console.error('  USER_ID="your-uuid" npx tsx scripts/seed-sample-journal-entries.ts')
+  console.error('  OR')
+  console.error('  npx tsx scripts/seed-sample-journal-entries.ts your-uuid')
+  console.error('\nGet your user ID from the app (see instructions in file header)')
+  process.exit(1)
+}
+
+// Validate UUID format
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+if (!uuidRegex.test(USER_ID)) {
+  console.error('❌ Invalid UUID format:', USER_ID)
+  console.error('   Expected format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
+  process.exit(1)
+}
 
 async function seedSampleJournalEntries() {
   // Initialize Supabase client with service role key to bypass RLS
@@ -37,18 +63,18 @@ async function seedSampleJournalEntries() {
   })
 
   console.log('🌱 Starting sample journal entry seeding...')
-  console.log(`   User ID: ${PROTOTYPE_USER_ID}`)
+  console.log(`   User ID: ${USER_ID}`)
   console.log(`   Entries to seed: ${sampleJournalEntries.length}`)
 
   // Check if entries already exist
   const { count } = await supabase
     .from('notes')
     .select('id', { count: 'exact', head: true })
-    .eq('user_id', PROTOTYPE_USER_ID)
+    .eq('user_id', USER_ID)
     .eq('note_type', 'journal-entry')
 
   if (count && count > 0) {
-    console.log(`\n⚠️  Found ${count} existing journal entries for prototype user`)
+    console.log(`\n⚠️  Found ${count} existing journal entries for this user`)
     console.log('   Skipping seed to avoid duplicates')
     console.log('   To re-seed, delete existing entries first')
     return
@@ -57,7 +83,7 @@ async function seedSampleJournalEntries() {
   // Convert sample entries to Supabase note format
   // Note: Don't use entry.id as Supabase will auto-generate UUIDs
   const notesToInsert = sampleJournalEntries.map(entry => ({
-    user_id: PROTOTYPE_USER_ID,
+    user_id: USER_ID,
     title: `Journal Entry - ${entry.date}`,
     content: entry.content,
     note_type: 'journal-entry',
