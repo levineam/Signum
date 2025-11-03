@@ -1356,21 +1356,16 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                               updatedRejectedSet.add(task.paragraphHash)
                               const updatedRejected = Array.from(updatedRejectedSet)
 
-                              // Persist to database (fetch from entries which has metadata)
-                              const allNotes = await getNotes(user.id)
-                              const currentNote = allNotes.find(n => n.id === entry.id)
-
-                              if (currentNote) {
-                                await updateNoteInDb(entry.id, {
-                                  metadata: {
-                                    ...(currentNote.metadata || {}),
-                                    rejectedTaskHashes: updatedRejected
-                                  }
-                                }, user.id)
-
-                                if (DEBUG_TASK_DETECTION) {
-                                  console.log('[Task Rejection] Persisted rejection:', task.paragraphHash)
+                              // Persist to database using in-memory metadata to avoid race conditions
+                              await updateNoteInDb(entry.id, {
+                                metadata: {
+                                  ...(currentEntry.metadata || {}),
+                                  rejectedTaskHashes: updatedRejected
                                 }
+                              }, user.id)
+
+                              if (DEBUG_TASK_DETECTION) {
+                                console.log('[Task Rejection] Persisted rejection:', task.paragraphHash)
                               }
                             }
                           } catch (metadataError) {
