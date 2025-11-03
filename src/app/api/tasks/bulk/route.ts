@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+interface TaskRow {
+  id: string;
+  title: string;
+  due_at: string | null;
+  rrule: string | null;
+  status: string;
+  is_query?: boolean;
+  query_confidence?: number;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -75,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Transform snake_case to camelCase for frontend
-    const transformedTasks = (tasks || []).map((task: any) => ({
+    const transformedTasks = (tasks || []).map((task: TaskRow) => ({
       id: task.id,
       title: task.title,
       dueAt: task.due_at,
