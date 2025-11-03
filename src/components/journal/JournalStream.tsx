@@ -435,6 +435,10 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       for (const entryId of entriesToUpdate) {
         const tasks = entryTasks.get(entryId)!
         const entry = entries.find(e => e.id === entryId)
+        // Story 1.2.2: Merge current rejected hashes from state
+        const currentRejectedHashes = rejectedTaskHashes.get(entryId)
+        const rejectedHashesArray = currentRejectedHashes ? Array.from(currentRejectedHashes) : undefined
+
         try {
           await updateNoteInDb(
             entryId,
@@ -445,7 +449,11 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                   id: t.id,
                   paragraphHash: t.paragraphHash,
                   status: t.status
-                }))
+                })),
+                // Include rejected hashes if any exist in state
+                ...(rejectedHashesArray && rejectedHashesArray.length > 0
+                  ? { rejectedTaskHashes: rejectedHashesArray }
+                  : {})
               }
             },
             user.id
