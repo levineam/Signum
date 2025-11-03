@@ -29,7 +29,6 @@ export async function POST(req: NextRequest) {
 
     // Validate inputs
     if (!paragraphText || typeof paragraphText !== 'string') {
-      console.error('[Task Parse API] Invalid paragraphText:', typeof paragraphText);
       return NextResponse.json(
         { error: 'paragraphText is required and must be a string' },
         { status: 400 }
@@ -37,7 +36,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (paragraphText.length > 1000) {
-      console.error('[Task Parse API] Paragraph too long:', paragraphText.length, 'chars');
       return NextResponse.json(
         { error: 'paragraphText must be less than 1000 characters' },
         { status: 400 }

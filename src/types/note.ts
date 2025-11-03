@@ -51,7 +51,6 @@ export interface NoteMetadata {
     paragraphHash: string       // Hash of paragraph text (entryId-text)
     status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
   }>
-  rejectedTaskHashes?: string[] // Story 1.2.2: Hashes of rejected tasks to prevent re-detection
 
   // For reflections (note_type: 'reflection')
   sourceNoteId?: string         // UUID of source journal entry
