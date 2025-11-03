@@ -1,6 +1,6 @@
 # Signum Story Index
 
-**Last Updated:** October 31, 2025
+**Last Updated:** November 3, 2025
 **Purpose:** Comprehensive tracking of all stories across the Signum project
 
 ---
@@ -73,10 +73,18 @@ See `docs/stories/completed/` for:
 
 ### 📋 In Progress / Planned
 
-| Story | Title | Status |
-|-------|-------|--------|
-| 2.4.5 | Ontology Expandable Rows | Completed (PR #49) |
-| 2.5 | Voice Transcription | Completed (PRs #69, #72, #74) |
+| Story | Title | Status | Priority |
+|-------|-------|--------|----------|
+| 2.4.5 | Ontology Expandable Rows | Completed (PR #49) | - |
+| 2.4.6 | Production Security Hardening & Logging | **📋 PLANNED (P0)** | **Launch Blocker** |
+| 2.5 | Voice Transcription | Completed (PRs #69, #72, #74) | - |
+
+**Story 2.4.6 Details:**
+- **GitHub Issue:** [#118](https://github.com/levineam/Signum/issues/118)
+- **Purpose:** Remove prototype user backdoor, implement structured logging
+- **Priority:** P0 (Critical - Launch Blocker)
+- **Estimate:** 3.5-4.5 hours (or 45-60 min for critical security fix only)
+- **Location:** `docs/stories/story-2.4.6-production-security-hardening.md`
 
 ---
 
@@ -166,6 +174,9 @@ See `docs/stories/completed/` for:
 ---
 
 ## Quick Reference: Active Stories
+
+**Launch Blockers:**
+1. Story 2.4.6: Production Security Hardening (P0 - Critical) - [Issue #118](https://github.com/levineam/Signum/issues/118)
 
 **High Priority:**
 1. Story 1.8: Guest Journaling Before Sign-Up (Planned)
