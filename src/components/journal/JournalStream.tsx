@@ -103,7 +103,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const [rejectedTaskHashes, setRejectedTaskHashes] = useState<Map<string, Set<string>>>(new Map())
 
   // Guest mode state
-  const { draft: guestDraft, saveDraft: saveGuestDraft, clearDraft: clearGuestDraft, isLoading: isGuestDraftLoading } = useGuestDraft()
+  const { draft: guestDraft, saveDraft: saveGuestDraft, clearDraft: clearGuestDraft } = useGuestDraft()
   const [showAuthModal, setShowAuthModal] = useState(false)
 
   // Idle timer callback: show auth modal after 2s idle (only for guests)
@@ -191,7 +191,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         // Story 1.2.2: Load rejected task hashes from metadata
         const rejectedHashesMap = new Map<string, Set<string>>()
 
-        const journalEntries: JournalEntry[] = journalNotes.map(note => {
+        const journalEntriesWithDuplicates: JournalEntry[] = journalNotes.map(note => {
           // Safely handle metadata (can be null for legacy notes)
           const meta = note.metadata || {}
           const journalDate = (meta as { journalDate?: string }).journalDate
@@ -226,6 +226,19 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             metadata: note.metadata as JournalEntry['metadata']  // Preserve original metadata for autosave merge
           }
         })
+
+        // Deduplicate entries by date (keep most recent if duplicates exist)
+        // This handles legacy notes that may not have journalDate metadata
+        const dateMap = new Map<string, JournalEntry>()
+        for (const entry of journalEntriesWithDuplicates) {
+          const existing = dateMap.get(entry.date)
+          if (!existing || new Date(entry.lastModified) > new Date(existing.lastModified)) {
+            dateMap.set(entry.date, entry)
+          }
+        }
+        const journalEntries = Array.from(dateMap.values()).sort((a, b) =>
+          b.date.localeCompare(a.date)
+        )
 
         // Restore tasks from metadata and fetch full details
         if (tasksMap.size > 0 && session?.access_token) {
@@ -959,11 +972,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   }, [activeHelper, activeHelperMode])
 
   const handleHelperInsertion = async (entryId: string, helperText: string) => {
-    if (!user) {
-      return
-    }
-
-    console.log('📝 Inserting helper text', { entryId, helperText })
+    console.log('📝 Inserting helper text', { entryId, helperText, isGuest })
 
     // Clear any pending auto-save timeout to prevent race condition
     // If user typed then quickly inserted helper, pending timeout would overwrite helper text
@@ -1018,10 +1027,17 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
           return entry
         }))
 
-        // Persist to Supabase
-        updateNoteInDb(entryId, { content: finalContent }, user.id)
-          .then(() => console.log('💾 Persisted helper insertion to Supabase'))
-          .catch(error => console.error('Error persisting helper insertion:', error))
+        // Persist based on mode
+        if (isGuest) {
+          // Guest mode: save to localStorage
+          console.log('💾 Saving helper insertion to guest draft')
+          saveGuestDraft(finalContent)
+        } else if (user) {
+          // Authenticated mode: persist to Supabase
+          updateNoteInDb(entryId, { content: finalContent }, user.id)
+            .then(() => console.log('💾 Persisted helper insertion to Supabase'))
+            .catch(error => console.error('Error persisting helper insertion:', error))
+        }
 
         setCreatingLink(false)
       }, 50)
