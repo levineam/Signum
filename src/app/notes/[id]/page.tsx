@@ -76,7 +76,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       if (loadedNote) {
         setNote(loadedNote)
 
-        // Support both old (type) and new (noteType) field names during migration
+        // Always set content (including for ontology notes which display via OntologyCardViewer)
         setContent(loadedNote.content)
       }
       setIsLoading(false)

@@ -36,7 +36,10 @@ export function GuestAuthModal({
   // Auto-dismiss after 30s of inactivity
   useEffect(() => {
     if (!isOpen) {
-      if (autoDismissTimer) clearTimeout(autoDismissTimer)
+      setAutoDismissTimer((prevTimer) => {
+        if (prevTimer) clearTimeout(prevTimer)
+        return undefined
+      })
       return
     }
 
@@ -47,7 +50,7 @@ export function GuestAuthModal({
     setAutoDismissTimer(timer)
 
     return () => {
-      if (timer) clearTimeout(timer)
+      clearTimeout(timer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, onClose])

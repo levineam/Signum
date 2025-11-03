@@ -103,7 +103,7 @@ export function LovingKindnessContent({ entryId, userId, onInsert }: LovingKindn
     return selectedRecipient !== ''
   }
 
-  // Generate metta phrases based on recipient and name
+  // Generate metta phrases for preview (returns array for UI display)
   const generateMettaPhrases = (): string[] => {
     if (selectedRecipient === 'Self') {
       return [
@@ -114,9 +114,7 @@ export function LovingKindnessContent({ entryId, userId, onInsert }: LovingKindn
       ]
     }
 
-    // For others: use name if provided, otherwise use "they"
     const pronoun = personName.trim() ? escapeHtml(personName.trim()) : 'they'
-
     return [
       `May ${pronoun} be happy.`,
       `May ${pronoun} be healthy.`,
@@ -125,36 +123,11 @@ export function LovingKindnessContent({ entryId, userId, onInsert }: LovingKindn
     ]
   }
 
-  // Format header for the entry
-  const getHeaderText = (): string => {
-    if (selectedRecipient === 'Self') {
-      return 'Loving-Kindness Meditation: Self'
-    }
-
-    if (personName.trim()) {
-      return `Loving-Kindness Meditation: ${escapeHtml(personName.trim())}`
-    }
-
-    return `Loving-Kindness Meditation: ${selectedRecipient}`
-  }
-
-  // Format loving-kindness entry as HTML paragraphs
+  // Format loving-kindness entry as HTML paragraphs (prose format)
   const formatLovingKindness = (): string => {
-    const parts: string[] = []
-
-    // Header
-    parts.push(`<p><strong>${getHeaderText()}</strong></p>`)
-    parts.push('<p><br></p>')
-
-    // Metta phrases
+    // Join phrases into single prose paragraph
     const phrases = generateMettaPhrases()
-    phrases.forEach(phrase => {
-      parts.push(`<p>${phrase}</p>`)
-    })
-
-    parts.push('<p><br></p>')
-
-    return parts.join('')
+    return `<p>${phrases.join(' ')}</p>`
   }
 
   // Handle insert to journal
@@ -178,24 +151,28 @@ export function LovingKindnessContent({ entryId, userId, onInsert }: LovingKindn
     // Insert into journal
     onInsert(lkmText)
 
-    // Log to database (non-blocking)
-    try {
-      await createHelperUsage({
-        helperType: 'loving-kindness',
-        entryId,
-        selectedItems: [selectedRecipient],
-        metadata: {
-          events: [...eventsRef.current],
-          selectionCount: 1,
-          insertedText: lkmText,
-          lkmRecipient: selectedRecipient as Recipient, // Type assertion safe here due to canSubmit() check
-          lkmPersonNamed: personName.trim().length > 0,
-          lkmNameLength: personName.trim().length
-        }
-      }, userId)
-    } catch (error) {
-      console.error('Failed to log loving-kindness helper usage:', error)
-      // Continue anyway - logging failure shouldn't block user
+    // Log to database (non-blocking, skip in guest mode)
+    if (userId !== 'guest' && entryId !== 'guest-entry') {
+      try {
+        await createHelperUsage({
+          helperType: 'loving-kindness',
+          entryId,
+          selectedItems: [selectedRecipient],
+          metadata: {
+            events: [...eventsRef.current],
+            selectionCount: 1,
+            insertedText: lkmText,
+            lkmRecipient: selectedRecipient as Recipient, // Type assertion safe here due to canSubmit() check
+            lkmPersonNamed: personName.trim().length > 0,
+            lkmNameLength: personName.trim().length
+          }
+        }, userId)
+      } catch (error) {
+        console.error('Failed to log loving-kindness helper usage:', error)
+        // Continue anyway - logging failure shouldn't block user
+      }
+    } else {
+      console.log('[Guest Mode] Skipping helper usage logging')
     }
 
     // Announce success

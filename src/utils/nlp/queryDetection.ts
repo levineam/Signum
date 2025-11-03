@@ -80,11 +80,18 @@ const ACTION_VERBS = [
  *
  * Scoring system:
  * - 0.9-1.0: Clear query (multiple signals)
- * - 0.7-0.89: Likely query (one strong signal)
+ * - 0.7-0.89: Likely query (one strong signal: interrogative, research keyword)
  * - 0.4-0.69: Ambiguous (treat as action)
  * - 0-0.39: Clear action
  *
  * Threshold for query: 0.7+
+ *
+ * Signal weights:
+ * - Research keywords: +0.7 (strong signal, sufficient alone)
+ * - Interrogative word: +0.4 (strong signal when combined)
+ * - Question mark: +0.3 (medium signal)
+ * - Info-seeking pattern: +0.3 (medium signal)
+ * - Action verb penalty: -0.5 (only when no strong query signal)
  *
  * @param taskText - The task text to analyze
  * @returns QueryDetectionResult with isQuery flag, confidence score, and reason
@@ -117,20 +124,23 @@ export function detectQuery(taskText: string): QueryDetectionResult {
     reasons.push('Contains question mark');
   }
 
-  // 3. Research keywords (medium signal: +0.3)
+  // 3. Research keywords (strong signal: +0.7)
+  // Research keywords alone should be sufficient to classify as query
   const hasResearchKeyword = RESEARCH_KEYWORDS.some(keyword =>
     lowerText.includes(keyword)
   );
   if (hasResearchKeyword) {
-    score += 0.3;
+    score += 0.7;
     reasons.push('Contains research keywords');
   }
 
   // 4. Action verb penalty (strong negative signal: -0.5)
+  // Only apply if there's no strong query signal (interrogative or question mark)
   const hasActionVerb = ACTION_VERBS.some(verb =>
     new RegExp(`\\b${verb}\\b`, 'i').test(lowerText)
   );
-  if (hasActionVerb) {
+  const hasStrongQuerySignal = startsWithInterrogative || lowerText.includes('?');
+  if (hasActionVerb && !hasStrongQuerySignal) {
     score -= 0.5;
     reasons.push('Contains action verb');
   }

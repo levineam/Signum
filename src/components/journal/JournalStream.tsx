@@ -44,8 +44,10 @@ interface JournalEntry {
       status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
     }>
     rejectedTaskHashes?: string[]
+    journalDate?: string
+    prompt?: string
     [key: string]: unknown  // Allow other metadata fields
-  }
+  } | null
 }
 
 interface ParsedTask {
@@ -191,7 +193,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         // Story 1.2.2: Load rejected task hashes from metadata
         const rejectedHashesMap = new Map<string, Set<string>>()
 
-        const journalEntries: JournalEntry[] = journalNotes.map(note => {
+        const journalEntriesWithDuplicates: JournalEntry[] = journalNotes.map(note => {
           // Safely handle metadata (can be null for legacy notes)
           const meta = note.metadata || {}
           const journalDate = (meta as { journalDate?: string }).journalDate
@@ -224,9 +226,23 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             date: journalDate || note.createdAt.split('T')[0],
             content: note.content,
             lastModified: note.updatedAt,
-            isSample: Boolean(isSample)
+            isSample: Boolean(isSample),
+            metadata: note.metadata as JournalEntry['metadata']  // Preserve original metadata for autosave merge
           }
         })
+
+        // Deduplicate entries by date (keep most recent if duplicates exist)
+        // This handles legacy notes that may not have journalDate metadata
+        const dateMap = new Map<string, JournalEntry>()
+        for (const entry of journalEntriesWithDuplicates) {
+          const existing = dateMap.get(entry.date)
+          if (!existing || new Date(entry.lastModified) > new Date(existing.lastModified)) {
+            dateMap.set(entry.date, entry)
+          }
+        }
+        const journalEntries = Array.from(dateMap.values()).sort((a, b) =>
+          b.date.localeCompare(a.date)
+        )
 
         // Restore tasks from metadata and fetch full details
         if (tasksMap.size > 0 && session?.access_token) {
@@ -441,21 +457,34 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       for (const entryId of entriesToUpdate) {
         const tasks = entryTasks.get(entryId)!
         const entry = entries.find(e => e.id === entryId)
+        // Story 1.2.2: Merge current rejected hashes from state
+        const currentRejectedHashes = rejectedTaskHashes.get(entryId)
+        const rejectedHashesArray = currentRejectedHashes ? Array.from(currentRejectedHashes) : undefined
+
+        const updatedMetadata = {
+          ...(entry?.metadata || {}),
+          tasks: tasks.map(t => ({
+            id: t.id,
+            paragraphHash: t.paragraphHash,
+            status: t.status
+          })),
+          // Include rejected hashes if any exist in state
+          ...(rejectedHashesArray && rejectedHashesArray.length > 0
+            ? { rejectedTaskHashes: rejectedHashesArray }
+            : {})
+        }
+
         try {
           await updateNoteInDb(
             entryId,
-            {
-              metadata: {
-                ...(entry?.metadata || {}),
-                tasks: tasks.map(t => ({
-                  id: t.id,
-                  paragraphHash: t.paragraphHash,
-                  status: t.status
-                }))
-              }
-            },
+            { metadata: updatedMetadata },
             user.id
           )
+
+          // Update entries state to keep it in sync with DB after successful save
+          setEntries(prev => prev.map(e =>
+            e.id === entryId ? { ...e, metadata: updatedMetadata } : e
+          ))
         } catch (error) {
           console.error(`Failed to save task metadata for entry ${entryId}:`, error)
         }
@@ -951,11 +980,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   }, [activeHelper, activeHelperMode])
 
   const handleHelperInsertion = async (entryId: string, helperText: string) => {
-    if (!user) {
-      return
-    }
-
-    console.log('📝 Inserting helper text', { entryId, helperText })
+    console.log('📝 Inserting helper text', { entryId, helperText, isGuest })
 
     // Clear any pending auto-save timeout to prevent race condition
     // If user typed then quickly inserted helper, pending timeout would overwrite helper text
@@ -1010,10 +1035,17 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
           return entry
         }))
 
-        // Persist to Supabase
-        updateNoteInDb(entryId, { content: finalContent }, user.id)
-          .then(() => console.log('💾 Persisted helper insertion to Supabase'))
-          .catch(error => console.error('Error persisting helper insertion:', error))
+        // Persist based on mode
+        if (isGuest) {
+          // Guest mode: save to localStorage
+          console.log('💾 Saving helper insertion to guest draft')
+          saveGuestDraft(finalContent)
+        } else if (user) {
+          // Authenticated mode: persist to Supabase
+          updateNoteInDb(entryId, { content: finalContent }, user.id)
+            .then(() => console.log('💾 Persisted helper insertion to Supabase'))
+            .catch(error => console.error('Error persisting helper insertion:', error))
+        }
 
         setCreatingLink(false)
       }, 50)
@@ -1355,21 +1387,16 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                               updatedRejectedSet.add(task.paragraphHash)
                               const updatedRejected = Array.from(updatedRejectedSet)
 
-                              // Persist to database (fetch from entries which has metadata)
-                              const allNotes = await getNotes(user.id)
-                              const currentNote = allNotes.find(n => n.id === entry.id)
-
-                              if (currentNote) {
-                                await updateNoteInDb(entry.id, {
-                                  metadata: {
-                                    ...(currentNote.metadata || {}),
-                                    rejectedTaskHashes: updatedRejected
-                                  }
-                                }, user.id)
-
-                                if (DEBUG_TASK_DETECTION) {
-                                  console.log('[Task Rejection] Persisted rejection:', task.paragraphHash)
+                              // Persist to database using in-memory metadata to avoid race conditions
+                              await updateNoteInDb(entry.id, {
+                                metadata: {
+                                  ...(currentEntry.metadata || {}),
+                                  rejectedTaskHashes: updatedRejected
                                 }
+                              }, user.id)
+
+                              if (DEBUG_TASK_DETECTION) {
+                                console.log('[Task Rejection] Persisted rejection:', task.paragraphHash)
                               }
                             }
                           } catch (metadataError) {
