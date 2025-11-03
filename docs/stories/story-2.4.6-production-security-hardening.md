@@ -80,7 +80,7 @@ A comprehensive security audit (Issue #118) revealed that while the app is 95% p
 3. Migration deletes prototype user from `auth.users` (CASCADE removes associated data)
 4. Migration includes verification assertion (fails if user still exists)
 5. Seed script updated to accept user ID parameter instead of hardcoded UUID
-6. All references to `00000000-0000-0000-0000-000000000000` removed from codebase
+6. All runtime code and database artifacts referencing `00000000-0000-0000-0000-000000000000` removed (excluding archival documentation like this story, Issue #118, and migration history which intentionally preserve the UUID for reference)
 
 ### Phase 2: Implement Structured Logging (HIGH)
 1. Pino logging library installed (`pino`, `pino-pretty`)
@@ -88,7 +88,7 @@ A comprehensive security audit (Issue #118) revealed that while the app is 95% p
    - Environment-based log levels (debug in dev, info in production)
    - Pretty-printing in development, JSON in production
    - Consistent formatting with context fields
-3. All `console.log` and `console.error` replaced with appropriate log levels:
+3. All `console.log`, `console.error`, `console.warn`, `console.info`, and `console.debug` replaced with appropriate log levels:
    - `logger.debug()` - Detailed info (hidden in production)
    - `logger.info()` - Important operations
    - `logger.warn()` - Recoverable issues
@@ -105,6 +105,7 @@ A comprehensive security audit (Issue #118) revealed that while the app is 95% p
    - `src/app/api/transcribe/route.ts`
    - `src/app/api/import/obsidian/route.ts`
 5. Environment variable `LOG_LEVEL` configured in dev and production
+6. `.env.example` updated to document `LOG_LEVEL` for other contributors
 
 ### Phase 3: Security Verification (CRITICAL)
 1. Verification checklist executed and documented:
@@ -149,15 +150,17 @@ DROP POLICY IF EXISTS "Notes owner or prototype access" ON public.notes;
 CREATE POLICY "Users can CRUD their own notes"
   ON public.notes
   FOR ALL
-  TO public
-  USING (
-    ((SELECT auth.role()) = 'service_role')
-    OR (user_id = (SELECT auth.uid()))
-  )
-  WITH CHECK (
-    ((SELECT auth.role()) = 'service_role')
-    OR (user_id = (SELECT auth.uid()))
-  );
+  TO authenticated  -- Restrict to authenticated role only (prevents anon access)
+  USING (user_id = (SELECT auth.uid()))
+  WITH CHECK (user_id = (SELECT auth.uid()));
+
+-- Allow service role for admin operations
+CREATE POLICY "Service role has full access to notes"
+  ON public.notes
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
 
 -- Drop and recreate links policy WITHOUT prototype UUID
 DROP POLICY IF EXISTS "Links owner or prototype access" ON public.links;
@@ -165,24 +168,36 @@ DROP POLICY IF EXISTS "Links owner or prototype access" ON public.links;
 CREATE POLICY "Users can CRUD their own links"
   ON public.links
   FOR ALL
-  TO public
-  USING (
-    ((SELECT auth.role()) = 'service_role')
-    OR (user_id = (SELECT auth.uid()))
-  )
-  WITH CHECK (
-    ((SELECT auth.role()) = 'service_role')
-    OR (user_id = (SELECT auth.uid()))
-  );
+  TO authenticated  -- Restrict to authenticated role only (prevents anon access)
+  USING (user_id = (SELECT auth.uid()))
+  WITH CHECK (user_id = (SELECT auth.uid()));
 
--- Delete prototype user from auth.users (CASCADE removes associated data)
+-- Allow service role for admin operations
+CREATE POLICY "Service role has full access to links"
+  ON public.links
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- Delete prototype user from auth.users (CASCADE removes associated data from notes, links, etc.)
 DELETE FROM auth.users WHERE id = '00000000-0000-0000-0000-000000000000'::uuid;
 
--- Verify deletion
+-- Explicitly clean up auth-related tables (Supabase keeps identity/token rows)
+DELETE FROM auth.identities WHERE user_id = '00000000-0000-0000-0000-000000000000'::uuid;
+DELETE FROM auth.refresh_tokens WHERE user_id = '00000000-0000-0000-0000-000000000000'::uuid;
+
+-- Verify complete deletion across all auth tables
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM auth.users WHERE id = '00000000-0000-0000-0000-000000000000'::uuid) THEN
-    RAISE EXCEPTION 'Prototype user still exists after deletion';
+    RAISE EXCEPTION 'Prototype user still exists in auth.users';
+  END IF;
+  IF EXISTS (SELECT 1 FROM auth.identities WHERE user_id = '00000000-0000-0000-0000-000000000000'::uuid) THEN
+    RAISE EXCEPTION 'Prototype user still exists in auth.identities';
+  END IF;
+  IF EXISTS (SELECT 1 FROM auth.refresh_tokens WHERE user_id = '00000000-0000-0000-0000-000000000000'::uuid) THEN
+    RAISE EXCEPTION 'Prototype user still exists in auth.refresh_tokens';
   END IF;
 END $$;
 
@@ -239,6 +254,13 @@ const logger = pino({
 
 export default logger
 ```
+
+**⚠️ Edge Runtime Compatibility Note:**
+Pino relies on Node.js runtime features. All API routes in this project currently use the Node.js runtime (default for API routes in Next.js). If any routes are later converted to Edge runtime (`export const runtime = 'edge'`), you must either:
+1. Keep those routes on Node runtime (`export const runtime = 'nodejs'`), OR
+2. Replace Pino with an edge-compatible logger (e.g., console wrapper, edge-optimized logger)
+
+Current project status: All API routes use Node runtime ✅
 
 #### Task 2.3: Migrate API Routes (1.5-2 hours)
 Replace console.log/error in each route:

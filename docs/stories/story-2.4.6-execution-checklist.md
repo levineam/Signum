@@ -36,11 +36,15 @@
 
 **Migration File Checklist:**
 - [ ] Drops `"Notes owner or prototype access"` policy
-- [ ] Creates `"Users can CRUD their own notes"` policy
+- [ ] Creates `"Users can CRUD their own notes"` policy (TO authenticated, not TO public)
+- [ ] Creates `"Service role has full access to notes"` policy (TO service_role)
 - [ ] Drops `"Links owner or prototype access"` policy
-- [ ] Creates `"Users can CRUD their own links"` policy
+- [ ] Creates `"Users can CRUD their own links"` policy (TO authenticated, not TO public)
+- [ ] Creates `"Service role has full access to links"` policy (TO service_role)
 - [ ] Deletes `00000000-0000-0000-0000-000000000000` from auth.users
-- [ ] Includes verification assertion
+- [ ] Deletes prototype user from auth.identities
+- [ ] Deletes prototype user from auth.refresh_tokens
+- [ ] Includes verification assertions for all three auth tables
 - [ ] Adds policy comments
 
 ### Task 1.2: Update Seed Script (15 min)
@@ -72,11 +76,21 @@ SELECT * FROM pg_policies WHERE tablename IN ('notes', 'links');
 - [ ] Policy names are correct (`"Users can CRUD their own notes"`, etc.)
 - [ ] Policy logic uses `auth.uid()` only (no hardcoded UUID)
 
-**Verification Query 2: Check Prototype User Deleted**
+**Verification Query 2: Check Prototype User Deleted from All Auth Tables**
 ```sql
+-- Check auth.users
 SELECT * FROM auth.users WHERE id = '00000000-0000-0000-0000-000000000000'::uuid;
+-- Should return 0 rows
+
+-- Check auth.identities
+SELECT * FROM auth.identities WHERE user_id = '00000000-0000-0000-0000-000000000000'::uuid;
+-- Should return 0 rows
+
+-- Check auth.refresh_tokens
+SELECT * FROM auth.refresh_tokens WHERE user_id = '00000000-0000-0000-0000-000000000000'::uuid;
+-- Should return 0 rows
 ```
-- [ ] Returns 0 rows (user deleted)
+- [ ] All three queries return 0 rows (complete deletion)
 
 **Verification Query 3: Check for Orphaned Data**
 ```sql
@@ -158,7 +172,7 @@ SELECT COUNT(*) FROM links WHERE user_id = '00000000-0000-0000-0000-000000000000
 #### Route 2: extract-ontology (15 min)
 - [ ] Open `src/app/api/extract-ontology/route.ts`
 - [ ] Import logger
-- [ ] Replace all console.log/error statements
+- [ ] Replace all console.log/error/warn/info/debug statements
 - [ ] Add context fields
 - [ ] Test route locally
 - [ ] Commit changes
@@ -166,7 +180,7 @@ SELECT COUNT(*) FROM links WHERE user_id = '00000000-0000-0000-0000-000000000000
 #### Route 3: ontology/analysis-state (10 min)
 - [ ] Open `src/app/api/ontology/analysis-state/route.ts`
 - [ ] Import logger
-- [ ] Replace all console.log/error statements
+- [ ] Replace all console.log/error/warn/info/debug statements
 - [ ] Add context fields
 - [ ] Test route locally
 - [ ] Commit changes
@@ -174,7 +188,7 @@ SELECT COUNT(*) FROM links WHERE user_id = '00000000-0000-0000-0000-000000000000
 #### Route 4: ontology/incremental-analysis (15 min)
 - [ ] Open `src/app/api/ontology/incremental-analysis/route.ts`
 - [ ] Import logger
-- [ ] Replace all console.log/error statements
+- [ ] Replace all console.log/error/warn/info/debug statements
 - [ ] Add context fields
 - [ ] Test route locally
 - [ ] Commit changes
@@ -182,7 +196,7 @@ SELECT COUNT(*) FROM links WHERE user_id = '00000000-0000-0000-0000-000000000000
 #### Route 5: tasks/[taskId] (10 min)
 - [ ] Open `src/app/api/tasks/[taskId]/route.ts`
 - [ ] Import logger
-- [ ] Replace all console.log/error statements
+- [ ] Replace all console.log/error/warn/info/debug statements
 - [ ] Add context fields
 - [ ] Test route locally
 - [ ] Commit changes
@@ -190,7 +204,7 @@ SELECT COUNT(*) FROM links WHERE user_id = '00000000-0000-0000-0000-000000000000
 #### Route 6: tasks/bulk (10 min)
 - [ ] Open `src/app/api/tasks/bulk/route.ts`
 - [ ] Import logger
-- [ ] Replace all console.log/error statements
+- [ ] Replace all console.log/error/warn/info/debug statements
 - [ ] Add context fields
 - [ ] Test route locally
 - [ ] Commit changes
@@ -198,7 +212,7 @@ SELECT COUNT(*) FROM links WHERE user_id = '00000000-0000-0000-0000-000000000000
 #### Route 7: tasks/parse (10 min)
 - [ ] Open `src/app/api/tasks/parse/route.ts`
 - [ ] Import logger
-- [ ] Replace all console.log/error statements
+- [ ] Replace all console.log/error/warn/info/debug statements
 - [ ] Add context fields
 - [ ] Test route locally
 - [ ] Commit changes
@@ -206,7 +220,7 @@ SELECT COUNT(*) FROM links WHERE user_id = '00000000-0000-0000-0000-000000000000
 #### Route 8: transcribe (10 min)
 - [ ] Open `src/app/api/transcribe/route.ts`
 - [ ] Import logger
-- [ ] Replace all console.log/error statements
+- [ ] Replace all console.log/error/warn/info/debug statements
 - [ ] Add context fields
 - [ ] Test route locally
 - [ ] Commit changes
@@ -214,23 +228,33 @@ SELECT COUNT(*) FROM links WHERE user_id = '00000000-0000-0000-0000-000000000000
 #### Route 9: import/obsidian (10 min)
 - [ ] Open `src/app/api/import/obsidian/route.ts`
 - [ ] Import logger
-- [ ] Replace all console.log/error statements
+- [ ] Replace all console.log/error/warn/info/debug statements
 - [ ] Add context fields
 - [ ] Test route locally
 - [ ] Commit changes
 
-### Task 2.4: Verify No Console.log Remains (10 min)
+### Task 2.4: Verify No Console Statements Remain (10 min)
 - [ ] Search codebase: `grep -r "console.log" src/app/api/`
 - [ ] Search codebase: `grep -r "console.error" src/app/api/`
+- [ ] Search codebase: `grep -r "console.warn" src/app/api/`
+- [ ] Search codebase: `grep -r "console.info" src/app/api/`
+- [ ] Search codebase: `grep -r "console.debug" src/app/api/`
 - [ ] Verify only intentional logging remains (if any)
 - [ ] Document any exceptions
 
-### Task 2.5: Configure Environment Variables (5 min)
+### Task 2.5: Configure Environment Variables (10 min)
 - [ ] Add to `.env.local`: `LOG_LEVEL=debug`
 - [ ] Add to Vercel dev environment: `LOG_LEVEL=debug`
 - [ ] Add to Vercel production environment: `LOG_LEVEL=info`
+- [ ] Update `.env.example` with `LOG_LEVEL` documentation:
+  ```env
+  # Logging level for Pino logger (debug|info|warn|error)
+  # Development: debug (shows all logs)
+  # Production: info (hides debug logs)
+  LOG_LEVEL=debug
+  ```
 - [ ] Verify environment variables set
-- [ ] Document in `.env.example` if exists
+- [ ] Commit `.env.example` changes
 
 ### Task 2.6: Test Logging Locally (10 min)
 - [ ] Run dev server: `npm run dev`
