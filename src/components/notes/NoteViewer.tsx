@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,6 +27,7 @@ export function NoteViewer({
   onNoteUpdated,
   onNoteDeleted
 }: NoteViewerProps) {
+  const router = useRouter()
   const { user } = useAuth()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
@@ -60,7 +62,11 @@ export function NoteViewer({
   }, [noteId, isOpen, user])
 
   const handleEdit = () => {
-    setIsEditing(true)
+    // Navigate to the dedicated note page instead of editing in modal
+    if (note) {
+      onClose()
+      router.push(`/notes/${note.id}`)
+    }
   }
 
   const handleCancelEdit = () => {
@@ -174,7 +180,12 @@ export function NoteViewer({
                   autoFocus
                 />
               ) : (
-                <DialogTitle className="text-lg font-semibold">{note.title}</DialogTitle>
+                <DialogTitle
+                  className="text-lg font-semibold cursor-pointer hover:text-primary transition-colors"
+                  onClick={handleEdit}
+                >
+                  {note.title}
+                </DialogTitle>
               )}
             </div>
             <div className="flex items-center gap-2 ml-4">
@@ -205,10 +216,10 @@ export function NoteViewer({
                     size="sm"
                     variant="outline"
                     onClick={handleEdit}
-                    className="flex items-center gap-1"
+                    className="flex items-center"
+                    aria-label="Edit note"
                   >
                     <Edit className="h-4 w-4" />
-                    Edit
                   </Button>
                   <Button
                     size="sm"
@@ -258,17 +269,6 @@ export function NoteViewer({
             </div>
           )}
         </div>
-
-        {!isEditing && (
-          <div className="flex justify-between items-center pt-4 border-t flex-shrink-0">
-            <div className="text-xs text-muted-foreground">
-              Press <kbd className="px-1 py-0.5 bg-muted rounded">Esc</kbd> to close
-            </div>
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   )
