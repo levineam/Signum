@@ -1,6 +1,6 @@
 # Signum Story Index
 
-**Last Updated:** October 31, 2025
+**Last Updated:** November 3, 2025
 **Purpose:** Comprehensive tracking of all stories across the Signum project
 
 ---
@@ -34,6 +34,14 @@ Brownfield enhancement stories for NLP, tasks, and analytics
 | 1.3 | Paragraph Detection & Suggestion Card UI | ⏸️ Partial | Task cards implemented (PR #79). Real-time detection deferred. |
 
 **Location:** `docs/stories/story-1.3-paragraph-suggestions.md`
+
+### 🚧 In Progress
+
+| Story | Title | Status | Issue |
+|-------|-------|--------|-------|
+| 1.2.2 | Fix Duplicate Task Creation & Rejected Task Re-appearance | In Progress | #130 |
+
+**Location:** `docs/stories/story-1.2.2-fix-duplicate-task-creation.md`
 
 ### 📋 Planned
 
