@@ -46,12 +46,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch tasks by IDs (RLS will ensure user owns them)
-    const { data: tasks, error: fetchError } = await supabase
+    // Try to fetch tasks with query fields (Story 1.9.1)
+    let { data: tasks, error: fetchError } = await supabase
       .from('tasks')
       .select('id, title, due_at, rrule, status, is_query, query_confidence')
       .in('id', taskIds)
       .eq('user_id', user.id);
+
+    // If error is due to unknown column (Story 1.9.1 migration not run), retry without query fields
+    if (fetchError && (fetchError.code === '42703' || fetchError.message?.includes('column') || fetchError.message?.includes('is_query'))) {
+      console.log('[POST /api/tasks/bulk] Query columns not found, retrying without them (pre-Story 1.9.1 database)');
+      const result = await supabase
+        .from('tasks')
+        .select('id, title, due_at, rrule, status')
+        .in('id', taskIds)
+        .eq('user_id', user.id);
+
+      tasks = result.data;
+      fetchError = result.error;
+    }
 
     if (fetchError) {
       console.error('[POST /api/tasks/bulk] Database error:', fetchError);
@@ -62,14 +75,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Transform snake_case to camelCase for frontend
-    const transformedTasks = (tasks || []).map(task => ({
+    const transformedTasks = (tasks || []).map((task: any) => ({
       id: task.id,
       title: task.title,
       dueAt: task.due_at,
       rrule: task.rrule,
       status: task.status,
-      isQuery: task.is_query || false,
-      queryConfidence: task.query_confidence || 0
+      isQuery: task.is_query ?? false,
+      queryConfidence: task.query_confidence ?? 0
     }));
 
     return NextResponse.json({ tasks: transformedTasks });

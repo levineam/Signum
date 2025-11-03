@@ -156,12 +156,79 @@ export async function POST(req: NextRequest) {
               dueAt: existingTask.due_at,
               rrule: existingTask.metadata?.rrule || null,
               status: existingTask.status,
-              isQuery: existingTask.is_query,
-              queryConfidence: existingTask.query_confidence,
+              isQuery: existingTask.is_query ?? false,
+              queryConfidence: existingTask.query_confidence ?? 0,
               alreadyExisted: true
             }
           });
         }
+      }
+
+      // If error is due to unknown column (Story 1.9.1 migration not run), retry without query fields
+      if (taskError.code === '42703' || taskError.message?.includes('column') || taskError.message?.includes('is_query')) {
+        console.log('[Task Parse API] Query columns not found, retrying without them (pre-Story 1.9.1 database)');
+        const { data: taskWithoutQuery, error: retryError } = await supabase
+          .from('tasks')
+          .insert({
+            user_id: userId,
+            title: detectedTask.title,
+            due_at: detectedTask.dueAt?.toISOString() || null,
+            deduplication_key: dedupeKey,
+            metadata: {
+              source_entry_id: entryId,
+              rrule: detectedTask.rrule,
+              extracted_from_text: paragraphText,
+              timezone_offset_at_creation: timezoneOffset,
+              timezone: timezone || null,
+              query_detection_reason: queryDetection.reason
+            }
+          })
+          .select()
+          .single();
+
+        if (retryError) {
+          console.error('Error creating task (retry):', retryError);
+          return NextResponse.json(
+            { error: 'Failed to create task' },
+            { status: 500 }
+          );
+        }
+
+        if (!taskWithoutQuery) {
+          return NextResponse.json(
+            { error: 'Failed to create task' },
+            { status: 500 }
+          );
+        }
+
+        // Create reminder if due date exists
+        if (detectedTask.dueAt) {
+          const { error: reminderError } = await supabase
+            .from('reminders')
+            .insert({
+              user_id: userId,
+              task_id: taskWithoutQuery.id,
+              rule_type: detectedTask.rrule ? 'rrule' : 'oneoff',
+              rrule: detectedTask.rrule || null
+            });
+
+          if (reminderError) {
+            console.error('Error creating reminder:', reminderError);
+          }
+        }
+
+        // Return task without query fields
+        return NextResponse.json({
+          task: {
+            id: taskWithoutQuery.id,
+            title: taskWithoutQuery.title,
+            dueAt: taskWithoutQuery.due_at,
+            rrule: detectedTask.rrule || null,
+            status: taskWithoutQuery.status,
+            isQuery: false, // Default to false when columns don't exist
+            queryConfidence: 0
+          }
+        });
       }
 
       console.error('Error creating task:', taskError);
@@ -203,8 +270,8 @@ export async function POST(req: NextRequest) {
         dueAt: task.due_at,
         rrule: detectedTask.rrule || null,
         status: task.status,
-        isQuery: task.is_query,
-        queryConfidence: task.query_confidence
+        isQuery: task.is_query ?? false,
+        queryConfidence: task.query_confidence ?? 0
       }
     });
 
