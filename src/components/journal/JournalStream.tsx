@@ -55,6 +55,8 @@ interface ParsedTask {
   dueAt: string | null
   rrule: string | null
   status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
+  isQuery: boolean
+  queryConfidence: number
 }
 
 // Helper: Get today's date in local timezone as YYYY-MM-DD
@@ -244,7 +246,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               if (response.ok) {
                 const { tasks } = await response.json()
                 const taskDetailsMap = new Map(
-                  tasks.map((t: { id: string; title: string; dueAt: string | null; rrule: string | null; status: string }) => [t.id, t])
+                  tasks.map((t: { id: string; title: string; dueAt: string | null; rrule: string | null; status: string; isQuery: boolean; queryConfidence: number }) => [t.id, t])
                 )
 
                 // Merge task details with metadata, filtering out orphaned tasks
@@ -255,13 +257,15 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                 for (const [entryId, entryTaskList] of tasksMap.entries()) {
                   tasksMap.set(entryId, entryTaskList
                     .map(t => {
-                      const details = taskDetailsMap.get(t.id) as { id: string; title: string; dueAt: string | null; rrule: string | null; status: string } | undefined
+                      const details = taskDetailsMap.get(t.id) as { id: string; title: string; dueAt: string | null; rrule: string | null; status: string; isQuery: boolean; queryConfidence: number } | undefined
                       return {
                         ...t,
                         title: details?.title ?? '',
                         dueAt: details?.dueAt ?? null,
                         rrule: details?.rrule ?? null,
                         status: (details?.status as 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled') ?? t.status,
+                        isQuery: details?.isQuery ?? false,
+                        queryConfidence: details?.queryConfidence ?? 0,
                         exists: !!details // Mark whether task exists in DB
                       }
                     })
@@ -674,7 +678,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                 paragraphHash: paraHash,
                 dueAt: task.dueAt,
                 rrule: task.rrule,
-                status: task.status || 'pending'
+                status: task.status || 'pending',
+                isQuery: task.isQuery || false,
+                queryConfidence: task.queryConfidence || 0
               }
 
               updated.set(entryId, [...existing, parsedTask])
@@ -1272,10 +1278,12 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               {entryTasks.get(entry.id)?.map((task) => (
                   <TaskCard
                     key={task.id}
+                    taskId={task.id}
                     title={task.title}
                     dueAt={task.dueAt}
                     rrule={task.rrule}
                     status={task.status}
+                    isQuery={task.isQuery}
                   onAccept={async () => {
                     // Accept task - update status in database
                     try {

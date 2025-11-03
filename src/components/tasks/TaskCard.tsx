@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { AskAIButton } from './AskAIButton';
 
 interface TaskCardProps {
   taskId: string;
@@ -19,6 +20,7 @@ interface TaskCardProps {
   dueAt: string | null;
   rrule: string | null;
   status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled';
+  isQuery?: boolean;
   onAccept?: () => void;
   onReject?: () => void;
   onDelete?: () => void;
@@ -28,17 +30,19 @@ interface TaskCardProps {
 }
 
 export function TaskCard({
+  taskId,
   title,
   dueAt,
   rrule,
   status,
+  isQuery = false,
   onAccept,
   onReject,
   onDelete,
   onEdit,
   onComplete,
   compact = true,
-}: Omit<TaskCardProps, 'taskId'>) {
+}: TaskCardProps) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleAccept = async () => {
@@ -156,6 +160,19 @@ export function TaskCard({
               {/* Only show status badge for rejected and cancelled tasks
                   (pending tasks have action buttons, accepted/completed have checkbox) */}
               {(status === 'rejected' || status === 'cancelled') && getStatusBadge()}
+            </div>
+          )}
+
+          {/* Ask AI button for query tasks */}
+          {isQuery && (
+            <div className="mt-2">
+              <AskAIButton
+                taskId={taskId}
+                taskText={title}
+                onAnswerCreated={(noteId) => {
+                  console.log('AI answer created:', noteId);
+                }}
+              />
             </div>
           )}
         </div>

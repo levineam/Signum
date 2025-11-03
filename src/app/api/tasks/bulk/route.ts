@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Fetch tasks by IDs (RLS will ensure user owns them)
     const { data: tasks, error: fetchError } = await supabase
       .from('tasks')
-      .select('id, title, due_at, rrule, status')
+      .select('id, title, due_at, rrule, status, is_query, query_confidence')
       .in('id', taskIds)
       .eq('user_id', user.id);
 
@@ -67,7 +67,9 @@ export async function POST(request: NextRequest) {
       title: task.title,
       dueAt: task.due_at,
       rrule: task.rrule,
-      status: task.status
+      status: task.status,
+      isQuery: task.is_query || false,
+      queryConfidence: task.query_confidence || 0
     }));
 
     return NextResponse.json({ tasks: transformedTasks });
