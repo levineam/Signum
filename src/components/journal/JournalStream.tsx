@@ -442,25 +442,30 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         const currentRejectedHashes = rejectedTaskHashes.get(entryId)
         const rejectedHashesArray = currentRejectedHashes ? Array.from(currentRejectedHashes) : undefined
 
+        const updatedMetadata = {
+          ...(entry?.metadata || {}),
+          tasks: tasks.map(t => ({
+            id: t.id,
+            paragraphHash: t.paragraphHash,
+            status: t.status
+          })),
+          // Include rejected hashes if any exist in state
+          ...(rejectedHashesArray && rejectedHashesArray.length > 0
+            ? { rejectedTaskHashes: rejectedHashesArray }
+            : {})
+        }
+
         try {
           await updateNoteInDb(
             entryId,
-            {
-              metadata: {
-                ...(entry?.metadata || {}),
-                tasks: tasks.map(t => ({
-                  id: t.id,
-                  paragraphHash: t.paragraphHash,
-                  status: t.status
-                })),
-                // Include rejected hashes if any exist in state
-                ...(rejectedHashesArray && rejectedHashesArray.length > 0
-                  ? { rejectedTaskHashes: rejectedHashesArray }
-                  : {})
-              }
-            },
+            { metadata: updatedMetadata },
             user.id
           )
+
+          // Update entries state to keep it in sync with DB after successful save
+          setEntries(prev => prev.map(e =>
+            e.id === entryId ? { ...e, metadata: updatedMetadata } : e
+          ))
         } catch (error) {
           console.error(`Failed to save task metadata for entry ${entryId}:`, error)
         }
