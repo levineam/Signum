@@ -88,6 +88,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const [entryTasks, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
   const [editingTask, setEditingTask] = useState<{ id: string; title: string; dueAt: string | null } | null>(null)
 
+  // Story 1.2.2: Store rejected task hashes per entry (entryId -> Set<paragraphHash>)
+  const [rejectedTaskHashes, setRejectedTaskHashes] = useState<Map<string, Set<string>>>(new Map())
+
   // Guest mode state
   const { draft: guestDraft, saveDraft: saveGuestDraft, clearDraft: clearGuestDraft, isLoading: isGuestDraftLoading } = useGuestDraft()
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -174,12 +177,17 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
         // Convert Note format to JournalEntry format and restore tasks
         const tasksMap = new Map<string, ParsedTask[]>()
+        // Story 1.2.2: Load rejected task hashes from metadata
+        const rejectedHashesMap = new Map<string, Set<string>>()
+
         const journalEntries: JournalEntry[] = journalNotes.map(note => {
           // Safely handle metadata (can be null for legacy notes)
           const meta = note.metadata || {}
           const journalDate = (meta as { journalDate?: string }).journalDate
           const isSample = (meta as { isSample?: boolean }).isSample
           const tasks = (meta as { tasks?: Array<{ id: string; paragraphHash: string; status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled' }> }).tasks
+          // Story 1.2.2: Load rejected hashes for this entry
+          const rejectedHashes = (meta as { rejectedTaskHashes?: string[] }).rejectedTaskHashes
 
           // Restore tasks for this entry
           if (tasks && tasks.length > 0) {
@@ -191,6 +199,11 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               rrule: null,
               status: t.status
             })))
+          }
+
+          // Story 1.2.2: Store rejected hashes in state
+          if (rejectedHashes && Array.isArray(rejectedHashes) && rejectedHashes.length > 0) {
+            rejectedHashesMap.set(note.id, new Set(rejectedHashes))
           }
 
           return {
@@ -254,6 +267,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         }
 
         setEntryTasks(tasksMap)
+        // Story 1.2.2: Set rejected hashes in state
+        setRejectedTaskHashes(rejectedHashesMap)
 
         // Check if today's entry exists
         const todayEntry = journalEntries.find(e => e.date === today)
@@ -517,31 +532,11 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const detectTasksInContent = async (content: string, entryId: string) => {
     if (!user || !session?.access_token) return
 
-    // Story 1.2.2: Get rejected task hashes from entry metadata
-    const currentEntry = entries.find(e => e.id === entryId)
-    const rejectedHashes = new Set<string>()
+    // Story 1.2.2: Get rejected task hashes from state
+    const rejectedHashes = rejectedTaskHashes.get(entryId) || new Set<string>()
 
-    // If entry has metadata with rejectedTaskHashes, load them
-    if (currentEntry) {
-      try {
-        const response = await fetch(`/api/notes/${entryId}`, {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        })
-        if (response.ok) {
-          const { note } = await response.json()
-          const rejectedTaskHashes = note?.metadata?.rejectedTaskHashes as string[] | undefined
-          if (rejectedTaskHashes && Array.isArray(rejectedTaskHashes)) {
-            rejectedTaskHashes.forEach(hash => rejectedHashes.add(hash))
-            if (DEBUG_TASK_DETECTION) {
-              console.log(`[Task Detection] Loaded ${rejectedHashes.size} rejected task hashes`)
-            }
-          }
-        }
-      } catch (error) {
-        console.error('[Task Detection] Failed to load rejected hashes:', error)
-      }
+    if (DEBUG_TASK_DETECTION && rejectedHashes.size > 0) {
+      console.log(`[Task Detection] Loaded ${rejectedHashes.size} rejected task hashes for entry ${entryId}`)
     }
 
     // Extract paragraphs from HTML content
@@ -1319,38 +1314,46 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                           return updated
                         })
 
-                        // Story 1.2.2: Persist rejection in note metadata
+                        // Story 1.2.2: Update rejected hashes in state AND persist to DB
                         if (user) {
                           try {
-                            // Fetch current note to get existing metadata
-                            const noteResponse = await fetch(`/api/notes/${entry.id}`, {
-                              headers: {
-                                'Authorization': `Bearer ${session?.access_token}`
-                              }
+                            // Update state immediately for instant filtering
+                            setRejectedTaskHashes(prev => {
+                              const updated = new Map(prev)
+                              const existing = updated.get(entry.id) || new Set<string>()
+                              existing.add(task.paragraphHash)
+                              updated.set(entry.id, existing)
+                              return updated
                             })
 
-                            if (noteResponse.ok) {
-                              const { note } = await noteResponse.json()
-                              const existingRejected = (note?.metadata?.rejectedTaskHashes as string[]) || []
+                            // Get current entry to access existing metadata
+                            const currentEntry = entries.find(e => e.id === entry.id)
+                            if (currentEntry) {
+                              // Get existing rejected hashes from state (already updated above)
+                              const updatedRejectedSet = rejectedTaskHashes.get(entry.id) || new Set<string>()
+                              updatedRejectedSet.add(task.paragraphHash)
+                              const updatedRejected = Array.from(updatedRejectedSet)
 
-                              // Add this task's paragraphHash to rejected list
-                              const updatedRejected = [...new Set([...existingRejected, task.paragraphHash])]
+                              // Persist to database (fetch from entries which has metadata)
+                              const allNotes = await getNotes(user.id)
+                              const currentNote = allNotes.find(n => n.id === entry.id)
 
-                              // Update note metadata
-                              await updateNoteInDb(entry.id, {
-                                metadata: {
-                                  ...note.metadata,
-                                  rejectedTaskHashes: updatedRejected
+                              if (currentNote) {
+                                await updateNoteInDb(entry.id, {
+                                  metadata: {
+                                    ...currentNote.metadata,
+                                    rejectedTaskHashes: updatedRejected
+                                  }
+                                }, user.id)
+
+                                if (DEBUG_TASK_DETECTION) {
+                                  console.log('[Task Rejection] Persisted rejection:', task.paragraphHash)
                                 }
-                              }, user.id)
-
-                              if (DEBUG_TASK_DETECTION) {
-                                console.log('[Task Rejection] Persisted rejection:', task.paragraphHash)
                               }
                             }
                           } catch (metadataError) {
                             console.error('[Task Rejection] Failed to persist rejection:', metadataError)
-                            // Don't fail the whole operation if metadata update fails
+                            // State is already updated, so filtering will still work for this session
                           }
                         }
 
