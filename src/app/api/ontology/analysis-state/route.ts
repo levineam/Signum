@@ -11,7 +11,6 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getAnalysisState } from '@/lib/ontology/state'
 import { hasAdminKey } from '@/lib/supabase-admin'
-import logger from '@/utils/logger'
 
 export async function GET() {
   try {
@@ -71,7 +70,7 @@ export async function GET() {
       },
     })
   } catch (error) {
-    logger.error({ route: 'analysis-state' }, 'Failed to get analysis state:', error)
+    console.error('Failed to get analysis state:', error)
     return NextResponse.json(
       {
         success: false,

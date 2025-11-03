@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import logger from '@/utils/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,7 +54,7 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id);
 
     if (fetchError) {
-      logger.error({ route: 'bulk' }, '[POST /api/tasks/bulk] Database error:', fetchError);
+      console.error('[POST /api/tasks/bulk] Database error:', fetchError);
       return NextResponse.json(
         { error: 'Failed to fetch tasks' },
         { status: 500 }
@@ -73,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ tasks: transformedTasks });
   } catch (error) {
-    logger.error({ route: 'bulk' }, '[POST /api/tasks/bulk] Error:', error);
+    console.error('[POST /api/tasks/bulk] Error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

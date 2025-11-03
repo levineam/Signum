@@ -24,7 +24,6 @@ import {
 } from '@/lib/ontology/state'
 import { runIncrementalExtraction } from '@/lib/ontology/extractor'
 import { hasAdminKey } from '@/lib/supabase-admin'
-import logger from '@/utils/logger'
 
 // Feature flag - server-side control
 const INCREMENTAL_ENABLED =
@@ -306,7 +305,7 @@ export async function POST(request: NextRequest) {
       throw extractionError
     }
   } catch (error) {
-    logger.error({ route: 'incremental-analysis' }, 'Incremental analysis failed:', error)
+    console.error('Incremental analysis failed:', error)
 
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error'

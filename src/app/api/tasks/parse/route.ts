@@ -9,7 +9,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { detectTask } from '@/utils/nlp/taskDetection';
-import logger from '@/utils/logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -135,7 +134,7 @@ export async function POST(req: NextRequest) {
     // If insertion failed due to unique constraint violation, fetch and return existing task
     if (taskError) {
       if (taskError.code === '23505') { // PostgreSQL unique violation error code
-        logger.debug({ route: 'parse' }, '[Task Parse API] Task already exists (duplicate key), fetching existing task');
+        console.log('[Task Parse API] Task already exists (duplicate key), fetching existing task');
         const { data: existingTask } = await supabase
           .from('tasks')
           .select('id, title, due_at, status, metadata')
@@ -156,7 +155,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      logger.error({ route: 'parse' }, 'Error creating task:', taskError);
+      console.error('Error creating task:', taskError);
       return NextResponse.json(
         { error: 'Failed to create task' },
         { status: 500 }
@@ -182,7 +181,7 @@ export async function POST(req: NextRequest) {
         });
 
       if (reminderError) {
-        logger.error({ route: 'parse' }, 'Error creating reminder:', reminderError);
+        console.error('Error creating reminder:', reminderError);
         // Don't fail the entire request if reminder creation fails
       }
     }
@@ -199,7 +198,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    logger.error({ route: 'parse' }, 'Error parsing task:', error);
+    console.error('Error parsing task:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

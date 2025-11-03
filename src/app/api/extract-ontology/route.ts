@@ -6,7 +6,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { Note } from '@/types/note'
-import logger from '@/utils/logger'
 import {
   buildExtractionPrompt,
   parseExtractionResult,
@@ -124,7 +123,7 @@ export async function POST(request: NextRequest) {
       }
     })
   } catch (error) {
-    logger.error({ route: 'extract-ontology' }, 'Extraction failed:', error)
+    console.error('Extraction failed:', error)
 
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error'
