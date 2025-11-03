@@ -104,6 +104,56 @@ export function ValuesAffirmationContent({ entryId, userId, onInsert }: ValuesAf
     return text.charAt(0).toLowerCase() + text.slice(1)
   }
 
+  // Helper function to capitalize first character
+  const capitalizeFirst = (text: string): string => {
+    if (!text) return text
+    return text.charAt(0).toUpperCase() + text.slice(1)
+  }
+
+  // Helper function to strip trailing punctuation
+  const cleanSentence = (text: string): string => {
+    const trimmed = text.trim()
+    return trimmed.replace(/[.!?]+$/, '')
+  }
+
+  // Smart formatting for "why important" field
+  const formatWhyImportant = (rawText: string): string => {
+    const trimmed = rawText.trim()
+
+    // Check if user wrote complete sentence starting with common patterns
+    if (trimmed.match(/^(This matters|It matters|This is important|This value)/i)) {
+      return capitalizeFirst(trimmed)
+    }
+
+    // Check if user already included "because"
+    if (trimmed.toLowerCase().startsWith('because ')) {
+      const withoutBecause = trimmed.substring(8).trim()
+      return `This matters to me because ${lowercaseFirst(withoutBecause)}`
+    }
+
+    // Default: add connector
+    return `This matters to me because ${lowercaseFirst(trimmed)}`
+  }
+
+  // Smart formatting for "specific time" field
+  const formatSpecificTime = (rawText: string): string => {
+    const trimmed = rawText.trim()
+
+    // Check if user wrote complete sentence starting with common patterns
+    if (trimmed.match(/^(A time|One time|I lived|I demonstrated|I showed|I acted|When I)/i)) {
+      return capitalizeFirst(trimmed)
+    }
+
+    // Check if user already included "when"
+    if (trimmed.toLowerCase().startsWith('when ')) {
+      const withoutWhen = trimmed.substring(5).trim()
+      return `A time I lived this value was when ${lowercaseFirst(withoutWhen)}`
+    }
+
+    // Default: add connector
+    return `A time I lived this value was ${lowercaseFirst(trimmed)}`
+  }
+
   // Format values entry as HTML paragraphs (prose format)
   const formatValuesEntry = (): string => {
     const sentences: string[] = []
@@ -111,17 +161,21 @@ export function ValuesAffirmationContent({ entryId, userId, onInsert }: ValuesAf
     // Start with affirmation statement
     sentences.push(`Today I'm affirming the value of ${escapeHtml(selectedValue.toLowerCase())}`)
 
-    // Why this matters
+    // Why this matters - apply smart formatting BEFORE escaping
     if (whyImportant.trim()) {
-      sentences.push(`This matters to me because ${escapeHtml(lowercaseFirst(whyImportant))}`)
+      const formatted = formatWhyImportant(whyImportant)
+      const cleaned = cleanSentence(formatted)
+      sentences.push(escapeHtml(cleaned))
     }
 
-    // Specific time lived this value
+    // Specific time lived this value - apply smart formatting BEFORE escaping
     if (specificTime.trim()) {
-      sentences.push(`A time I lived this value was ${escapeHtml(lowercaseFirst(specificTime))}`)
+      const formatted = formatSpecificTime(specificTime)
+      const cleaned = cleanSentence(formatted)
+      sentences.push(escapeHtml(cleaned))
     }
 
-    // Join all sentences into one paragraph
+    // Join all sentences with periods
     return `<p>${sentences.join('. ')}.</p>`
   }
 
