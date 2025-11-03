@@ -49,7 +49,7 @@ export function GuestAuthModal({
     return () => {
       if (timer) clearTimeout(timer)
     }
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, autoDismissTimer])
 
   // Reset auto-dismiss timer on user interaction
   const resetAutoDismissTimer = () => {
