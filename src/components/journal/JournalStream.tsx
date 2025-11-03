@@ -37,6 +37,15 @@ interface JournalEntry {
   content: string
   lastModified: string
   isSample?: boolean
+  metadata?: {
+    tasks?: Array<{
+      id: string
+      paragraphHash: string
+      status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
+    }>
+    rejectedTaskHashes?: string[]
+    [key: string]: unknown  // Allow other metadata fields
+  }
 }
 
 interface ParsedTask {
@@ -425,11 +434,13 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       // Only update entries that actually changed
       for (const entryId of entriesToUpdate) {
         const tasks = entryTasks.get(entryId)!
+        const entry = entries.find(e => e.id === entryId)
         try {
           await updateNoteInDb(
             entryId,
             {
               metadata: {
+                ...(entry?.metadata || {}),
                 tasks: tasks.map(t => ({
                   id: t.id,
                   paragraphHash: t.paragraphHash,
