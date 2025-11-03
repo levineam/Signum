@@ -4,7 +4,22 @@
 <!-- Context: Brownfield enhancement - Epic 1: Content Intelligence & Feedback System -->
 <!-- Epic: https://github.com/levineam/Signum/issues/50 -->
 
-## Status: Draft
+## Status: ⏸️ Partially Complete (PR #79 - Task Cards implemented, Oct 28, 2025)
+
+**What's Complete:**
+- ✅ Task card UI component (TaskCard.tsx)
+- ✅ Accept/Reject/Edit actions
+- ✅ Task persistence via note.metadata.tasks[]
+- ✅ Completed in Story 1.2.1 (PR #79)
+
+**What's Deferred:**
+- ⏸️ Real-time paragraph boundary detection
+- ⏸️ Floating suggestion card near cursor
+- ⏸️ Idle timer (1.2s after typing)
+- ⏸️ Auto-dismiss after 30 seconds
+- ⏸️ Suggestion API with confidence scoring
+
+**Current Implementation:** TaskCards render at bottom of journal entries after task parsing completes (via Story 1.2 API). Real-time paragraph-level suggestions deferred to future story.
 
 ## Story
 

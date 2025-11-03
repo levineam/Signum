@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { getNoteById, updateNote } from '@/lib/notes'
+import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
 import { Note, getNoteDisplayTitle } from '@/types/note'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Trash2 } from 'lucide-react'
 import { OntologyCardViewer } from '@/components/notes/OntologyCardViewer'
 import { useAuth } from '@/contexts/AuthContext'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
@@ -31,6 +33,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const [aimsContent, setAimsContent] = useState<AimsContent>({ todos: '', goals: '' })
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const editorRef = useRef<HTMLElement | null>(null)
   const selectionMetadataRef = useRef<ReturnType<typeof captureSelectionMetadata> | null>(null)
@@ -336,6 +339,25 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     }
   }
 
+  const handleDelete = async () => {
+    if (!note || !user) return
+
+    const confirmed = window.confirm(`Are you sure you want to delete "${note.title}"? This action cannot be undone.`)
+    if (!confirmed) return
+
+    setIsDeleting(true)
+    try {
+      const success = await deleteNote(note.id, user.id)
+      if (success) {
+        // Navigate back to notes page after successful deletion
+        router.push('/notes')
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -389,6 +411,22 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
           <AppHeader />
           <div className="flex-1">
             <div className="max-w-3xl mx-auto p-6">
+      {/* Header with Delete Button */}
+      {!isOntologyNote && (
+        <div className="mb-6 flex justify-end">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="text-destructive hover:text-destructive"
+            aria-label="Delete note"
+          >
+            <Trash2 className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
+
       {/* Note Title */}
       <h1 className="text-3xl font-bold mb-6">{getNoteDisplayTitle(note)}</h1>
 

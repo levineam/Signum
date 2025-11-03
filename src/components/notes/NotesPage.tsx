@@ -19,6 +19,11 @@ export function NotesPage() {
     setRegularNotes(allNotes)
   }
 
+  const handleNoteDeleted = (noteId: string) => {
+    // Remove the deleted note from the list immediately
+    setRegularNotes(prevNotes => prevNotes.filter(note => note.id !== noteId))
+  }
+
   useEffect(() => {
     if (!user) {
       // Clear notes when user signs out to prevent data leakage
@@ -40,7 +45,7 @@ export function NotesPage() {
         ) : (
           <div className="space-y-4">
             {regularNotes.map((note) => (
-              <RegularNoteCard key={note.id} note={note} />
+              <RegularNoteCard key={note.id} note={note} onDeleted={handleNoteDeleted} />
             ))}
           </div>
         )}
