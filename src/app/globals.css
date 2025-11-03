@@ -212,6 +212,22 @@
     border-width: 0;
   }
 
+  /* Rich text editor paragraph styling */
+  /* Match prose paragraph spacing for consistency between edit and read-only modes */
+  .rich-editor-body p {
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.75;
+  }
+
+  .rich-editor-body p:first-child {
+    margin-top: 0;
+  }
+
+  .rich-editor-body p:last-child {
+    margin-bottom: 0;
+  }
+
   /* Rich text editor list styling */
   /* Override Tailwind's preflight reset to show bullets/numbers in contentEditable */
   .rich-editor-body ul {
