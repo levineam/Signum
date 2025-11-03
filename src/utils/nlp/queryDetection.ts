@@ -127,10 +127,12 @@ export function detectQuery(taskText: string): QueryDetectionResult {
   }
 
   // 4. Action verb penalty (strong negative signal: -0.5)
+  // Only apply if there's no strong query signal (interrogative or question mark)
   const hasActionVerb = ACTION_VERBS.some(verb =>
     new RegExp(`\\b${verb}\\b`, 'i').test(lowerText)
   );
-  if (hasActionVerb) {
+  const hasStrongQuerySignal = startsWithInterrogative || lowerText.includes('?');
+  if (hasActionVerb && !hasStrongQuerySignal) {
     score -= 0.5;
     reasons.push('Contains action verb');
   }
