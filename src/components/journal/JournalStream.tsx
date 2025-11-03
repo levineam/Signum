@@ -1341,7 +1341,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                               if (currentNote) {
                                 await updateNoteInDb(entry.id, {
                                   metadata: {
-                                    ...currentNote.metadata,
+                                    ...(currentNote.metadata || {}),
                                     rejectedTaskHashes: updatedRejected
                                   }
                                 }, user.id)
