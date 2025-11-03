@@ -98,29 +98,31 @@ export function ValuesAffirmationContent({ entryId, userId, onInsert }: ValuesAf
     return selectedValue !== '' && (whyImportant.trim() !== '' || specificTime.trim() !== '')
   }
 
-  // Format values entry as HTML paragraphs
-  const formatValuesEntry = (): string => {
-    const parts: string[] = []
+  // Helper function to lowercase first character for prose flow
+  const lowercaseFirst = (text: string): string => {
+    if (!text) return text
+    return text.charAt(0).toLowerCase() + text.slice(1)
+  }
 
-    // Header with selected value (VALUES_OPTIONS are hardcoded strings, but escape anyway for safety)
-    parts.push(`<p><strong>Values Affirmation: ${escapeHtml(selectedValue)}</strong></p>`)
-    parts.push('<p><br></p>')
+  // Format values entry as HTML paragraphs (prose format)
+  const formatValuesEntry = (): string => {
+    const sentences: string[] = []
+
+    // Start with affirmation statement
+    sentences.push(`Today I'm affirming the value of ${escapeHtml(selectedValue.toLowerCase())}`)
 
     // Why this matters
     if (whyImportant.trim()) {
-      parts.push('<p>Why this matters to me:</p>')
-      parts.push(`<p>${escapeHtml(whyImportant)}</p>`)
-      parts.push('<p><br></p>')
+      sentences.push(`This matters to me because ${escapeHtml(lowercaseFirst(whyImportant))}`)
     }
 
     // Specific time lived this value
     if (specificTime.trim()) {
-      parts.push('<p>A time I lived this value:</p>')
-      parts.push(`<p>${escapeHtml(specificTime)}</p>`)
-      parts.push('<p><br></p>')
+      sentences.push(`A time I lived this value was ${escapeHtml(lowercaseFirst(specificTime))}`)
     }
 
-    return parts.join('')
+    // Join all sentences into one paragraph
+    return `<p>${sentences.join('. ')}.</p>`
   }
 
   // Handle insert to journal
@@ -141,26 +143,30 @@ export function ValuesAffirmationContent({ entryId, userId, onInsert }: ValuesAf
     }
     addEvent(insertedEvent)
 
-    // Log usage to database (non-blocking)
-    try {
-      await createHelperUsage({
-        helperType: 'values-affirmation',
-        entryId: entryId,
-        selectedItems: [selectedValue as string],
-        metadata: {
-          events: eventsRef.current,
-          selectionCount: 1,
-          insertedText: reflectionText,
-          valuesSelectedValue: selectedValue as string,
-          valuesFieldCharCounts: [
-            whyImportant.length,
-            specificTime.length
-          ]
-        }
-      }, userId)
-    } catch (error) {
-      console.error('Failed to log helper usage:', error)
-      // Don't block user interaction if logging fails
+    // Log usage to database (non-blocking, skip in guest mode)
+    if (userId !== 'guest' && entryId !== 'guest-entry') {
+      try {
+        await createHelperUsage({
+          helperType: 'values-affirmation',
+          entryId: entryId,
+          selectedItems: [selectedValue as string],
+          metadata: {
+            events: eventsRef.current,
+            selectionCount: 1,
+            insertedText: reflectionText,
+            valuesSelectedValue: selectedValue as string,
+            valuesFieldCharCounts: [
+              whyImportant.length,
+              specificTime.length
+            ]
+          }
+        }, userId)
+      } catch (error) {
+        console.error('Failed to log helper usage:', error)
+        // Don't block user interaction if logging fails
+      }
+    } else {
+      console.log('[Guest Mode] Skipping helper usage logging')
     }
 
     // Announce and callback

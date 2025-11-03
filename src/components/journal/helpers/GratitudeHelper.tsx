@@ -78,9 +78,15 @@ export function GratitudeContent({ entryId, userId, onInsert }: GratitudeHelperP
     )
   }
 
-  // Format gratitude entry as HTML paragraphs
+  // Helper function to lowercase first character for prose flow
+  const lowercaseFirst = (text: string): string => {
+    if (!text) return text
+    return text.charAt(0).toLowerCase() + text.slice(1)
+  }
+
+  // Format gratitude entry as HTML paragraphs (prose format)
   const formatGratitudeEntry = (): string => {
-    const parts: string[] = ['<p><strong>Three Good Things</strong></p>', '<p><br></p>']
+    const paragraphs: string[] = []
 
     goodThings.forEach((thing, index) => {
       // Skip empty good things
@@ -88,36 +94,35 @@ export function GratitudeContent({ entryId, userId, onInsert }: GratitudeHelperP
         return
       }
 
-      // Add good thing number and title
+      const sentences: string[] = []
+
+      // Start with title or numbered label
       if (thing.title.trim()) {
-        parts.push(`<p><strong>${escapeHtml(thing.title)}</strong></p>`)
+        sentences.push(escapeHtml(thing.title))
       } else {
-        parts.push(`<p><strong>Good Thing #${index + 1}</strong></p>`)
+        sentences.push(`Good thing #${index + 1}`)
       }
 
       // Add what happened
       if (thing.whatHappened.trim()) {
-        parts.push(`<p>What happened: ${escapeHtml(thing.whatHappened)}</p>`)
-        parts.push('<p><br></p>')
+        sentences.push(escapeHtml(lowercaseFirst(thing.whatHappened)))
       }
 
       // Add how I felt
       if (thing.howIFelt.trim()) {
-        parts.push(`<p>How I felt: ${escapeHtml(thing.howIFelt)}</p>`)
-        parts.push('<p><br></p>')
+        sentences.push(`It made me feel ${escapeHtml(lowercaseFirst(thing.howIFelt))}`)
       }
 
       // Add why it happened
       if (thing.whyItHappened.trim()) {
-        parts.push(`<p>Why it happened: ${escapeHtml(thing.whyItHappened)}</p>`)
-        parts.push('<p><br></p>')
+        sentences.push(`This happened because ${escapeHtml(lowercaseFirst(thing.whyItHappened))}`)
       }
 
-      // Add spacing between good things
-      parts.push('<p><br></p>')
+      // Create paragraph from sentences
+      paragraphs.push(`<p>${sentences.join('. ')}.</p>`)
     })
 
-    return parts.join('')
+    return paragraphs.join('')
   }
 
   // Calculate field completion count
@@ -173,28 +178,32 @@ export function GratitudeContent({ entryId, userId, onInsert }: GratitudeHelperP
     }
     addEvent(insertedEvent)
 
-    // Log usage to database (non-blocking)
-    try {
-      const charCounts = getCharacterCounts()
-      await createHelperUsage({
-        helperType: 'gratitude',
-        entryId: entryId,
-        selectedItems: [],
-        metadata: {
-          events: eventsRef.current,
-          selectionCount: 0,
-          insertedText: reflectionText,
-          gratitudeFieldsCompleted: getFieldCompletionCount(),
-          gratitudeFieldCharCounts: [
-            charCounts.goodThing1.title, charCounts.goodThing1.what, charCounts.goodThing1.feel, charCounts.goodThing1.why,
-            charCounts.goodThing2.title, charCounts.goodThing2.what, charCounts.goodThing2.feel, charCounts.goodThing2.why,
-            charCounts.goodThing3.title, charCounts.goodThing3.what, charCounts.goodThing3.feel, charCounts.goodThing3.why
-          ]
-        }
-      }, userId)
-    } catch (error) {
-      console.error('Failed to log helper usage:', error)
-      // Don't block user interaction if logging fails
+    // Log usage to database (non-blocking, skip in guest mode)
+    if (userId !== 'guest' && entryId !== 'guest-entry') {
+      try {
+        const charCounts = getCharacterCounts()
+        await createHelperUsage({
+          helperType: 'gratitude',
+          entryId: entryId,
+          selectedItems: [],
+          metadata: {
+            events: eventsRef.current,
+            selectionCount: 0,
+            insertedText: reflectionText,
+            gratitudeFieldsCompleted: getFieldCompletionCount(),
+            gratitudeFieldCharCounts: [
+              charCounts.goodThing1.title, charCounts.goodThing1.what, charCounts.goodThing1.feel, charCounts.goodThing1.why,
+              charCounts.goodThing2.title, charCounts.goodThing2.what, charCounts.goodThing2.feel, charCounts.goodThing2.why,
+              charCounts.goodThing3.title, charCounts.goodThing3.what, charCounts.goodThing3.feel, charCounts.goodThing3.why
+            ]
+          }
+        }, userId)
+      } catch (error) {
+        console.error('Failed to log helper usage:', error)
+        // Don't block user interaction if logging fails
+      }
+    } else {
+      console.log('[Guest Mode] Skipping helper usage logging')
     }
 
     // Announce and callback

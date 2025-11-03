@@ -162,24 +162,28 @@ export function SavoringContent({ entryId, userId, onInsert }: SavoringHelperPro
     // Insert into journal
     onInsert(savoringText)
 
-    // Log to database (non-blocking)
-    try {
-      await createHelperUsage({
-        helperType: 'savoring',
-        entryId,
-        selectedItems: [selectedStrategy],
-        metadata: {
-          events: [...eventsRef.current],
-          selectionCount: 1,
-          insertedText: savoringText,
-          savoringStrategy: selectedStrategy,
-          reflectionCharacterCount: reflection.length,
-          hasReflection: reflection.trim().length > 0
-        }
-      }, userId)
-    } catch (error) {
-      console.error('Failed to log savoring helper usage:', error)
-      // Continue anyway - logging failure shouldn't block user
+    // Log to database (non-blocking, skip in guest mode)
+    if (userId !== 'guest' && entryId !== 'guest-entry') {
+      try {
+        await createHelperUsage({
+          helperType: 'savoring',
+          entryId,
+          selectedItems: [selectedStrategy],
+          metadata: {
+            events: [...eventsRef.current],
+            selectionCount: 1,
+            insertedText: savoringText,
+            savoringStrategy: selectedStrategy,
+            reflectionCharacterCount: reflection.length,
+            hasReflection: reflection.trim().length > 0
+          }
+        }, userId)
+      } catch (error) {
+        console.error('Failed to log savoring helper usage:', error)
+        // Continue anyway - logging failure shouldn't block user
+      }
+    } else {
+      console.log('[Guest Mode] Skipping helper usage logging')
     }
 
     // Announce success

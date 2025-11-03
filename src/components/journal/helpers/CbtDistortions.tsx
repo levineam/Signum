@@ -114,22 +114,26 @@ export function CbtDistortionsContent({ entryId, userId, onInsert }: CbtDistorti
     }
     addEvent(insertedEvent)
 
-    // Log usage to database (non-blocking)
-    try {
-      await createHelperUsage({
-        helperType: 'cbt-distortions',
-        entryId: entryId,
-        selectedItems: Array.from(selectedDistortions),
-        metadata: {
-          events: eventsRef.current,
-          selectionCount: selectedDistortions.size,
-          insertedText: reflectionText,
-          distortionNames: selected.map(d => d.name)
-        }
-      }, userId)
-    } catch (error) {
-      console.error('Failed to log helper usage:', error)
-      // Don't block user interaction if logging fails
+    // Log usage to database (non-blocking, skip in guest mode)
+    if (userId !== 'guest' && entryId !== 'guest-entry') {
+      try {
+        await createHelperUsage({
+          helperType: 'cbt-distortions',
+          entryId: entryId,
+          selectedItems: Array.from(selectedDistortions),
+          metadata: {
+            events: eventsRef.current,
+            selectionCount: selectedDistortions.size,
+            insertedText: reflectionText,
+            distortionNames: selected.map(d => d.name)
+          }
+        }, userId)
+      } catch (error) {
+        console.error('Failed to log helper usage:', error)
+        // Don't block user interaction if logging fails
+      }
+    } else {
+      console.log('[Guest Mode] Skipping helper usage logging')
     }
 
     // Announce and callback

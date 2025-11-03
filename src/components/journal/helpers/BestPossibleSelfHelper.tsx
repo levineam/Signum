@@ -103,23 +103,27 @@ export function BestPossibleSelfContent({ entryId, userId, onInsert }: BestPossi
     }
     addEvent(insertedEvent)
 
-    // Log usage to database (non-blocking)
-    try {
-      await createHelperUsage({
-        helperType: 'best-possible-self',
-        entryId: entryId,
-        selectedItems: [],
-        metadata: {
-          events: eventsRef.current,
-          selectionCount: 0,
-          insertedText: visionText,
-          visionCharacterCount: vision.length,
-          visionWordCount: getWordCount()
-        }
-      }, userId)
-    } catch (error) {
-      console.error('Failed to log helper usage:', error)
-      // Don't block user interaction if logging fails
+    // Log usage to database (non-blocking, skip in guest mode)
+    if (userId !== 'guest' && entryId !== 'guest-entry') {
+      try {
+        await createHelperUsage({
+          helperType: 'best-possible-self',
+          entryId: entryId,
+          selectedItems: [],
+          metadata: {
+            events: eventsRef.current,
+            selectionCount: 0,
+            insertedText: visionText,
+            visionCharacterCount: vision.length,
+            visionWordCount: getWordCount()
+          }
+        }, userId)
+      } catch (error) {
+        console.error('Failed to log helper usage:', error)
+        // Don't block user interaction if logging fails
+      }
+    } else {
+      console.log('[Guest Mode] Skipping helper usage logging')
     }
 
     // Announce and callback
