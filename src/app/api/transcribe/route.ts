@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import logger from '@/utils/logger'
 
 // Use Node.js runtime for OpenAI API calls (edge runtime has limitations)
 export const runtime = 'nodejs'
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
   const requestId = crypto.randomUUID()
 
-  console.log(`[transcribe:${requestId}] Request received`)
+  logger.debug({ route: 'transcribe' }, `[transcribe:${requestId}] Request received`)
 
   try {
     // Initialize OpenAI client (done here to avoid build-time issues)
@@ -76,13 +77,13 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (authError) {
-      console.warn(`[transcribe:${requestId}] Auth error (continuing anyway):`, authError)
+      logger.warn({ route: 'transcribe' }, `[transcribe:${requestId}] Auth error (continuing anyway):`, authError)
     }
 
     if (user) {
-      console.log(`[transcribe:${requestId}] User authenticated: ${user.id}`)
+      logger.debug({ route: 'transcribe' }, `[transcribe:${requestId}] User authenticated: ${user.id}`)
     } else {
-      console.warn(`[transcribe:${requestId}] No user found, but continuing (auth optional for now)`)
+      logger.warn({ route: 'transcribe' }, `[transcribe:${requestId}] No user found, but continuing (auth optional for now)`)
     }
 
     // 2. Validate Content-Type
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
     )
 
     if (!isValidMimeType) {
-      console.error(`[transcribe:${requestId}] Invalid Content-Type: ${contentType}`)
+      logger.error({ route: 'transcribe' }, `[transcribe:${requestId}] Invalid Content-Type: ${contentType}`)
       return NextResponse.json(
         { error: `Unsupported audio format. Supported: ${SUPPORTED_MIME_TYPES.join(', ')}` },
         { status: 400 }
@@ -103,11 +104,11 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await request.arrayBuffer()
     const fileSize = arrayBuffer.byteLength
 
-    console.log(`[transcribe:${requestId}] File size: ${fileSize} bytes (${(fileSize / 1024 / 1024).toFixed(2)} MB)`)
+    logger.debug({ route: 'transcribe' }, `[transcribe:${requestId}] File size: ${fileSize} bytes (${(fileSize / 1024 / 1024).toFixed(2)} MB)`)
 
     // 4. Validate file size
     if (fileSize > MAX_FILE_SIZE_BYTES) {
-      console.error(`[transcribe:${requestId}] File too large: ${fileSize} bytes`)
+      logger.error({ route: 'transcribe' }, `[transcribe:${requestId}] File too large: ${fileSize} bytes`)
       return NextResponse.json(
         {
           error: `File too large. Maximum size: ${(MAX_FILE_SIZE_BYTES / 1024 / 1024).toFixed(1)} MB`,
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (fileSize === 0) {
-      console.error(`[transcribe:${requestId}] Empty file`)
+      logger.error({ route: 'transcribe' }, `[transcribe:${requestId}] Empty file`)
       return NextResponse.json({ error: 'Empty audio file' }, { status: 400 })
     }
 
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
       type: contentType,
     })
 
-    console.log(`[transcribe:${requestId}] Calling Whisper API (${fileExtension})...`)
+    logger.debug({ route: 'transcribe' }, `[transcribe:${requestId}] Calling Whisper API (${fileExtension})...`)
     const whisperStartTime = Date.now()
 
     // 7. Call Whisper API for transcription
@@ -150,11 +151,11 @@ export async function POST(request: NextRequest) {
     })
 
     const whisperLatency = Date.now() - whisperStartTime
-    console.log(`[transcribe:${requestId}] Whisper API completed in ${whisperLatency}ms`)
-    console.log(`[transcribe:${requestId}] Raw transcription length: ${transcription.length} chars`)
+    logger.debug({ route: 'transcribe' }, `[transcribe:${requestId}] Whisper API completed in ${whisperLatency}ms`)
+    logger.debug({ route: 'transcribe' }, `[transcribe:${requestId}] Raw transcription length: ${transcription.length} chars`)
 
     // 8. Clean up transcription with GPT-5 Mini (intent-based)
-    console.log(`[transcribe:${requestId}] Calling GPT-5 Mini for intent cleanup...`)
+    logger.debug({ route: 'transcribe' }, `[transcribe:${requestId}] Calling GPT-5 Mini for intent cleanup...`)
     const gptStartTime = Date.now()
 
     const completion = await openai.chat.completions.create({
@@ -183,13 +184,13 @@ Output ONLY the cleaned text, nothing else.`,
     const gptLatency = Date.now() - gptStartTime
     const cleanedText = completion.choices[0]?.message?.content?.trim() || transcription
 
-    console.log(`[transcribe:${requestId}] GPT-5 Mini completed in ${gptLatency}ms`)
-    console.log(`[transcribe:${requestId}] Cleaned text length: ${cleanedText.length} chars`)
+    logger.debug({ route: 'transcribe' }, `[transcribe:${requestId}] GPT-5 Mini completed in ${gptLatency}ms`)
+    logger.debug({ route: 'transcribe' }, `[transcribe:${requestId}] Cleaned text length: ${cleanedText.length} chars`)
 
     // 9. Log final metrics
     const totalLatency = Date.now() - startTime
-    console.log(`[transcribe:${requestId}] Total latency: ${totalLatency}ms`)
-    console.log(`[transcribe:${requestId}] Breakdown: Whisper ${whisperLatency}ms, GPT ${gptLatency}ms`)
+    logger.debug({ route: 'transcribe' }, `[transcribe:${requestId}] Total latency: ${totalLatency}ms`)
+    logger.debug({ route: 'transcribe' }, `[transcribe:${requestId}] Breakdown: Whisper ${whisperLatency}ms, GPT ${gptLatency}ms`)
 
     // 10. Return cleaned transcription
     return NextResponse.json(
@@ -207,11 +208,11 @@ Output ONLY the cleaned text, nothing else.`,
     )
   } catch (error) {
     const totalLatency = Date.now() - startTime
-    console.error(`[transcribe:${requestId}] Error after ${totalLatency}ms:`, error)
+    logger.error({ route: 'transcribe' }, `[transcribe:${requestId}] Error after ${totalLatency}ms:`, error)
 
     // Handle OpenAI API errors
     if (error instanceof OpenAI.APIError) {
-      console.error(`[transcribe:${requestId}] OpenAI API Error:`, {
+      logger.error({ route: 'transcribe' }, `[transcribe:${requestId}] OpenAI API Error:`, {
         status: error.status,
         message: error.message,
         code: error.code,
