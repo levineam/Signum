@@ -72,7 +72,8 @@ export async function POST(request: NextRequest) {
         .in('id', taskIds)
         .eq('user_id', user.id);
 
-      tasks = result.data;
+      // Cast to TaskRow[] with optional query fields for backward compatibility
+      tasks = result.data as TaskRow[] | null;
       fetchError = result.error;
     }
 
