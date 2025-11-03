@@ -1,0 +1,319 @@
+# Story 1.9.4: Create AI-Generated Note and Link to Task
+
+**Status:** Backlog
+**Parent Story:** Story 1.9 - AI-Powered Task Assistance
+**GitHub Issue:** [#124](https://github.com/levineam/Signum/issues/124)
+**Epic:** Epic 1 - Content Intelligence & Feedback System
+
+## Story
+
+As a user who clicked "Ask AI" on a research query,
+I want the AI response to be automatically saved as a new note linked to my task,
+so that I can reference the answer later without losing it.
+
+## Acceptance Criteria
+
+1. **Automatic Note Creation**
+   - [ ] AI response from `/api/ai/answer` endpoint automatically creates new note
+   - [ ] Note content is the AI-generated answer (markdown format)
+   - [ ] Note is labeled "AI-generated" (for ontology exclusion, see Story 1.9.5)
+   - [ ] Note is saved to user's journal stream with current timestamp
+
+2. **Task-Note Linking**
+   - [ ] Note record includes `source_task_id` field linking to originating task
+   - [ ] Task record updated with reference to created note (optional, for bidirectional link)
+   - [ ] Link is persisted in database for future reference
+   - [ ] Both task and note can navigate to each other in UI (future enhancement)
+
+3. **Note Metadata**
+   - [ ] Note includes system-generated title (e.g., "AI Answer: [task text preview]")
+   - [ ] Note marked with `ai_generated = true` flag
+   - [ ] Note timestamp set to creation time
+   - [ ] Note belongs to authenticated user (same as task owner)
+
+4. **UI Display**
+   - [ ] New note appears in journal stream immediately after creation
+   - [ ] Note displays "AI-generated" label/badge
+   - [ ] Note can be edited by user (like any other note)
+   - [ ] Note can be deleted by user (like any other note)
+
+5. **Error Handling**
+   - [ ] If note creation fails, API returns error to user
+   - [ ] Failed note creation does not leave orphaned AI response
+   - [ ] Database transaction ensures atomicity (note created or not, no partial state)
+
+6. **Performance**
+   - [ ] Note creation adds <500ms to total API response time
+   - [ ] Database operations optimized (single INSERT, minimal queries)
+
+## Tasks / Subtasks
+
+- [ ] **Add Database Schema Changes** (AC: #2, #3)
+  - [ ] Create migration: `YYYYMMDDHHMMSS_add_ai_generated_to_notes.sql`
+  - [ ] Add `ai_generated BOOLEAN DEFAULT FALSE` to notes table
+  - [ ] Add `source_task_id UUID REFERENCES tasks(id) ON DELETE SET NULL` to notes table
+  - [ ] Add indexes for performance: `idx_notes_ai_generated`, `idx_notes_source_task`
+  - [ ] Run migration on Supabase
+
+- [ ] **Implement Note Creation Logic** (AC: #1, #3)
+  - [ ] Update `/src/app/api/ai/answer/route.ts` to create note
+  - [ ] Insert new note record into Supabase `notes` table
+  - [ ] Set `ai_generated = true` and `source_task_id = taskId`
+  - [ ] Generate note title from task text (e.g., "AI Answer: {first 50 chars}")
+  - [ ] Set note content to AI response (markdown)
+
+- [ ] **Add Transaction Handling** (AC: #5)
+  - [ ] Wrap note creation in database transaction
+  - [ ] Ensure atomicity: if note creation fails, AI response is not returned
+  - [ ] Handle database errors and return appropriate error response
+
+- [ ] **Update API Response** (AC: #1)
+  - [ ] Return `noteId` in API response (replace placeholder from Story 1.9.3)
+  - [ ] Include note metadata in response (title, timestamp, id)
+
+- [ ] **Add UI Label for AI-Generated Notes** (AC: #4)
+  - [ ] Modify `/src/components/notes/NoteCard.tsx`
+  - [ ] Display "AI-generated" badge if `note.ai_generated === true`
+  - [ ] Use shadcn/ui Badge component
+  - [ ] Style badge to be visually distinct (e.g., purple color)
+
+- [ ] **Test Note Appears in Journal Stream** (AC: #4)
+  - [ ] Verify new note appears in journal stream after API call
+  - [ ] Verify note displays correctly with AI-generated label
+  - [ ] Verify note can be edited and deleted like normal notes
+
+- [ ] **Add Optional Bidirectional Link UI** (AC: #2)
+  - [ ] Future enhancement: Add "Related Task" section in note
+  - [ ] Future enhancement: Add "AI Answer" link in task card
+  - [ ] MVP: Store link in database, UI navigation deferred to future story
+
+## Dev Notes
+
+### Technical Summary
+
+Extend the `/api/ai/answer` endpoint to automatically create a new note record in the database with the AI-generated response. The note should be marked as AI-generated and linked to the originating task for future reference.
+
+### Implementation Approach
+
+**Database Schema Changes:**
+
+```sql
+-- Migration: YYYYMMDDHHMMSS_add_ai_generated_to_notes.sql
+ALTER TABLE notes ADD COLUMN ai_generated BOOLEAN DEFAULT FALSE;
+ALTER TABLE notes ADD COLUMN source_task_id UUID REFERENCES tasks(id) ON DELETE SET NULL;
+
+-- Create indexes for performance
+CREATE INDEX idx_notes_ai_generated ON notes(ai_generated);
+CREATE INDEX idx_notes_source_task ON notes(source_task_id);
+
+-- Add comment for documentation
+COMMENT ON COLUMN notes.ai_generated IS 'True if note was generated by AI (excluded from ontology by default)';
+COMMENT ON COLUMN notes.source_task_id IS 'Task that triggered AI answer creation (if applicable)';
+```
+
+**Updated API Route:**
+
+```typescript
+// /src/app/api/ai/answer/route.ts (modifications)
+export async function POST(request: Request) {
+  try {
+    // ... existing auth and validation code ...
+
+    // Generate AI answer (existing code)
+    const completion = await openai.chat.completions.create({...})
+    const answer = completion.choices[0]?.message?.content || ''
+    const tokensUsed = completion.usage?.total_tokens || 0
+
+    // Create note with AI response
+    const noteTitle = generateNoteTitle(taskText)
+
+    const { data: note, error: noteError } = await supabase
+      .from('notes')
+      .insert({
+        user_id: session.user.id,
+        title: noteTitle,
+        content: answer,
+        ai_generated: true,
+        source_task_id: taskId,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (noteError) {
+      console.error('[Note Creation Error]', noteError)
+      return NextResponse.json(
+        { error: 'Failed to save answer', code: 'NOTE_CREATION_FAILED' },
+        { status: 500 }
+      )
+    }
+
+    // Log usage
+    console.log('[AI Answer Created]', {
+      userId: session.user.id,
+      taskId,
+      noteId: note.id,
+      tokensUsed,
+      timestamp: new Date().toISOString()
+    })
+
+    return NextResponse.json({
+      answer,
+      taskId,
+      noteId: note.id,
+      noteTitle,
+      tokensUsed
+    })
+
+  } catch (error) {
+    // ... existing error handling ...
+  }
+}
+
+function generateNoteTitle(taskText: string): string {
+  // Create concise title from task text
+  const maxLength = 50
+  const preview = taskText.length > maxLength
+    ? taskText.substring(0, maxLength) + '...'
+    : taskText
+  return `AI Answer: ${preview}`
+}
+```
+
+**UI Badge for AI-Generated Notes:**
+
+```typescript
+// /src/components/notes/NoteCard.tsx (modifications)
+import { Badge } from '@/components/ui/badge'
+import { Sparkles } from 'lucide-react'
+
+export function NoteCard({ note }: { note: Note }) {
+  return (
+    <div className="note-card">
+      {/* Note title */}
+      <div className="flex items-center gap-2">
+        <h3>{note.title}</h3>
+        {note.ai_generated && (
+          <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+            <Sparkles className="h-3 w-3 mr-1" />
+            AI-generated
+          </Badge>
+        )}
+      </div>
+
+      {/* Note content */}
+      <div className="note-content prose">
+        {/* Render markdown content */}
+      </div>
+    </div>
+  )
+}
+```
+
+### Files to Modify
+
+**New Files:**
+- `/supabase/migrations/YYYYMMDDHHMMSS_add_ai_generated_to_notes.sql` - Schema migration
+
+**Modified Files:**
+- `/src/app/api/ai/answer/route.ts` - Add note creation logic
+- `/src/components/notes/NoteCard.tsx` - Add AI-generated badge
+
+**Type Definitions:**
+- Update `Note` type in `/src/types/notes.ts` (if exists) to include:
+  ```typescript
+  interface Note {
+    // ... existing fields ...
+    ai_generated: boolean
+    source_task_id: string | null
+  }
+  ```
+
+### Dependencies
+
+- **Story 1.9.3 (AI Answer API):** Must be completed first
+- **Supabase:** Database for note storage
+- **shadcn/ui Badge:** UI component for label
+
+### Database Transaction Flow
+
+```
+1. User clicks "Ask AI" button
+2. API endpoint validates authentication and task ownership
+3. OpenAI API called to generate answer
+4. BEGIN TRANSACTION
+   4a. Insert new note with ai_generated=true, source_task_id=taskId
+   4b. COMMIT if successful, ROLLBACK if error
+5. Return noteId to frontend
+6. Frontend refreshes journal stream (note appears)
+```
+
+### UI/UX Considerations
+
+- **Note Title:** Auto-generated title should be concise and descriptive
+- **AI Badge:** Should be visually distinct but not distracting
+- **Edit/Delete:** AI-generated notes can be edited/deleted like normal notes
+- **Future:** Add "Related Task" link in note card for navigation
+
+### Error Scenarios
+
+| Error | Handling |
+|-------|----------|
+| Note insertion fails | Return 500 error, AI response not saved |
+| Invalid task ID | Return 404 error, no note created |
+| Database timeout | Return 500 error, transaction rolled back |
+
+### Performance Optimization
+
+- **Single INSERT:** Use Supabase `.insert().single()` for atomicity
+- **Minimize Queries:** Fetch task and insert note in 2 queries total
+- **Index Usage:** Indexes on `ai_generated` and `source_task_id` for future queries
+
+### Time Estimate
+
+**2-3 days**
+- Day 1: Database migration, note creation logic in API
+- Day 2: UI badge for AI-generated notes, testing
+- Day 3: Error handling, edge cases, integration testing
+
+**Story Points:** 3 points
+
+### References
+
+- **Notes Table Schema:** `/supabase/migrations/` (existing notes table)
+- **Supabase Insert:** https://supabase.com/docs/reference/javascript/insert
+- **shadcn/ui Badge:** `/src/components/ui/badge.tsx`
+
+---
+
+## Dev Agent Record
+
+### Context Reference
+
+<!-- Will be populated during dev-story execution -->
+
+### Agent Model Used
+
+<!-- Will be populated during dev-story execution -->
+
+### Debug Log References
+
+<!-- Will be populated during dev-story execution -->
+
+### Completion Notes List
+
+<!-- Will be populated during dev-story execution -->
+
+### File List
+
+<!-- Will be populated during dev-story execution -->
+
+### Test Results
+
+<!-- Will be populated during dev-story execution -->
+
+---
+
+## Review Notes
+
+<!-- Will be populated during code review -->
