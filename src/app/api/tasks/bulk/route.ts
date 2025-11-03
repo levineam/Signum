@@ -57,11 +57,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Try to fetch tasks with query fields (Story 1.9.1)
-    let { data: tasks, error: fetchError } = await supabase
+    // Explicitly type tasks to allow optional query fields for backward compatibility
+    let tasks: TaskRow[] | null;
+    let fetchError;
+
+    const result = await supabase
       .from('tasks')
       .select('id, title, due_at, rrule, status, is_query, query_confidence')
       .in('id', taskIds)
       .eq('user_id', user.id);
+
+    tasks = result.data as TaskRow[] | null;
+    fetchError = result.error;
 
     // If error is due to unknown column (Story 1.9.1 migration not run), retry without query fields
     if (fetchError && (fetchError.code === '42703' || fetchError.message?.includes('column') || fetchError.message?.includes('is_query'))) {
