@@ -44,8 +44,10 @@ interface JournalEntry {
       status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
     }>
     rejectedTaskHashes?: string[]
+    journalDate?: string
+    prompt?: string
     [key: string]: unknown  // Allow other metadata fields
-  }
+  } | null
 }
 
 interface ParsedTask {
@@ -220,7 +222,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             date: journalDate || note.createdAt.split('T')[0],
             content: note.content,
             lastModified: note.updatedAt,
-            isSample: Boolean(isSample)
+            isSample: Boolean(isSample),
+            metadata: note.metadata as JournalEntry['metadata']  // Preserve original metadata for autosave merge
           }
         })
 
