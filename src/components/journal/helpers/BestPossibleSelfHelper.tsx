@@ -67,22 +67,50 @@ export function BestPossibleSelfContent({ entryId, userId, onInsert }: BestPossi
     return vision.trim().split(/\s+/).filter(word => word.length > 0).length
   }
 
-  // Format best possible self as HTML paragraphs
+  // Helper function to capitalize first character
+  const capitalizeFirst = (text: string): string => {
+    if (!text) return text
+    return text.charAt(0).toUpperCase() + text.slice(1)
+  }
+
+  // Helper function to strip trailing punctuation
+  const cleanSentence = (text: string): string => {
+    const trimmed = text.trim()
+    return trimmed.replace(/[.!?]+$/, '')
+  }
+
+  // Smart formatting for vision text
+  const formatVision = (rawText: string): string => {
+    const trimmed = rawText.trim()
+
+    // Check if user wrote complete sentence starting with common patterns
+    if (trimmed.match(/^(In |I see |I am |I have |I will |My |Five |Ten )/i)) {
+      return capitalizeFirst(trimmed)
+    }
+
+    // Check if it starts with a verb (fragment) - add "I am" or "I see myself"
+    // Common verbs for future vision: continuing, living, working, being, having, etc.
+    if (trimmed.match(/^(continuing|living|working|being|having|doing|creating|leading|building|enjoying|pursuing)/i)) {
+      return `I see myself ${trimmed.toLowerCase()}`
+    }
+
+    // Default: assume it's a complete sentence, just capitalize
+    return capitalizeFirst(trimmed)
+  }
+
+  // Format best possible self as HTML paragraphs (prose format)
   const formatBestSelf = (): string => {
-    const parts: string[] = []
-
-    // Header
-    parts.push('<p><strong>My Best Possible Self</strong></p>')
-    parts.push('<p><br></p>')
-
     // Split vision into paragraphs (preserve user's line breaks)
     const paragraphs = vision.split('\n').filter(p => p.trim())
-    paragraphs.forEach(paragraph => {
-      parts.push(`<p>${escapeHtml(paragraph)}</p>`)
-      parts.push('<p><br></p>')
+
+    // Process each paragraph with smart formatting
+    const formattedParagraphs = paragraphs.map(paragraph => {
+      const formatted = formatVision(paragraph)
+      const cleaned = cleanSentence(formatted)
+      return `<p>${escapeHtml(cleaned)}.</p>`
     })
 
-    return parts.join('')
+    return formattedParagraphs.join('')
   }
 
   // Handle insert to journal
