@@ -12,8 +12,8 @@ import {
   CreateLinkRequest,
   NoteType
 } from '@/types/note'
-import { decryptNote } from '@/lib/crypto/encryption'
-import { getUserEncryptionKey } from '@/lib/crypto/keyManagement'
+import { decryptNote, encryptNote } from '@/lib/crypto/encryption'
+import { getUserEncryptionKey, hasEncryptionKey } from '@/lib/crypto/keyManagement'
 
 // ============================================================================
 // Note CRUD Operations
@@ -109,23 +109,57 @@ export async function getNoteById(
 
 /**
  * Create a new note.
+ * Automatically encrypts if user has encryption enabled.
  */
 export async function createNote(
   request: CreateNoteRequest,
   userId: string
 ): Promise<Note> {
-  
 
-  const { data, error } = await supabase
-    .from('notes')
-    .insert({
+
+  // Check if user has encryption enabled
+  const hasKey = await hasEncryptionKey(userId)
+
+  let insertData: Record<string, unknown>
+
+  if (hasKey) {
+    // User has encryption enabled - encrypt the note
+    const key = await getUserEncryptionKey(userId)
+    const title = request.title ?? ''
+    const content = request.content ?? ''
+
+    const encryptedTitle = await encryptNote(title, key)
+    const encryptedContent = await encryptNote(content, key)
+
+    insertData = {
+      user_id: userId,
+      encrypted_title: encryptedTitle.ciphertext,
+      title_iv: encryptedTitle.iv,
+      encrypted_content: encryptedContent.ciphertext,
+      content_iv: encryptedContent.iv,
+      encryption_version: 1,
+      note_type: request.noteType,
+      is_pinned: request.isPinned || false,
+      metadata: request.metadata || {},
+      // Clear plaintext columns
+      title: null,
+      content: null,
+    }
+  } else {
+    // User does not have encryption enabled - use plaintext
+    insertData = {
       user_id: userId,
       title: request.title,
       content: request.content || '',
       note_type: request.noteType,
       is_pinned: request.isPinned || false,
-      metadata: request.metadata || {}
-    })
+      metadata: request.metadata || {},
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('notes')
+    .insert(insertData)
     .select()
     .single()
 
@@ -143,17 +177,53 @@ export async function createNote(
 
 /**
  * Update an existing note.
+ * Automatically encrypts if user has encryption enabled.
  */
 export async function updateNote(
   request: UpdateNoteRequest,
   userId: string
 ): Promise<Note> {
-  
 
-  const updates: Record<string, string | boolean | object> = {}
 
-  if (request.title !== undefined) updates.title = request.title
-  if (request.content !== undefined) updates.content = request.content
+  const updates: Record<string, string | number | boolean | object | null> = {}
+
+  // Check if user has encryption enabled
+  const hasKey = await hasEncryptionKey(userId)
+
+  // Handle title and content updates with encryption if enabled
+  if (hasKey && (request.title !== undefined || request.content !== undefined)) {
+    // User has encryption enabled - need to encrypt updates
+    const key = await getUserEncryptionKey(userId)
+
+    // Get current note to preserve unchanged fields
+    const current = await getNoteById(request.id, userId)
+    if (!current) {
+      throw new Error('Note not found')
+    }
+
+    // Use updated values or fall back to current values
+    const titleToEncrypt = request.title !== undefined ? request.title : current.title
+    const contentToEncrypt = request.content !== undefined ? request.content : current.content
+
+    // Encrypt both title and content
+    const encryptedTitle = await encryptNote(titleToEncrypt ?? '', key)
+    const encryptedContent = await encryptNote(contentToEncrypt ?? '', key)
+
+    updates.encrypted_title = encryptedTitle.ciphertext
+    updates.title_iv = encryptedTitle.iv
+    updates.encrypted_content = encryptedContent.ciphertext
+    updates.content_iv = encryptedContent.iv
+    updates.encryption_version = 1
+    // Clear plaintext
+    updates.title = null
+    updates.content = null
+  } else {
+    // User does not have encryption enabled - use plaintext
+    if (request.title !== undefined) updates.title = request.title
+    if (request.content !== undefined) updates.content = request.content
+  }
+
+  // Handle other fields (not encrypted)
   if (request.isPinned !== undefined) updates.is_pinned = request.isPinned
   if (request.metadata !== undefined) {
     // Merge metadata instead of replacing
