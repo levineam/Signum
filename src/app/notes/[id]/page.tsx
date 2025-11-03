@@ -4,9 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getNoteById, updateNote } from '@/lib/notes'
 import { Note, getNoteDisplayTitle } from '@/types/note'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { ArrowLeft } from 'lucide-react'
 import { OntologyCardViewer } from '@/components/notes/OntologyCardViewer'
 import { useAuth } from '@/contexts/AuthContext'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
@@ -338,19 +336,6 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     }
   }
 
-  const handleBack = () => {
-    // Return to Ontology page for ontology notes, Notes page for others
-    const noteType = 'type' in note! ? (note as { type: string }).type : note!.noteType
-    const isOntology = noteType === 'values' || noteType === 'beliefs' || noteType === 'aims' ||
-      noteType === 'ontology-value' || noteType === 'ontology-belief' || noteType === 'ontology-aim'
-
-    if (isOntology) {
-      router.push('/ontology')
-    } else {
-      router.push('/notes')
-    }
-  }
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -378,12 +363,6 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
             <AppHeader />
             <div className="flex-1">
               <div className="max-w-3xl mx-auto p-6">
-                <div className="mb-6">
-                  <Button variant="ghost" onClick={() => router.push('/notes')} className="gap-2">
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to Notes
-                  </Button>
-                </div>
                 <div className="text-center py-12">
                   <h2 className="text-2xl font-semibold mb-2">Note Not Found</h2>
                   <p className="text-muted-foreground">This note could not be found.</p>
@@ -401,7 +380,6 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const noteType = 'type' in note ? (note as { type: string }).type : note.noteType
   const isOntologyNote = noteType === 'values' || noteType === 'beliefs' || noteType === 'aims' ||
     noteType === 'ontology-value' || noteType === 'ontology-belief' || noteType === 'ontology-aim'
-  const backButtonLabel = isOntologyNote ? 'Back to Ontology' : 'Back to Notes'
 
   return (
     <div className="min-h-screen bg-background">
@@ -411,14 +389,6 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
           <AppHeader />
           <div className="flex-1">
             <div className="max-w-3xl mx-auto p-6">
-      {/* Header with Back Button */}
-      <div className="mb-6">
-        <Button variant="ghost" onClick={handleBack} className="gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          {backButtonLabel}
-        </Button>
-      </div>
-
       {/* Note Title */}
       <h1 className="text-3xl font-bold mb-6">{getNoteDisplayTitle(note)}</h1>
 
