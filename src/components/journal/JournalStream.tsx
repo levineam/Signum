@@ -208,7 +208,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               paragraphHash: t.paragraphHash,
               dueAt: null, // Will be fetched from tasks table if needed
               rrule: null,
-              status: t.status
+              status: t.status,
+              isQuery: false, // Will be fetched from tasks table via bulk API
+              queryConfidence: 0 // Will be fetched from tasks table via bulk API
             })))
           }
 
@@ -466,7 +468,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     // Debounce to avoid excessive saves
     const timeout = setTimeout(saveTaskMetadata, 500)
     return () => clearTimeout(timeout)
-  }, [entryTasks, user])
+  }, [entryTasks, user, entries])
 
   const handleContentChange = (entryId: string, newContent: string) => {
     // Don't override content changes while we're creating a link
