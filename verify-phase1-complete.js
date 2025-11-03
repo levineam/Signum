@@ -8,13 +8,16 @@
  * 2. Prototype user deleted from all auth tables
  * 3. No orphaned data in notes/links tables
  *
- * Requires: SUPABASE_SERVICE_ROLE_KEY in environment
+ * Requires:
+ *   - SUPABASE_SERVICE_ROLE_KEY (for orphaned data checks)
+ *   - NEXT_PUBLIC_SUPABASE_ANON_KEY (for RLS policy testing)
  */
 
 const { createClient } = require('@supabase/supabase-js')
 
 const SUPABASE_URL = 'https://otyvmmgakowcdsxehwox.supabase.co'
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!SUPABASE_SERVICE_KEY) {
   console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY environment variable')
@@ -23,7 +26,23 @@ if (!SUPABASE_SERVICE_KEY) {
   process.exit(1)
 }
 
+if (!SUPABASE_ANON_KEY) {
+  console.error('❌ Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
+  console.error('   Export it from your .env.local file:')
+  console.error('   export NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key-here')
+  process.exit(1)
+}
+
+// Service role client - bypasses RLS, used for checking orphaned data
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+})
+
+// Anonymous client - subject to RLS, used for testing policies
+const anonSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
@@ -41,8 +60,8 @@ async function runVerification() {
   // Test 1: Verify notes table has correct policies
   console.log('1️⃣  Testing Notes Table RLS Policies...')
   try {
-    // Create a temporary test without auth to verify RLS blocks it
-    const { data: anonTest, error: anonError } = await supabase
+    // Use anonymous client (not service role) to verify RLS blocks unauthenticated access
+    const { data: anonTest, error: anonError } = await anonSupabase
       .from('notes')
       .select('id')
       .limit(1)
