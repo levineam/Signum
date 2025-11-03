@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sanitizeHtml } from '@/utils/sanitizeHtml'
+import logger from '@/utils/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('[transfer-guest-content] Missing Supabase environment variables')
+      logger.error({ route: 'transfer-guest-content' }, 'Missing Supabase environment variables')
       return NextResponse.json(
         { error: 'Server configuration error' },
         { status: 500 }
@@ -43,14 +44,14 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
 
     if (authError || !user) {
-      console.error('[transfer-guest-content] Auth error:', authError)
+      logger.error({ error: authError, route: 'transfer-guest-content' }, 'Authentication failed')
       return NextResponse.json(
         { error: 'Unauthorized - invalid token' },
         { status: 401 }
       )
     }
 
-    console.log('[transfer-guest-content] Authenticated user:', user.id)
+    logger.debug({ userId: user.id, route: 'transfer-guest-content' }, 'User authenticated')
 
     // Parse request body
     const body = await request.json()
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
       .eq('note_type', 'journal-entry')
 
     if (fetchError) {
-      console.error('[transfer-guest-content] Error fetching existing entries:', fetchError)
+      logger.error({ error: fetchError, userId: user.id, route: 'transfer-guest-content' }, 'Error fetching existing entries')
       return NextResponse.json(
         { error: 'Database error' },
         { status: 500 }
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     if (todayEntry) {
       // Update existing entry
-      console.log('[transfer-guest-content] Updating existing entry:', todayEntry.id)
+      logger.debug({ entryId: todayEntry.id, userId: user.id, route: 'transfer-guest-content' }, 'Updating existing entry')
 
       const { error: updateError } = await supabaseAdmin
         .from('notes')
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
         .eq('user_id', user.id)
 
       if (updateError) {
-        console.error('[transfer-guest-content] Error updating entry:', updateError)
+        logger.error({ error: updateError, entryId: todayEntry.id, userId: user.id, route: 'transfer-guest-content' }, 'Error updating entry')
         return NextResponse.json(
           { error: 'Failed to update journal entry' },
           { status: 500 }
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Create new entry
-      console.log('[transfer-guest-content] Creating new entry for user:', user.id)
+      logger.debug({ userId: user.id, route: 'transfer-guest-content' }, 'Creating new entry')
 
       const { data: newNote, error: insertError } = await supabaseAdmin
         .from('notes')
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (insertError || !newNote) {
-        console.error('[transfer-guest-content] Error creating entry:', insertError)
+        logger.error({ error: insertError, userId: user.id, route: 'transfer-guest-content' }, 'Error creating entry')
         return NextResponse.json(
           { error: 'Failed to create journal entry' },
           { status: 500 }
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
       })
     }
   } catch (error) {
-    console.error('[transfer-guest-content] Unexpected error:', error)
+    logger.error({ error, route: 'transfer-guest-content' }, 'Unexpected error')
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
