@@ -120,25 +120,32 @@ export function SavoringContent({ entryId, userId, onInsert }: SavoringHelperPro
     return selectedStrategy !== '' && reflection.trim() !== ''
   }
 
-  // Format savoring entry as HTML paragraphs
+  // Helper function to capitalize first character
+  const capitalizeFirst = (text: string): string => {
+    if (!text) return text
+    return text.charAt(0).toUpperCase() + text.slice(1)
+  }
+
+  // Helper function to strip trailing punctuation
+  const cleanSentence = (text: string): string => {
+    const trimmed = text.trim()
+    return trimmed.replace(/[.!?]+$/, '')
+  }
+
+  // Format savoring entry as prose (no header)
   const formatSavoringEntry = (): string => {
-    const parts: string[] = []
+    if (!reflection.trim()) return ''
 
-    // Header with selected strategy
-    parts.push(`<p><strong>Savoring: ${escapeHtml(selectedStrategy)}</strong></p>`)
-    parts.push('<p><br></p>')
+    // Split by newlines and convert each paragraph to prose
+    const paragraphs = reflection.trim().split('\n').filter(p => p.trim())
 
-    // User's reflection (optional)
-    if (reflection.trim()) {
-      // Split by newlines and convert each paragraph
-      const paragraphs = reflection.trim().split('\n').filter(p => p.trim())
-      paragraphs.forEach(paragraph => {
-        parts.push(`<p>${escapeHtml(paragraph)}</p>`)
-      })
-      parts.push('<p><br></p>')
-    }
+    const formattedParagraphs = paragraphs.map(paragraph => {
+      const cleaned = cleanSentence(paragraph)
+      const capitalized = capitalizeFirst(cleaned)
+      return `<p>${escapeHtml(capitalized)}.</p>`
+    })
 
-    return parts.join('')
+    return formattedParagraphs.join('')
   }
 
   // Handle insert to journal
