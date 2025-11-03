@@ -244,7 +244,10 @@ export function NoteViewer({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto py-4">
+        <div
+          className="flex-1 overflow-y-auto py-4 cursor-pointer hover:bg-muted/30 transition-colors rounded-md"
+          onClick={isEditing ? undefined : handleEdit}
+        >
           {isEditing ? (
             <SimpleRichEditor
               value={editContent}
