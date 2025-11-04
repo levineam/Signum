@@ -18,7 +18,8 @@ import {
   markNotesProcessed,
   updateQueueStatus,
   completeQueueJob,
-  insertTelemetry
+  insertTelemetry,
+  type UnprocessedNoteRow
 } from '@/lib/ontology/queue'
 import { runIncrementalExtraction } from '@/lib/ontology/extractor'
 import { Note } from '@/types/note'
@@ -26,19 +27,6 @@ import { Note } from '@/types/note'
 // Feature flag - server-side control
 const QUEUE_PROCESSING_ENABLED =
   process.env.ONTOLOGY_QUEUE_PROCESSING_ENABLED !== 'false'
-
-// Type for database row from get_unprocessed_notes function
-interface UnprocessedNoteRow {
-  id: string
-  user_id: string
-  title: string
-  content: string
-  note_type: string
-  is_pinned: boolean
-  metadata: Record<string, unknown>
-  created_at: string
-  updated_at: string
-}
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()

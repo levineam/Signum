@@ -160,28 +160,28 @@ export async function getNextPendingJob(): Promise<{
   }
 }
 
-interface UnprocessedNote {
+// Full database row type from get_unprocessed_notes RPC function
+export interface UnprocessedNoteRow {
   id: string
+  user_id: string
   title: string
   content: string
-  updatedAt: string
-}
-
-interface UnprocessedNoteRow {
-  id: string
-  title: string
-  content: string
+  note_type: string
+  is_pinned: boolean
+  metadata: Record<string, unknown>
+  created_at: string
   updated_at: string
 }
 
 /**
  * Get unprocessed notes for a queue job (max 20 at a time)
  * Codex Finding #2: Fetch by ID, not by cursor
+ * Returns full database rows (not converted to Note type yet)
  */
 export async function getUnprocessedNotes(
   queueId: string,
   batchSize: number = 20
-): Promise<UnprocessedNote[]> {
+): Promise<UnprocessedNoteRow[]> {
   const { data, error } = await supabaseAdmin.rpc('get_unprocessed_notes', {
     p_queue_id: queueId,
     p_batch_size: batchSize
@@ -192,14 +192,7 @@ export async function getUnprocessedNotes(
     throw error
   }
 
-  return (
-    data?.map((row: UnprocessedNoteRow) => ({
-      id: row.id,
-      title: row.title,
-      content: row.content,
-      updatedAt: row.updated_at
-    })) || []
-  )
+  return data || []
 }
 
 /**
