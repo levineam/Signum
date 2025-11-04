@@ -133,9 +133,17 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
     return allText.includes('if') && allText.includes('then')
   }
 
-  // Utility: Lowercase first character
+  // Utility: Lowercase first character (but preserve first-person pronouns)
   const lowercaseFirst = (text: string): string => {
     if (!text) return text
+
+    // Preserve first-person pronouns at the start of text
+    // These should stay capitalized: I, I'm, I've, I'll, I'd
+    const firstPersonPronouns = /^I('m|'ve|'ll|'d)?\s/
+    if (firstPersonPronouns.test(text)) {
+      return text // Keep as-is
+    }
+
     return text.charAt(0).toLowerCase() + text.slice(1)
   }
 
@@ -148,76 +156,62 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
     return withoutPunctuation
   }
 
-  // Format morning practice as natural prose (two paragraphs)
+  // Format morning practice as natural prose (one paragraph)
   const formatMorningPractice = (): string => {
-    const parts: string[] = []
+    const sentences: string[] = []
 
-    // Paragraph 1: Sections 1-5
-    const p1Sentences: string[] = []
-
-    // Section 1 (capitalize first, always starts paragraph)
+    // Section 1 (capitalize first, always starts)
     if (fields.section1.trim()) {
-      p1Sentences.push(escapeHtml(normalizeSentence(fields.section1)))
+      sentences.push(escapeHtml(normalizeSentence(fields.section1)))
     }
 
-    // Section 2 (lowercase, connector: "to make this happen")
+    // Section 2 (connector: "to make this happen")
     if (fields.section2.trim()) {
-      p1Sentences.push(`to make this happen, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section2)))}`)
+      sentences.push(`to make this happen, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section2)))}`)
     }
 
-    // Section 3 (lowercase, connector: "and if obstacles arise")
+    // Section 3 (connector: "and if obstacles arise")
     if (fields.section3.trim()) {
-      p1Sentences.push(`and if obstacles arise, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section3)))}`)
+      sentences.push(`and if obstacles arise, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section3)))}`)
     }
 
-    // Section 4 (lowercase, connector: "right now I'm feeling")
+    // Section 4 (connector: "right now I'm feeling")
     if (fields.section4.trim()) {
-      p1Sentences.push(`right now I'm feeling ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section4)))}`)
+      sentences.push(`right now I'm feeling ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section4)))}`)
     }
 
-    // Section 5 (lowercase, connector: "and when I notice unhelpful thoughts")
+    // Section 5 (connector: "and when I notice unhelpful thoughts")
     if (fields.section5.trim()) {
-      p1Sentences.push(`and when I notice unhelpful thoughts, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section5)))}`)
+      sentences.push(`and when I notice unhelpful thoughts, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section5)))}`)
     }
 
-    // Join paragraph 1 with proper punctuation
-    if (p1Sentences.length > 0) {
-      const p1 = p1Sentences.join(', ') + '.'
-      parts.push(`<p>${p1}</p>`)
-      parts.push('<p><br></p>')
-    }
-
-    // Paragraph 2: Sections 6-9
-    const p2Sentences: string[] = []
-
-    // Section 6 (capitalize, starts paragraph)
+    // Section 6 (connector: "today I will")
     if (fields.section6.trim()) {
-      p2Sentences.push(escapeHtml(normalizeSentence(fields.section6)))
+      sentences.push(`today I will ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section6)))}`)
     }
 
-    // Section 7 (lowercase, connector: "and I'll challenge myself by")
+    // Section 7 (connector: "and I'll challenge myself by")
     if (fields.section7.trim()) {
-      p2Sentences.push(`and I'll challenge myself by ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section7)))}`)
+      sentences.push(`and I'll challenge myself by ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section7)))}`)
     }
 
-    // Section 8 (lowercase, connector: "I wish")
+    // Section 8 (connector: "I wish")
     if (fields.section8.trim()) {
-      p2Sentences.push(`I wish ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section8)))}`)
+      sentences.push(`I wish ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section8)))}`)
     }
 
-    // Section 9 (lowercase, connector: "and I envision")
+    // Section 9 (connector: "and I envision")
     if (fields.section9.trim()) {
-      p2Sentences.push(`and I envision ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section9)))}`)
+      sentences.push(`and I envision ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section9)))}`)
     }
 
-    // Join paragraph 2 with proper punctuation
-    if (p2Sentences.length > 0) {
-      const p2 = p2Sentences.join(', ') + '.'
-      parts.push(`<p>${p2}</p>`)
-      parts.push('<p><br></p>')
+    // Join all sentences into one paragraph
+    if (sentences.length > 0) {
+      const paragraph = sentences.join(', ') + '.'
+      return `<p>${paragraph}</p><p><br></p>`
     }
 
-    return parts.join('')
+    return ''
   }
 
   // Handle insert to journal
@@ -512,7 +506,7 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
               htmlFor="morning-section7"
               className="text-sm font-medium text-purple-800 dark:text-purple-200"
             >
-              What&apos;s one small stretch or learning opportunity today?
+              What&apos;s one small stretch or learning opportunity? (Use -ing form: &quot;trying...&quot;, &quot;learning...&quot;)
             </label>
             <HelperInfo
               content={{
