@@ -102,9 +102,18 @@ export function AskAIButton({ taskId, taskText, onAnswerCreated }: AskAIButtonPr
         <Button
           onClick={handleClick}
           disabled={state === 'loading'}
-          variant={state === 'error' ? 'destructive' : 'secondary'}
+          variant={state === 'error' ? 'destructive' : 'ghost'}
           size="sm"
           aria-label="Get AI-powered answer to this research question"
+          className={
+            state === 'idle'
+              ? 'bg-gradient-to-r from-slate-100 to-slate-200 hover:from-slate-200 hover:to-slate-300 dark:from-slate-700 dark:to-slate-600 dark:hover:from-slate-600 dark:hover:to-slate-500 text-slate-900 dark:text-slate-100 shadow-sm border border-slate-300 dark:border-slate-500'
+              : state === 'loading'
+              ? 'bg-gradient-to-r from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 text-blue-900 dark:text-blue-100'
+              : state === 'success'
+              ? 'bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 text-green-900 dark:text-green-100'
+              : ''
+          }
         >
           {getButtonContent()}
         </Button>
