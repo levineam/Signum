@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
       const requestBody = await request.json().catch(() => ({}))
       noteIdsFromRequest = requestBody.noteIds || []
       updateCursorFlag = requestBody.updateCursor !== false // Default to true
-    } catch (e) {
+    } catch {
       // Silently fail, use defaults
     }
 

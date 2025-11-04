@@ -27,10 +27,8 @@ import { Note } from '@/types/note'
 const QUEUE_PROCESSING_ENABLED =
   process.env.ONTOLOGY_QUEUE_PROCESSING_ENABLED !== 'false'
 
-/**
- * Convert snake_case DB row to camelCase Note type
- */
-function convertToNote(row: {
+// Type for database row from get_unprocessed_notes function
+interface UnprocessedNoteRow {
   id: string
   user_id: string
   title: string
@@ -40,18 +38,6 @@ function convertToNote(row: {
   metadata: Record<string, unknown>
   created_at: string
   updated_at: string
-}): Note {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    title: row.title,
-    content: row.content,
-    noteType: row.note_type as Note['noteType'],
-    isPinned: row.is_pinned,
-    metadata: row.metadata,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
-  }
 }
 
 export async function POST(request: NextRequest) {
@@ -119,12 +105,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert to Note type
-    const notesToProcess: Note[] = unprocessedNotes.map((row: any) => ({
+    const notesToProcess: Note[] = unprocessedNotes.map((row: UnprocessedNoteRow) => ({
       id: row.id,
       userId: row.user_id,
       title: row.title,
       content: row.content,
-      noteType: row.note_type,
+      noteType: row.note_type as Note['noteType'],
       isPinned: row.is_pinned,
       metadata: row.metadata,
       createdAt: row.created_at,
@@ -149,9 +135,9 @@ export async function POST(request: NextRequest) {
     const processedNoteIds = notesToProcess.map((n) => n.id)
     try {
       await markNotesProcessed(queueId, processedNoteIds)
-    } catch (e) {
+    } catch (markError) {
       console.error(
-        `[Queue] Failed to mark notes processed: ${e instanceof Error ? e.message : 'unknown'}`
+        `[Queue] Failed to mark notes processed: ${markError instanceof Error ? markError.message : 'unknown'}`
       )
     }
 
@@ -201,15 +187,15 @@ export async function POST(request: NextRequest) {
         })
 
         console.log(`[Queue] Job ${queueId} completed successfully`)
-      } catch (e) {
+      } catch (completeError) {
         console.error(
-          `[Queue] Failed to complete queue job: ${e instanceof Error ? e.message : 'unknown'}`
+          `[Queue] Failed to complete queue job: ${completeError instanceof Error ? completeError.message : 'unknown'}`
         )
         await updateQueueStatus(
           queueId,
           'failed',
           newProcessedCount,
-          e instanceof Error ? e.message : 'Failed to complete queue'
+          completeError instanceof Error ? completeError.message : 'Failed to complete queue'
         )
       }
     }

@@ -160,6 +160,20 @@ export async function getNextPendingJob(): Promise<{
   }
 }
 
+interface UnprocessedNote {
+  id: string
+  title: string
+  content: string
+  updatedAt: string
+}
+
+interface UnprocessedNoteRow {
+  id: string
+  title: string
+  content: string
+  updated_at: string
+}
+
 /**
  * Get unprocessed notes for a queue job (max 20 at a time)
  * Codex Finding #2: Fetch by ID, not by cursor
@@ -167,7 +181,7 @@ export async function getNextPendingJob(): Promise<{
 export async function getUnprocessedNotes(
   queueId: string,
   batchSize: number = 20
-): Promise<Array<{ id: string; title: string; content: string; updatedAt: string }>> {
+): Promise<UnprocessedNote[]> {
   const { data, error } = await supabaseAdmin.rpc('get_unprocessed_notes', {
     p_queue_id: queueId,
     p_batch_size: batchSize
@@ -179,7 +193,7 @@ export async function getUnprocessedNotes(
   }
 
   return (
-    data?.map((row: any) => ({
+    data?.map((row: UnprocessedNoteRow) => ({
       id: row.id,
       title: row.title,
       content: row.content,
