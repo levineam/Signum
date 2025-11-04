@@ -102,15 +102,23 @@ See `docs/stories/completed/` for:
 | Story | Title | Status | Priority |
 |-------|-------|--------|----------|
 | 2.4.5 | Ontology Expandable Rows | Completed (PR #49) | - |
-| 2.4.6 | Production Security Hardening & Logging | **📋 PLANNED (P0)** | **Launch Blocker** |
+| 2.4.6 | Production Security Hardening & Logging | **✅ COMPLETE** | **Launch Blocker Resolved** |
 | 2.5 | Voice Transcription | Completed (PRs #69, #72, #74) | - |
 
 **Story 2.4.6 Details:**
-- **GitHub Issue:** [#118](https://github.com/levineam/Signum/issues/118)
+- **GitHub Issue:** [#118](https://github.com/levineam/Signum/issues/118) (Closed)
+- **PR:** [#145](https://github.com/levineam/Signum/pull/145) (replaces #143)
 - **Purpose:** Remove prototype user backdoor, implement structured logging
-- **Priority:** P0 (Critical - Launch Blocker)
-- **Estimate:** 3.5-4.5 hours (or 45-60 min for critical security fix only)
+- **Priority:** P0 (Critical - Launch Blocker) → **RESOLVED ✅**
+- **Completed:** November 3, 2025
 - **Location:** `docs/stories/story-2.4.6-production-security-hardening.md`
+- **Key Achievements:**
+  - Removed prototype user (UUID `00000000-0000-0000-0000-000000000000`) from all auth tables
+  - Hardened RLS policies to use `TO authenticated` (not `TO public`)
+  - Implemented Pino structured logging across all 9 API routes (57 replacements)
+  - Fixed Codex P1 issue: Anonymous client for RLS verification
+  - Created automated verification infrastructure
+  - Documented security baseline
 
 ---
 
