@@ -30,6 +30,7 @@ import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
 import { HelperContainer } from './HelperContainer'
 import { HelperInfo } from './HelperInfo'
+import { escapeHtml } from '@/utils/htmlEscape'
 
 interface MorningHelperProps {
   entryId: string
@@ -156,27 +157,27 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
 
     // Section 1 (capitalize first, always starts paragraph)
     if (fields.section1.trim()) {
-      p1Sentences.push(normalizeSentence(fields.section1))
+      p1Sentences.push(escapeHtml(normalizeSentence(fields.section1)))
     }
 
     // Section 2 (lowercase, connector: "to make this happen")
     if (fields.section2.trim()) {
-      p1Sentences.push(`to make this happen, ${lowercaseFirst(normalizeSentence(fields.section2))}`)
+      p1Sentences.push(`to make this happen, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section2)))}`)
     }
 
     // Section 3 (lowercase, connector: "and if obstacles arise")
     if (fields.section3.trim()) {
-      p1Sentences.push(`and if obstacles arise, ${lowercaseFirst(normalizeSentence(fields.section3))}`)
+      p1Sentences.push(`and if obstacles arise, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section3)))}`)
     }
 
     // Section 4 (lowercase, connector: "right now I'm feeling")
     if (fields.section4.trim()) {
-      p1Sentences.push(`right now I'm feeling ${lowercaseFirst(normalizeSentence(fields.section4))}`)
+      p1Sentences.push(`right now I'm feeling ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section4)))}`)
     }
 
     // Section 5 (lowercase, connector: "and when I notice unhelpful thoughts")
     if (fields.section5.trim()) {
-      p1Sentences.push(`and when I notice unhelpful thoughts, ${lowercaseFirst(normalizeSentence(fields.section5))}`)
+      p1Sentences.push(`and when I notice unhelpful thoughts, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section5)))}`)
     }
 
     // Join paragraph 1 with proper punctuation
@@ -191,22 +192,22 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
 
     // Section 6 (capitalize, starts paragraph)
     if (fields.section6.trim()) {
-      p2Sentences.push(normalizeSentence(fields.section6))
+      p2Sentences.push(escapeHtml(normalizeSentence(fields.section6)))
     }
 
     // Section 7 (lowercase, connector: "and I'll challenge myself by")
     if (fields.section7.trim()) {
-      p2Sentences.push(`and I'll challenge myself by ${lowercaseFirst(normalizeSentence(fields.section7))}`)
+      p2Sentences.push(`and I'll challenge myself by ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section7)))}`)
     }
 
     // Section 8 (lowercase, connector: "I wish")
     if (fields.section8.trim()) {
-      p2Sentences.push(`I wish ${lowercaseFirst(normalizeSentence(fields.section8))}`)
+      p2Sentences.push(`I wish ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section8)))}`)
     }
 
     // Section 9 (lowercase, connector: "and I envision")
     if (fields.section9.trim()) {
-      p2Sentences.push(`and I envision ${lowercaseFirst(normalizeSentence(fields.section9))}`)
+      p2Sentences.push(`and I envision ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section9)))}`)
     }
 
     // Join paragraph 2 with proper punctuation
