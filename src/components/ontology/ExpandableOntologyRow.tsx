@@ -3,15 +3,17 @@
 import { useRef, useEffect } from 'react'
 import { Note, getNoteDisplayTitle } from '@/types/note'
 import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
 interface ExpandableOntologyRowProps {
   note: Note
   isExpanded: boolean
   onToggle: () => void
+  isNew?: boolean // Story 2.4.7: Highlight new ontology items
 }
 
-export function ExpandableOntologyRow({ note, isExpanded, onToggle }: ExpandableOntologyRowProps) {
+export function ExpandableOntologyRow({ note, isExpanded, onToggle, isNew = false }: ExpandableOntologyRowProps) {
   const category = note.noteType.replace('ontology-', '')
   const contentId = `ontology-${category}-content`
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -38,18 +40,27 @@ export function ExpandableOntologyRow({ note, isExpanded, onToggle }: Expandable
   }>) || []
 
   return (
-    <Card className="w-full">
+    <Card className={`w-full transition-all ${isNew ? 'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-950/20' : ''}`}>
       <button
         ref={buttonRef}
         onClick={onToggle}
         aria-expanded={isExpanded}
         aria-controls={contentId}
+        aria-label={isNew ? `${title} (new updates)` : title}
         className="w-full text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-t-lg"
       >
         <CardContent className="p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-semibold mb-3">{title}</h2>
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-lg font-semibold">{title}</h2>
+                {/* Story 2.4.7: NEW badge for unread updates */}
+                {isNew && (
+                  <Badge variant="secondary" className="bg-blue-500 text-white">
+                    NEW
+                  </Badge>
+                )}
+              </div>
               {items.length > 0 && (
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   {items.map((item) => (

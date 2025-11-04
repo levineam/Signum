@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import { initializePinnedNotes, getPinnedNotes } from '@/lib/notes'
 import { Note } from '@/types/note'
 import { OntologyAnalysisButton } from '../notes/OntologyAnalysisButton'
@@ -25,6 +26,8 @@ export function OntologyPage() {
   const [pinnedNotes, setPinnedNotes] = useState<Note[]>([])
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
   const [isHydrated, setIsHydrated] = useState(false)
+  // Story 2.4.7: Track unread note IDs for highlighting
+  const [unreadNoteIds, setUnreadNoteIds] = useState<Set<string>>(new Set())
 
   const loadNotes = async () => {
     if (!user) return
@@ -56,6 +59,46 @@ export function OntologyPage() {
       localStorage.setItem('ontology-expanded', JSON.stringify([...expandedCards]))
     }
   }, [expandedCards, isHydrated])
+
+  // Story 2.4.7: Fetch unread updates for highlighting
+  useEffect(() => {
+    if (!user) {
+      setUnreadNoteIds(new Set())
+      return
+    }
+
+    const fetchUnreadUpdates = async () => {
+      const { data, error } = await supabase
+        .from('ontology_updates')
+        .select('note_id')
+        .eq('user_id', user.id)
+        .is('viewed_at', null)
+
+      if (!error && data) {
+        setUnreadNoteIds(new Set(data.map((u) => u.note_id)))
+      } else if (error) {
+        console.error('[OntologyPage] Error fetching unread updates:', error)
+      }
+    }
+
+    fetchUnreadUpdates()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
+  // Story 2.4.7: Mark updates as viewed when user leaves page
+  useEffect(() => {
+    return () => {
+      // Cleanup: mark all updates as viewed when user navigates away
+      if (user && unreadNoteIds.size > 0) {
+        fetch('/api/ontology/mark-viewed', {
+          method: 'POST',
+          credentials: 'include',
+        }).catch((error) => {
+          console.error('[OntologyPage] Error marking updates as viewed:', error)
+        })
+      }
+    }
+  }, [user, unreadNoteIds])
 
   useEffect(() => {
     if (!user) {
@@ -108,6 +151,7 @@ export function OntologyPage() {
                 note={note}
                 isExpanded={expandedCards.has(category)}
                 onToggle={() => toggleCard(category)}
+                isNew={unreadNoteIds.has(note.id)} // Story 2.4.7: Highlight new items
               />
             )
           })}

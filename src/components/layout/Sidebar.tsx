@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { Logo } from '@/components/branding/Logo'
 import { Menu, X, BookOpen, StickyNote, Target, MessageCircle, FileText, Users, Coins, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useOntologyBadge } from '@/hooks/useOntologyBadge'
 
 interface SidebarProps {
   activeSection: string
@@ -18,6 +20,8 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   // Mobile drawer state
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const { user, signOut } = useAuth()
+  // Story 2.4.7: Ontology update notification badge
+  const unreadCount = useOntologyBadge()
 
   // Load manual collapse preference from localStorage on mount
   useEffect(() => {
@@ -138,13 +142,15 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               {sections.map((section) => {
                 const Icon = section.icon
                 const isActive = activeSection === section.id
+                // Story 2.4.7: Show badge on Ontology button
+                const showBadge = section.id === 'ontology' && unreadCount > 0
 
                 const button = (
                   <Button
                     key={section.id}
                     variant={isActive ? "secondary" : "ghost"}
                     className={`
-                      w-full transition-all duration-300
+                      w-full transition-all duration-300 relative
                       ${
                         manuallyCollapsed !== null
                           ? (isCollapsed ? 'justify-center px-2' : 'justify-start')
@@ -178,6 +184,22 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                     `}>
                       {section.label}
                     </span>
+                    {/* Story 2.4.7: Notification badge */}
+                    {showBadge && (
+                      <Badge
+                        variant="destructive"
+                        className={`
+                          ml-auto
+                          ${
+                            manuallyCollapsed !== null
+                              ? (isCollapsed ? 'absolute -top-1 -right-1' : '')
+                              : 'md:absolute md:-top-1 md:-right-1 xl:relative xl:top-0 xl:right-0'
+                          }
+                        `}
+                      >
+                        {unreadCount}
+                      </Badge>
+                    )}
                   </Button>
                 )
 
@@ -260,6 +282,8 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
             {sections.map((section) => {
               const Icon = section.icon
               const isActive = activeSection === section.id
+              // Story 2.4.7: Show badge on Ontology button
+              const showBadge = section.id === 'ontology' && unreadCount > 0
 
               return (
                 <Button
@@ -277,6 +301,12 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                 >
                   <Icon className="h-5 w-5 mr-3" />
                   <span className="text-lg">{section.label}</span>
+                  {/* Story 2.4.7: Notification badge */}
+                  {showBadge && (
+                    <Badge variant="destructive" className="ml-auto">
+                      {unreadCount}
+                    </Badge>
+                  )}
                 </Button>
               )
             })}
