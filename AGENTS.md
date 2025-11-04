@@ -1,9 +1,9 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- App code lives in `signum-app/src`, with routing in `src/app`, shared UI in `src/components`, state providers in `src/contexts`, and data helpers in `src/lib` and `src/utils`.
-- UI assets and static content sit under `public/`; reference docs, debug captures, and screenshots are in `signum-app/docs`, `debug-*.png`, and `screenshots/`.
-- Playwright specs are colocated at the repo root (`test-*.js`) and in `tests/*.test.ts`; generated artifacts land in `test-results/`.
+- App code lives in `src/`, with routing in `src/app`, shared UI in `src/components`, state providers in `src/contexts`, and data helpers in `src/lib` and `src/utils`.
+- UI assets sit under `public/`; reference docs in `docs/`, debug captures and screenshots at repo root.
+- Playwright specs are in `tests/*.test.ts`; generated artifacts land in `test-results/`.
 
 ## Build, Test, and Development Commands
 - `npm run dev` — start the Next.js dev server with Turbopack at `http://localhost:3000`.
@@ -26,6 +26,7 @@
 - Base commit messages on the existing `git log`: a short, present-tense summary (e.g. "Add tabbed editor layout"). Append an issue key when available.
 - Each PR should describe the change, note affected screens, and link any tracking tickets. Provide before/after screenshots or test output when UI or E2E behavior changes.
 - Run `npm run lint` and `npx playwright test` locally before requesting review; call out any skipped checks in the PR description.
+- When creating GitHub issues, apply relevant labels: Type (`bug`, `enhancement`, `story`, `epic`, `refactor`, `documentation`), Feature (`ai`, `ontology`, `helpers`, `journal`, `notes`, `editor`), Area (`ui/ux`, `auth`, `security`, `testing`, `infrastructure`).
 
 ## Environment & Configuration
 - Copy `.env.example` to `.env.local` and populate Supabase credentials before running the dev server; never commit secrets.

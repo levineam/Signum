@@ -9,12 +9,10 @@ This project uses PR-based deployment with auto-deploy to Vercel. You MUST follo
 1. **Create feature branch**: `git checkout -b story-X.X-description`
 2. **Make changes & test locally**: `npm run build`, verify functionality
 3. **Commit & push**: `git add [files] && git commit` with `Co-Authored-By: Claude <noreply@anthropic.com>`, then `git push`
-4. **Create PR** (first time): `gh pr create` with description, test plan, screenshots
-5. **🚨 ALWAYS request Codex review after push**: Automatically handled by CI. No manual action needed. If the workflow is disabled, run: `gh pr comment [PR#] --body '@codex review'`.
+4. **Create PR**: `gh pr create` with description, test plan, screenshots. Apply appropriate labels (see GitHub Labels below).
+5. **🚨 Codex review**: CI auto-comments `@codex review` after push. If not posted within ~30s, run manually: `gh pr comment [PR#] --body '@codex review'`
 6. **Test on Vercel Preview**: Test thoroughly on preview URL
 7. **User merges**: User reviews, approves, and merges (NOT Claude)
-
-**⚠️ CRITICAL**: After pushing ANY commit to a PR (initial or additional), CI auto-comments `@codex review`. If you don’t see a bot comment within ~30s, run the command manually: `gh pr comment [PR#] --body '@codex review'`.
 
 ## Testing on Vercel Preview
 
@@ -40,9 +38,15 @@ Feature → `dev` (test) → `main` (production). Both `dev` and `main` are prot
 ❌ NEVER commit/push to `main` directly
 ❌ NEVER merge PRs yourself
 ❌ NEVER skip PR process or local testing
-❌ NEVER push without immediately requesting Codex review
-✅ ALWAYS ensure Codex is requested after EVERY push (CI posts `@codex review` automatically)
+✅ ALWAYS ensure Codex review is requested after EVERY push (CI auto-posts `@codex review`)
 ✅ ALWAYS verify new AI models/APIs with Context7 MCP first
+
+## GitHub Labels
+
+When creating issues, apply relevant labels:
+- **Type**: `bug`, `enhancement`, `story`, `epic`, `refactor`, `documentation`, `question`
+- **Feature**: `ai`, `ontology`, `helpers`, `journal`, `notes`, `editor`, `noticer`
+- **Area**: `ui/ux`, `auth`, `security`, `testing`, `infrastructure`, `navigation`, `notifications`
 
 ---
 
@@ -90,21 +94,3 @@ When adding new HTML formatting features to SimpleRichEditor, you MUST ensure th
 ❌ Adding formatting without updating `sanitizeHtml.ts` → content stripped in read-only mode
 ❌ Only styling `.rich-editor-body` → no styling in read-only mode
 ❌ Using inline styles without whitelisting in `styleFilterHook` → styles stripped by DOMPurify
-
-### Example: Adding Highlight Feature
-```typescript
-// 1. Edit mode: SimpleRichEditor.tsx - add button/logic
-// 2. Edit mode: globals.css
-.rich-editor-body mark { background-color: #fef08a; }
-
-// 3. Read-only: sanitizeHtml.ts
-ALLOWED_TAGS: [..., 'mark']
-
-// 4. Read-only: sanitizeHtml.ts (if using inline styles)
-if (prop === 'background-color' && node.tagName === 'MARK') {
-  return /^#[0-9A-Fa-f]{6}$/i.test(value)
-}
-
-// 5. Read-only: globals.css
-.prose mark { background-color: #fef08a; }
-```
