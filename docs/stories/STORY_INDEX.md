@@ -1,6 +1,6 @@
 # Signum Story Index
 
-**Last Updated:** November 3, 2025
+**Last Updated:** November 4, 2025
 **Purpose:** Comprehensive tracking of all stories across the Signum project
 
 ---
@@ -104,6 +104,7 @@ See `docs/stories/completed/` for:
 | 2.4.5 | Ontology Expandable Rows | Completed (PR #49) | - |
 | 2.4.6 | Production Security Hardening & Logging | **✅ COMPLETE** | **Launch Blocker Resolved** |
 | 2.5 | Voice Transcription | Completed (PRs #69, #72, #74) | - |
+| **2.10v2** | **User-Facing Security & Transparency (Notion Model)** | **📋 PLANNED** | **P1 (High - User Trust)** |
 
 **Story 2.4.6 Details:**
 - **GitHub Issue:** [#118](https://github.com/levineam/Signum/issues/118) (Closed)
@@ -119,6 +120,32 @@ See `docs/stories/completed/` for:
   - Fixed Codex P1 issue: Anonymous client for RLS verification
   - Created automated verification infrastructure
   - Documented security baseline
+
+**Story 2.10v2 Details (NEW - Notion Model Security):**
+- **GitHub Issue:** [#110](https://github.com/levineam/Signum/issues/110) (Pivoted from E2E encryption)
+- **Purpose:** User-facing security features (audit logs, transparency, data export, support consent)
+- **Priority:** P1 (High - User Trust)
+- **Estimated Effort:** 2-3 weeks
+- **Location:** `docs/stories/story-2.10v2-user-facing-security.md`
+- **Prerequisites:** Story 2.4.6 ✅ Complete
+- **Strategic Pivot:** Abandoned E2E encryption (Story 2.10) in favor of Notion's transparency model
+- **Key Features:**
+  - User-visible audit logs (who accessed my data, when, why)
+  - Clear privacy policy (admins CAN but DON'T access data)
+  - Data export (download all my notes/tasks)
+  - Support access consent (time-limited, user-approved)
+- **Why This Approach:**
+  - Matches Notion/Google Docs security model (proven at scale)
+  - Keeps AI features working (no encryption blocking analysis)
+  - Much simpler (2-3 weeks vs 6-8 weeks for E2E encryption)
+  - Builds trust through transparency, not cryptography
+
+**Story 2.10 (Original - ARCHIVED):**
+- **Title:** End-to-End Encryption Phase 1
+- **Status:** ❌ Abandoned (strategic pivot)
+- **Reason:** Too complex, breaks AI features, not how successful products work
+- **Archive Location:** Branch `archive/e2e-encryption-phase1`
+- **Key Learning:** Organizational security (transparency) > Cryptographic security (E2E encryption)
 
 ---
 
