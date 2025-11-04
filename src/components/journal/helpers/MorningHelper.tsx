@@ -156,23 +156,23 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
     return withoutPunctuation
   }
 
-  // Format morning practice as natural prose (one sentence per section)
+  // Format morning practice as natural prose (one paragraph, separate sentences)
   const formatMorningPractice = (): string => {
     const sentences: string[] = []
 
     // Section 1: Values-anchored goal (keep as-is, capitalize first)
     if (fields.section1.trim()) {
-      sentences.push(`<p>${escapeHtml(normalizeSentence(fields.section1))}.</p>`)
+      sentences.push(`${escapeHtml(normalizeSentence(fields.section1))}.`)
     }
 
     // Section 2: Implementation intention (add contextual prefix)
     if (fields.section2.trim()) {
-      sentences.push(`<p>To make this happen, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section2)))}.</p>`)
+      sentences.push(`To make this happen, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section2)))}.`)
     }
 
     // Section 3: Obstacle identification (add contextual prefix)
     if (fields.section3.trim()) {
-      sentences.push(`<p>If obstacles arise, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section3)))}.</p>`)
+      sentences.push(`If obstacles arise, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section3)))}.`)
     }
 
     // Section 4: Emotional awareness (keep as-is if starts with "I", else add prefix)
@@ -180,25 +180,25 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
       const text = normalizeSentence(fields.section4)
       // Check if user already included "I'm feeling" or similar
       if (text.match(/^I('m| am)/i)) {
-        sentences.push(`<p>${escapeHtml(text)}.</p>`)
+        sentences.push(`${escapeHtml(text)}.`)
       } else {
-        sentences.push(`<p>Right now I'm feeling ${escapeHtml(lowercaseFirst(text))}.</p>`)
+        sentences.push(`Right now I'm feeling ${escapeHtml(lowercaseFirst(text))}.`)
       }
     }
 
     // Section 5: Cognitive reframing (add contextual prefix)
     if (fields.section5.trim()) {
-      sentences.push(`<p>When I notice unhelpful thoughts, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section5)))}.</p>`)
+      sentences.push(`When I notice unhelpful thoughts, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section5)))}.`)
     }
 
     // Section 6: Social connection (keep as-is, capitalize first)
     if (fields.section6.trim()) {
-      sentences.push(`<p>${escapeHtml(normalizeSentence(fields.section6))}.</p>`)
+      sentences.push(`${escapeHtml(normalizeSentence(fields.section6))}.`)
     }
 
     // Section 7: Growth challenge (add contextual prefix)
     if (fields.section7.trim()) {
-      sentences.push(`<p>I'll challenge myself by ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section7)))}.</p>`)
+      sentences.push(`I'll challenge myself by ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section7)))}.`)
     }
 
     // Section 8: Loving-kindness (keep as-is if starts with "I wish", else add prefix)
@@ -206,20 +206,20 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
       const text = normalizeSentence(fields.section8)
       // Check if user already included "I wish"
       if (text.match(/^I wish/i)) {
-        sentences.push(`<p>${escapeHtml(text)}.</p>`)
+        sentences.push(`${escapeHtml(text)}.`)
       } else {
-        sentences.push(`<p>I wish ${escapeHtml(lowercaseFirst(text))}.</p>`)
+        sentences.push(`I wish ${escapeHtml(lowercaseFirst(text))}.`)
       }
     }
 
     // Section 9: Best possible self (add contextual prefix)
     if (fields.section9.trim()) {
-      sentences.push(`<p>I envision ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section9)))}.</p>`)
+      sentences.push(`I envision ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section9)))}.`)
     }
 
-    // Add spacing between all sections
+    // Join all sentences into one paragraph with spaces
     if (sentences.length > 0) {
-      return sentences.join('<p><br></p>') + '<p><br></p>'
+      return `<p>${sentences.join(' ')}</p><p><br></p>`
     }
 
     return ''
