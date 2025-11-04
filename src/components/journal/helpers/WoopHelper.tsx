@@ -86,37 +86,99 @@ export function WoopContent({ entryId, userId, onInsert }: WoopHelperProps) {
     return plan.includes('if') && plan.includes('then')
   }
 
-  // Format WOOP plan as HTML paragraphs
+  // Helper function to lowercase first character for prose flow
+  const lowercaseFirst = (text: string): string => {
+    if (!text) return text
+    return text.charAt(0).toLowerCase() + text.slice(1)
+  }
+
+  // Helper function to capitalize first character
+  const capitalizeFirst = (text: string): string => {
+    if (!text) return text
+    return text.charAt(0).toUpperCase() + text.slice(1)
+  }
+
+  // Helper function to strip trailing punctuation
+  const cleanSentence = (text: string): string => {
+    const trimmed = text.trim()
+    return trimmed.replace(/[.!?]+$/, '')
+  }
+
+  // Smart formatting for wish field
+  const formatWish = (rawText: string): string => {
+    const trimmed = rawText.trim()
+
+    // Check if user already wrote complete sentence
+    if (trimmed.match(/^(I wish|I want|I hope|I plan|I will|My goal)/i)) {
+      return capitalizeFirst(trimmed)
+    }
+
+    // Default: add "I wish to"
+    return `I wish to ${lowercaseFirst(trimmed)}`
+  }
+
+  // Smart formatting for outcome field
+  const formatOutcome = (rawText: string): string => {
+    const trimmed = rawText.trim()
+
+    // Check if user already wrote complete sentence
+    if (trimmed.match(/^(The best|The outcome|It would|I would|I will|I'd)/i)) {
+      return capitalizeFirst(trimmed)
+    }
+
+    // Default: add connector
+    return `The best outcome would be ${lowercaseFirst(trimmed)}`
+  }
+
+  // Smart formatting for obstacle field
+  const formatObstacle = (rawText: string): string => {
+    const trimmed = rawText.trim()
+
+    // Check if user already wrote complete sentence
+    if (trimmed.match(/^(The main|The obstacle|My obstacle|I might|I could)/i)) {
+      return capitalizeFirst(trimmed)
+    }
+
+    // Default: add connector
+    return `The main obstacle is ${lowercaseFirst(trimmed)}`
+  }
+
+  // Smart formatting for plan field
+  const formatPlan = (rawText: string): string => {
+    const trimmed = rawText.trim()
+
+    // Plan is often "If...then..." format, so just capitalize
+    return capitalizeFirst(trimmed)
+  }
+
+  // Format WOOP plan as HTML paragraphs (prose format)
   const formatWoopPlan = (): string => {
-    const parts: string[] = []
+    const sentences: string[] = []
 
-    // Header
-    parts.push('<p><strong>WOOP Goal Plan</strong></p>')
-    parts.push('<p><br></p>')
+    // Wish (required) - apply smart formatting BEFORE escaping
+    const formattedWish = formatWish(steps.wish)
+    sentences.push(escapeHtml(cleanSentence(formattedWish)))
 
-    // Wish (always included, it's required)
-    parts.push(`<p><strong>Wish:</strong> ${escapeHtml(steps.wish)}</p>`)
-    parts.push('<p><br></p>')
-
-    // Outcome (optional)
+    // Outcome (optional) - apply smart formatting BEFORE escaping
     if (steps.outcome.trim()) {
-      parts.push(`<p><strong>Outcome:</strong> ${escapeHtml(steps.outcome)}</p>`)
-      parts.push('<p><br></p>')
+      const formattedOutcome = formatOutcome(steps.outcome)
+      sentences.push(escapeHtml(cleanSentence(formattedOutcome)))
     }
 
-    // Obstacle (optional)
+    // Obstacle (optional) - apply smart formatting BEFORE escaping
     if (steps.obstacle.trim()) {
-      parts.push(`<p><strong>Obstacle:</strong> ${escapeHtml(steps.obstacle)}</p>`)
-      parts.push('<p><br></p>')
+      const formattedObstacle = formatObstacle(steps.obstacle)
+      sentences.push(escapeHtml(cleanSentence(formattedObstacle)))
     }
 
-    // Plan (optional)
+    // Plan (optional) - apply smart formatting BEFORE escaping
     if (steps.plan.trim()) {
-      parts.push(`<p><strong>Plan:</strong> ${escapeHtml(steps.plan)}</p>`)
-      parts.push('<p><br></p>')
+      const formattedPlan = formatPlan(steps.plan)
+      sentences.push(escapeHtml(cleanSentence(formattedPlan)))
     }
 
-    return parts.join('')
+    // Join all sentences into one paragraph
+    return `<p>${sentences.join('. ')}.</p>`
   }
 
   // Get character counts for telemetry
@@ -157,23 +219,27 @@ export function WoopContent({ entryId, userId, onInsert }: WoopHelperProps) {
     }
     addEvent(insertedEvent)
 
-    // Log usage to database (non-blocking)
-    try {
-      await createHelperUsage({
-        helperType: 'woop',
-        entryId: entryId,
-        selectedItems: [],
-        metadata: {
-          events: eventsRef.current,
-          selectionCount: 0,
-          insertedText: woopText,
-          woopStepCounts: getStepCounts(),
-          hasIfThenFormat: hasIfThenFormat()
-        }
-      }, userId)
-    } catch (error) {
-      console.error('Failed to log helper usage:', error)
-      // Don't block user interaction if logging fails
+    // Log usage to database (non-blocking, skip in guest mode)
+    if (userId !== 'guest' && entryId !== 'guest-entry') {
+      try {
+        await createHelperUsage({
+          helperType: 'woop',
+          entryId: entryId,
+          selectedItems: [],
+          metadata: {
+            events: eventsRef.current,
+            selectionCount: 0,
+            insertedText: woopText,
+            woopStepCounts: getStepCounts(),
+            hasIfThenFormat: hasIfThenFormat()
+          }
+        }, userId)
+      } catch (error) {
+        console.error('Failed to log helper usage:', error)
+        // Don't block user interaction if logging fails
+      }
+    } else {
+      console.log('[Guest Mode] Skipping helper usage logging')
     }
 
     // Announce and callback

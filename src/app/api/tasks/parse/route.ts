@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { detectTask } from '@/utils/nlp/taskDetection';
+import { detectQuery } from '@/utils/nlp/queryDetection';
 import logger from '@/utils/logger'
 
 export async function POST(req: NextRequest) {
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
 
     // Validate inputs
     if (!paragraphText || typeof paragraphText !== 'string') {
+      console.error('[Task Parse API] Invalid paragraphText:', typeof paragraphText);
       return NextResponse.json(
         { error: 'paragraphText is required and must be a string' },
         { status: 400 }
@@ -37,6 +39,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (paragraphText.length > 1000) {
+      console.error('[Task Parse API] Paragraph too long:', paragraphText.length, 'chars');
       return NextResponse.json(
         { error: 'paragraphText must be less than 1000 characters' },
         { status: 400 }
@@ -102,6 +105,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ task: null });
     }
 
+    // Detect if task is a query (Story 1.9.1)
+    const queryDetection = detectQuery(detectedTask.title);
+
     // Generate a deterministic deduplication key from user, entry, and paragraph
     // This ensures atomicity at the database level via unique constraint
     const crypto = await import('crypto');
@@ -110,7 +116,7 @@ export async function POST(req: NextRequest) {
       .update(`${userId}:${entryId}:${paragraphText}`)
       .digest('hex');
 
-    // Attempt to create task with deduplication_key
+    // Attempt to create task with deduplication_key and query detection fields
     // If a duplicate exists (same user + entry + paragraph), the unique constraint will prevent insertion
     const { data: task, error: taskError } = await supabase
       .from('tasks')
@@ -119,12 +125,15 @@ export async function POST(req: NextRequest) {
         title: detectedTask.title,
         due_at: detectedTask.dueAt?.toISOString() || null,
         deduplication_key: dedupeKey,
+        is_query: queryDetection.isQuery,
+        query_confidence: queryDetection.confidence,
         metadata: {
           source_entry_id: entryId,
           rrule: detectedTask.rrule,
           extracted_from_text: paragraphText,
           timezone_offset_at_creation: timezoneOffset, // Offset in minutes
-          timezone: timezone || null // IANA timezone ID (e.g., "America/New_York") for DST handling
+          timezone: timezone || null, // IANA timezone ID (e.g., "America/New_York") for DST handling
+          query_detection_reason: queryDetection.reason // Debugging info for query classification
         }
       })
       .select()
@@ -136,7 +145,7 @@ export async function POST(req: NextRequest) {
         logger.debug({ route: 'parse' }, '[Task Parse API] Task already exists (duplicate key), fetching existing task');
         const { data: existingTask } = await supabase
           .from('tasks')
-          .select('id, title, due_at, status, metadata')
+          .select('id, title, due_at, status, metadata, is_query, query_confidence')
           .eq('deduplication_key', dedupeKey)
           .single();
 
@@ -148,6 +157,8 @@ export async function POST(req: NextRequest) {
               dueAt: existingTask.due_at,
               rrule: existingTask.metadata?.rrule || null,
               status: existingTask.status,
+              isQuery: existingTask.is_query,
+              queryConfidence: existingTask.query_confidence,
               alreadyExisted: true
             }
           });
@@ -185,14 +196,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Return created task
+    // Return created task (including query detection info)
     return NextResponse.json({
       task: {
         id: task.id,
         title: task.title,
         dueAt: task.due_at,
         rrule: detectedTask.rrule || null,
-        status: task.status
+        status: task.status,
+        isQuery: task.is_query,
+        queryConfidence: task.query_confidence
       }
     });
 

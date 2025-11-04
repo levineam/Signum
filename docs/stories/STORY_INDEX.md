@@ -35,6 +35,14 @@ Brownfield enhancement stories for NLP, tasks, and analytics
 
 **Location:** `docs/stories/story-1.3-paragraph-suggestions.md`
 
+### 🚧 In Progress
+
+| Story | Title | Status | Issue |
+|-------|-------|--------|-------|
+| 1.2.2 | Fix Duplicate Task Creation & Rejected Task Re-appearance | In Progress | #130 |
+
+**Location:** `docs/stories/story-1.2.2-fix-duplicate-task-creation.md`
+
 ### 📋 Planned
 
 | Story | Title | Status | Epic |
@@ -42,6 +50,24 @@ Brownfield enhancement stories for NLP, tasks, and analytics
 | 1.4 | Today Header & Task Management UI | Draft | Issue #50 |
 | 1.5 | Weekly Snapshot & Rising Themes Analytics | Draft | Issue #50 |
 | 1.6 | Keywords Visualization & C3 Progress Bars | Draft | Issue #50 |
+| 1.9 | AI-Powered Task Assistance | Planned | Issue #119 |
+
+**Story 1.9 Sub-Stories:**
+
+| Story | Title | Status | Effort |
+|-------|-------|--------|--------|
+| 1.9.1 | Query Detection (Rules) for Query-Based Tasks | Backlog | 2-3 days |
+| 1.9.2 | UI: Add 'Ask AI' Button on Query Tasks | Backlog | 1-2 days |
+| 1.9.3 | API: /api/ai/answer Endpoint for AI Responses | Backlog | 2-3 days |
+| 1.9.4 | Create AI-Generated Note and Link to Task | Backlog | 2-3 days |
+| 1.9.5 | Ontology Isolation + 'Add to Ontology' Toggle | Backlog | 2-3 days |
+| 1.9.6 | Feature Flag and Rate Limiting for AI Answers | Backlog | 1-2 days |
+| 1.9.7 | Telemetry for AI Answers Usage and Satisfaction | Backlog | 1-2 days |
+| 1.9.8 | E2E and Unit Tests for 'Ask AI' Flow | Backlog | 2-3 days |
+
+**Related Issues:** [#119](https://github.com/levineam/Signum/issues/119) (Epic), [#121-#128](https://github.com/levineam/Signum/issues) (Sub-stories)
+**Location:** `docs/stories/story-1.9-ai-task-assistance.md` (epic), `docs/stories/story-1.9.{1-8}-*.md` (sub-stories)
+**Total Effort:** 13-21 days (3-4 weeks), 21 story points
 
 ---
 
@@ -81,7 +107,7 @@ See `docs/stories/completed/` for:
 
 **Story 2.4.6 Details:**
 - **GitHub Issue:** [#118](https://github.com/levineam/Signum/issues/118) (Closed)
-- **PR:** [#143](https://github.com/levineam/Signum/pull/143)
+- **PR:** [#145](https://github.com/levineam/Signum/pull/145) (replaces #143)
 - **Purpose:** Remove prototype user backdoor, implement structured logging
 - **Priority:** P0 (Critical - Launch Blocker) → **RESOLVED ✅**
 - **Completed:** November 3, 2025
@@ -90,6 +116,7 @@ See `docs/stories/completed/` for:
   - Removed prototype user (UUID `00000000-0000-0000-0000-000000000000`) from all auth tables
   - Hardened RLS policies to use `TO authenticated` (not `TO public`)
   - Implemented Pino structured logging across all 9 API routes (57 replacements)
+  - Fixed Codex P1 issue: Anonymous client for RLS verification
   - Created automated verification infrastructure
   - Documented security baseline
 
@@ -162,8 +189,8 @@ See `docs/stories/completed/` for:
 
 | Epic | GitHub Issue | Description | Story Range |
 |------|--------------|-------------|-------------|
-| Epic 1 (PRD) | N/A | Greenfield Foundation | 1.1-1.7 (PRD) |
-| Epic 1 (Brownfield) | #50 | Content Intelligence | 1.1-1.6 (docs) |
+| Epic 1 (PRD) | N/A | Greenfield Foundation | 1.1-1.8 (PRD) |
+| Epic 1 (Brownfield) | #50, #119 | Content Intelligence & AI Task Assistance | 1.1-1.6, 1.9 (docs) |
 | Epic 2 | N/A | AI Personal Ontology | 2.1-2.4.x |
 | Epic 2.5 | N/A | Helper System | 2.5.x |
 | Epic 3 | N/A | Social Layer | 3.x |
@@ -186,8 +213,9 @@ See `docs/stories/completed/` for:
 1. Story 2.4.6: Production Security Hardening (P0 - Critical) - [Issue #118](https://github.com/levineam/Signum/issues/118)
 
 **High Priority:**
-1. Story 1.8: Guest Journaling Before Sign-Up (Planned)
-2. Story 1.4: Today Header & Task Management (Draft)
+1. Story 1.9: AI-Powered Task Assistance (Planned) - 21 story points, 3-4 weeks
+2. Story 1.8: Guest Journaling Before Sign-Up (Planned)
+3. Story 1.4: Today Header & Task Management (Draft)
 
 **Deferred Features:**
 - Story 1.3: Real-time paragraph detection (partial completion acceptable)
