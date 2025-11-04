@@ -44,6 +44,7 @@ so that I can start my day with clarity about my values, goals, emotions, and so
 - **Fills transcendence gap**: Adds awe/purpose components missing from individual helpers
 - **First tile**: Prime position reinforces daily practice habit
 - **Natural prose output**: Reads like journaling, not form-filling (per PR #120 pattern)
+- **7 new + 1 reused info popup**: All research-backed with effect sizes and citations
 
 ---
 
@@ -108,17 +109,17 @@ so that I can start my day with clarity about my values, goals, emotions, and so
    - Example text: `e.g., "I'll feel proud finishing my presentation, energized by a midday walk, and connected after dinner with my partner" or "I'll help my team solve that bug, laugh with my coworker, and go to bed feeling accomplished"`
    - Info icon → Best Possible Self / Positive Visualization popup
 
-3. **Info Popups (HelperInfoDialog)**
-   - 6 unique info content objects needed:
+3. **Info Popups (HelperInfo component)**
+   - 7 unique info content objects needed:
      1. Goals, Values & Purpose (Section 1)
      2. Implementation Intentions & Committed Action (Section 2)
      3. WOOP: Mental Contrasting & Implementation Intentions (Section 3)
      4. Emotional Awareness & Embodiment (Section 4)
      5. Growth Mindset & Stretch Goals (Section 8)
-     6. Best Possible Self / Positive Visualization (Section 9)
-   - Reuse existing popups:
+     6. Social Connection & Loving-Kindness (Sections 6-7, shared)
+     7. Best Possible Self / Positive Visualization (Section 9)
+   - Reuse existing popup:
      - CBT Cognitive Distortions (Section 5)
-     - Social Connection & Loving-Kindness (Sections 6-7)
 
 4. **Prose Output Format**
    - Follow PR #120 pattern: natural flowing paragraphs
@@ -457,7 +458,18 @@ export function MorningHelper({ entryId, userId, onInsert }: MorningHelperProps)
 }
 ```
 
-#### 6. Best Possible Self / Positive Visualization
+#### 6. Social Connection & Loving-Kindness
+```typescript
+{
+  title: "Social Connection & Loving-Kindness",
+  description: "Social support is one of the strongest predictors of well-being and resilience. Planning social connections increases follow-through on reaching out. Combining this with loving-kindness (wishing others well) enhances prosocial behavior and positive emotions.",
+  effectSize: "r=0.30-0.50 with well-being (social support); d=0.33 for positive emotions (loving-kindness)",
+  citation: "Holt-Lunstad, J., et al. (2010). Social relationships and mortality risk. PLoS Medicine, 7(7). Galante, J., et al. (2014). Loving-kindness meditation effects. Journal of Clinical Psychology, 70(9), 794-807.",
+  learnMoreUrl: "https://www.apa.org/monitor/2023/06/cover-story-social-support"
+}
+```
+
+#### 7. Best Possible Self / Positive Visualization
 ```typescript
 {
   title: "Best Possible Self Exercise",
@@ -640,7 +652,7 @@ const hasIfThenFormat = (): boolean => {
 ### Functional Requirements
 - [ ] MorningHelper component created in `/src/components/journal/helpers/MorningHelper.tsx`
 - [ ] 9 sections with prompts + example text + info icons
-- [ ] All info icons open correct popup (6 new + 2 reused)
+- [ ] All info icons open correct popup (7 new + 1 reused)
 - [ ] Section 1 (goalsPurpose) is required, all others optional
 - [ ] "Add to Journal Entry" button disabled until Section 1 filled
 - [ ] "Clear All" button clears all 9 fields
