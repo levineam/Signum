@@ -241,7 +241,7 @@ export async function GET() {
       enabled: QUEUE_PROCESSING_ENABLED,
       pendingJobs: count || 0
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         enabled: QUEUE_PROCESSING_ENABLED,

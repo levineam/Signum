@@ -23,7 +23,7 @@ import {
   type AnalysisRunSummary
 } from '@/lib/ontology/state'
 import { runIncrementalExtraction } from '@/lib/ontology/extractor'
-import { hasAdminKey } from '@/lib/supabase-admin'
+import { hasAdminKey, supabaseAdmin } from '@/lib/supabase-admin'
 
 // Feature flag - server-side control
 const INCREMENTAL_ENABLED =
@@ -32,6 +32,33 @@ const INCREMENTAL_ENABLED =
 // Rate limiting: max 6 runs per hour per user
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000 // 1 hour
 const RATE_LIMIT_MAX = 6
+
+/**
+ * Convert snake_case DB row to camelCase Note type
+ */
+function convertToNote(row: {
+  id: string
+  user_id: string
+  title: string
+  content: string
+  note_type: string
+  is_pinned: boolean
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}): Note {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    content: row.content,
+    noteType: row.note_type as Note['noteType'],
+    isPinned: row.is_pinned,
+    metadata: row.metadata as Note['metadata'],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }
+}
 
 /**
  * Count recent runs within the rate limit window (SECURITY FIX: Issue #3)
