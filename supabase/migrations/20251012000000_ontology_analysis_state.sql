@@ -90,6 +90,8 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to get notes for incremental analysis
+-- NOTE: Excludes encrypted notes (encryption_version IS NULL) because
+-- AI analysis requires plaintext content and encryption is client-side only
 CREATE OR REPLACE FUNCTION get_notes_for_incremental_analysis(
   p_user_id UUID,
   p_last_analyzed_at TIMESTAMP WITH TIME ZONE
@@ -124,6 +126,7 @@ BEGIN
   FROM notes n
   WHERE n.user_id = p_user_id
     AND n.note_type IN ('journal-entry', 'reflection', 'custom')
+    AND n.encryption_version IS NULL  -- Exclude encrypted notes (can't analyze encrypted content server-side)
     AND (
       p_last_analyzed_at IS NULL
       OR n.updated_at > p_last_analyzed_at

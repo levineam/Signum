@@ -12,6 +12,8 @@ import {
   CreateLinkRequest,
   NoteType
 } from '@/types/note'
+import { decryptNote, encryptNote } from '@/lib/crypto/encryption'
+import { getUserEncryptionKey, hasEncryptionKey } from '@/lib/crypto/keyManagement'
 
 // ============================================================================
 // Note CRUD Operations
@@ -33,7 +35,7 @@ export async function getJournalEntries(userId: string): Promise<Note[]> {
     throw error
   }
 
-  return mapDatabaseNotesToNotes(data || [])
+  return await mapDatabaseNotesToNotes(data || [], userId)
 }
 
 /**
@@ -52,7 +54,7 @@ export async function getRegularNotes(userId: string): Promise<Note[]> {
     throw error
   }
 
-  return mapDatabaseNotesToNotes(data || [])
+  return await mapDatabaseNotesToNotes(data || [], userId)
 }
 
 /**
@@ -72,7 +74,7 @@ export async function getOntologyNotes(userId: string): Promise<Note[]> {
   }
 
   // Sort manually: values → beliefs → aims
-  const notes = mapDatabaseNotesToNotes(data || [])
+  const notes = await mapDatabaseNotesToNotes(data || [], userId)
   return notes.sort((a, b) => {
     const order = ['ontology-value', 'ontology-belief', 'ontology-aim']
     return order.indexOf(a.noteType) - order.indexOf(b.noteType)
@@ -102,28 +104,62 @@ export async function getNoteById(
     throw error
   }
 
-  return mapDatabaseNoteToNote(data)
+  return await mapDatabaseNoteToNote(data, userId)
 }
 
 /**
  * Create a new note.
+ * Automatically encrypts if user has encryption enabled.
  */
 export async function createNote(
   request: CreateNoteRequest,
   userId: string
 ): Promise<Note> {
-  
 
-  const { data, error } = await supabase
-    .from('notes')
-    .insert({
+
+  // Check if user has encryption enabled
+  const hasKey = await hasEncryptionKey(userId)
+
+  let insertData: Record<string, unknown>
+
+  if (hasKey) {
+    // User has encryption enabled - encrypt the note
+    const key = await getUserEncryptionKey(userId)
+    const title = request.title ?? ''
+    const content = request.content ?? ''
+
+    const encryptedTitle = await encryptNote(title, key)
+    const encryptedContent = await encryptNote(content, key)
+
+    insertData = {
+      user_id: userId,
+      encrypted_title: encryptedTitle.ciphertext,
+      title_iv: encryptedTitle.iv,
+      encrypted_content: encryptedContent.ciphertext,
+      content_iv: encryptedContent.iv,
+      encryption_version: 1,
+      note_type: request.noteType,
+      is_pinned: request.isPinned || false,
+      metadata: request.metadata || {},
+      // Clear plaintext columns
+      title: null,
+      content: null,
+    }
+  } else {
+    // User does not have encryption enabled - use plaintext
+    insertData = {
       user_id: userId,
       title: request.title,
       content: request.content || '',
       note_type: request.noteType,
       is_pinned: request.isPinned || false,
-      metadata: request.metadata || {}
-    })
+      metadata: request.metadata || {},
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('notes')
+    .insert(insertData)
     .select()
     .single()
 
@@ -132,22 +168,62 @@ export async function createNote(
     throw error
   }
 
-  return mapDatabaseNoteToNote(data)
+  const note = await mapDatabaseNoteToNote(data, userId)
+  if (!note) {
+    throw new Error('Failed to create note: mapping failed')
+  }
+  return note
 }
 
 /**
  * Update an existing note.
+ * Automatically encrypts if user has encryption enabled.
  */
 export async function updateNote(
   request: UpdateNoteRequest,
   userId: string
 ): Promise<Note> {
-  
 
-  const updates: Record<string, string | boolean | object> = {}
 
-  if (request.title !== undefined) updates.title = request.title
-  if (request.content !== undefined) updates.content = request.content
+  const updates: Record<string, string | number | boolean | object | null> = {}
+
+  // Check if user has encryption enabled
+  const hasKey = await hasEncryptionKey(userId)
+
+  // Handle title and content updates with encryption if enabled
+  if (hasKey && (request.title !== undefined || request.content !== undefined)) {
+    // User has encryption enabled - need to encrypt updates
+    const key = await getUserEncryptionKey(userId)
+
+    // Get current note to preserve unchanged fields
+    const current = await getNoteById(request.id, userId)
+    if (!current) {
+      throw new Error('Note not found')
+    }
+
+    // Use updated values or fall back to current values
+    const titleToEncrypt = request.title !== undefined ? request.title : current.title
+    const contentToEncrypt = request.content !== undefined ? request.content : current.content
+
+    // Encrypt both title and content
+    const encryptedTitle = await encryptNote(titleToEncrypt ?? '', key)
+    const encryptedContent = await encryptNote(contentToEncrypt ?? '', key)
+
+    updates.encrypted_title = encryptedTitle.ciphertext
+    updates.title_iv = encryptedTitle.iv
+    updates.encrypted_content = encryptedContent.ciphertext
+    updates.content_iv = encryptedContent.iv
+    updates.encryption_version = 1
+    // Clear plaintext
+    updates.title = null
+    updates.content = null
+  } else {
+    // User does not have encryption enabled - use plaintext
+    if (request.title !== undefined) updates.title = request.title
+    if (request.content !== undefined) updates.content = request.content
+  }
+
+  // Handle other fields (not encrypted)
   if (request.isPinned !== undefined) updates.is_pinned = request.isPinned
   if (request.metadata !== undefined) {
     // Merge metadata instead of replacing
@@ -173,7 +249,11 @@ export async function updateNote(
     throw error
   }
 
-  return mapDatabaseNoteToNote(data)
+  const note = await mapDatabaseNoteToNote(data, userId)
+  if (!note) {
+    throw new Error('Failed to update note: mapping failed')
+  }
+  return note
 }
 
 /**
@@ -326,43 +406,105 @@ export async function deleteLink(
 
 /**
  * Maps database column names to app-friendly camelCase.
+ * Handles both encrypted and plain text notes.
  */
-function mapDatabaseNoteToNote(dbNote: {
-  id: string
-  user_id: string
-  title: string
-  content: string
-  note_type: string
-  is_pinned: boolean
-  metadata: Record<string, unknown>
-  created_at: string
-  updated_at: string
-}): Note {
-  return {
-    id: dbNote.id,
-    userId: dbNote.user_id,
-    title: dbNote.title,
-    content: dbNote.content,
-    noteType: dbNote.note_type as NoteType,
-    isPinned: dbNote.is_pinned,
-    metadata: dbNote.metadata || {},
-    createdAt: dbNote.created_at,
-    updatedAt: dbNote.updated_at
+async function mapDatabaseNoteToNote(
+  dbNote: {
+    id: string
+    user_id: string
+    title: string | null
+    content: string | null
+    encrypted_title?: string | null
+    title_iv?: string | null
+    encrypted_content?: string | null
+    content_iv?: string | null
+    encryption_version?: number | null
+    note_type: string
+    is_pinned: boolean
+    metadata: Record<string, unknown>
+    created_at: string
+    updated_at: string
+  },
+  userId: string
+): Promise<Note | null> {
+  try {
+    // Check if note is encrypted
+    if (dbNote.encryption_version && dbNote.encrypted_title && dbNote.encrypted_content) {
+      // Decrypt encrypted note
+      const key = await getUserEncryptionKey(userId)
+
+      const title = await decryptNote(
+        {
+          ciphertext: dbNote.encrypted_title,
+          iv: dbNote.title_iv!,
+          version: dbNote.encryption_version,
+        },
+        key
+      )
+
+      const content = await decryptNote(
+        {
+          ciphertext: dbNote.encrypted_content,
+          iv: dbNote.content_iv!,
+          version: dbNote.encryption_version,
+        },
+        key
+      )
+
+      return {
+        id: dbNote.id,
+        userId: dbNote.user_id,
+        title,
+        content,
+        noteType: dbNote.note_type as NoteType,
+        isPinned: dbNote.is_pinned,
+        metadata: dbNote.metadata || {},
+        createdAt: dbNote.created_at,
+        updatedAt: dbNote.updated_at,
+      }
+    }
+
+    // Handle plain text note (backward compatibility)
+    return {
+      id: dbNote.id,
+      userId: dbNote.user_id,
+      title: dbNote.title ?? '',
+      content: dbNote.content ?? '',
+      noteType: dbNote.note_type as NoteType,
+      isPinned: dbNote.is_pinned,
+      metadata: dbNote.metadata || {},
+      createdAt: dbNote.created_at,
+      updatedAt: dbNote.updated_at,
+    }
+  } catch (error) {
+    console.error('Error mapping database note:', error)
+    return null
   }
 }
 
-function mapDatabaseNotesToNotes(dbNotes: Array<{
-  id: string
-  user_id: string
-  title: string
-  content: string
-  note_type: string
-  is_pinned: boolean
-  metadata: Record<string, unknown>
-  created_at: string
-  updated_at: string
-}>): Note[] {
-  return dbNotes.map(mapDatabaseNoteToNote)
+async function mapDatabaseNotesToNotes(
+  dbNotes: Array<{
+    id: string
+    user_id: string
+    title: string | null
+    content: string | null
+    encrypted_title?: string | null
+    title_iv?: string | null
+    encrypted_content?: string | null
+    content_iv?: string | null
+    encryption_version?: number | null
+    note_type: string
+    is_pinned: boolean
+    metadata: Record<string, unknown>
+    created_at: string
+    updated_at: string
+  }>,
+  userId: string
+): Promise<Note[]> {
+  const notes = await Promise.all(
+    dbNotes.map((note) => mapDatabaseNoteToNote(note, userId))
+  )
+  return notes.filter((note): note is Note => note !== null)
 }
 
 function mapDatabaseLinkToLink(dbLink: {
