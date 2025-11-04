@@ -87,9 +87,9 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
     setFields(prev => ({ ...prev, [fieldName]: value }))
   }
 
-  // Check if form can be submitted (all fields must have content)
+  // Check if form can be submitted (only section1 is mandatory, others optional)
   const canSubmit = (): boolean => {
-    return Object.values(fields).every(field => field.trim() !== '')
+    return fields.section1.trim() !== ''
   }
 
   // Get field completion count

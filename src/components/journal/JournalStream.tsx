@@ -958,6 +958,7 @@ export function JournalStream() {
               {isTodayEntry && user && (
                 <HelperTileGrid
                   helperTypes={[
+                    'morning',
                     'cbt-distortions',
                     'gratitude',
                     'values-affirmation',
