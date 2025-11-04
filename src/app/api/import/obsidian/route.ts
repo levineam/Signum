@@ -11,6 +11,7 @@ import { cookies } from 'next/headers';
 import { obsidianParser } from '@/lib/import/obsidian-parser';
 import { BatchImporter } from '@/lib/import/batch-importer';
 import { LinkResolver } from '@/lib/import/link-resolver';
+import logger from '@/utils/logger'
 
 export const maxDuration = 60; // Allow up to 60 seconds for large imports
 
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
 
     const importId = `import-${Date.now()}-${user.id.slice(0, 8)}`;
 
-    console.log(`[${importId}] Starting import of ${body.files.length} files for user ${user.id}`);
+    logger.debug({ route: 'obsidian' }, `[${importId}] Starting import of ${body.files.length} files for user ${user.id}`);
 
     // Validate total size server-side (100MB max)
     // SECURITY: Compute actual size from content, don't trust client-provided size
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
 
         parsedNotes.push(parsed);
       } catch (error) {
-        console.error(`[${importId}] Error parsing ${file.fileName}:`, error);
+        logger.error({ route: 'obsidian' }, `[${importId}] Error parsing ${file.fileName}:`, error);
         parseErrors.push({
           fileName: file.fileName,
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -196,7 +197,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`[${importId}] Parsed ${parsedNotes.length} notes, ${parseErrors.length} errors`);
+    logger.debug({ route: 'obsidian' }, `[${importId}] Parsed ${parsedNotes.length} notes, ${parseErrors.length} errors`);
 
     // Phase 2: Import notes to database
     const batchImporter = new BatchImporter(supabase);
@@ -208,11 +209,11 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    console.log(`[${importId}] Imported ${importResult.noteIds.length} notes`);
+    logger.debug({ route: 'obsidian' }, `[${importId}] Imported ${importResult.noteIds.length} notes`);
 
     // Check if batch import failed
     if (!importResult.success || importResult.errors.length > 0) {
-      console.error(`[${importId}] Batch import failed, rolling back ${importResult.noteIds.length} notes`);
+      logger.error({ route: 'obsidian' }, `[${importId}] Batch import failed, rolling back ${importResult.noteIds.length} notes`);
       await batchImporter.rollbackImport(user.id, importResult.noteIds);
 
       return NextResponse.json(
@@ -240,9 +241,9 @@ export async function POST(request: NextRequest) {
           user.id,
           importResult.noteIds
         );
-        console.log(`[${importId}] Resolved ${linkResolutionResult.resolvedCount} links, ${linkResolutionResult.brokenLinks.length} broken`);
+        logger.debug({ route: 'obsidian' }, `[${importId}] Resolved ${linkResolutionResult.resolvedCount} links, ${linkResolutionResult.brokenLinks.length} broken`);
       } catch (error) {
-        console.error(`[${importId}] Link resolution error:`, error);
+        logger.error({ route: 'obsidian' }, `[${importId}] Link resolution error:`, error);
         // Roll back on link resolution failure
         await batchImporter.rollbackImport(user.id, importResult.noteIds);
 
@@ -292,7 +293,7 @@ export async function POST(request: NextRequest) {
       importId,
     };
 
-    console.log(`[${importId}] Import complete:`, {
+    logger.debug({ route: 'obsidian' }, `[${importId}] Import complete:`, {
       notesImported: response.summary.notesImported,
       linksResolved: response.summary.linksResolved,
       brokenLinks: response.summary.brokenLinks.length,
@@ -301,7 +302,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Import error:', error);
+    logger.error({ route: 'obsidian' }, 'Import error:', error);
 
     return NextResponse.json(
       {

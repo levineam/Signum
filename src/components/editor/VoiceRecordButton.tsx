@@ -9,7 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { detectBestCodec, isVoiceTranscriptionSupported, isApproachingLimit } from '@/utils/audioCodecDetection'
+import { isVoiceTranscriptionSupported, isApproachingLimit } from '@/utils/audioCodecDetection'
 import { useVoiceRecording } from '@/hooks/useVoiceRecording'
 import { RecordingIndicator } from '@/components/editor/RecordingIndicator'
 
@@ -23,17 +23,11 @@ export function VoiceRecordButton({
   disabled = false
 }: VoiceRecordButtonProps) {
   const [isSupported, setIsSupported] = useState<boolean>(true)
-  const [codecInfo, setCodecInfo] = useState<string>('')
 
   // Check browser support on mount
   useEffect(() => {
     const supported = isVoiceTranscriptionSupported()
     setIsSupported(supported)
-
-    if (supported) {
-      const codec = detectBestCodec()
-      setCodecInfo(`Using ${codec.codec.toUpperCase()} codec`)
-    }
   }, [])
 
   // Handle audio recording

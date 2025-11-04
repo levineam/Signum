@@ -78,9 +78,73 @@ export function GratitudeContent({ entryId, userId, onInsert }: GratitudeHelperP
     )
   }
 
-  // Format gratitude entry as HTML paragraphs
+  // Helper function to capitalize first character
+  const capitalizeFirst = (text: string): string => {
+    if (!text) return text
+    return text.charAt(0).toUpperCase() + text.slice(1)
+  }
+
+  // Helper function to lowercase first character
+  const lowercaseFirst = (text: string): string => {
+    if (!text) return text
+    return text.charAt(0).toLowerCase() + text.slice(1)
+  }
+
+  // Clean trailing punctuation
+  const cleanSentence = (text: string): string => {
+    const trimmed = text.trim()
+    // Remove ALL trailing punctuation (., !, ?) to avoid "Great!." or "Really?."
+    return trimmed.replace(/[.!?]+$/, '')
+  }
+
+  // Add terminal punctuation only if needed
+  const ensurePeriod = (text: string): string => {
+    const trimmed = text.trim()
+    // If already ends with terminal punctuation, return as-is
+    if (/[.!?]$/.test(trimmed)) {
+      return trimmed
+    }
+    // Otherwise add period
+    return trimmed + '.'
+  }
+
+  // Smart formatting for "how I felt" field
+  // IMPORTANT: Operates on RAW text before HTML escaping
+  const formatFeeling = (rawText: string): string => {
+    const trimmed = rawText.trim()
+
+    // Check if user wrote complete sentence (before escaping)
+    if (trimmed.match(/^(I feel|I felt|It makes me feel|It made me feel)/i)) {
+      return capitalizeFirst(trimmed)
+    }
+
+    // Fragment - prepend connector
+    return `It made me feel ${lowercaseFirst(trimmed)}`
+  }
+
+  // Smart formatting for "why it happened" field
+  // IMPORTANT: Operates on RAW text before HTML escaping
+  const formatWhy = (rawText: string): string => {
+    const trimmed = rawText.trim()
+
+    // Check if starts with "because"
+    if (trimmed.toLowerCase().startsWith('because ')) {
+      const withoutBecause = trimmed.substring(8).trim()
+      return `This happened because ${lowercaseFirst(withoutBecause)}`
+    }
+
+    // Check for complete sentence structure
+    if (trimmed.match(/^(This happened|It happened|I )/i)) {
+      return capitalizeFirst(trimmed)
+    }
+
+    // Fragment - prepend connector
+    return `This happened because ${lowercaseFirst(trimmed)}`
+  }
+
+  // Format gratitude entry as HTML paragraphs (prose format)
   const formatGratitudeEntry = (): string => {
-    const parts: string[] = ['<p><strong>Three Good Things</strong></p>', '<p><br></p>']
+    const paragraphs: string[] = []
 
     goodThings.forEach((thing, index) => {
       // Skip empty good things
@@ -88,36 +152,45 @@ export function GratitudeContent({ entryId, userId, onInsert }: GratitudeHelperP
         return
       }
 
-      // Add good thing number and title
+      const sentences: string[] = []
+
+      // Start with title or numbered label
       if (thing.title.trim()) {
-        parts.push(`<p><strong>${escapeHtml(thing.title)}</strong></p>`)
+        // Process THEN escape: capitalize raw text, then make HTML-safe
+        const processed = capitalizeFirst(thing.title.trim())
+        sentences.push(escapeHtml(processed))
       } else {
-        parts.push(`<p><strong>Good Thing #${index + 1}</strong></p>`)
+        sentences.push(`Good thing #${index + 1}`)
       }
 
       // Add what happened
       if (thing.whatHappened.trim()) {
-        parts.push(`<p>What happened: ${escapeHtml(thing.whatHappened)}</p>`)
-        parts.push('<p><br></p>')
+        // Process THEN escape
+        const processed = capitalizeFirst(thing.whatHappened.trim())
+        sentences.push(escapeHtml(processed))
       }
 
-      // Add how I felt
+      // Add how I felt (smart formatting)
       if (thing.howIFelt.trim()) {
-        parts.push(`<p>How I felt: ${escapeHtml(thing.howIFelt)}</p>`)
-        parts.push('<p><br></p>')
+        // Format raw text FIRST, then escape
+        const processed = formatFeeling(thing.howIFelt)
+        sentences.push(escapeHtml(processed))
       }
 
-      // Add why it happened
+      // Add why it happened (smart formatting)
       if (thing.whyItHappened.trim()) {
-        parts.push(`<p>Why it happened: ${escapeHtml(thing.whyItHappened)}</p>`)
-        parts.push('<p><br></p>')
+        // Format raw text FIRST, then escape
+        const processed = formatWhy(thing.whyItHappened)
+        sentences.push(escapeHtml(processed))
       }
 
-      // Add spacing between good things
-      parts.push('<p><br></p>')
+      // Clean and join sentences
+      const cleanedSentences = sentences.map(cleanSentence)
+      const joined = cleanedSentences.join('. ')
+      paragraphs.push(`<p>${ensurePeriod(joined)}</p>`)
     })
 
-    return parts.join('')
+    return paragraphs.join('')
   }
 
   // Calculate field completion count
@@ -173,28 +246,32 @@ export function GratitudeContent({ entryId, userId, onInsert }: GratitudeHelperP
     }
     addEvent(insertedEvent)
 
-    // Log usage to database (non-blocking)
-    try {
-      const charCounts = getCharacterCounts()
-      await createHelperUsage({
-        helperType: 'gratitude',
-        entryId: entryId,
-        selectedItems: [],
-        metadata: {
-          events: eventsRef.current,
-          selectionCount: 0,
-          insertedText: reflectionText,
-          gratitudeFieldsCompleted: getFieldCompletionCount(),
-          gratitudeFieldCharCounts: [
-            charCounts.goodThing1.title, charCounts.goodThing1.what, charCounts.goodThing1.feel, charCounts.goodThing1.why,
-            charCounts.goodThing2.title, charCounts.goodThing2.what, charCounts.goodThing2.feel, charCounts.goodThing2.why,
-            charCounts.goodThing3.title, charCounts.goodThing3.what, charCounts.goodThing3.feel, charCounts.goodThing3.why
-          ]
-        }
-      }, userId)
-    } catch (error) {
-      console.error('Failed to log helper usage:', error)
-      // Don't block user interaction if logging fails
+    // Log usage to database (non-blocking, skip in guest mode)
+    if (userId !== 'guest' && entryId !== 'guest-entry') {
+      try {
+        const charCounts = getCharacterCounts()
+        await createHelperUsage({
+          helperType: 'gratitude',
+          entryId: entryId,
+          selectedItems: [],
+          metadata: {
+            events: eventsRef.current,
+            selectionCount: 0,
+            insertedText: reflectionText,
+            gratitudeFieldsCompleted: getFieldCompletionCount(),
+            gratitudeFieldCharCounts: [
+              charCounts.goodThing1.title, charCounts.goodThing1.what, charCounts.goodThing1.feel, charCounts.goodThing1.why,
+              charCounts.goodThing2.title, charCounts.goodThing2.what, charCounts.goodThing2.feel, charCounts.goodThing2.why,
+              charCounts.goodThing3.title, charCounts.goodThing3.what, charCounts.goodThing3.feel, charCounts.goodThing3.why
+            ]
+          }
+        }, userId)
+      } catch (error) {
+        console.error('Failed to log helper usage:', error)
+        // Don't block user interaction if logging fails
+      }
+    } else {
+      console.log('[Guest Mode] Skipping helper usage logging')
     }
 
     // Announce and callback

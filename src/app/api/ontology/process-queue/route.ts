@@ -117,9 +117,40 @@ export async function POST(request: NextRequest) {
         e instanceof Error ? e.message : 'Unknown extraction error'
       batchError = errorMsg
       console.error(`[Queue] Extraction failed for batch: ${errorMsg}`)
+
+      // P1 FIX: Mark queue as failed and exit without marking notes as processed
+      // This allows the batch to be retried
+      await updateQueueStatus(queueId, 'failed')
+
+      // Track failure in telemetry
+      await insertTelemetry({
+        userId,
+        eventType: 'queue_batch_failed',
+        importId,
+        queueId,
+        noteCount: notesToProcess.length,
+        runtimeMs: Date.now() - startTime,
+        tokenEstimate: 0,
+        extractedValues: 0,
+        extractedBeliefs: 0,
+        extractedAims: 0,
+        errorMessage: errorMsg,
+        metadata: { failedNoteIds: notesToProcess.map((n) => n.id) }
+      })
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Extraction failed',
+          details: errorMsg,
+          queueId,
+          noteCount: notesToProcess.length
+        },
+        { status: 500 }
+      )
     }
 
-    // 7. Mark notes as processed
+    // 7. Mark notes as processed (only if extraction succeeded)
     const processedNoteIds = notesToProcess.map((n) => n.id)
     try {
       await markNotesProcessed(queueId, processedNoteIds)
@@ -127,6 +158,10 @@ export async function POST(request: NextRequest) {
       console.error(
         `[Queue] Failed to mark notes processed: ${markError instanceof Error ? markError.message : 'unknown'}`
       )
+      // This is a critical error - notes were analyzed but couldn't be marked
+      // Mark queue as failed to prevent data loss
+      await updateQueueStatus(queueId, 'failed')
+      throw markError
     }
 
     // 8. Get current queue state and calculate new processed count

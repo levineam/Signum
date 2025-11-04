@@ -64,32 +64,28 @@ export function SelfCompassionContent({ entryId, userId, onInsert }: SelfCompass
   const trimmedSituation = situation.trim()
   const canSubmit = trimmedSituation !== '' && completedSteps
 
-  // Format self-compassion break as HTML paragraphs
+  // Helper function to capitalize first character
+  const capitalizeFirst = (text: string): string => {
+    if (!text) return text
+    return text.charAt(0).toLowerCase() + text.slice(1)
+  }
+
+  // Format self-compassion break as flowing prose
   const formatCompassionBreak = (): string => {
-    const parts: string[] = []
+    const sentences: string[] = []
 
-    // Header
-    parts.push('<p><strong>Self-Compassion Break</strong></p>')
-    parts.push('<p><br></p>')
+    // Start with the situation
+    sentences.push(`Right now, I'm struggling with ${capitalizeFirst(escapeHtml(situation))}`)
 
-    // User's situation
-    parts.push('<p><strong>What\'s difficult right now:</strong></p>')
-    parts.push(`<p>${escapeHtml(situation)}</p>`)
-    parts.push('<p><br></p>')
+    // Add the three steps as flowing prose
+    sentences.push('This is a moment of suffering, and it\'s okay to feel what I\'m feeling')
+    sentences.push('Suffering is a part of life—I\'m not alone in this')
+    sentences.push('Others have felt this way too')
+    sentences.push('May I be kind to myself in this moment')
+    sentences.push('May I give myself the compassion I need')
 
-    // Step 1: Mindfulness
-    parts.push('<p><strong>Mindfulness:</strong> This is a moment of suffering. It\'s okay to feel what I\'m feeling.</p>')
-    parts.push('<p><br></p>')
-
-    // Step 2: Common Humanity
-    parts.push('<p><strong>Common Humanity:</strong> Suffering is a part of life. I\'m not alone in this. Others have felt this way too.</p>')
-    parts.push('<p><br></p>')
-
-    // Step 3: Self-Kindness
-    parts.push('<p><strong>Self-Kindness:</strong> May I be kind to myself in this moment. May I give myself the compassion I need.</p>')
-    parts.push('<p><br></p>')
-
-    return parts.join('')
+    // Join into prose paragraph
+    return `<p>${sentences.join('. ')}.</p>`
   }
 
   // Handle insert to journal
@@ -110,23 +106,27 @@ export function SelfCompassionContent({ entryId, userId, onInsert }: SelfCompass
     }
     addEvent(insertedEvent)
 
-    // Log usage to database (non-blocking)
-    try {
-      await createHelperUsage({
-        helperType: 'self-compassion',
-        entryId: entryId,
-        selectedItems: [],
-        metadata: {
-          events: eventsRef.current,
-          selectionCount: 0,
-          insertedText: compassionText,
-          situationCharacterCount: situation.length,
-          selfCompassionStepsAcknowledged: completedSteps
-        }
-      }, userId)
-    } catch (error) {
-      console.error('Failed to log helper usage:', error)
-      // Don't block user interaction if logging fails
+    // Log usage to database (non-blocking, skip in guest mode)
+    if (userId !== 'guest' && entryId !== 'guest-entry') {
+      try {
+        await createHelperUsage({
+          helperType: 'self-compassion',
+          entryId: entryId,
+          selectedItems: [],
+          metadata: {
+            events: eventsRef.current,
+            selectionCount: 0,
+            insertedText: compassionText,
+            situationCharacterCount: situation.length,
+            selfCompassionStepsAcknowledged: completedSteps
+          }
+        }, userId)
+      } catch (error) {
+        console.error('Failed to log helper usage:', error)
+        // Don't block user interaction if logging fails
+      }
+    } else {
+      console.log('[Guest Mode] Skipping helper usage logging')
     }
 
     // Announce and callback

@@ -135,48 +135,19 @@ export class BatchImporter {
         Math.max(...notes.map((n) => new Date(n.updated_at).getTime()))
       );
 
+      // P1 FIX: Use queue system for all import sizes instead of server-side fetch
+      // Server-side fetch() requires absolute URLs and adds unnecessary complexity
+      // The queue system handles analysis asynchronously and provides retry logic
+
       if (noteCount <= 200) {
-        // Tier 1: Analyze all immediately with cursor update
-        await fetch('/api/ontology/incremental-analysis', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            triggeredBy: 'bulk-import',
-            noteIds: noteIds,
-            updateCursor: true, // Safe: analyze all, update cursor
-          }),
-        }).catch((e) => {
-          // Don't fail import if analysis fails
-          console.error('Failed to trigger ontology analysis:', e);
-        });
+        // Tier 1: Small imports - queue with high priority, will be processed within 2 minutes
+        await createQueueJob(userId, importId, noteIds, importSnapshotTimestamp);
+        console.log(`[BatchImporter] Created queue job for ${noteCount} notes (small import)`);
       } else {
-        // Tier 2/3: Sample + queue
-        const sampleSize = noteCount <= 500 ? 200 : 400;
-        const sampleNoteIds = noteIds.slice(0, sampleSize);
-        const queuedNoteIds = noteIds.slice(sampleSize);
-
-        // Immediate sample analysis WITHOUT cursor update (Codex Finding #1)
-        await fetch('/api/ontology/incremental-analysis', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            triggeredBy: 'bulk-import-sample',
-            noteIds: sampleNoteIds,
-            updateCursor: false, // DO NOT advance lastAnalyzedAt yet
-          }),
-        }).catch((e) => {
-          console.error('Failed to trigger sample analysis:', e);
-        });
-
-        // Queue remaining notes (Codex Finding #2: explicit note ID tracking)
-        try {
-          await createQueueJob(userId, importId, queuedNoteIds, importSnapshotTimestamp);
-        } catch (e) {
-          console.error('Failed to create queue job:', e);
-          // Don't fail import if queue creation fails
-        }
+        // Tier 2/3: Large imports - queue all notes
+        // The background worker will process them in batches
+        await createQueueJob(userId, importId, noteIds, importSnapshotTimestamp);
+        console.log(`[BatchImporter] Created queue job for ${noteCount} notes (large import)`);
       }
     } catch (e) {
       console.error('Failed to trigger ontology analysis:', e);

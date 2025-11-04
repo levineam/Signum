@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { getNoteById, updateNote } from '@/lib/notes'
+import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
 import { Note, getNoteDisplayTitle } from '@/types/note'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { ArrowLeft } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { OntologyCardViewer } from '@/components/notes/OntologyCardViewer'
 import { useAuth } from '@/contexts/AuthContext'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
@@ -19,20 +19,15 @@ import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { AppHeader } from '@/components/layout/AppHeader'
 
-interface AimsContent {
-  todos: string
-  goals: string
-}
-
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { user } = useAuth()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
   const [content, setContent] = useState('')
-  const [aimsContent, setAimsContent] = useState<AimsContent>({ todos: '', goals: '' })
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const editorRef = useRef<HTMLElement | null>(null)
   const selectionMetadataRef = useRef<ReturnType<typeof captureSelectionMetadata> | null>(null)
@@ -81,18 +76,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       if (loadedNote) {
         setNote(loadedNote)
 
-        // Support both old (type) and new (noteType) field names during migration
-        const noteType = 'type' in loadedNote ? (loadedNote as { type: string }).type : loadedNote.noteType
-        if (noteType === 'aims' || noteType === 'ontology-aim') {
-          try {
-            const parsed = JSON.parse(loadedNote.content)
-            setAimsContent(parsed)
-          } catch {
-            setAimsContent({ todos: '', goals: '' })
-          }
-        } else {
-          setContent(loadedNote.content)
-        }
+        // Always set content (including for ontology notes which display via OntologyCardViewer)
+        setContent(loadedNote.content)
       }
       setIsLoading(false)
     }
@@ -338,19 +323,25 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     }
   }
 
-  const handleBack = () => {
-    // Return to Ontology page for ontology notes, Notes page for others
-    const noteType = 'type' in note! ? (note as { type: string }).type : note!.noteType
-    const isOntology = noteType === 'values' || noteType === 'beliefs' || noteType === 'aims' ||
-      noteType === 'ontology-value' || noteType === 'ontology-belief' || noteType === 'ontology-aim'
+  const handleDelete = async () => {
+    if (!note || !user) return
 
-    if (isOntology) {
-      router.push('/ontology')
-    } else {
-      router.push('/notes')
+    const confirmed = window.confirm(`Are you sure you want to delete "${note.title}"? This action cannot be undone.`)
+    if (!confirmed) return
+
+    setIsDeleting(true)
+    try {
+      const success = await deleteNote(note.id, user.id)
+      if (success) {
+        // Navigate back to notes page after successful deletion
+        router.push('/notes')
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error)
+    } finally {
+      setIsDeleting(false)
     }
   }
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -378,12 +369,6 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
             <AppHeader />
             <div className="flex-1">
               <div className="max-w-3xl mx-auto p-6">
-                <div className="mb-6">
-                  <Button variant="ghost" onClick={() => router.push('/notes')} className="gap-2">
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to Notes
-                  </Button>
-                </div>
                 <div className="text-center py-12">
                   <h2 className="text-2xl font-semibold mb-2">Note Not Found</h2>
                   <p className="text-muted-foreground">This note could not be found.</p>
@@ -401,7 +386,6 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   const noteType = 'type' in note ? (note as { type: string }).type : note.noteType
   const isOntologyNote = noteType === 'values' || noteType === 'beliefs' || noteType === 'aims' ||
     noteType === 'ontology-value' || noteType === 'ontology-belief' || noteType === 'ontology-aim'
-  const backButtonLabel = isOntologyNote ? 'Back to Ontology' : 'Back to Notes'
 
   return (
     <div className="min-h-screen bg-background">
@@ -411,16 +395,22 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
           <AppHeader />
           <div className="flex-1">
             <div className="max-w-3xl mx-auto p-6">
-      {/* Header with Back Button */}
-      <div className="mb-6">
-        <Button variant="ghost" onClick={handleBack} className="gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          {backButtonLabel}
-        </Button>
+      {/* Note Title with Delete Button */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">{getNoteDisplayTitle(note)}</h1>
+        {!isOntologyNote && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="text-destructive hover:text-destructive"
+            aria-label="Delete note"
+          >
+            <Trash2 className="h-5 w-5" />
+          </Button>
+        )}
       </div>
-
-      {/* Note Title */}
-      <h1 className="text-3xl font-bold mb-6">{getNoteDisplayTitle(note)}</h1>
 
       {/* Ontology note description */}
       {isOntologyNote && (

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import logger from '@/utils/logger'
 
 export async function PATCH(
   request: NextRequest,
@@ -89,7 +90,7 @@ export async function PATCH(
       .eq('user_id', user.id);
 
     if (updateError) {
-      console.error('[PATCH /api/tasks/:id] Database error:', updateError);
+      logger.error({ route: '[taskId]' }, '[PATCH /api/tasks/:id] Database error:', updateError);
       return NextResponse.json(
         { error: 'Failed to update task' },
         { status: 500 }
@@ -98,7 +99,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[PATCH /api/tasks/:id] Error:', error);
+    logger.error({ route: '[taskId]' }, '[PATCH /api/tasks/:id] Error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -154,7 +155,7 @@ export async function DELETE(
       .eq('user_id', user.id);
 
     if (deleteError) {
-      console.error('[DELETE /api/tasks/:id] Database error:', deleteError);
+      logger.error({ route: '[taskId]' }, '[DELETE /api/tasks/:id] Database error:', deleteError);
       return NextResponse.json(
         { error: 'Failed to delete task' },
         { status: 500 }
@@ -163,7 +164,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[DELETE /api/tasks/:id] Error:', error);
+    logger.error({ route: '[taskId]' }, '[DELETE /api/tasks/:id] Error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

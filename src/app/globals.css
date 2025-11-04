@@ -212,6 +212,22 @@
     border-width: 0;
   }
 
+  /* Rich text editor paragraph styling */
+  /* Match prose paragraph spacing for consistency between edit and read-only modes */
+  .rich-editor-body p {
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.75;
+  }
+
+  .rich-editor-body p:first-child {
+    margin-top: 0;
+  }
+
+  .rich-editor-body p:last-child {
+    margin-bottom: 0;
+  }
+
   /* Rich text editor list styling */
   /* Override Tailwind's preflight reset to show bullets/numbers in contentEditable */
   .rich-editor-body ul {
@@ -259,6 +275,21 @@
     color: #374151 !important; /* gray-700 */
   }
 
+  /* Prose paragraph styling for imported notes */
+  .prose p {
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.75;
+  }
+
+  .prose p:first-child {
+    margin-top: 0;
+  }
+
+  .prose p:last-child {
+    margin-bottom: 0;
+  }
+
   /* Prose list styling for read-only mode */
   /* Apply same list styles to prose class used in JournalStream read-only view */
   .prose ul {
@@ -292,7 +323,7 @@
     color: hsl(var(--muted-foreground));
   }
 
-  /* Highlight styling for read-only mode */
+  /* Highlight styling for read-only mode and Obsidian imports (==text== syntax) */
   .prose mark {
     display: inline !important; /* Force inline to prevent stacking */
     background-color: #fef08a !important; /* yellow-200 */
@@ -308,6 +339,36 @@
   /* Dark mode: Make highlighted text dark grey for readability */
   .dark .prose mark {
     color: #374151 !important; /* gray-700 */
+  }
+
+  .dark .prose mark,
+  .dark mark {
+    background-color: #854d0e; /* yellow-900 for dark mode */
+    color: #fef3c7; /* yellow-100 for dark mode text */
+  }
+
+  /* Link styling for prose content (including timestamp links from Obsidian) */
+  .prose a {
+    color: #2563eb; /* blue-600 */
+    text-decoration: underline;
+    text-decoration-color: #93c5fd; /* blue-300 */
+    text-underline-offset: 2px;
+    transition: color 0.2s ease-in-out;
+  }
+
+  .prose a:hover {
+    color: #1d4ed8; /* blue-700 */
+    text-decoration-color: #60a5fa; /* blue-400 */
+  }
+
+  .dark .prose a {
+    color: #60a5fa; /* blue-400 for dark mode */
+    text-decoration-color: #1e40af; /* blue-800 */
+  }
+
+  .dark .prose a:hover {
+    color: #93c5fd; /* blue-300 for dark mode */
+    text-decoration-color: #1e3a8a; /* blue-900 */
   }
 
   /* Accessibility: Respect user's motion preferences */

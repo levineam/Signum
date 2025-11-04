@@ -23,6 +23,10 @@ import { HELPER_TILES } from '@/constants/helperTitles'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskEditDialog } from '@/components/tasks/TaskEditDialog'
+import { useGuestDraft } from '@/hooks/useGuestDraft'
+import { useIdleTimer } from '@/hooks/useIdleTimer'
+import { GuestAuthModal } from '@/components/auth/GuestAuthModal'
+import { IDLE_TIMER_MS } from '@/types/guest'
 
 // Debug logging flag (disable in production for performance)
 const DEBUG_TASK_DETECTION = process.env.NODE_ENV === 'development'
@@ -33,6 +37,17 @@ interface JournalEntry {
   content: string
   lastModified: string
   isSample?: boolean
+  metadata?: {
+    tasks?: Array<{
+      id: string
+      paragraphHash: string
+      status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
+    }>
+    rejectedTaskHashes?: string[]
+    journalDate?: string
+    prompt?: string
+    [key: string]: unknown  // Allow other metadata fields
+  } | null
 }
 
 interface ParsedTask {
@@ -61,7 +76,11 @@ function isContentEmpty(html: string): boolean {
   return text.trim() === ''
 }
 
-export function JournalStream() {
+interface JournalStreamProps {
+  isGuest?: boolean
+}
+
+export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const router = useRouter()
   const { user, session } = useAuth()
   const isDOMPurifyReady = useDOMPurifyReady()
@@ -80,6 +99,22 @@ export function JournalStream() {
   const [entryTasks, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
   const [editingTask, setEditingTask] = useState<{ id: string; title: string; dueAt: string | null } | null>(null)
 
+  // Story 1.2.2: Store rejected task hashes per entry (entryId -> Set<paragraphHash>)
+  const [rejectedTaskHashes, setRejectedTaskHashes] = useState<Map<string, Set<string>>>(new Map())
+
+  // Guest mode state
+  const { draft: guestDraft, saveDraft: saveGuestDraft, clearDraft: clearGuestDraft } = useGuestDraft()
+  const [showAuthModal, setShowAuthModal] = useState(false)
+
+  // Idle timer callback: show auth modal after 2s idle (only for guests)
+  const handleIdle = () => {
+    if (isGuest) {
+      setShowAuthModal(true)
+    }
+  }
+
+  const { reset: resetIdleTimer, setDismissed: setAuthModalDismissed } = useIdleTimer(handleIdle, IDLE_TIMER_MS)
+
   // Story 2.8: Helper tile UI state
   const [activeHelper, setActiveHelper] = useState<HelperType | null>(null)
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null)
@@ -91,8 +126,24 @@ export function JournalStream() {
   const cachedEditorRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
-    // Load journal entries from Supabase
+    // Load journal entries from Supabase or create guest entry
     async function loadEntries() {
+      // Guest mode: create a single local entry with guest draft
+      if (isGuest) {
+        console.log('[JournalStream] Guest mode: creating local guest entry')
+        const today = getLocalDateString()
+        const guestEntry: JournalEntry = {
+          id: 'guest-entry',
+          date: today,
+          content: guestDraft || '',
+          lastModified: new Date().toISOString()
+        }
+        setEntries([guestEntry])
+        setEditingEntryId('guest-entry') // Auto-enter edit mode
+        setIsLoading(false)
+        return
+      }
+
       if (!user) {
         console.log('[JournalStream] No user, clearing entries')
         // Clear entries and reset loading state when user signs out
@@ -137,12 +188,17 @@ export function JournalStream() {
 
         // Convert Note format to JournalEntry format and restore tasks
         const tasksMap = new Map<string, ParsedTask[]>()
-        const journalEntries: JournalEntry[] = journalNotes.map(note => {
+        // Story 1.2.2: Load rejected task hashes from metadata
+        const rejectedHashesMap = new Map<string, Set<string>>()
+
+        const journalEntriesWithDuplicates: JournalEntry[] = journalNotes.map(note => {
           // Safely handle metadata (can be null for legacy notes)
           const meta = note.metadata || {}
           const journalDate = (meta as { journalDate?: string }).journalDate
           const isSample = (meta as { isSample?: boolean }).isSample
           const tasks = (meta as { tasks?: Array<{ id: string; paragraphHash: string; status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled' }> }).tasks
+          // Story 1.2.2: Load rejected hashes for this entry
+          const rejectedHashes = (meta as { rejectedTaskHashes?: string[] }).rejectedTaskHashes
 
           // Restore tasks for this entry
           if (tasks && tasks.length > 0) {
@@ -156,14 +212,33 @@ export function JournalStream() {
             })))
           }
 
+          // Story 1.2.2: Store rejected hashes in state
+          if (rejectedHashes && Array.isArray(rejectedHashes) && rejectedHashes.length > 0) {
+            rejectedHashesMap.set(note.id, new Set(rejectedHashes))
+          }
+
           return {
             id: note.id,
             date: journalDate || note.createdAt.split('T')[0],
             content: note.content,
             lastModified: note.updatedAt,
-            isSample: Boolean(isSample)
+            isSample: Boolean(isSample),
+            metadata: note.metadata as JournalEntry['metadata']  // Preserve original metadata for autosave merge
           }
         })
+
+        // Deduplicate entries by date (keep most recent if duplicates exist)
+        // This handles legacy notes that may not have journalDate metadata
+        const dateMap = new Map<string, JournalEntry>()
+        for (const entry of journalEntriesWithDuplicates) {
+          const existing = dateMap.get(entry.date)
+          if (!existing || new Date(entry.lastModified) > new Date(existing.lastModified)) {
+            dateMap.set(entry.date, entry)
+          }
+        }
+        const journalEntries = Array.from(dateMap.values()).sort((a, b) =>
+          b.date.localeCompare(a.date)
+        )
 
         // Restore tasks from metadata and fetch full details
         if (tasksMap.size > 0 && session?.access_token) {
@@ -217,6 +292,8 @@ export function JournalStream() {
         }
 
         setEntryTasks(tasksMap)
+        // Story 1.2.2: Set rejected hashes in state
+        setRejectedTaskHashes(rejectedHashesMap)
 
         // Check if today's entry exists
         const todayEntry = journalEntries.find(e => e.date === today)
@@ -320,7 +397,7 @@ export function JournalStream() {
       setIsLoading(false)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]) // Only re-run when user ID changes (login/logout), not on user object updates
+  }, [user?.id, isGuest, guestDraft]) // Re-run when user ID, guest mode, or guest draft changes
 
   // Story 2.8: Deep linking support - check URL for ?helper=type on mount
   // Story 2.9: Updated to set mode to 'use' for deep links
@@ -373,20 +450,35 @@ export function JournalStream() {
       // Only update entries that actually changed
       for (const entryId of entriesToUpdate) {
         const tasks = entryTasks.get(entryId)!
+        const entry = entries.find(e => e.id === entryId)
+        // Story 1.2.2: Merge current rejected hashes from state
+        const currentRejectedHashes = rejectedTaskHashes.get(entryId)
+        const rejectedHashesArray = currentRejectedHashes ? Array.from(currentRejectedHashes) : undefined
+
+        const updatedMetadata = {
+          ...(entry?.metadata || {}),
+          tasks: tasks.map(t => ({
+            id: t.id,
+            paragraphHash: t.paragraphHash,
+            status: t.status
+          })),
+          // Include rejected hashes if any exist in state
+          ...(rejectedHashesArray && rejectedHashesArray.length > 0
+            ? { rejectedTaskHashes: rejectedHashesArray }
+            : {})
+        }
+
         try {
           await updateNoteInDb(
             entryId,
-            {
-              metadata: {
-                tasks: tasks.map(t => ({
-                  id: t.id,
-                  paragraphHash: t.paragraphHash,
-                  status: t.status
-                }))
-              }
-            },
+            { metadata: updatedMetadata },
             user.id
           )
+
+          // Update entries state to keep it in sync with DB after successful save
+          setEntries(prev => prev.map(e =>
+            e.id === entryId ? { ...e, metadata: updatedMetadata } : e
+          ))
         } catch (error) {
           console.error(`Failed to save task metadata for entry ${entryId}:`, error)
         }
@@ -432,6 +524,13 @@ export function JournalStream() {
         : entry
     ))
 
+    // Guest mode: save to localStorage and reset idle timer
+    if (isGuest) {
+      saveGuestDraft(newContent)
+      resetIdleTimer() // Reset idle timer on every content change
+      return // Skip Supabase saves and task detection for guests
+    }
+
     // Debounce task detection to avoid duplicate tasks while typing (Story 1.2)
     // Wait 3 seconds after user stops typing before detecting tasks
     taskDetectionTimeoutRef.current = setTimeout(() => {
@@ -460,8 +559,25 @@ export function JournalStream() {
   // Task detection from journal paragraphs (Story 1.2)
   const processedParagraphs = useRef<Set<string>>(new Set())
 
+  // Story 1.2.2: Normalize paragraph text for consistent hashing
+  // Handles punctuation, whitespace, and case variations
+  const normalizeParagraphText = (text: string): string => {
+    return text
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ') // Collapse multiple spaces
+      .replace(/[.,;!?]+$/, '') // Remove trailing punctuation
+  }
+
   const detectTasksInContent = async (content: string, entryId: string) => {
     if (!user || !session?.access_token) return
+
+    // Story 1.2.2: Get rejected task hashes from state
+    const rejectedHashes = rejectedTaskHashes.get(entryId) || new Set<string>()
+
+    if (DEBUG_TASK_DETECTION && rejectedHashes.size > 0) {
+      console.log(`[Task Detection] Loaded ${rejectedHashes.size} rejected task hashes for entry ${entryId}`)
+    }
 
     // Extract paragraphs from HTML content
     const tempDiv = document.createElement('div')
@@ -489,16 +605,40 @@ export function JournalStream() {
 
     for (const para of paragraphs) {
       const paragraphText = para.textContent?.trim() || ''
-      const paraHash = `${entryId}-${paragraphText}`
+
+      // Story 1.2.2: Use normalized text for hashing
+      const normalizedText = normalizeParagraphText(paragraphText)
+      const paraHash = `${entryId}-${normalizedText}`
 
       if (DEBUG_TASK_DETECTION) {
-        console.log('[Task Detection] Examining paragraph:', { paragraphText, isEmpty: !paragraphText, paraHash })
+        console.log('[Task Detection] Examining paragraph:', {
+          paragraphText: paragraphText.substring(0, 50),
+          normalizedText: normalizedText.substring(0, 50),
+          isEmpty: !paragraphText,
+          paraHash
+        })
       }
 
       // Skip empty paragraphs
       if (!paragraphText) {
         if (DEBUG_TASK_DETECTION) {
           console.log('[Task Detection] Skipping empty paragraph')
+        }
+        continue
+      }
+
+      // Story 1.2.2: Skip paragraphs that are too long (API limit is 1000 chars)
+      if (paragraphText.length > 1000) {
+        if (DEBUG_TASK_DETECTION) {
+          console.log('[Task Detection] Skipping paragraph too long:', paragraphText.length, 'chars')
+        }
+        continue
+      }
+
+      // Story 1.2.2: Check if this paragraph was rejected
+      if (rejectedHashes.has(paraHash)) {
+        if (DEBUG_TASK_DETECTION) {
+          console.log('[Task Detection] Skipping rejected paragraph:', paragraphText.substring(0, 50))
         }
         continue
       }
@@ -542,10 +682,17 @@ export function JournalStream() {
               const updated = new Map(prev)
               const existing = updated.get(entryId) || []
 
-              // Skip if task with this ID already exists in this entry
-              const taskExists = existing.some(t => t.id === task.id)
-              if (taskExists) {
-                console.log('⏭️ Task already exists in entryTasks, skipping:', task.id)
+              // Story 1.2.2: Check for duplicates by both ID and paragraphHash
+              const taskExistsById = existing.some(t => t.id === task.id)
+              const taskExistsByHash = existing.some(t => t.paragraphHash === paraHash)
+
+              if (taskExistsById) {
+                console.log('⏭️ Task already exists in entryTasks (by ID), skipping:', task.id)
+                return prev
+              }
+
+              if (taskExistsByHash) {
+                console.log('⏭️ Task already exists in entryTasks (by hash), skipping:', paraHash)
                 return prev
               }
 
@@ -716,6 +863,85 @@ export function JournalStream() {
     setViewingNoteId(null)
   }
 
+  // Guest auth modal handlers
+  const handleAuthModalClose = () => {
+    setShowAuthModal(false)
+    setAuthModalDismissed() // Record dismissal for cooldown
+  }
+
+  const handleAuthSuccess = async (userId: string) => {
+    console.log('[GuestJournal] Auth success, transferring content for user:', userId)
+
+    // Get the current guest draft content
+    const currentContent = guestDraft || ''
+
+    if (!currentContent.trim()) {
+      console.log('[GuestJournal] No content to transfer, clearing draft')
+      clearGuestDraft()
+      setShowAuthModal(false)
+      // Router will redirect after auth context updates
+      return
+    }
+
+    try {
+      // Wait for session to be available (up to 5 seconds)
+      let accessToken: string | null = null
+      const maxWaitTime = 5000
+      const startTime = Date.now()
+
+      while (!accessToken && (Date.now() - startTime) < maxWaitTime) {
+        // Import supabase client dynamically to get session
+        const { supabase } = await import('@/lib/supabase')
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+
+        if (currentSession?.access_token) {
+          accessToken = currentSession.access_token
+          break
+        }
+
+        // Wait 200ms before trying again
+        await new Promise(resolve => setTimeout(resolve, 200))
+      }
+
+      if (!accessToken) {
+        throw new Error('Failed to get authentication token')
+      }
+
+      // Call transfer API with auth token
+      const response = await fetch('/api/transfer-guest-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ content: currentContent })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Transfer failed')
+      }
+
+      const { entryId } = await response.json()
+      console.log('[GuestJournal] Content transferred successfully to entry:', entryId)
+
+      // Clear local draft after successful transfer
+      clearGuestDraft()
+
+      // Close modal
+      setShowAuthModal(false)
+
+      // Show success toast
+      toast.success('Welcome! Your journal entry has been saved.')
+
+      // Navigation will happen automatically when auth context updates
+    } catch (error) {
+      console.error('[GuestJournal] Transfer failed:', error)
+      toast.error('Failed to save your entry. Please try again.')
+      // Keep modal open and draft preserved for retry
+    }
+  }
+
   // Story 2.9: Handler for info icon clicks
   const handleInfoClick = (helperType: HelperType) => {
     setActiveHelper(helperType)
@@ -746,11 +972,7 @@ export function JournalStream() {
   }, [activeHelper, activeHelperMode])
 
   const handleHelperInsertion = async (entryId: string, helperText: string) => {
-    if (!user) {
-      return
-    }
-
-    console.log('📝 Inserting helper text', { entryId, helperText })
+    console.log('📝 Inserting helper text', { entryId, helperText, isGuest })
 
     // Clear any pending auto-save timeout to prevent race condition
     // If user typed then quickly inserted helper, pending timeout would overwrite helper text
@@ -805,10 +1027,17 @@ export function JournalStream() {
           return entry
         }))
 
-        // Persist to Supabase
-        updateNoteInDb(entryId, { content: finalContent }, user.id)
-          .then(() => console.log('💾 Persisted helper insertion to Supabase'))
-          .catch(error => console.error('Error persisting helper insertion:', error))
+        // Persist based on mode
+        if (isGuest) {
+          // Guest mode: save to localStorage
+          console.log('💾 Saving helper insertion to guest draft')
+          saveGuestDraft(finalContent)
+        } else if (user) {
+          // Authenticated mode: persist to Supabase
+          updateNoteInDb(entryId, { content: finalContent }, user.id)
+            .then(() => console.log('💾 Persisted helper insertion to Supabase'))
+            .catch(error => console.error('Error persisting helper insertion:', error))
+        }
 
         setCreatingLink(false)
       }, 50)
@@ -902,7 +1131,7 @@ export function JournalStream() {
 
       {/* Journal Entries - One per day */}
       <div className="space-y-4">
-        {!user ? (
+        {!user && !isGuest ? (
           <Card className="p-6">
             <div className="text-center">
               <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
@@ -953,7 +1182,7 @@ export function JournalStream() {
               </div>
 
               {/* Helpers (only on today's entry) - Story 2.8: Tile-based UI */}
-              {isTodayEntry && user && (
+              {isTodayEntry && (user || isGuest) && (
                 <HelperTileGrid
                   helperTypes={[
                     'cbt-distortions',
@@ -1110,7 +1339,7 @@ export function JournalStream() {
                     }
                   }}
                   onReject={async () => {
-                    // Reject task - remove from list and delete from database
+                    // Story 1.2.2: Reject task - remove from list, delete from database, and persist rejection
                     try {
                       const response = await fetch(`/api/tasks/${task.id}`, {
                         method: 'DELETE',
@@ -1120,12 +1349,52 @@ export function JournalStream() {
                       })
 
                       if (response.ok) {
+                        // Remove from UI
                         setEntryTasks(prev => {
                           const updated = new Map(prev)
                           const tasks = updated.get(entry.id) || []
                           updated.set(entry.id, tasks.filter(t => t.id !== task.id))
                           return updated
                         })
+
+                        // Story 1.2.2: Update rejected hashes in state AND persist to DB
+                        if (user) {
+                          try {
+                            // Update state immediately for instant filtering
+                            setRejectedTaskHashes(prev => {
+                              const updated = new Map(prev)
+                              const existing = updated.get(entry.id) || new Set<string>()
+                              existing.add(task.paragraphHash)
+                              updated.set(entry.id, existing)
+                              return updated
+                            })
+
+                            // Get current entry to access existing metadata
+                            const currentEntry = entries.find(e => e.id === entry.id)
+                            if (currentEntry) {
+                              // Get existing rejected hashes from state (already updated above)
+                              const updatedRejectedSet = rejectedTaskHashes.get(entry.id) || new Set<string>()
+                              updatedRejectedSet.add(task.paragraphHash)
+                              const updatedRejected = Array.from(updatedRejectedSet)
+
+                              // Persist to database using in-memory metadata to avoid race conditions
+                              await updateNoteInDb(entry.id, {
+                                metadata: {
+                                  ...(currentEntry.metadata || {}),
+                                  rejectedTaskHashes: updatedRejected
+                                }
+                              }, user.id)
+
+                              if (DEBUG_TASK_DETECTION) {
+                                console.log('[Task Rejection] Persisted rejection:', task.paragraphHash)
+                              }
+                            }
+                          } catch (metadataError) {
+                            console.error('[Task Rejection] Failed to persist rejection:', metadataError)
+                            // State is already updated, so filtering will still work for this session
+                          }
+                        }
+
                         toast.success('Task rejected and deleted')
                       } else {
                         toast.error('Failed to delete task')
@@ -1238,7 +1507,7 @@ export function JournalStream() {
       )}
 
       {/* Story 2.9: Helper Dialog (rendered once, outside entry loop) */}
-      {activeHelper && user && (activeHelperMode === 'info' || activeEntryId) && (
+      {activeHelper && (user || isGuest) && (activeHelperMode === 'info' || activeEntryId) && (
         <Dialog open={true} onOpenChange={(open) => !open && handleHelperClose()}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             {activeHelperMode === 'info' ? (
@@ -1256,7 +1525,7 @@ export function JournalStream() {
                 <HelperDialogContent
                   helperType={activeHelper}
                   entryId={activeEntryId!}
-                  userId={user.id}
+                  userId={user?.id || 'guest'}
                   onInsert={(helperText) => handleHelperInsertion(activeEntryId!, helperText)}
                   onClose={handleHelperClose}
                 />
@@ -1264,6 +1533,15 @@ export function JournalStream() {
             ) : null}
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Story 1.8: Guest Auth Modal */}
+      {isGuest && (
+        <GuestAuthModal
+          isOpen={showAuthModal}
+          onClose={handleAuthModalClose}
+          onAuthSuccess={handleAuthSuccess}
+        />
       )}
     </div>
   )

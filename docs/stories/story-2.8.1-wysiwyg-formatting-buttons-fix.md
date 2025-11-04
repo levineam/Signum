@@ -1,4 +1,4 @@
-# Story 2.8: Fix WYSIWYG Editor Formatting Buttons in Edit Mode
+# Story 2.8.1: Fix WYSIWYG Editor Formatting Buttons in Edit Mode
 
 **Issue:** #87
 **Epic:** 2.x Accessibility & Polish
