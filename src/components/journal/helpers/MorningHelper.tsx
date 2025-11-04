@@ -156,76 +156,73 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
     return withoutPunctuation
   }
 
-  // Format morning practice as natural prose (two paragraphs)
+  // Format morning practice as natural prose (one sentence per section)
   const formatMorningPractice = (): string => {
-    const parts: string[] = []
+    const sentences: string[] = []
 
-    // Paragraph 1: Sections 1-5 (goals/action/obstacles/emotions/thoughts)
-    const p1Sentences: string[] = []
-
-    // Section 1 (capitalize first, always starts paragraph)
+    // Section 1: Values-anchored goal (keep as-is, capitalize first)
     if (fields.section1.trim()) {
-      p1Sentences.push(escapeHtml(normalizeSentence(fields.section1)))
+      sentences.push(`<p>${escapeHtml(normalizeSentence(fields.section1))}.</p>`)
     }
 
-    // Section 2 (connector: "to make this happen")
+    // Section 2: Implementation intention (add contextual prefix)
     if (fields.section2.trim()) {
-      p1Sentences.push(`to make this happen, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section2)))}`)
+      sentences.push(`<p>To make this happen, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section2)))}.</p>`)
     }
 
-    // Section 3 (connector: "and if obstacles arise")
+    // Section 3: Obstacle identification (add contextual prefix)
     if (fields.section3.trim()) {
-      p1Sentences.push(`and if obstacles arise, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section3)))}`)
+      sentences.push(`<p>If obstacles arise, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section3)))}.</p>`)
     }
 
-    // Section 4 (connector: "right now I'm feeling")
+    // Section 4: Emotional awareness (keep as-is if starts with "I", else add prefix)
     if (fields.section4.trim()) {
-      p1Sentences.push(`right now I'm feeling ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section4)))}`)
+      const text = normalizeSentence(fields.section4)
+      // Check if user already included "I'm feeling" or similar
+      if (text.match(/^I('m| am)/i)) {
+        sentences.push(`<p>${escapeHtml(text)}.</p>`)
+      } else {
+        sentences.push(`<p>Right now I'm feeling ${escapeHtml(lowercaseFirst(text))}.</p>`)
+      }
     }
 
-    // Section 5 (connector: "and when I notice unhelpful thoughts")
+    // Section 5: Cognitive reframing (add contextual prefix)
     if (fields.section5.trim()) {
-      p1Sentences.push(`and when I notice unhelpful thoughts, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section5)))}`)
+      sentences.push(`<p>When I notice unhelpful thoughts, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section5)))}.</p>`)
     }
 
-    // Join paragraph 1 with proper punctuation
-    if (p1Sentences.length > 0) {
-      const p1 = p1Sentences.join(', ') + '.'
-      parts.push(`<p>${p1}</p>`)
-      parts.push('<p><br></p>')
-    }
-
-    // Paragraph 2: Sections 6-9 (social support/challenges/best possible self)
-    const p2Sentences: string[] = []
-
-    // Section 6 (capitalize, starts new paragraph)
+    // Section 6: Social connection (keep as-is, capitalize first)
     if (fields.section6.trim()) {
-      p2Sentences.push(escapeHtml(normalizeSentence(fields.section6)))
+      sentences.push(`<p>${escapeHtml(normalizeSentence(fields.section6))}.</p>`)
     }
 
-    // Section 7 (connector: "and I'll challenge myself by")
+    // Section 7: Growth challenge (add contextual prefix)
     if (fields.section7.trim()) {
-      p2Sentences.push(`and I'll challenge myself by ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section7)))}`)
+      sentences.push(`<p>I'll challenge myself by ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section7)))}.</p>`)
     }
 
-    // Section 8 (connector: "I wish")
+    // Section 8: Loving-kindness (keep as-is if starts with "I wish", else add prefix)
     if (fields.section8.trim()) {
-      p2Sentences.push(`I wish ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section8)))}`)
+      const text = normalizeSentence(fields.section8)
+      // Check if user already included "I wish"
+      if (text.match(/^I wish/i)) {
+        sentences.push(`<p>${escapeHtml(text)}.</p>`)
+      } else {
+        sentences.push(`<p>I wish ${escapeHtml(lowercaseFirst(text))}.</p>`)
+      }
     }
 
-    // Section 9 (connector: "and I envision")
+    // Section 9: Best possible self (add contextual prefix)
     if (fields.section9.trim()) {
-      p2Sentences.push(`and I envision ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section9)))}`)
+      sentences.push(`<p>I envision ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section9)))}.</p>`)
     }
 
-    // Join paragraph 2 with proper punctuation
-    if (p2Sentences.length > 0) {
-      const p2 = p2Sentences.join(', ') + '.'
-      parts.push(`<p>${p2}</p>`)
-      parts.push('<p><br></p>')
+    // Add spacing between all sections
+    if (sentences.length > 0) {
+      return sentences.join('<p><br></p>') + '<p><br></p>'
     }
 
-    return parts.join('')
+    return ''
   }
 
   // Handle insert to journal
