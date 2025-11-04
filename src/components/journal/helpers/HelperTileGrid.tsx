@@ -25,6 +25,7 @@ interface HelperTileGridProps {
 
 // Theme colors for different helper types
 const HELPER_VARIANTS: Record<HelperType, string> = {
+  morning: 'from-purple-50 to-violet-50 border-purple-200 hover:shadow-purple-100 dark:from-purple-950/30 dark:to-violet-950/30 dark:border-purple-800',
   'cbt-distortions': 'from-blue-50 to-indigo-50 border-blue-200 hover:shadow-blue-100 dark:from-blue-950/30 dark:to-indigo-950/30 dark:border-blue-800',
   gratitude: 'from-green-50 to-emerald-50 border-green-200 hover:shadow-green-100 dark:from-green-950/30 dark:to-emerald-950/30 dark:border-green-800',
   'values-affirmation': 'from-purple-50 to-violet-50 border-purple-200 hover:shadow-purple-100 dark:from-purple-950/30 dark:to-violet-950/30 dark:border-purple-800',

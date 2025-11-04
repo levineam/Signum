@@ -19,6 +19,12 @@ export interface HelperTileData {
 }
 
 export const HELPER_TILES: Record<HelperType, HelperTileData> = {
+  morning: {
+    shortTitle: 'Morning',
+    description: 'Complete your daily practice with evidence-based reflection',
+    fullTitle: 'Morning Practice',
+    icon: '☀️',
+  },
   'cbt-distortions': {
     shortTitle: 'Thinking Traps',
     description: 'Identify unhelpful thought patterns',

@@ -22,6 +22,16 @@ export interface HelperResearchInfo {
 }
 
 export const HELPER_INFO: Record<HelperType, HelperResearchInfo> = {
+  morning: {
+    title: 'Morning Practice',
+    description:
+      'A comprehensive evidence-based daily practice combining values clarification, implementation intentions, mental contrasting, emotional awareness, cognitive reframing, social connection planning, growth mindset, and future visualization. This integrated approach addresses multiple well-being dimensions.',
+    effectSize: 'd=0.65 for implementation intentions (strongest component)',
+    citation:
+      'Integrates research from Gollwitzer (2006), Oettingen (2014), Kim et al. (2022), and others.',
+    learnMoreUrl: 'https://github.com/levineam/Signum/issues/100',
+  },
+
   'cbt-distortions': {
     title: 'CBT Cognitive Distortions',
     description:

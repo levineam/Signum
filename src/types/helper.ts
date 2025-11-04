@@ -15,6 +15,7 @@
  * Issue #18: Removed 'gentle-prompt' - only in-entry helpers remain.
  */
 export type HelperType =
+  | 'morning'             // Morning Daily Practice Helper (Story 2.10)
   | 'cbt-distortions'     // CBT Cognitive Distortions helper
   | 'gratitude'           // Three Good Things (Story 2.5.5)
   | 'values-affirmation'  // Values Affirmation (Story 2.5.6)
@@ -175,6 +176,16 @@ export interface HelperUsageMetadata {
   lkmRecipient?: 'Self' | 'Loved One' | 'Neutral Person' | 'Difficult Person'
   lkmPersonNamed?: boolean
   lkmNameLength?: number
+
+  // ========================================================
+  // Story 2.10 — Morning Daily Practice Helper
+  // ========================================================
+  // Character counts for all 9 fields
+  morningFieldCharCounts?: number[]
+  // Field completion count (1-9, reusing existing fieldCompletionCount)
+  // Implementation intention detection (Section 2: time-based cues)
+  hasImplementationIntention?: boolean
+  // If-then format detection (Section 3: already exists from WOOP, shared)
 }
 
 /**
@@ -306,6 +317,7 @@ export function isHelperDismissedEvent(event: HelperEvent): event is HelperDismi
  * Issue #18: Removed gentle-prompt - only in-entry helpers.
  */
 export const HELPER_TYPES: HelperType[] = [
+  'morning',
   'cbt-distortions',
   'gratitude',
   'values-affirmation',
@@ -321,6 +333,7 @@ export const HELPER_TYPES: HelperType[] = [
  * Issue #18: Simplified to only in-entry helpers.
  */
 export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
+  'morning': 'Morning Practice',
   'cbt-distortions': 'CBT Cognitive Distortions',
   'gratitude': 'Three Good Things',
   'values-affirmation': 'Values Affirmation',
