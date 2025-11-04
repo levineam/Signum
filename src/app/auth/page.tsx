@@ -6,9 +6,19 @@ import { useAuth } from '@/contexts/AuthContext'
 import { AuthForms } from '@/components/auth/AuthForms'
 
 export default function AuthPage() {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [mode, setMode] = useState<'signin' | 'signup'>(() => {
+    // Default to signup for new users, signin for returning users
+    if (typeof window === 'undefined') return 'signup'
+    const hasVisited = localStorage.getItem('signum_has_visited')
+    return hasVisited ? 'signin' : 'signup'
+  })
   const { user, loading } = useAuth()
   const router = useRouter()
+
+  useEffect(() => {
+    // Mark user as having visited the auth page
+    localStorage.setItem('signum_has_visited', 'true')
+  }, [])
 
   useEffect(() => {
     if (!loading && user) {
