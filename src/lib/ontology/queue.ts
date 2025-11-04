@@ -9,7 +9,7 @@
  * - Idempotent note processing (prevents double-analysis)
  */
 
-import { supabaseAdmin } from './supabase-admin'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 // ============================================================================
 // Types

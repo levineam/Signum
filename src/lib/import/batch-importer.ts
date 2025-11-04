@@ -8,7 +8,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ParsedNote } from './obsidian-parser'
 import { createQueueJob } from '@/lib/ontology/queue'
-import { v4 as uuidv4 } from 'uuid'
+
+/**
+ * Generate a simple UUID v4 without external dependency
+ */
+function generateImportId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
 
 export interface ImportOptions {
   preserveTimestamps: boolean;
@@ -106,7 +116,7 @@ export class BatchImporter {
    */
   private async triggerOntologyAnalysis(userId: string, noteIds: string[]): Promise<void> {
     const noteCount = noteIds.length;
-    const importId = uuidv4();
+    const importId = generateImportId();
 
     try {
       // Fetch notes to get their timestamps
