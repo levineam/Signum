@@ -5,10 +5,6 @@ import OpenAI from 'openai';
 // Node.js runtime for OpenAI SDK compatibility
 export const runtime = 'nodejs';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 const RESEARCH_ANSWER_SYSTEM_PROMPT = `You are a research assistant helping users answer questions from their personal journals.
 
 Guidelines:
@@ -110,7 +106,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Check for OpenAI API key
+    // 4. Check for OpenAI API key and initialize client
     if (!process.env.OPENAI_API_KEY) {
       console.error('[AI Answer] Missing OpenAI API key');
       return NextResponse.json(
@@ -119,10 +115,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Generate AI answer with timeout
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // 10 seconds
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
+    // 5. Generate AI answer with timeout
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini', // Cost-efficient model
@@ -139,10 +136,8 @@ export async function POST(request: NextRequest) {
         temperature: 0.7,
         max_tokens: 1000,
       }, {
-        signal: controller.signal as AbortSignal
+        timeout: 10000, // 10 seconds - using OpenAI SDK's built-in timeout
       });
-
-      clearTimeout(timeout);
 
       const answer = completion.choices[0]?.message?.content || '';
       const tokensUsed = completion.usage?.total_tokens || 0;
@@ -168,10 +163,8 @@ export async function POST(request: NextRequest) {
       });
 
     } catch (error: unknown) {
-      clearTimeout(timeout);
-
-      // Handle abort/timeout
-      if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') {
+      // Handle timeout errors from OpenAI SDK
+      if (error && typeof error === 'object' && 'name' in error && error.name === 'APIConnectionTimeoutError') {
         return NextResponse.json(
           { error: 'Request timeout - AI took too long to respond', code: 'TIMEOUT' },
           { status: 408 }
