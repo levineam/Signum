@@ -10,6 +10,7 @@
 import { HelperType } from '@/types/helper'
 import { HELPER_TILES } from '@/constants/helperTitles'
 // Story 2.9: Import *Content components (without HelperContainer wrappers)
+import { MorningContent } from './MorningHelper'
 import { GratitudeContent } from './GratitudeHelper'
 import { CbtDistortionsContent } from './CbtDistortions'
 import { ValuesAffirmationContent } from './ValuesAffirmationHelper'
@@ -53,6 +54,15 @@ export function HelperDialogContent({
   // Route to appropriate helper content component
   // Story 2.9: All helpers now use *Content components (no HelperContainer)
   switch (helperType) {
+    case 'morning':
+      return (
+        <MorningContent
+          entryId={entryId}
+          userId={userId}
+          onInsert={handleInsert}
+        />
+      )
+
     case 'gratitude':
       return (
         <GratitudeContent
