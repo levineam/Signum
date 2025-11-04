@@ -162,10 +162,13 @@ export function TaskCard({
               {(status === 'rejected' || status === 'cancelled') && getStatusBadge()}
             </div>
           )}
+        </div>
 
-          {/* Ask AI button for query tasks */}
-          {isQuery && (
-            <div className="mt-2">
+        {/* Actions for pending tasks */}
+        {status === 'pending' && (
+          <div className="flex items-center gap-1">
+            {/* Ask AI button for query tasks - shown first for pending tasks */}
+            {isQuery && (
               <AskAIButton
                 taskId={taskId}
                 taskText={title}
@@ -173,13 +176,7 @@ export function TaskCard({
                   console.log('AI answer created:', noteId);
                 }}
               />
-            </div>
-          )}
-        </div>
-
-        {/* Actions for pending tasks */}
-        {status === 'pending' && (
-          <div className="flex items-center gap-1">
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -236,6 +233,16 @@ export function TaskCard({
         {/* Actions for accepted/completed tasks */}
         {isAccepted && (
           <div className="flex items-center gap-1">
+            {/* Ask AI button for query tasks - shown first for accepted tasks */}
+            {isQuery && (
+              <AskAIButton
+                taskId={taskId}
+                taskText={title}
+                onAnswerCreated={(noteId) => {
+                  console.log('AI answer created:', noteId);
+                }}
+              />
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
