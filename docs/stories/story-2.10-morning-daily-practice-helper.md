@@ -64,16 +64,19 @@ so that I can start my day with clarity about my values, goals, emotions, and so
    - Prompt: "What do you hope to accomplish today?"
    - Example text: `e.g., "Be present with my kids" (value), "Help my team succeed" (mission), "Finish the proposal" (concrete goal)`
    - Info icon → Goals, Values & Purpose popup
+   - Additional example (values-anchored): `Top value: craftsmanship. Today I’ll embody it by shipping a clean draft by 10 and doing one quality pass.`
 
    **Section 2: Action Step**
    - Prompt: "What's something you can do today that will move you one step closer to your goal?"
    - Example text: `e.g., "At 2pm, I'll block 90 minutes and draft the executive summary" or "After breakfast, I'll call Sarah to ask about her templates"`
    - Info icon → Implementation Intentions & Committed Action popup
+   - Hint: If you named a value above, write how you'll embody it today with a specific time and place.
 
    **Section 3: Obstacles & Plan**
    - Prompt: "What obstacle or obstacles might stand in your way? If that happens, then what will you do?"
    - Example text: `e.g., "I might get pulled into meetings. If that happens, then I'll decline non-urgent invites and protect my focus block" or "I might feel anxious and procrastinate. If so, I'll start with just 10 minutes"`
    - Info icon → WOOP (Mental Contrasting & Implementation Intentions) popup
+   - Optional self-compassion nudge: `This task is tough; lots of people find it tough; I’ll start with five focused minutes.`
 
    **Section 4: Emotional Awareness**
    - Prompt: "Are you feeling any persistent emotions? What are they? Do you feel them in any specific parts of your body?"
@@ -644,6 +647,8 @@ const hasIfThenFormat = (): boolean => {
 - [ ] Prose output format (no labels, natural connectors)
 - [ ] Output follows PR #120 pattern (lowercase first character, sentence connectors)
 - [ ] HTML paragraph structure maintained (`<p>...</p>`)
+- [ ] Values-to-action hint shown across Sections 1–2
+- [ ] Optional self-compassion nudge hint visible in Section 3
 
 ### Helper System Integration
 - [ ] 'morning' added to HelperType union in `/src/types/helper.ts` (line 17-26)
