@@ -227,17 +227,9 @@ export async function POST(request: NextRequest) {
           return (state.lastRunSummary as AnalysisRunSummary & { runCountInWindow?: number })?.runCountInWindow
         })()
 
-    // Parse request body for bulk import parameters
-    let noteIdsFromRequest: string[] = []
-    let updateCursorFlag = true // Default: update cursor (backward compatible)
-
-    try {
-      const requestBody = await request.json().catch(() => ({}))
-      noteIdsFromRequest = requestBody.noteIds || []
-      updateCursorFlag = requestBody.updateCursor !== false // Default to true
-    } catch {
-      // Silently fail, use defaults
-    }
+    // Parse request body for bulk import parameters (body already parsed at line 109)
+    const noteIdsFromRequest: string[] = body.noteIds || []
+    const updateCursorFlag = body.updateCursor !== false // Default to true (backward compatible)
 
     let notesToAnalyze: Note[] = [] // Declare outside try block for error handler access
 
@@ -246,9 +238,11 @@ export async function POST(request: NextRequest) {
       // Codex Finding #1: Support explicit note ID list (bulk import path)
       if (noteIdsFromRequest && noteIdsFromRequest.length > 0) {
         // Bulk import path: fetch specific notes by ID
+        // SECURITY: Verify notes belong to authenticated user
         const { data: notes, error } = await supabaseAdmin
           .from('notes')
           .select('*')
+          .eq('user_id', userId)
           .in('id', noteIdsFromRequest)
 
         if (error) {

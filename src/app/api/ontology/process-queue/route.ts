@@ -129,9 +129,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 8. Calculate new processed count
+    // 8. Get current queue state and calculate new processed count
     const runtime = Date.now() - startTime
-    const newProcessedCount = remainingNotes - unprocessedNotes.length + batchSize
+    const { data: queueData } = await supabaseAdmin
+      .from('ontology_analysis_queue')
+      .select('processed_notes, total_notes')
+      .eq('id', queueId)
+      .single()
+
+    const currentProcessedCount = queueData?.processed_notes || 0
+    const newProcessedCount = currentProcessedCount + unprocessedNotes.length
     await updateQueueStatus(queueId, 'pending', newProcessedCount)
 
     // 9. Track in telemetry (Codex Finding #4)
@@ -149,13 +156,13 @@ export async function POST(request: NextRequest) {
       errorMessage: batchError || undefined,
       metadata: {
         processedCount: newProcessedCount,
-        remainingCount: remainingNotes - newProcessedCount,
+        remainingCount: (queueData?.total_notes || 0) - newProcessedCount,
         batchNumber: Math.ceil(newProcessedCount / 20)
       }
     })
 
     // 10. Check if queue is complete
-    if (remainingNotes - newProcessedCount <= 0) {
+    if (newProcessedCount >= (queueData?.total_notes || 0)) {
       // All notes processed! Advance lastAnalyzedAt (Codex Finding #1)
       try {
         await completeQueueJob(
