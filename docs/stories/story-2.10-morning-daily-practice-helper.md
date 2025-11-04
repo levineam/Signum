@@ -122,10 +122,16 @@ so that I can start my day with clarity about my values, goals, emotions, and so
    - No bold labels or section headers in output
    - Natural connectors between sections
    - Lowercase first character of user input for prose flow
-   - Single paragraph or natural paragraph breaks
-   - Example output:
-     ```
-     Today I hope to accomplish being present with my kids and finishing the proposal. At 2pm, I'll block 90 minutes and draft the executive summary. I might get pulled into meetings. If that happens, then I'll decline non-urgent invites and protect my focus block. I'm feeling anxious with a tight chest and shallow breathing. I notice the thought that I'll never finish this, but more rationally, I've finished hard things before, and I have a plan. My colleague Jamie is great at presentations and always willing to help. I'll ask her to review my slides. I also want to connect with my partner just to say hi. An easy challenge for today is sending the budget email, and a stretch goal is recording a practice pitch and watching it back (even if it's cringey!). To make today amazing, I'll feel proud finishing my presentation, energized by a midday walk, and connected after dinner with my partner.
+   - **Recommended formatting:** Two paragraphs for better pacing
+     - Paragraph 1: Sections 1-5 (goals, action, obstacles, emotions, thoughts)
+     - Paragraph 2: Sections 6-9 (social support, challenges, best day)
+     - Break provides visual breathing room and logical separation
+   - Example output (two-paragraph format):
+     ```html
+     <p>Today I hope to accomplish being present with my kids and finishing the proposal. At 2pm, I'll block 90 minutes and draft the executive summary. I might get pulled into meetings. If that happens, then I'll decline non-urgent invites and protect my focus block. I'm feeling anxious with a tight chest and shallow breathing. I notice the thought that I'll never finish this, but more rationally, I've finished hard things before, and I have a plan.</p>
+     <p><br></p>
+     <p>My colleague Jamie is great at presentations and always willing to help. I'll ask her to review my slides. I also want to connect with my partner just to say hi. An easy challenge for today is sending the budget email, and a stretch goal is recording a practice pitch and watching it back (even if it's cringey!). To make today amazing, I'll feel proud finishing my presentation, energized by a midday walk, and connected after dinner with my partner.</p>
+     <p><br></p>
      ```
 
 5. **Helper Metadata**
@@ -153,9 +159,8 @@ so that I can start my day with clarity about my values, goals, emotions, and so
 7. **Usage Tracking Metadata**
    - Track field completion count (0-9)
    - Track character counts per field
-   - Track implementation intention format detection (Section 2)
-   - Track if-then format detection (Section 3)
-   - Track specific vs. vague language patterns
+   - Track implementation intention format detection (Section 2) - time-based cues via regex
+   - Track if-then format detection (Section 3) - if/then pattern via regex
    - Store events array (helper_selection, helper_inserted, helper_cleared)
 
 ### Out of Scope
@@ -236,6 +241,12 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
     bestPossibleDay: ''
   })
 
+  // Utility to lowercase first character for natural prose flow
+  const lowercaseFirst = (text: string): string => {
+    if (!text) return text
+    return text.charAt(0).toLowerCase() + text.slice(1)
+  }
+
   // Utility to normalize sentences (prevent double punctuation)
   const normalizeSentence = (text: string): string => {
     const trimmed = text.trim()
@@ -243,24 +254,65 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
     return trimmed.replace(/[.!?]+$/, '')
   }
 
-  // Format as prose following PR #120 pattern
+  // Format as prose following PR #120 pattern (two-paragraph structure)
   const formatMorningPractice = (): string => {
-    const sentences: string[] = []
+    const parts: string[] = []
 
-    // Build natural prose from filled fields
+    // Paragraph 1: Goals, action, obstacles, emotions, thoughts (Sections 1-5)
+    const paragraph1: string[] = []
+
     if (fields.goalsPurpose.trim()) {
-      sentences.push(`Today I hope to accomplish ${lowercaseFirst(normalizeSentence(fields.goalsPurpose))}`)
+      paragraph1.push(`Today I hope to accomplish ${lowercaseFirst(normalizeSentence(escapeHtml(fields.goalsPurpose)))}`)
     }
 
     if (fields.actionStep.trim()) {
-      sentences.push(normalizeSentence(fields.actionStep)) // Often has timing/location
+      paragraph1.push(normalizeSentence(escapeHtml(fields.actionStep))) // Often has timing/location
     }
 
-    // ... continue for all 9 fields with natural connectors
-    // Apply normalizeSentence + escapeHtml to each field
+    if (fields.obstaclesPlan.trim()) {
+      paragraph1.push(normalizeSentence(escapeHtml(fields.obstaclesPlan)))
+    }
 
-    // Join with period-space, add final period, add spacing paragraph
-    return `<p>${sentences.join('. ')}.</p><p><br></p>`
+    if (fields.emotions.trim()) {
+      paragraph1.push(`I'm feeling ${lowercaseFirst(normalizeSentence(escapeHtml(fields.emotions)))}`)
+    }
+
+    if (fields.thoughts.trim()) {
+      paragraph1.push(normalizeSentence(escapeHtml(fields.thoughts)))
+    }
+
+    // Add paragraph 1 if any content
+    if (paragraph1.length > 0) {
+      parts.push(`<p>${paragraph1.join('. ')}.</p>`)
+      parts.push('<p><br></p>')
+    }
+
+    // Paragraph 2: Social support, challenges, best day (Sections 6-9)
+    const paragraph2: string[] = []
+
+    if (fields.socialSupport.trim()) {
+      paragraph2.push(normalizeSentence(escapeHtml(fields.socialSupport)))
+    }
+
+    if (fields.alternativeConnection.trim()) {
+      paragraph2.push(normalizeSentence(escapeHtml(fields.alternativeConnection)))
+    }
+
+    if (fields.challenges.trim()) {
+      paragraph2.push(normalizeSentence(escapeHtml(fields.challenges)))
+    }
+
+    if (fields.bestPossibleDay.trim()) {
+      paragraph2.push(`To make today amazing, ${lowercaseFirst(normalizeSentence(escapeHtml(fields.bestPossibleDay)))}`)
+    }
+
+    // Add paragraph 2 if any content
+    if (paragraph2.length > 0) {
+      parts.push(`<p>${paragraph2.join('. ')}.</p>`)
+      parts.push('<p><br></p>')
+    }
+
+    return parts.join('')
   }
 
   // Telemetry detection heuristics
@@ -280,7 +332,52 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
     return fields.goalsPurpose.trim() !== ''
   }
 
-  // ... rest of component
+  // Render with data-testid attributes for Playwright stability
+  return (
+    <>
+      <Textarea
+        id="morning-goalsPurpose"
+        data-testid="morning-field-goalsPurpose"
+        value={fields.goalsPurpose}
+        onChange={(e) => updateField('goalsPurpose', e.target.value)}
+        // ... rest of props
+      />
+      {/* Repeat pattern for all 9 fields:
+          morning-field-actionStep
+          morning-field-obstaclesPlan
+          morning-field-emotions
+          morning-field-thoughts
+          morning-field-socialSupport
+          morning-field-alternativeConnection
+          morning-field-challenges
+          morning-field-bestPossibleDay
+      */}
+
+      <Button
+        onClick={handleInsert}
+        data-testid="morning-insert-button"
+        disabled={!canSubmit()}
+      >
+        Add to Journal Entry
+      </Button>
+
+      <Button
+        onClick={handleClear}
+        data-testid="morning-clear-button"
+      >
+        Clear All
+      </Button>
+    </>
+  )
+}
+
+// Tile-level info content (top-level helper summary)
+const morningTileLevelInfo: HelperInfoContent = {
+  title: 'Morning Practice',
+  description: 'A comprehensive evidence-based daily practice combining values, goals, emotional awareness, social connection, and positive visualization. Integrates the most effective interventions from psychology research into one streamlined flow.',
+  effectSize: 'd=0.65 for implementation intentions (strongest component)',
+  citation: 'Integrates research from Gollwitzer (2006), Oettingen (2014), Kim et al. (2022), and others.',
+  learnMoreUrl: 'https://github.com/levineam/Signum/issues/100'
 }
 
 export function MorningHelper({ entryId, userId, onInsert }: MorningHelperProps) {
@@ -424,6 +521,20 @@ export function MorningHelper({ entryId, userId, onInsert }: MorningHelperProps)
     }
     ```
 
+- `/src/components/journal/helpers/HelperTileGrid.tsx`
+  - Add `'morning'` to theme gradient map (around line 26)
+  - Use purple gradient (matching variant in HelperContainer):
+    ```typescript
+    const getGradientClasses = (helperType: HelperType): string => {
+      const gradients: Record<HelperType, string> = {
+        'morning': 'from-purple-100 to-violet-100 dark:from-purple-900/30 dark:to-violet-900/30',
+        'cbt-distortions': 'from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30',
+        // ... rest
+      }
+      return gradients[helperType] || 'from-gray-100 to-slate-100 dark:from-gray-900/30 dark:to-slate-900/30'
+    }
+    ```
+
 - `/src/components/journal/helpers/HelperDialogContent.tsx`
   - Add `case 'morning': return <MorningContent ... />`
 
@@ -540,9 +651,11 @@ const hasIfThenFormat = (): boolean => {
 - [ ] 'morning' added to HELPER_TYPE_LABELS in `/src/types/helper.ts` (line 323-332)
 - [ ] Helper metadata added to `/src/constants/helperTitles.ts`
 - [ ] Tile-level info added to `/src/constants/helperInfo.ts` (HELPER_INFO['morning'])
+- [ ] Morning gradient added to `/src/components/journal/helpers/HelperTileGrid.tsx` theme map
 - [ ] Morning helper routed in `/src/components/journal/helpers/HelperDialogContent.tsx`
 - [ ] Morning helper listed FIRST in JournalStream.tsx helperTypes array (line 960)
 - [ ] Helper tile displays with ☀️ icon
+- [ ] Helper tile renders with purple gradient background
 - [ ] Clicking tile opens dialog with MorningContent
 - [ ] Tile info icon triggers HelperInfoDialog (tile-level summary)
 - [ ] Section info icons (9 inline) use HelperInfo component (section-level research)
