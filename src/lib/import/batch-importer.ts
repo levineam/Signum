@@ -5,8 +5,10 @@
  * Manages transactions, deduplication, and progress tracking
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { ParsedNote } from './obsidian-parser';
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { ParsedNote } from './obsidian-parser'
+import { createQueueJob } from '@/lib/ontology/queue'
+import { v4 as uuidv4 } from 'uuid'
 
 export interface ImportOptions {
   preserveTimestamps: boolean;
@@ -89,7 +91,87 @@ export class BatchImporter {
     result.summary.totalProcessed = parsedNotes.length;
     result.success = result.errors.length === 0;
 
+    // Story 2.5.1: Trigger ontology analysis after successful import
+    if (result.success && result.noteIds.length > 0) {
+      await this.triggerOntologyAnalysis(options.userId, result.noteIds);
+    }
+
     return result;
+  }
+
+  /**
+   * Trigger ontology analysis based on import size (tiered approach)
+   * Story 2.5.1: Bulk Import Ontology Analysis
+   * Codex Finding #1: Manages cursor updates appropriately
+   */
+  private async triggerOntologyAnalysis(userId: string, noteIds: string[]): Promise<void> {
+    const noteCount = noteIds.length;
+    const importId = uuidv4();
+
+    try {
+      // Fetch notes to get their timestamps
+      const { data: notes } = await this.supabase
+        .from('notes')
+        .select('id, updated_at')
+        .in('id', noteIds);
+
+      if (!notes || notes.length === 0) {
+        console.warn('No notes found for ontology analysis');
+        return;
+      }
+
+      // Calculate snapshot timestamp (max updated_at)
+      const importSnapshotTimestamp = new Date(
+        Math.max(...notes.map((n) => new Date(n.updated_at).getTime()))
+      );
+
+      if (noteCount <= 200) {
+        // Tier 1: Analyze all immediately with cursor update
+        await fetch('/api/ontology/incremental-analysis', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            triggeredBy: 'bulk-import',
+            noteIds: noteIds,
+            updateCursor: true, // Safe: analyze all, update cursor
+          }),
+        }).catch((e) => {
+          // Don't fail import if analysis fails
+          console.error('Failed to trigger ontology analysis:', e);
+        });
+      } else {
+        // Tier 2/3: Sample + queue
+        const sampleSize = noteCount <= 500 ? 200 : 400;
+        const sampleNoteIds = noteIds.slice(0, sampleSize);
+        const queuedNoteIds = noteIds.slice(sampleSize);
+
+        // Immediate sample analysis WITHOUT cursor update (Codex Finding #1)
+        await fetch('/api/ontology/incremental-analysis', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            triggeredBy: 'bulk-import-sample',
+            noteIds: sampleNoteIds,
+            updateCursor: false, // DO NOT advance lastAnalyzedAt yet
+          }),
+        }).catch((e) => {
+          console.error('Failed to trigger sample analysis:', e);
+        });
+
+        // Queue remaining notes (Codex Finding #2: explicit note ID tracking)
+        try {
+          await createQueueJob(userId, importId, queuedNoteIds, importSnapshotTimestamp);
+        } catch (e) {
+          console.error('Failed to create queue job:', e);
+          // Don't fail import if queue creation fails
+        }
+      }
+    } catch (e) {
+      console.error('Failed to trigger ontology analysis:', e);
+      // Don't fail the import if analysis setup fails
+    }
   }
 
   /**

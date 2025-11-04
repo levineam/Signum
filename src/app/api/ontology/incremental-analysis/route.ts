@@ -200,18 +200,46 @@ export async function POST(request: NextRequest) {
           return (state.lastRunSummary as AnalysisRunSummary & { runCountInWindow?: number })?.runCountInWindow
         })()
 
+    // Parse request body for bulk import parameters
+    let noteIdsFromRequest: string[] = []
+    let updateCursorFlag = true // Default: update cursor (backward compatible)
+
+    try {
+      const requestBody = await request.json().catch(() => ({}))
+      noteIdsFromRequest = requestBody.noteIds || []
+      updateCursorFlag = requestBody.updateCursor !== false // Default to true
+    } catch (e) {
+      // Silently fail, use defaults
+    }
+
     let notesToAnalyze: Note[] = [] // Declare outside try block for error handler access
 
     try {
       // 8. Get notes for incremental analysis
-      const lastAnalyzed = state?.lastAnalyzedAt
-        ? new Date(state.lastAnalyzedAt)
-        : null
+      // Codex Finding #1: Support explicit note ID list (bulk import path)
+      if (noteIdsFromRequest && noteIdsFromRequest.length > 0) {
+        // Bulk import path: fetch specific notes by ID
+        const { data: notes, error } = await supabaseAdmin
+          .from('notes')
+          .select('*')
+          .in('id', noteIdsFromRequest)
 
-      notesToAnalyze = await getNotesForIncrementalAnalysis(
-        userId,
-        lastAnalyzed
-      )
+        if (error) {
+          throw new Error(`Failed to fetch requested notes: ${error.message}`)
+        }
+
+        notesToAnalyze = (notes || []).map(convertToNote)
+      } else {
+        // Incremental path: use cursor-based selection
+        const lastAnalyzed = state?.lastAnalyzedAt
+          ? new Date(state.lastAnalyzedAt)
+          : null
+
+        notesToAnalyze = await getNotesForIncrementalAnalysis(
+          userId,
+          lastAnalyzed
+        )
+      }
 
       // 9. Check if there are notes to analyze
       if (notesToAnalyze.length === 0) {
@@ -275,10 +303,19 @@ export async function POST(request: NextRequest) {
         runSummary.runCountInWindow = runCountInWindow
       }
 
-      await updateAnalysisState(userId, maxNoteTimestamp, runSummary)
+      // 13b. Handle cursor update (Codex Finding #1)
+      // Only update lastAnalyzedAt if updateCursor=true (bulk import sample runs skip this)
+      if (updateCursorFlag) {
+        await updateAnalysisState(userId, maxNoteTimestamp, runSummary)
+      } else {
+        // Sample run: update summary but NOT lastAnalyzedAt
+        await releaseLock(userId, runSummary)
+      }
 
-      // 14. Release lock
-      await releaseLock(userId, runSummary)
+      // 14. Release lock (only if updateCursor=true, otherwise done above)
+      if (updateCursorFlag) {
+        await releaseLock(userId, runSummary)
+      }
 
       // 15. Return success
       return NextResponse.json({
