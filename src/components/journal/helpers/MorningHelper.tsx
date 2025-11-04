@@ -156,62 +156,76 @@ export function MorningContent({ entryId, userId, onInsert }: MorningHelperProps
     return withoutPunctuation
   }
 
-  // Format morning practice as natural prose (one paragraph)
+  // Format morning practice as natural prose (two paragraphs)
   const formatMorningPractice = (): string => {
-    const sentences: string[] = []
+    const parts: string[] = []
 
-    // Section 1 (capitalize first, always starts)
+    // Paragraph 1: Sections 1-5 (goals/action/obstacles/emotions/thoughts)
+    const p1Sentences: string[] = []
+
+    // Section 1 (capitalize first, always starts paragraph)
     if (fields.section1.trim()) {
-      sentences.push(escapeHtml(normalizeSentence(fields.section1)))
+      p1Sentences.push(escapeHtml(normalizeSentence(fields.section1)))
     }
 
     // Section 2 (connector: "to make this happen")
     if (fields.section2.trim()) {
-      sentences.push(`to make this happen, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section2)))}`)
+      p1Sentences.push(`to make this happen, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section2)))}`)
     }
 
     // Section 3 (connector: "and if obstacles arise")
     if (fields.section3.trim()) {
-      sentences.push(`and if obstacles arise, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section3)))}`)
+      p1Sentences.push(`and if obstacles arise, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section3)))}`)
     }
 
     // Section 4 (connector: "right now I'm feeling")
     if (fields.section4.trim()) {
-      sentences.push(`right now I'm feeling ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section4)))}`)
+      p1Sentences.push(`right now I'm feeling ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section4)))}`)
     }
 
     // Section 5 (connector: "and when I notice unhelpful thoughts")
     if (fields.section5.trim()) {
-      sentences.push(`and when I notice unhelpful thoughts, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section5)))}`)
+      p1Sentences.push(`and when I notice unhelpful thoughts, ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section5)))}`)
     }
 
-    // Section 6 (connector: "today I will")
+    // Join paragraph 1 with proper punctuation
+    if (p1Sentences.length > 0) {
+      const p1 = p1Sentences.join(', ') + '.'
+      parts.push(`<p>${p1}</p>`)
+      parts.push('<p><br></p>')
+    }
+
+    // Paragraph 2: Sections 6-9 (social support/challenges/best possible self)
+    const p2Sentences: string[] = []
+
+    // Section 6 (capitalize, starts new paragraph)
     if (fields.section6.trim()) {
-      sentences.push(`today I will ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section6)))}`)
+      p2Sentences.push(escapeHtml(normalizeSentence(fields.section6)))
     }
 
     // Section 7 (connector: "and I'll challenge myself by")
     if (fields.section7.trim()) {
-      sentences.push(`and I'll challenge myself by ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section7)))}`)
+      p2Sentences.push(`and I'll challenge myself by ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section7)))}`)
     }
 
     // Section 8 (connector: "I wish")
     if (fields.section8.trim()) {
-      sentences.push(`I wish ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section8)))}`)
+      p2Sentences.push(`I wish ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section8)))}`)
     }
 
     // Section 9 (connector: "and I envision")
     if (fields.section9.trim()) {
-      sentences.push(`and I envision ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section9)))}`)
+      p2Sentences.push(`and I envision ${escapeHtml(lowercaseFirst(normalizeSentence(fields.section9)))}`)
     }
 
-    // Join all sentences into one paragraph
-    if (sentences.length > 0) {
-      const paragraph = sentences.join(', ') + '.'
-      return `<p>${paragraph}</p><p><br></p>`
+    // Join paragraph 2 with proper punctuation
+    if (p2Sentences.length > 0) {
+      const p2 = p2Sentences.join(', ') + '.'
+      parts.push(`<p>${p2}</p>`)
+      parts.push('<p><br></p>')
     }
 
-    return ''
+    return parts.join('')
   }
 
   // Handle insert to journal
