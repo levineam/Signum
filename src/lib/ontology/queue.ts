@@ -35,6 +35,7 @@ export interface TelemetryEvent {
     | 'import_sample_complete'
     | 'queue_created'
     | 'queue_batch_complete'
+    | 'queue_batch_failed'
     | 'queue_complete'
     | 'manual_trigger'
   importId?: string
