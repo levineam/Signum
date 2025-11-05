@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm install --no-save @tailwindcss/oxide lightningcss
+          npm install --no-save @tailwindcss/oxide lightningcss @rollup/rollup-linux-x64-gnu
 
       - name: Run ESLint
         run: npm run lint
@@ -63,7 +63,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm install --no-save @tailwindcss/oxide lightningcss
+          npm install --no-save @tailwindcss/oxide lightningcss @rollup/rollup-linux-x64-gnu
 
       - name: Run unit tests
         run: npm run test:unit
@@ -98,7 +98,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm install --no-save @tailwindcss/oxide lightningcss
+          npm install --no-save @tailwindcss/oxide lightningcss @rollup/rollup-linux-x64-gnu
 
       - name: Build project
         run: npm run build
@@ -129,7 +129,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm install --no-save @tailwindcss/oxide lightningcss
+          npm install --no-save @tailwindcss/oxide lightningcss @rollup/rollup-linux-x64-gnu
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
@@ -185,7 +185,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm install --no-save @tailwindcss/oxide lightningcss
+          npm install --no-save @tailwindcss/oxide lightningcss @rollup/rollup-linux-x64-gnu
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
@@ -237,7 +237,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm install --no-save @tailwindcss/oxide lightningcss
+          npm install --no-save @tailwindcss/oxide lightningcss @rollup/rollup-linux-x64-gnu
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
