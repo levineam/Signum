@@ -250,6 +250,93 @@ case 'day-planning':
 **Stream Ordering** (`/src/components/journal/JournalStream.tsx`):
 - Add 'day-planning' to helperTypes array at position 0
 
+### Database Schema
+
+**CRITICAL**: The `helper_usage` table has a CHECK constraint (`valid_helper_type`) that restricts which helper types can be logged. Adding 'day-planning' to the TypeScript codebase without updating this constraint will cause telemetry to fail with constraint violations.
+
+**Migration Required** (`supabase/migrations/YYYYMMDD_extend_helper_types_phase3.sql`):
+
+```sql
+-- Migration: Add 'day-planning' to helper_usage.valid_helper_type constraint
+-- Story: 2.11 Day Planning Helper
+-- Created: 2025-11-05
+-- Description: Extends helper_usage check constraint to include 'day-planning' helper type
+
+-- ============================================================================
+-- SAFETY CHECKS
+-- ============================================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_name = 'helper_usage'
+  ) THEN
+    RAISE EXCEPTION 'Table helper_usage does not exist. Apply base migration first.';
+  END IF;
+END$$;
+
+-- ============================================================================
+-- UPDATE CHECK CONSTRAINT (DROP + RE-ADD)
+-- ============================================================================
+ALTER TABLE helper_usage DROP CONSTRAINT IF EXISTS valid_helper_type;
+
+ALTER TABLE helper_usage
+ADD CONSTRAINT valid_helper_type CHECK (
+  helper_type IN (
+    'cbt-distortions',
+    'gentle-prompt',
+    'gratitude',
+    'values-affirmation',
+    'self-compassion',
+    'woop',
+    'best-possible-self',
+    'savoring',
+    'loving-kindness',
+    'morning',                -- Add if Story 2.10 merged
+    'day-planning'            -- NEW for Story 2.11
+  )
+);
+
+-- Refresh column comment to reflect expanded types
+COMMENT ON COLUMN helper_usage.helper_type IS
+  'Type of helper used (cbt-distortions, gentle-prompt, gratitude, values-affirmation, self-compassion, woop, best-possible-self, savoring, loving-kindness, morning, day-planning)';
+
+-- ============================================================================
+-- ROLLBACK INSTRUCTIONS
+-- ============================================================================
+-- To rollback this migration, run:
+--
+-- BEGIN;
+--   ALTER TABLE helper_usage DROP CONSTRAINT IF EXISTS valid_helper_type;
+--   ALTER TABLE helper_usage
+--   ADD CONSTRAINT valid_helper_type CHECK (
+--     helper_type IN (
+--       'cbt-distortions',
+--       'gentle-prompt',
+--       'gratitude',
+--       'values-affirmation',
+--       'self-compassion',
+--       'woop',
+--       'best-possible-self',
+--       'savoring',
+--       'loving-kindness',
+--       'morning'
+--     )
+--   );
+--   COMMENT ON COLUMN helper_usage.helper_type IS
+--     'Type of helper used (cbt-distortions, gentle-prompt, gratitude, values-affirmation, self-compassion, woop, best-possible-self, savoring, loving-kindness, morning)';
+-- COMMIT;
+```
+
+**Migration Timing**: This migration MUST be applied BEFORE any `DayPlanningHelper` instances are created or any telemetry calls to `createHelperUsage()` with `helperType='day-planning'` are made. Otherwise, usage events will be rejected by the database.
+
+**Environment Deployment Order**:
+1. Apply migration to dev environment
+2. Test day-planning helper in dev
+3. Apply migration to production
+4. Deploy code changes that use 'day-planning'
+
 ### Usage Tracking (Telemetry)
 
 **Events tracked:**
@@ -301,6 +388,15 @@ interface DayPlanningUsageMetadata {
 - [ ] Clicking tile opens dialog with DayPlanningContent
 - [ ] Tile info icon triggers HelperInfoDialog (tile-level summary)
 - [ ] Section info icons (7 inline) use HelperInfo component (section-level research)
+
+### Database Schema
+- [ ] Supabase migration created: `supabase/migrations/YYYYMMDD_extend_helper_types_phase3.sql`
+- [ ] Migration adds 'day-planning' to `helper_usage.valid_helper_type` check constraint
+- [ ] Migration includes safety checks (table existence validation)
+- [ ] Migration includes rollback instructions
+- [ ] Migration tested in dev environment before production deployment
+- [ ] Migration applied to dev environment BEFORE any DayPlanningHelper code is deployed
+- [ ] Migration applied to production environment BEFORE merging PR to main
 
 ### Usage Tracking
 - [ ] DayPlanningUsageMetadata type added to `/src/types/helper.ts`
@@ -401,13 +497,14 @@ Day Planning Helper is a 7-section guided planning tool that combines evidence-b
 - `sanitizeHtml.ts`: HTML safety for prose output
 
 **Files to modify:**
-1. `/src/components/journal/helpers/DayPlanningHelper.tsx` (NEW)
-2. `/src/types/helper.ts` (add 'day-planning' type + metadata interface)
-3. `/src/constants/helperTitles.ts` (add metadata)
-4. `/src/constants/helperInfo.ts` (add 7 research entries)
-5. `/src/components/journal/helpers/HelperTileGrid.tsx` (add gradient)
-6. `/src/components/journal/helpers/HelperDialogContent.tsx` (add routing)
-7. `/src/components/journal/JournalStream.tsx` (add to helperTypes array)
+1. `supabase/migrations/...extend_helper_types_phase3.sql` (NEW - add 'day-planning' to check constraint)
+2. `/src/components/journal/helpers/DayPlanningHelper.tsx` (NEW)
+3. `/src/types/helper.ts` (add 'day-planning' type + metadata interface)
+4. `/src/constants/helperTitles.ts` (add metadata)
+5. `/src/constants/helperInfo.ts` (add 8 research entries)
+6. `/src/components/journal/helpers/HelperTileGrid.tsx` (add gradient)
+7. `/src/components/journal/helpers/HelperDialogContent.tsx` (add routing)
+8. `/src/components/journal/JournalStream.tsx` (add to helperTypes array)
 
 ### Dependencies
 
@@ -420,46 +517,48 @@ Day Planning Helper is a 7-section guided planning tool that combines evidence-b
 - lucide-react for calendar icon
 - shadcn/ui components (already available)
 
-**No new package.json dependencies needed**
+No new package.json dependencies needed
 
 ---
 
 ## Test Plan
 
+**Note:** The following are planned test cases to be implemented during development. None have been executed yet.
+
 ### Unit Tests
-- [x] formatDayPlanningPlan() produces correct prose structure
-- [x] Each section connector text is appropriate
-- [x] HTML escaping works correctly
-- [x] Field normalization (lowercase first, remove punctuation) works
-- [x] If-then detection regex works on various formats
-- [x] canSubmit() only allows submission with sections 1-2
+- [ ] formatDayPlanningPlan() produces correct prose structure
+- [ ] Each section connector text is appropriate
+- [ ] HTML escaping works correctly
+- [ ] Field normalization (lowercase first, remove punctuation) works
+- [ ] If-then detection regex works on various formats
+- [ ] canSubmit() only allows submission with sections 1-2
 
 ### Integration Tests
-- [x] Helper inserts prose correctly into journal
-- [x] All 7 info icons display when clicked
-- [x] Info popover closes properly
-- [x] Clear All button resets all fields
-- [x] Character counts captured correctly for telemetry
-- [x] Usage event logged with correct metadata
+- [ ] Helper inserts prose correctly into journal
+- [ ] All 8 info icons display when clicked
+- [ ] Info popover closes properly
+- [ ] Clear All button resets all fields
+- [ ] Character counts captured correctly for telemetry
+- [ ] Usage event logged with correct metadata
 
 ### E2E Tests (Playwright)
-- [x] Open day-planning helper from journal stream
-- [x] Fill all 7 sections with sample text
-- [x] Click each info icon and verify research content displays
-- [x] Try to submit with only section 1 → button disabled
-- [x] Fill sections 1-2 → button enabled
-- [x] Submit and verify text appears in journal
-- [x] Clear All and verify all fields reset
-- [x] Test keyboard navigation (Tab through fields)
-- [x] Test on mobile viewport (320px)
-- [x] Verify if-then format detected in telemetry when present
+- [ ] Open day-planning helper from journal stream
+- [ ] Fill all 7 sections with sample text
+- [ ] Click each info icon and verify research content displays
+- [ ] Try to submit with only section 1 → button disabled
+- [ ] Fill sections 1-2 → button enabled
+- [ ] Submit and verify text appears in journal
+- [ ] Clear All and verify all fields reset
+- [ ] Test keyboard navigation (Tab through fields)
+- [ ] Test on mobile viewport (320px)
+- [ ] Verify if-then format detected in telemetry when present
 
 ### Accessibility Tests
-- [x] WCAG AA color contrast on all text
-- [x] Keyboard-only navigation works
-- [x] Screen reader announces all prompts and buttons
-- [x] Focus states visible on all interactive elements
-- [x] Info icon buttons have proper aria-labels
+- [ ] WCAG AA color contrast on all text
+- [ ] Keyboard-only navigation works
+- [ ] Screen reader announces all prompts and buttons
+- [ ] Focus states visible on all interactive elements
+- [ ] Info icon buttons have proper aria-labels
 
 ### Manual Testing Checklist
 - [ ] Prose output reads naturally (sounds like journaling, not form-filling)
@@ -494,6 +593,15 @@ Day Planning Helper is a 7-section guided planning tool that combines evidence-b
 ---
 
 ## Implementation Checklist
+
+### Database Phase (MUST BE DONE FIRST)
+- [ ] Create migration file: `supabase/migrations/YYYYMMDD_extend_helper_types_phase3.sql`
+- [ ] Add 'day-planning' (and 'morning' if not yet added) to `helper_usage.valid_helper_type` CHECK constraint
+- [ ] Include safety checks in migration (table existence validation)
+- [ ] Include rollback instructions in migration comments
+- [ ] Apply migration to dev environment
+- [ ] Verify migration applied successfully: `SELECT constraint_name, check_clause FROM information_schema.check_constraints WHERE constraint_name = 'valid_helper_type';`
+- [ ] Test that telemetry with 'day-planning' no longer fails in dev
 
 ### Setup Phase
 - [ ] Create DayPlanningHelper.tsx with DayPlanningContent + DayPlanningHelper exports
