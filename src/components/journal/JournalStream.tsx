@@ -1185,6 +1185,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               {isTodayEntry && (user || isGuest) && (
                 <HelperTileGrid
                   helperTypes={[
+                    'day-planning',
                     'cbt-distortions',
                     'gratitude',
                     'values-affirmation',
