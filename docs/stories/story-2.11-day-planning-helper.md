@@ -420,46 +420,48 @@ Day Planning Helper is a 7-section guided planning tool that combines evidence-b
 - lucide-react for calendar icon
 - shadcn/ui components (already available)
 
-**No new package.json dependencies needed**
+No new package.json dependencies needed
 
 ---
 
 ## Test Plan
 
+**Note:** The following are planned test cases to be implemented during development. None have been executed yet.
+
 ### Unit Tests
-- [x] formatDayPlanningPlan() produces correct prose structure
-- [x] Each section connector text is appropriate
-- [x] HTML escaping works correctly
-- [x] Field normalization (lowercase first, remove punctuation) works
-- [x] If-then detection regex works on various formats
-- [x] canSubmit() only allows submission with sections 1-2
+- [ ] formatDayPlanningPlan() produces correct prose structure
+- [ ] Each section connector text is appropriate
+- [ ] HTML escaping works correctly
+- [ ] Field normalization (lowercase first, remove punctuation) works
+- [ ] If-then detection regex works on various formats
+- [ ] canSubmit() only allows submission with sections 1-2
 
 ### Integration Tests
-- [x] Helper inserts prose correctly into journal
-- [x] All 7 info icons display when clicked
-- [x] Info popover closes properly
-- [x] Clear All button resets all fields
-- [x] Character counts captured correctly for telemetry
-- [x] Usage event logged with correct metadata
+- [ ] Helper inserts prose correctly into journal
+- [ ] All 8 info icons display when clicked
+- [ ] Info popover closes properly
+- [ ] Clear All button resets all fields
+- [ ] Character counts captured correctly for telemetry
+- [ ] Usage event logged with correct metadata
 
 ### E2E Tests (Playwright)
-- [x] Open day-planning helper from journal stream
-- [x] Fill all 7 sections with sample text
-- [x] Click each info icon and verify research content displays
-- [x] Try to submit with only section 1 → button disabled
-- [x] Fill sections 1-2 → button enabled
-- [x] Submit and verify text appears in journal
-- [x] Clear All and verify all fields reset
-- [x] Test keyboard navigation (Tab through fields)
-- [x] Test on mobile viewport (320px)
-- [x] Verify if-then format detected in telemetry when present
+- [ ] Open day-planning helper from journal stream
+- [ ] Fill all 7 sections with sample text
+- [ ] Click each info icon and verify research content displays
+- [ ] Try to submit with only section 1 → button disabled
+- [ ] Fill sections 1-2 → button enabled
+- [ ] Submit and verify text appears in journal
+- [ ] Clear All and verify all fields reset
+- [ ] Test keyboard navigation (Tab through fields)
+- [ ] Test on mobile viewport (320px)
+- [ ] Verify if-then format detected in telemetry when present
 
 ### Accessibility Tests
-- [x] WCAG AA color contrast on all text
-- [x] Keyboard-only navigation works
-- [x] Screen reader announces all prompts and buttons
-- [x] Focus states visible on all interactive elements
-- [x] Info icon buttons have proper aria-labels
+- [ ] WCAG AA color contrast on all text
+- [ ] Keyboard-only navigation works
+- [ ] Screen reader announces all prompts and buttons
+- [ ] Focus states visible on all interactive elements
+- [ ] Info icon buttons have proper aria-labels
 
 ### Manual Testing Checklist
 - [ ] Prose output reads naturally (sounds like journaling, not form-filling)
