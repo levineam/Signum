@@ -311,7 +311,7 @@ export function DayPlanningContent({ entryId, userId, onInsert }: DayPlanningHel
             />
           </div>
           <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
-            List everything tugging at your attention—tasks, errands, worries. Don't organize yet; just unload.
+            List everything tugging at your attention—tasks, errands, worries. Don&apos;t organize yet; just unload.
           </p>
           <Textarea
             id="day-planning-brain-dump"
