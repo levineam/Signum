@@ -25,17 +25,14 @@ echo ""
 if echo "$CHANGED_FILES" | grep -qE '\.(ts|tsx|js|jsx)$'; then
   echo "✅ Code changes detected. Running affected tests..."
 
-  # Extract test file patterns
-  TEST_PATTERN=$(echo "$CHANGED_FILES" \
+  # Extract test file paths
+  TEST_FILES=$(echo "$CHANGED_FILES" \
     | grep -E 'tests/.*\.(spec|test)\.(ts|tsx)$' \
-    | sed 's|tests/||g' \
-    | sed 's|\.spec\.ts||g' \
-    | tr '\n' '|' \
-    | sed 's/|$//')
+    | tr '\n' ' ')
 
-  if [ -n "$TEST_PATTERN" ]; then
-    echo "Running tests matching pattern: $TEST_PATTERN"
-    npm run test:e2e -- --grep "$TEST_PATTERN"
+  if [ -n "$TEST_FILES" ]; then
+    echo "Running test files: $TEST_FILES"
+    npx playwright test $TEST_FILES
   else
     echo "No direct test file changes. Running smoke tests..."
     npm run test:e2e:smoke
