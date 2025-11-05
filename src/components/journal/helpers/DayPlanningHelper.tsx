@@ -127,8 +127,8 @@ export function DayPlanningContent({ entryId, userId, onInsert }: DayPlanningHel
   // Helper function to lowercase first character (preserve I, I'm, etc.)
   const lowercaseFirst = (text: string): string => {
     if (!text) return text
-    // Preserve first-person pronouns
-    if (/^I('m|'ve|'ll|'d)?\s/.test(text)) {
+    // Preserve first-person pronouns (supports both straight and curly quotes)
+    if (/^I(['']m|['']ve|['']ll|['']d)?\s/.test(text)) {
       return text
     }
     return text.charAt(0).toLowerCase() + text.slice(1)
