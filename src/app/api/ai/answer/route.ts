@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
     // Detailed error logging
     console.error('[AI Answer] Error occurred:', {
       error,
-      errorType: error?.constructor?.name,
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
       errorMessage: error instanceof Error ? error.message : String(error),
       errorStack: error instanceof Error ? error.stack : undefined,
     });
