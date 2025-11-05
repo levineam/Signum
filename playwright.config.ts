@@ -34,7 +34,7 @@ export default defineConfig({
   ],
   // Auto-start Next.js server before tests
   webServer: {
-    command: 'npm run build && npm run start',
+    command: 'npm run build && PORT=3001 npm run start',
     url: baseURL,
     timeout: 120 * 1000,
     reuseExistingServer: !process.env.CI,
