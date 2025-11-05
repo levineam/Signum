@@ -121,8 +121,8 @@ export async function POST(request: NextRequest) {
 
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-      timeout: 25000, // 25 seconds - balance between user experience and serverless limits
-      maxRetries: 1, // Single retry for transient network issues
+      timeout: 20000, // 20 seconds - stay within edge function 30s limit with overhead
+      maxRetries: 0, // No retries to prevent exceeding 30s edge function timeout
     });
 
     // 5. Generate AI answer
