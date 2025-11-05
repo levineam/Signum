@@ -117,9 +117,11 @@ export async function POST(request: NextRequest) {
 
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      timeout: 30000, // 30 seconds global timeout (more reasonable for serverless)
+      maxRetries: 2, // Retry on transient failures
     });
 
-    // 5. Generate AI answer with timeout
+    // 5. Generate AI answer
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini', // Cost-efficient model
@@ -135,8 +137,6 @@ export async function POST(request: NextRequest) {
         ],
         temperature: 0.7,
         max_tokens: 1000,
-      }, {
-        timeout: 10000, // 10 seconds - using OpenAI SDK's built-in timeout
       });
 
       const answer = completion.choices[0]?.message?.content || '';
