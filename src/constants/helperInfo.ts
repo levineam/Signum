@@ -98,4 +98,22 @@ export const HELPER_INFO: Record<HelperType, HelperResearchInfo> = {
       'Galante, J., et al. (2014). Loving-kindness meditation for chronic pain. Journal of Clinical Psychology, 70(9), 794-807.',
     learnMoreUrl: 'https://www.mindful.org/a-guide-to-loving-kindness-meditation/',
   },
+
+  morning: {
+    title: 'Morning Daily Practice',
+    description:
+      'Comprehensive evidence-based morning routine combining 9 interventions: values anchoring, implementation intentions, obstacle planning, emotional awareness, cognitive reframing, social connection, growth mindset, and positive visualization.',
+    effectSize: 'Combined effect from implementation intentions (d=0.65), CBT (d=0.80-1.00), and mental contrasting',
+    citation:
+      'Integrates research from Gollwitzer & Sheeran (2006), Hofmann et al. (2012), Oettingen (2014), and others.',
+  },
+
+  'day-planning': {
+    title: 'Day Planning Helper',
+    description:
+      'A comprehensive planning framework combining 7 evidence-based interventions from cognitive offloading to outcome visualization. Each section addresses a specific barrier to goal achievement, creating a synergistic effect when used together.',
+    effectSize: 'Combined effect from implementation intentions (d=0.65), WOOP, temptation bundling, and cognitive offloading (40-50% reduction in intrusive thoughts)',
+    citation:
+      'Integrates research from Gollwitzer & Sheeran (2006), Oettingen (2014), Fogg (2020), Baumeister & Masicampo (2011), and Milkman et al. (2014).',
+  },
 }
