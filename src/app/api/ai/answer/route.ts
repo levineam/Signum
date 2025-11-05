@@ -176,7 +176,13 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error: unknown) {
-    console.error('[AI Answer] Error:', error);
+    // Detailed error logging
+    console.error('[AI Answer] Error occurred:', {
+      error,
+      errorType: error?.constructor?.name,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
 
     // Handle OpenAI-specific errors
     if (error && typeof error === 'object' && 'response' in error) {
@@ -189,9 +195,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generic error
+    // Generic error with details in development
+    const isDev = process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'preview';
     return NextResponse.json(
-      { error: 'Failed to generate AI answer. Please try again.', code: 'INTERNAL_ERROR' },
+      {
+        error: 'Failed to generate AI answer. Please try again.',
+        code: 'INTERNAL_ERROR',
+        ...(isDev && { details: error instanceof Error ? error.message : String(error) })
+      },
       { status: 500 }
     );
   }
