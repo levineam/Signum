@@ -497,13 +497,14 @@ Day Planning Helper is a 7-section guided planning tool that combines evidence-b
 - `sanitizeHtml.ts`: HTML safety for prose output
 
 **Files to modify:**
-1. `/src/components/journal/helpers/DayPlanningHelper.tsx` (NEW)
-2. `/src/types/helper.ts` (add 'day-planning' type + metadata interface)
-3. `/src/constants/helperTitles.ts` (add metadata)
-4. `/src/constants/helperInfo.ts` (add 7 research entries)
-5. `/src/components/journal/helpers/HelperTileGrid.tsx` (add gradient)
-6. `/src/components/journal/helpers/HelperDialogContent.tsx` (add routing)
-7. `/src/components/journal/JournalStream.tsx` (add to helperTypes array)
+1. `supabase/migrations/...extend_helper_types_phase3.sql` (NEW - add 'day-planning' to check constraint)
+2. `/src/components/journal/helpers/DayPlanningHelper.tsx` (NEW)
+3. `/src/types/helper.ts` (add 'day-planning' type + metadata interface)
+4. `/src/constants/helperTitles.ts` (add metadata)
+5. `/src/constants/helperInfo.ts` (add 8 research entries)
+6. `/src/components/journal/helpers/HelperTileGrid.tsx` (add gradient)
+7. `/src/components/journal/helpers/HelperDialogContent.tsx` (add routing)
+8. `/src/components/journal/JournalStream.tsx` (add to helperTypes array)
 
 ### Dependencies
 
