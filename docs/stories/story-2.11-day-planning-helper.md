@@ -250,6 +250,93 @@ case 'day-planning':
 **Stream Ordering** (`/src/components/journal/JournalStream.tsx`):
 - Add 'day-planning' to helperTypes array at position 0
 
+### Database Schema
+
+**CRITICAL**: The `helper_usage` table has a CHECK constraint (`valid_helper_type`) that restricts which helper types can be logged. Adding 'day-planning' to the TypeScript codebase without updating this constraint will cause telemetry to fail with constraint violations.
+
+**Migration Required** (`supabase/migrations/YYYYMMDD_extend_helper_types_phase3.sql`):
+
+```sql
+-- Migration: Add 'day-planning' to helper_usage.valid_helper_type constraint
+-- Story: 2.11 Day Planning Helper
+-- Created: 2025-11-05
+-- Description: Extends helper_usage check constraint to include 'day-planning' helper type
+
+-- ============================================================================
+-- SAFETY CHECKS
+-- ============================================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_name = 'helper_usage'
+  ) THEN
+    RAISE EXCEPTION 'Table helper_usage does not exist. Apply base migration first.';
+  END IF;
+END$$;
+
+-- ============================================================================
+-- UPDATE CHECK CONSTRAINT (DROP + RE-ADD)
+-- ============================================================================
+ALTER TABLE helper_usage DROP CONSTRAINT IF EXISTS valid_helper_type;
+
+ALTER TABLE helper_usage
+ADD CONSTRAINT valid_helper_type CHECK (
+  helper_type IN (
+    'cbt-distortions',
+    'gentle-prompt',
+    'gratitude',
+    'values-affirmation',
+    'self-compassion',
+    'woop',
+    'best-possible-self',
+    'savoring',
+    'loving-kindness',
+    'morning',                -- Add if Story 2.10 merged
+    'day-planning'            -- NEW for Story 2.11
+  )
+);
+
+-- Refresh column comment to reflect expanded types
+COMMENT ON COLUMN helper_usage.helper_type IS
+  'Type of helper used (cbt-distortions, gentle-prompt, gratitude, values-affirmation, self-compassion, woop, best-possible-self, savoring, loving-kindness, morning, day-planning)';
+
+-- ============================================================================
+-- ROLLBACK INSTRUCTIONS
+-- ============================================================================
+-- To rollback this migration, run:
+--
+-- BEGIN;
+--   ALTER TABLE helper_usage DROP CONSTRAINT IF EXISTS valid_helper_type;
+--   ALTER TABLE helper_usage
+--   ADD CONSTRAINT valid_helper_type CHECK (
+--     helper_type IN (
+--       'cbt-distortions',
+--       'gentle-prompt',
+--       'gratitude',
+--       'values-affirmation',
+--       'self-compassion',
+--       'woop',
+--       'best-possible-self',
+--       'savoring',
+--       'loving-kindness',
+--       'morning'
+--     )
+--   );
+--   COMMENT ON COLUMN helper_usage.helper_type IS
+--     'Type of helper used (cbt-distortions, gentle-prompt, gratitude, values-affirmation, self-compassion, woop, best-possible-self, savoring, loving-kindness, morning)';
+-- COMMIT;
+```
+
+**Migration Timing**: This migration MUST be applied BEFORE any `DayPlanningHelper` instances are created or any telemetry calls to `createHelperUsage()` with `helperType='day-planning'` are made. Otherwise, usage events will be rejected by the database.
+
+**Environment Deployment Order**:
+1. Apply migration to dev environment
+2. Test day-planning helper in dev
+3. Apply migration to production
+4. Deploy code changes that use 'day-planning'
+
 ### Usage Tracking (Telemetry)
 
 **Events tracked:**
@@ -301,6 +388,15 @@ interface DayPlanningUsageMetadata {
 - [ ] Clicking tile opens dialog with DayPlanningContent
 - [ ] Tile info icon triggers HelperInfoDialog (tile-level summary)
 - [ ] Section info icons (7 inline) use HelperInfo component (section-level research)
+
+### Database Schema
+- [ ] Supabase migration created: `supabase/migrations/YYYYMMDD_extend_helper_types_phase3.sql`
+- [ ] Migration adds 'day-planning' to `helper_usage.valid_helper_type` check constraint
+- [ ] Migration includes safety checks (table existence validation)
+- [ ] Migration includes rollback instructions
+- [ ] Migration tested in dev environment before production deployment
+- [ ] Migration applied to dev environment BEFORE any DayPlanningHelper code is deployed
+- [ ] Migration applied to production environment BEFORE merging PR to main
 
 ### Usage Tracking
 - [ ] DayPlanningUsageMetadata type added to `/src/types/helper.ts`
@@ -496,6 +592,15 @@ No new package.json dependencies needed
 ---
 
 ## Implementation Checklist
+
+### Database Phase (MUST BE DONE FIRST)
+- [ ] Create migration file: `supabase/migrations/YYYYMMDD_extend_helper_types_phase3.sql`
+- [ ] Add 'day-planning' (and 'morning' if not yet added) to `helper_usage.valid_helper_type` CHECK constraint
+- [ ] Include safety checks in migration (table existence validation)
+- [ ] Include rollback instructions in migration comments
+- [ ] Apply migration to dev environment
+- [ ] Verify migration applied successfully: `SELECT constraint_name, check_clause FROM information_schema.check_constraints WHERE constraint_name = 'valid_helper_type';`
+- [ ] Test that telemetry with 'day-planning' no longer fails in dev
 
 ### Setup Phase
 - [ ] Create DayPlanningHelper.tsx with DayPlanningContent + DayPlanningHelper exports
