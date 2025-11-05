@@ -115,13 +115,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Log API key presence (not the actual key)
+    console.log('[AI Answer] OpenAI API key present:', !!process.env.OPENAI_API_KEY);
+    console.log('[AI Answer] OpenAI API key prefix:', process.env.OPENAI_API_KEY?.substring(0, 7));
+
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-      timeout: 10000, // 10 seconds - fail fast for better UX
-      maxRetries: 0, // No retries - return 408 immediately on timeout
+      timeout: 25000, // 25 seconds - balance between user experience and serverless limits
+      maxRetries: 1, // Single retry for transient network issues
     });
 
-    // 5. Generate AI answer with 10s timeout
+    // 5. Generate AI answer
+    console.log('[AI Answer] Calling OpenAI API...');
+    const startTime = Date.now();
+
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini', // Cost-efficient model
@@ -138,6 +145,9 @@ export async function POST(request: NextRequest) {
         temperature: 0.7,
         max_tokens: 1000,
       });
+
+      const duration = Date.now() - startTime;
+      console.log(`[AI Answer] OpenAI API call completed in ${duration}ms`);
 
       const answer = completion.choices[0]?.message?.content || '';
       const tokensUsed = completion.usage?.total_tokens || 0;
