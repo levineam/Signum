@@ -52,7 +52,7 @@ export function AskAIButton({ taskId, taskText, onAnswerCreated }: AskAIButtonPr
       const data = await response.json();
       setState('success');
 
-      // Log answer to console for testing (Story 1.9.4 will create actual note)
+      // Log for debugging
       console.log('[Ask AI] Answer received:', {
         answer: data.answer,
         tokensUsed: data.tokensUsed,
@@ -60,10 +60,16 @@ export function AskAIButton({ taskId, taskText, onAnswerCreated }: AskAIButtonPr
       });
 
       if (data.noteId) {
+        // Notify parent component (which can navigate or refresh)
         onAnswerCreated?.(data.noteId);
+        toast.success('AI answer created! Opening note...', {
+          duration: 2000
+        });
+      } else if (data.warning) {
+        toast.warning(data.warning);
+      } else {
+        toast.success('AI answer generated!');
       }
-
-      toast.success('AI answer created! (Check console for now)');
 
       // Reset to idle after 2 seconds
       setTimeout(() => setState('idle'), 2000);

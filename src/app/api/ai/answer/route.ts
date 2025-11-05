@@ -142,14 +142,44 @@ export async function POST(request: NextRequest) {
       const answer = completion.choices[0]?.message?.content || '';
       const tokensUsed = completion.usage?.total_tokens || 0;
 
-      // 6. Create note (Story 1.9.4 will handle this)
-      // For now, return placeholder noteId
-      const noteId = 'placeholder'; // Will be replaced in Story 1.9.4
+      // 6. Create note with AI-generated answer (Story 1.9.4)
+      const { data: note, error: noteError } = await supabase
+        .from('notes')
+        .insert({
+          user_id: user.id,
+          title: taskText.length > 100 ? taskText.substring(0, 97) + '...' : taskText,
+          content: answer,
+          note_type: 'custom',
+          is_pinned: false,
+          metadata: {
+            sourceType: 'ai-answer',
+            taskId,
+            taskText,
+            tokensUsed,
+            model: 'gpt-4o-mini',
+            generatedAt: new Date().toISOString()
+          }
+        })
+        .select('id')
+        .single();
+
+      if (noteError) {
+        console.error('[AI Answer] Failed to create note:', noteError);
+        // Don't fail the request - we got the answer, just couldn't save it
+        return NextResponse.json({
+          answer,
+          taskId,
+          noteId: null,
+          tokensUsed,
+          warning: 'Answer generated but failed to save as note'
+        });
+      }
 
       // 7. Log usage for cost tracking
       console.log('[AI Answer] Request completed', {
         userId: user.id,
         taskId,
+        noteId: note.id,
         tokensUsed,
         answerLength: answer.length,
         timestamp: new Date().toISOString()
@@ -158,7 +188,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         answer,
         taskId,
-        noteId,
+        noteId: note.id,
         tokensUsed
       });
 

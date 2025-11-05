@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Check, X, Edit2, Calendar, Repeat, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -44,6 +45,7 @@ export function TaskCard({
   compact = true,
 }: TaskCardProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const router = useRouter();
 
   const handleAccept = async () => {
     setIsProcessing(true);
@@ -173,7 +175,8 @@ export function TaskCard({
                 taskId={taskId}
                 taskText={title}
                 onAnswerCreated={(noteId) => {
-                  console.log('AI answer created:', noteId);
+                  // Navigate to the newly created note
+                  router.push(`/notes/${noteId}`);
                 }}
               />
             )}
@@ -239,7 +242,8 @@ export function TaskCard({
                 taskId={taskId}
                 taskText={title}
                 onAnswerCreated={(noteId) => {
-                  console.log('AI answer created:', noteId);
+                  // Navigate to the newly created note
+                  router.push(`/notes/${noteId}`);
                 }}
               />
             )}
