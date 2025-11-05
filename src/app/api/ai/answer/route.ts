@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-// Node.js runtime for OpenAI SDK compatibility
-export const runtime = 'nodejs';
+// Edge runtime for longer timeout (25s+) vs Node.js runtime (10s on Hobby tier)
+export const runtime = 'edge';
 
 const RESEARCH_ANSWER_SYSTEM_PROMPT = `You are a research assistant helping users answer questions from their personal journals.
 
