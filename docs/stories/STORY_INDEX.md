@@ -104,7 +104,7 @@ See `docs/stories/completed/` for:
 | 2.4.5 | Ontology Expandable Rows | Completed (PR #49) | - |
 | 2.4.6 | Production Security Hardening & Logging | **✅ COMPLETE** | **Launch Blocker Resolved** |
 | 2.5 | Voice Transcription | Completed (PRs #69, #72, #74) | - |
-| **2.10v2** | **User-Facing Security & Transparency (Notion Model)** | **📋 PLANNED** | **P1 (High - User Trust)** |
+| 2.10v2 | User-Facing Security & Transparency (Notion Model) | ⏸️ DEFERRED | P3 (Post-Launch) |
 
 **Story 2.4.6 Details:**
 - **GitHub Issue:** [#118](https://github.com/levineam/Signum/issues/118) (Closed)
@@ -121,11 +121,12 @@ See `docs/stories/completed/` for:
   - Created automated verification infrastructure
   - Documented security baseline
 
-**Story 2.10v2 Details (NEW - Notion Model Security):**
+**Story 2.10v2 Details (DEFERRED - Notion Model Security):**
 - **GitHub Issue:** [#110](https://github.com/levineam/Signum/issues/110) (Pivoted from E2E encryption)
 - **Purpose:** User-facing security features (audit logs, transparency, data export, support consent)
-- **Priority:** P1 (High - User Trust)
-- **Estimated Effort:** 2-3 weeks
+- **Priority:** P3 (Post-Launch - Defer until users request it)
+- **Status:** ⏸️ DEFERRED - Premature optimization before having users
+- **Estimated Effort:** 2-3 weeks (when needed)
 - **Location:** `docs/stories/story-2.10v2-user-facing-security.md`
 - **Prerequisites:** Story 2.4.6 ✅ Complete
 - **Strategic Pivot:** Abandoned E2E encryption (Story 2.10) in favor of Notion's transparency model

@@ -1,7 +1,7 @@
 # Story 2.10v2: User-Facing Security & Transparency (Notion Model)
 
-**Status:** 📋 PLANNED
-**Priority:** P1 (High - User Trust)
+**Status:** ⏸️ DEFERRED (Post-Launch)
+**Priority:** P3 (Nice-to-Have - Defer until users request it)
 **Created:** 2025-11-04
 **GitHub Issue:** [#110](https://github.com/levineam/Signum/issues/110) (Pivoted from E2E encryption)
 **Prerequisites:**
