@@ -138,7 +138,6 @@ jobs:
         run: npm run test:e2e:smoke
         env:
           CI: true
-          PLAYWRIGHT_BASE_URL: http://localhost:3001
           # Mock OpenAI API in CI
           OPENAI_MOCK: "1"
           # Add other env vars as needed
@@ -193,7 +192,6 @@ jobs:
         run: npm run test:e2e -- --project=chromium
         env:
           CI: true
-          PLAYWRIGHT_BASE_URL: http://localhost:3001
           OPENAI_MOCK: "1"
 
       - name: Upload test artifacts on failure
@@ -253,7 +251,6 @@ jobs:
           echo "Tests are stable and non-flaky."
         env:
           CI: true
-          PLAYWRIGHT_BASE_URL: http://localhost:3001
           OPENAI_MOCK: "1"
 
       - name: Upload failure artifacts

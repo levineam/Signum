@@ -32,4 +32,11 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
   ],
+  // Auto-start Next.js server before tests
+  webServer: {
+    command: 'npm run build && npm run start',
+    url: baseURL,
+    timeout: 120 * 1000,
+    reuseExistingServer: !process.env.CI,
+  },
 })
