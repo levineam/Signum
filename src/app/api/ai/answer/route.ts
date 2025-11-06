@@ -115,10 +115,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log API key presence (not the actual key)
-    console.log('[AI Answer] OpenAI API key present:', !!process.env.OPENAI_API_KEY);
-    console.log('[AI Answer] OpenAI API key prefix:', process.env.OPENAI_API_KEY?.substring(0, 7));
-
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
       timeout: 20000, // 20 seconds - stay within edge function 30s limit with overhead
