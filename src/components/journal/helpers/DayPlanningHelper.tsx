@@ -146,7 +146,7 @@ export function DayPlanningContent({ entryId, userId, onInsert }: DayPlanningHel
     }
 
     if (fields.enjoyableElement.trim()) {
-      lines.push(`Enjoyable: ${escapeHtml(fields.enjoyableElement.trim())}`)
+      lines.push(`Indulgence: ${escapeHtml(fields.enjoyableElement.trim())}`)
     }
 
     if (fields.obstaclePlan.trim()) {
@@ -154,7 +154,7 @@ export function DayPlanningContent({ entryId, userId, onInsert }: DayPlanningHel
     }
 
     if (fields.futureVision.trim()) {
-      lines.push(`Future: ${escapeHtml(fields.futureVision.trim())}`)
+      lines.push(`Vision: ${escapeHtml(fields.futureVision.trim())}`)
     }
 
     // Join lines with <br> tags for line breaks
