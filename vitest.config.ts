@@ -6,13 +6,14 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     setupFiles: [],
-    // Exclude Playwright E2E tests (they use .spec.ts)
-    // Only run unit tests (they use .test.ts)
+    // Exclude ALL files in tests/ directory (those are Playwright E2E tests)
+    // Only run unit tests in src/ directory
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: [
       'node_modules/**',
       '.next/**',
-      'tests/**/*.spec.ts', // Playwright E2E tests
-      'test-hyperlink-workflow.spec.js', // Playwright E2E test
+      'tests/**', // ALL Playwright E2E tests are in tests/
+      '*.spec.js', // Root-level Playwright tests
     ],
   },
   resolve: {

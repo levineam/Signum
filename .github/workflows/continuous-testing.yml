@@ -67,6 +67,10 @@ jobs:
 
       - name: Run unit tests
         run: npm run test:unit
+        env:
+          # Mock Supabase credentials for tests that need them
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
 
       - name: Upload coverage (if available)
         if: always()
