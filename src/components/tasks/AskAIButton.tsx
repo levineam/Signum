@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Sparkles, Loader2, Check, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ButtonState = 'idle' | 'loading' | 'success' | 'error';
 
@@ -20,8 +21,14 @@ interface AskAIButtonProps {
 
 export function AskAIButton({ taskId, taskText, onAnswerCreated }: AskAIButtonProps) {
   const [state, setState] = useState<ButtonState>('idle');
+  const { session } = useAuth();
 
   const handleClick = async () => {
+    if (!session?.access_token) {
+      toast.error('Please sign in to use AI features');
+      return;
+    }
+
     setState('loading');
 
     try {
@@ -29,6 +36,7 @@ export function AskAIButton({ taskId, taskText, onAnswerCreated }: AskAIButtonPr
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ taskId, taskText }),
       });
@@ -44,11 +52,24 @@ export function AskAIButton({ taskId, taskText, onAnswerCreated }: AskAIButtonPr
       const data = await response.json();
       setState('success');
 
-      if (data.noteId) {
-        onAnswerCreated?.(data.noteId);
-      }
+      // Log for debugging
+      console.log('[Ask AI] Answer received:', {
+        answer: data.answer,
+        tokensUsed: data.tokensUsed,
+        noteId: data.noteId
+      });
 
-      toast.success('AI answer created');
+      if (data.noteId) {
+        // Notify parent component (which can navigate or refresh)
+        onAnswerCreated?.(data.noteId);
+        toast.success('AI answer created! Opening note...', {
+          duration: 2000
+        });
+      } else if (data.warning) {
+        toast.warning(data.warning);
+      } else {
+        toast.success('AI answer generated!');
+      }
 
       // Reset to idle after 2 seconds
       setTimeout(() => setState('idle'), 2000);
