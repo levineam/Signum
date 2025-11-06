@@ -147,7 +147,29 @@ jobs:
             ${{ runner.os }}-playwright-
 
       - name: Run smoke tests
-        run: npm run test:e2e:smoke || echo "No smoke tests found - this is expected if no tests are tagged with @smoke"
+        id: smoke-tests
+        run: |
+          set +e  # Don't exit on error
+          npm run test:e2e:smoke
+          EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+
+          # Exit code 0 = tests passed
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✓ Smoke tests passed"
+            exit 0
+          fi
+
+          # Check if failure was due to "no tests found"
+          # Playwright returns exit code 1 when no tests match the filter
+          if npm run test:e2e:smoke 2>&1 | grep -q "no tests found"; then
+            echo "ℹ No smoke tests found - this is expected if no tests are tagged with @smoke"
+            exit 0
+          fi
+
+          # Otherwise, it's a real test failure
+          echo "✗ Smoke tests failed with exit code $EXIT_CODE"
+          exit $EXIT_CODE
         env:
           CI: true
           # Mock OpenAI API in CI
