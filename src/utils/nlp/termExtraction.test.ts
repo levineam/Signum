@@ -51,7 +51,7 @@ describe('extractTerms', () => {
     expect(createTerms.length).toBeGreaterThanOrEqual(1);
   });
 
-  // TODO: Fix stemming - expects 'appl' but stemmer might produce different result
+  // TODO: Fix stemming - expects 'appl' but stemmer produces different result
   it.skip('should count term frequencies correctly', () => {
     const text = 'apple banana apple cherry apple';
     const terms = extractTerms(text);
