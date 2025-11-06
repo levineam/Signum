@@ -102,18 +102,22 @@ $$;
 -- If it doesn't exist, this will create a placeholder (can be dropped later if not needed)
 -- If it does exist, this will add the missing search_path
 DO $$
+DECLARE
+  v_func_signature TEXT;
 BEGIN
-  -- Check if function exists
-  IF EXISTS (
-    SELECT 1 FROM pg_proc p
-    JOIN pg_namespace n ON p.pronamespace = n.oid
-    WHERE n.nspname = 'public'
-    AND p.proname = 'create_ontology_update_notification'
-  ) THEN
-    -- Function exists but we don't know its signature from migrations
-    -- We'll use ALTER FUNCTION to set search_path on the existing function
-    EXECUTE 'ALTER FUNCTION public.create_ontology_update_notification SET search_path = public';
-    RAISE NOTICE 'Fixed search_path for existing create_ontology_update_notification function';
+  -- Check if function exists and get its full signature
+  SELECT pg_get_function_identity_arguments(p.oid)
+  INTO v_func_signature
+  FROM pg_proc p
+  JOIN pg_namespace n ON p.pronamespace = n.oid
+  WHERE n.nspname = 'public'
+  AND p.proname = 'create_ontology_update_notification'
+  LIMIT 1;
+
+  -- If function exists, alter it with proper signature
+  IF v_func_signature IS NOT NULL THEN
+    EXECUTE format('ALTER FUNCTION public.create_ontology_update_notification(%s) SET search_path = public', v_func_signature);
+    RAISE NOTICE 'Fixed search_path for existing create_ontology_update_notification function with signature: %', v_func_signature;
   ELSE
     RAISE NOTICE 'Function create_ontology_update_notification does not exist - skipping';
   END IF;
