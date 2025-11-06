@@ -124,58 +124,42 @@ export function DayPlanningContent({ entryId, userId, onInsert }: DayPlanningHel
     return timePatterns.some(pattern => pattern.test(text))
   }
 
-  // Light-touch formatting: capitalize first letter and ensure period at end
-  const formatSentence = (text: string): string => {
-    const trimmed = text.trim()
-    if (!trimmed) return trimmed
-
-    // Capitalize first letter
-    const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
-
-    // Add period if no punctuation at end
-    if (!/[.!?]$/.test(capitalized)) {
-      return capitalized + '.'
-    }
-
-    return capitalized
-  }
-
-  // Format day planning as natural prose - just combine user inputs with light formatting
+  // Format day planning with section labels and line breaks
   const formatDayPlanningPlan = (): string => {
-    const sentences: string[] = []
+    const lines: string[] = []
 
-    // Just combine all filled fields with capitalize + period
+    // Add each field with its label on a separate line
     if (fields.brainDump.trim()) {
-      sentences.push(escapeHtml(formatSentence(fields.brainDump)))
+      lines.push(`Brain Dump: ${escapeHtml(fields.brainDump.trim())}`)
     }
 
     if (fields.bigThing.trim()) {
-      sentences.push(escapeHtml(formatSentence(fields.bigThing)))
+      lines.push(`Big Thing: ${escapeHtml(fields.bigThing.trim())}`)
     }
 
     if (fields.firstStep.trim()) {
-      sentences.push(escapeHtml(formatSentence(fields.firstStep)))
+      lines.push(`First Step: ${escapeHtml(fields.firstStep.trim())}`)
     }
 
     if (fields.timeCommitment.trim()) {
-      sentences.push(escapeHtml(formatSentence(fields.timeCommitment)))
+      lines.push(`Time: ${escapeHtml(fields.timeCommitment.trim())}`)
     }
 
     if (fields.enjoyableElement.trim()) {
-      sentences.push(escapeHtml(formatSentence(fields.enjoyableElement)))
+      lines.push(`Enjoyable: ${escapeHtml(fields.enjoyableElement.trim())}`)
     }
 
     if (fields.obstaclePlan.trim()) {
-      sentences.push(escapeHtml(formatSentence(fields.obstaclePlan)))
+      lines.push(`Obstacles: ${escapeHtml(fields.obstaclePlan.trim())}`)
     }
 
     if (fields.futureVision.trim()) {
-      sentences.push(escapeHtml(formatSentence(fields.futureVision)))
+      lines.push(`Future: ${escapeHtml(fields.futureVision.trim())}`)
     }
 
-    // Join all sentences into one paragraph with space between
-    if (sentences.length > 0) {
-      return `<p>${sentences.join(' ')}</p><p><br></p>`
+    // Join lines with <br> tags for line breaks
+    if (lines.length > 0) {
+      return `<p>${lines.join('<br>')}</p><p><br></p>`
     }
 
     return ''
