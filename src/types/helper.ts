@@ -23,6 +23,8 @@ export type HelperType =
   | 'best-possible-self'  // Best Possible Self Helper (Story 2.5.9)
   | 'savoring'            // Savoring Helper (Story 2.5.10)
   | 'loving-kindness'     // Loving-Kindness Meditation (Story 2.5.12)
+  | 'morning'             // Morning Daily Practice (Story 2.10)
+  | 'day-planning'        // Day Planning Helper (Story 2.11)
 
 // ============================================================================
 // Helper Event Types (Discriminated Union)
@@ -175,6 +177,18 @@ export interface HelperUsageMetadata {
   lkmRecipient?: 'Self' | 'Loved One' | 'Neutral Person' | 'Difficult Person'
   lkmPersonNamed?: boolean
   lkmNameLength?: number
+
+  // ===================================
+  // Story 2.11 — Day Planning helper
+  // ===================================
+  // Character counts for all 7 planning fields (ordered array)
+  dayPlanningFieldCharCounts?: number[]
+  // Number of fields completed (1-7)
+  fieldCompletionCount?: number
+  // If-then format detected in obstacle planning (Section 6)
+  // hasIfThenFormat?: boolean  // Already defined above for WOOP
+  // Time specification detected in time commitment (Section 4)
+  hasTimeSpecification?: boolean
 }
 
 /**
@@ -306,6 +320,8 @@ export function isHelperDismissedEvent(event: HelperEvent): event is HelperDismi
  * Issue #18: Removed gentle-prompt - only in-entry helpers.
  */
 export const HELPER_TYPES: HelperType[] = [
+  'day-planning',        // Story 2.11 - First position for high visibility
+  'morning',             // Story 2.10 - Morning Daily Practice
   'cbt-distortions',
   'gratitude',
   'values-affirmation',
@@ -321,6 +337,8 @@ export const HELPER_TYPES: HelperType[] = [
  * Issue #18: Simplified to only in-entry helpers.
  */
 export const HELPER_TYPE_LABELS: Record<HelperType, string> = {
+  'day-planning': 'Day Planning Helper',           // Story 2.11
+  'morning': 'Morning Daily Practice',             // Story 2.10
   'cbt-distortions': 'CBT Cognitive Distortions',
   'gratitude': 'Three Good Things',
   'values-affirmation': 'Values Affirmation',
