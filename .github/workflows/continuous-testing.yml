@@ -162,7 +162,7 @@ jobs:
 
           # Check if failure was due to "no tests found"
           # Playwright returns exit code 1 when no tests match the filter
-          if npm run test:e2e:smoke 2>&1 | grep -q "no tests found"; then
+          if npm run test:e2e:smoke 2>&1 | grep -qi "no tests found"; then
             echo "ℹ No smoke tests found - this is expected if no tests are tagged with @smoke"
             exit 0
           fi
