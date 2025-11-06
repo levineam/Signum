@@ -19,6 +19,8 @@ const eslintConfig = [
       "build/**",
       "next-env.d.ts",
       ".bmad-core/**",
+      "scripts/**/*.js",
+      "*.js", // Ignore root-level JS files (migration scripts, etc.)
     ],
   },
 ];
