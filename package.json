@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "bmad-method install -f -i codex 2>/dev/null || echo 'BMAD setup skipped'",
+    "postinstall": "[ -z \"$VERCEL\" ] && bmad-method install -f -i codex 2>/dev/null || echo 'BMAD setup skipped (CI environment detected)'",
     "bmad:refresh": "bmad-method install -f -i codex",
     "bmad:list": "bmad-method list:agents",
     "bmad:validate": "bmad-method status",
