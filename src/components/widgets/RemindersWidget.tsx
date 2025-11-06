@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, ChevronDown, CheckCircle, Clock, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,21 +13,21 @@ interface RemindersWidgetProps {
 }
 
 export function RemindersWidget({ className }: RemindersWidgetProps) {
-  const [isExpanded, setIsExpanded] = useState(() => {
-    // Load collapse state from localStorage
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('reminders-widget-expanded');
-      return saved === 'true';
+  // Initialize to false to match server render, avoiding hydration mismatch
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Sync from localStorage after mount
+  useEffect(() => {
+    const saved = localStorage.getItem('reminders-widget-expanded');
+    if (saved === 'true') {
+      setIsExpanded(true);
     }
-    return false; // Default: collapsed
-  });
+  }, []);
 
   const toggleExpanded = () => {
     const newState = !isExpanded;
     setIsExpanded(newState);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('reminders-widget-expanded', String(newState));
-    }
+    localStorage.setItem('reminders-widget-expanded', String(newState));
   };
 
   const pendingCount = mockReminders.filter((r) => r.status === 'pending').length;

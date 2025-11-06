@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckSquare, ChevronDown, CheckCircle, Pencil, Trash2, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,21 +13,21 @@ interface TasksWidgetProps {
 }
 
 export function TasksWidget({ className }: TasksWidgetProps) {
-  const [isExpanded, setIsExpanded] = useState(() => {
-    // Load collapse state from localStorage
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('tasks-widget-expanded');
-      return saved === 'true';
+  // Initialize to false to match server render, avoiding hydration mismatch
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Sync from localStorage after mount
+  useEffect(() => {
+    const saved = localStorage.getItem('tasks-widget-expanded');
+    if (saved === 'true') {
+      setIsExpanded(true);
     }
-    return false; // Default: collapsed
-  });
+  }, []);
 
   const toggleExpanded = () => {
     const newState = !isExpanded;
     setIsExpanded(newState);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('tasks-widget-expanded', String(newState));
-    }
+    localStorage.setItem('tasks-widget-expanded', String(newState));
   };
 
   const pendingCount = mockTasks.filter((t) => t.status === 'pending').length;
