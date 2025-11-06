@@ -235,36 +235,54 @@ CREATE POLICY "Users can CRUD their own embeddings"
 -- ============================================================================
 -- TABLE 9: ontology_updates (3 policies)
 -- ============================================================================
+-- Note: This table may not exist in all environments (not in base migrations)
+-- Only apply policy changes if the table exists
 
-DROP POLICY IF EXISTS "Users can view their own ontology updates" ON public.ontology_updates;
-DROP POLICY IF EXISTS "Users can update their own ontology updates" ON public.ontology_updates;
-DROP POLICY IF EXISTS "System can insert ontology updates" ON public.ontology_updates;
+DO $$
+BEGIN
+  -- Check if ontology_updates table exists
+  IF EXISTS (
+    SELECT 1 FROM pg_tables
+    WHERE schemaname = 'public'
+    AND tablename = 'ontology_updates'
+  ) THEN
+    -- Drop existing policies
+    DROP POLICY IF EXISTS "Users can view their own ontology updates" ON public.ontology_updates;
+    DROP POLICY IF EXISTS "Users can update their own ontology updates" ON public.ontology_updates;
+    DROP POLICY IF EXISTS "System can insert ontology updates" ON public.ontology_updates;
 
-CREATE POLICY "Users can view their own ontology updates"
-  ON public.ontology_updates
-  FOR SELECT
-  USING ((SELECT auth.uid()) = user_id);
+    -- Recreate with optimized auth.uid()
+    EXECUTE 'CREATE POLICY "Users can view their own ontology updates"
+      ON public.ontology_updates
+      FOR SELECT
+      USING ((SELECT auth.uid()) = user_id)';
 
-CREATE POLICY "Users can update their own ontology updates"
-  ON public.ontology_updates
-  FOR UPDATE
-  USING ((SELECT auth.uid()) = user_id)
-  WITH CHECK ((SELECT auth.uid()) = user_id);
+    EXECUTE 'CREATE POLICY "Users can update their own ontology updates"
+      ON public.ontology_updates
+      FOR UPDATE
+      USING ((SELECT auth.uid()) = user_id)
+      WITH CHECK ((SELECT auth.uid()) = user_id)';
 
--- System policy for service role to insert updates
-CREATE POLICY "System can insert ontology updates"
-  ON public.ontology_updates
-  FOR INSERT
-  TO service_role
-  WITH CHECK (true);
+    -- System policy for service role to insert updates
+    EXECUTE 'CREATE POLICY "System can insert ontology updates"
+      ON public.ontology_updates
+      FOR INSERT
+      TO service_role
+      WITH CHECK (true)';
 
--- Add general service role policy
-CREATE POLICY "Service role has full access to ontology updates"
-  ON public.ontology_updates
-  FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+    -- Add general service role policy
+    EXECUTE 'CREATE POLICY "Service role has full access to ontology updates"
+      ON public.ontology_updates
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true)';
+
+    RAISE NOTICE 'Updated RLS policies for ontology_updates table';
+  ELSE
+    RAISE NOTICE 'Table ontology_updates does not exist - skipping policy updates';
+  END IF;
+END $$;
 
 -- ============================================================================
 -- Re-analyze tables for query planner statistics
@@ -278,7 +296,19 @@ ANALYZE public.tasks;
 ANALYZE public.reminders;
 ANALYZE public.meters_daily;
 ANALYZE public.paragraph_embeddings;
-ANALYZE public.ontology_updates;
+
+-- Only analyze ontology_updates if it exists
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_tables
+    WHERE schemaname = 'public'
+    AND tablename = 'ontology_updates'
+  ) THEN
+    EXECUTE 'ANALYZE public.ontology_updates';
+    RAISE NOTICE 'Analyzed ontology_updates table';
+  END IF;
+END $$;
 
 -- ============================================================================
 -- Verification Queries

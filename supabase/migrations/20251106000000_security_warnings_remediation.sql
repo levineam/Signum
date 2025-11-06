@@ -141,47 +141,21 @@ GRANT EXECUTE ON FUNCTION public.increment_entity_centrality TO authenticated;
 -- Step 1: Create extensions schema if it doesn't exist
 CREATE SCHEMA IF NOT EXISTS extensions;
 
--- Step 2: Drop extension from public schema (CASCADE to handle dependencies)
--- WARNING: This will temporarily break vector-dependent objects (paragraph_embeddings table)
-DROP EXTENSION IF EXISTS vector CASCADE;
+-- Step 2: Move extension to extensions schema WITHOUT dropping data
+-- This preserves all existing embeddings and dependent objects
+ALTER EXTENSION vector SET SCHEMA extensions;
 
--- Step 3: Recreate extension in extensions schema
-CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions;
-
--- Step 4: Recreate paragraph_embeddings table (was dropped by CASCADE)
--- This is a replica of the table from 20251020000000_content_intelligence_schema.sql
-CREATE TABLE IF NOT EXISTS paragraph_embeddings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  content_hash TEXT NOT NULL,
-  embedding extensions.vector(1536),  -- Note: Now uses extensions.vector type
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-  -- Unique constraint for cache lookups
-  CONSTRAINT unique_user_content_hash UNIQUE(user_id, content_hash)
-);
-
--- Step 5: Recreate indexes on paragraph_embeddings
--- IVFFlat index for vector similarity search (cosine distance)
-CREATE INDEX IF NOT EXISTS idx_paragraph_embeddings_vector
-  ON paragraph_embeddings
-  USING ivfflat (embedding extensions.vector_cosine_ops)  -- Note: Now uses extensions schema ops
-  WITH (lists = 100);
-
--- Index for cache lookups by hash
-CREATE INDEX IF NOT EXISTS idx_paragraph_embeddings_hash
-  ON paragraph_embeddings(user_id, content_hash);
-
--- Step 6: Recreate RLS policies on paragraph_embeddings
-ALTER TABLE paragraph_embeddings ENABLE ROW LEVEL SECURITY;
-
+-- Step 3: Update RLS policy on paragraph_embeddings to use optimized auth.uid()
+-- (This also ensures the policy exists after the schema move)
+DROP POLICY IF EXISTS "Users can CRUD their own embeddings" ON paragraph_embeddings;
 CREATE POLICY "Users can CRUD their own embeddings"
   ON paragraph_embeddings
   FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);
 
--- Step 7: Add service role policy (best practice from Story 2.4.6)
+-- Step 4: Ensure service role policy exists (best practice from Story 2.4.6)
+DROP POLICY IF EXISTS "Service role has full access to embeddings" ON paragraph_embeddings;
 CREATE POLICY "Service role has full access to embeddings"
   ON paragraph_embeddings
   FOR ALL
@@ -233,12 +207,15 @@ COMMENT ON TABLE paragraph_embeddings IS
 -- ============================================================================
 -- If this migration causes issues, run the following to rollback:
 --
--- -- Rollback vector extension move
--- DROP EXTENSION IF EXISTS vector CASCADE;
--- CREATE EXTENSION IF NOT EXISTS vector;  -- Back to public schema
+-- -- Rollback vector extension move (preserves data)
+-- ALTER EXTENSION vector SET SCHEMA public;
 --
--- -- Recreate paragraph_embeddings with public.vector
--- CREATE TABLE paragraph_embeddings (...);  -- Use original definition
+-- -- Rollback RLS policy changes on paragraph_embeddings
+-- DROP POLICY IF EXISTS "Users can CRUD their own embeddings" ON paragraph_embeddings;
+-- CREATE POLICY "Users can CRUD their own embeddings"
+--   ON paragraph_embeddings FOR ALL
+--   USING (auth.uid() = user_id)
+--   WITH CHECK (auth.uid() = user_id);
 --
 -- -- Rollback function changes (revert to previous definitions)
 -- -- Use definitions from previous migrations
