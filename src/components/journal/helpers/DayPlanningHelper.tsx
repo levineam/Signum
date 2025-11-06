@@ -124,176 +124,53 @@ export function DayPlanningContent({ entryId, userId, onInsert }: DayPlanningHel
     return timePatterns.some(pattern => pattern.test(text))
   }
 
-  // Helper function to lowercase first character (preserve I, I'm, etc.)
-  const lowercaseFirst = (text: string): string => {
-    if (!text) return text
-    // Preserve first-person pronouns (supports both straight and curly quotes)
-    if (/^I(['']m|['']ve|['']ll|['']d)?\s/.test(text)) {
-      return text
-    }
-    return text.charAt(0).toLowerCase() + text.slice(1)
-  }
-
-  // Helper function to normalize sentence (remove trailing punctuation)
-  const normalizeSentence = (text: string): string => {
+  // Light-touch formatting: capitalize first letter and ensure period at end
+  const formatSentence = (text: string): string => {
     const trimmed = text.trim()
     if (!trimmed) return trimmed
-    return trimmed.replace(/[.!?]+$/, '')
-  }
 
-  // Common English verb stems that likely need infinitive 'to' prefix
-  const commonVerbStems = [
-    'finish', 'complete', 'write', 'create', 'build', 'start', 'begin',
-    'review', 'edit', 'send', 'call', 'email', 'meet', 'plan', 'organize',
-    'prepare', 'practice', 'study', 'read', 'learn', 'teach', 'make',
-    'do', 'get', 'go', 'see', 'find', 'take', 'give', 'work', 'submit'
-  ]
+    // Capitalize first letter
+    const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
 
-  // Check if text starts with a verb that needs 'to' prefix
-  const needsInfinitivePrefix = (text: string): boolean => {
-    const normalized = text.trim().toLowerCase()
-    return commonVerbStems.some(verb => normalized.startsWith(verb + ' ') || normalized === verb)
-  }
-
-  // Check if text already has a subject pronoun
-  const hasSubject = (text: string): boolean => {
-    const normalized = text.trim().toLowerCase()
-    const subjectPronouns = ['i ', "i'll ", "i will ", 'my ', 'me ']
-    return subjectPronouns.some(pronoun => normalized.startsWith(pronoun))
-  }
-
-  // Check if text starts with 'if' conditional
-  const startsWithIf = (text: string): boolean => {
-    return text.trim().toLowerCase().startsWith('if ')
-  }
-
-  // Check if text is just adjectives (for emotion descriptions)
-  const isEmotionAdjectives = (text: string): boolean => {
-    const normalized = text.trim().toLowerCase()
-    const emotionWords = [
-      'relieved', 'accomplished', 'proud', 'satisfied', 'happy', 'joyful',
-      'confident', 'energized', 'fulfilled', 'grateful', 'calm', 'peaceful',
-      'excited', 'motivated', 'empowered', 'focused', 'clear', 'ready'
-    ]
-    // Check if it's a single word or "word and word" pattern
-    const words = normalized.split(/\s+(?:and\s+)?/)
-    return words.every(word => emotionWords.includes(word.replace(/[,]/g, '')))
-  }
-
-  // Convert verb to gerund form (basic patterns)
-  const toGerund = (text: string): string => {
-    const normalized = text.trim()
-    const words = normalized.split(' ')
-    const firstWord = words[0].toLowerCase()
-
-    // Common irregular gerunds
-    const irregularGerunds: Record<string, string> = {
-      'make': 'making',
-      'take': 'taking',
-      'give': 'giving',
-      'write': 'writing',
-      'come': 'coming',
-      'have': 'having',
-      'die': 'dying',
-      'lie': 'lying',
-      'tie': 'tying'
+    // Add period if no punctuation at end
+    if (!/[.!?]$/.test(capitalized)) {
+      return capitalized + '.'
     }
 
-    if (irregularGerunds[firstWord]) {
-      words[0] = irregularGerunds[firstWord]
-      return words.join(' ')
-    }
-
-    // Basic gerund rules
-    if (firstWord.endsWith('e') && !firstWord.endsWith('ee')) {
-      words[0] = firstWord.slice(0, -1) + 'ing' // remove 'e' and add 'ing'
-    } else if (firstWord.match(/[^aeiou][aeiou][^aeiouwxy]$/)) {
-      // Double final consonant for CVC pattern (run -> running)
-      words[0] = firstWord + firstWord.slice(-1) + 'ing'
-    } else {
-      words[0] = firstWord + 'ing'
-    }
-
-    return words.join(' ')
+    return capitalized
   }
 
-  // Format day planning as natural prose
+  // Format day planning as natural prose - just combine user inputs with light formatting
   const formatDayPlanningPlan = (): string => {
     const sentences: string[] = []
 
-    // Section 1: Brain Dump (required)
+    // Just combine all filled fields with capitalize + period
     if (fields.brainDump.trim()) {
-      sentences.push(`Things on my mind: ${escapeHtml(normalizeSentence(fields.brainDump))}.`)
+      sentences.push(escapeHtml(formatSentence(fields.brainDump)))
     }
 
-    // Section 2: Big Thing (required)
     if (fields.bigThing.trim()) {
-      const normalized = normalizeSentence(fields.bigThing)
-      const lowercased = lowercaseFirst(normalized)
-
-      // If it starts with a verb, add 'to' prefix for infinitive
-      const formatted = needsInfinitivePrefix(lowercased)
-        ? `to ${lowercased}`
-        : lowercased
-
-      sentences.push(`My priority today is ${escapeHtml(formatted)}.`)
+      sentences.push(escapeHtml(formatSentence(fields.bigThing)))
     }
 
-    // Section 3: First Step (optional)
     if (fields.firstStep.trim()) {
-      const normalized = normalizeSentence(fields.firstStep)
-      const lowercased = lowercaseFirst(normalized)
-
-      // Convert to gerund if it starts with a verb
-      const formatted = needsInfinitivePrefix(lowercased)
-        ? toGerund(lowercased)
-        : lowercased
-
-      sentences.push(`I'll start by ${escapeHtml(formatted)}.`)
+      sentences.push(escapeHtml(formatSentence(fields.firstStep)))
     }
 
-    // Section 4: Time Commitment (optional)
     if (fields.timeCommitment.trim()) {
-      sentences.push(`I'm scheduling ${escapeHtml(lowercaseFirst(normalizeSentence(fields.timeCommitment)))}.`)
+      sentences.push(escapeHtml(formatSentence(fields.timeCommitment)))
     }
 
-    // Section 5: Enjoyable Element (optional)
     if (fields.enjoyableElement.trim()) {
-      const normalized = normalizeSentence(fields.enjoyableElement)
-      const lowercased = lowercaseFirst(normalized)
-
-      // Add subject pronoun if missing
-      const formatted = hasSubject(lowercased)
-        ? lowercased
-        : `I'll ${lowercased}`
-
-      sentences.push(`To make it easier, ${escapeHtml(formatted)}.`)
+      sentences.push(escapeHtml(formatSentence(fields.enjoyableElement)))
     }
 
-    // Section 6: Obstacle Plan (optional)
     if (fields.obstaclePlan.trim()) {
-      const normalized = normalizeSentence(fields.obstaclePlan)
-      const lowercased = lowercaseFirst(normalized)
-
-      // Avoid redundant 'if' - use direct text if it already starts with 'if'
-      const formatted = startsWithIf(lowercased)
-        ? lowercased
-        : `if obstacles arise, ${lowercased}`
-
-      sentences.push(`${escapeHtml(formatted.charAt(0).toUpperCase() + formatted.slice(1))}.`)
+      sentences.push(escapeHtml(formatSentence(fields.obstaclePlan)))
     }
 
-    // Section 7: Future Vision (optional)
     if (fields.futureVision.trim()) {
-      const normalized = normalizeSentence(fields.futureVision)
-      const lowercased = lowercaseFirst(normalized)
-
-      // Add "I'll feel" for emotion adjectives
-      const formatted = isEmotionAdjectives(lowercased)
-        ? `I'll feel ${lowercased}`
-        : lowercased
-
-      sentences.push(`When I complete this, ${escapeHtml(formatted)}.`)
+      sentences.push(escapeHtml(formatSentence(fields.futureVision)))
     }
 
     // Join all sentences into one paragraph with space between
