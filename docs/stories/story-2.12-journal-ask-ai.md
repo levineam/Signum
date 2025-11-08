@@ -148,16 +148,19 @@ interface AskAIDialogProps {
 - [ ] When user highlights text in journal entry, "Ask AI" button appears in toolbar
 - [ ] "Ask AI" button appears next to "Make Note" button
 - [ ] Button has sparkles icon (✨) and "Ask AI" label
-- [ ] Button only appears when text is selected
+- [ ] Button ONLY appears when text is selected (hidden when no selection)
 - [ ] Button works on mobile, tablet, and desktop
+- [ ] Behavior consistent with "Make Note" button (same visibility rules)
 
 **AC2: Query Refinement Dialog**
 - [ ] Clicking "Ask AI" opens modal dialog
-- [ ] Dialog shows selected text as readonly context (styled box)
-- [ ] Input field is pre-filled with selected text
+- [ ] Dialog shows selected text as readonly context (styled box, max 200 chars preview with "..." if longer)
+- [ ] Input field is pre-filled with selected text (truncated to 500 chars if longer)
+- [ ] If selected text >500 chars, show warning: "Selection truncated to 500 characters. Edit as needed."
 - [ ] User can edit query before submitting
-- [ ] Character limit enforced (500 chars) with counter
-- [ ] "Generate Answer" button disabled when query empty
+- [ ] Character limit enforced (500 chars) with live counter (e.g., "485/500")
+- [ ] Counter turns red when approaching limit (>480 chars)
+- [ ] "Generate Answer" button disabled when query empty or >500 chars
 - [ ] "Cancel" button closes dialog without action
 - [ ] ESC key closes dialog
 
@@ -187,10 +190,42 @@ interface AskAIDialogProps {
 
 **AC6: Error Handling & Edge Cases**
 - [ ] Auth required: Show "Please sign in to use AI features"
-- [ ] Query too long: Show validation error at 500 chars
-- [ ] Selected text empty: Button appears but dialog shows error
-- [ ] Dialog closed during generation: API call cancelled
+- [ ] Query >500 chars: "Generate Answer" button disabled, counter shows red
+- [ ] Selected text >500 chars: Auto-truncate with warning message
+- [ ] Dialog closed during generation: Request completes in background, note created but not opened (acceptable MVP limitation)
 - [ ] Network offline: Show appropriate offline error
+- [ ] Malformed markdown from API: Conversion error caught, fallback to plain text with warning logged
+
+---
+
+## Design Decisions (Codex Review Findings)
+
+**Issue 1: Button Visibility Contradiction (Blocking)**
+- **Finding:** AC1 stated button "only appears when text is selected," but AC6 required "Selected text empty: Button appears but dialog shows error"
+- **Resolution:** Button ONLY appears when text is selected (hidden otherwise)
+- **Rationale:** Consistent with "Make Note" button UX pattern, prevents confusing empty-state interactions
+
+**Issue 2: >500 Character Selections (Major)**
+- **Finding:** No guidance on handling selections longer than 500-character query limit
+- **Resolution:** Auto-truncate to 500 chars with visible warning message
+- **Rationale:** Don't block user flow, but clearly communicate the limitation. User can edit truncated query before submission.
+- **Implementation:** Dialog shows: "Selection truncated to 500 characters. Edit as needed." when `selectedText.length > 500`
+
+**Issue 3: Cancellation During Generation (Minor/Major)**
+- **Finding:** AC6 required "API call cancelled" when dialog closed, but serverless functions typically run to completion
+- **Resolution:** Request completes in background, note created but not opened (acceptable MVP limitation)
+- **Rationale:** Implementing true cancellation would require:
+  - AbortController/AbortSignal on client
+  - Job tracking system on server
+  - Cooperative cancellation in edge runtime
+  - Significantly increases complexity for edge case
+- **Future Enhancement:** If this becomes a real UX issue, can add job tracking and cancellation in Phase 2
+
+**Additional Clarifications:**
+- Selected text preview in dialog capped at 200 chars (prevents dialog from being too tall)
+- Character counter turns red at 480+ chars (clear visual feedback before limit)
+- "Generate Answer" button disabled when query empty OR >500 chars (prevents invalid submissions)
+- Markdown conversion errors fall back to plain text (logged for debugging, user sees content)
 
 ---
 
@@ -206,13 +241,14 @@ SimpleRichEditor
     └── Opens AskAIDialog
 
 AskAIDialog (NEW)
-├── Selected Text Display (readonly)
-├── Query Input Field (editable)
-├── Character Counter
-├── "Generate Answer" Button
+├── Selected Text Display (readonly, max 200 chars preview)
+├── Truncation Warning (if selected text >500 chars)
+├── Query Input Field (editable, max 500 chars)
+├── Character Counter (live, turns red >480 chars)
+├── "Generate Answer" Button (disabled if empty or >500 chars)
 │   └── Calls /api/ai/answer
 │       └── Creates Note
-│           └── Opens NoteViewer
+│           └── Opens NoteViewer (if dialog still open)
 └── "Cancel" Button
 ```
 
@@ -260,6 +296,22 @@ export async function convertMarkdownToHtml(markdown: string): Promise<string> {
 - No changes needed to NoteViewer rendering logic
 - Reuses existing sanitizeHtml() security infrastructure
 - Works immediately with `.prose` styling in globals.css
+
+**Error Handling:**
+```typescript
+export async function convertMarkdownToHtml(markdown: string): Promise<string> {
+  try {
+    const result = await remark()
+      .use(html, { sanitize: false })
+      .process(markdown)
+    return String(result)
+  } catch (error) {
+    console.error('[Markdown Conversion] Failed:', error)
+    // Fallback: return original text wrapped in paragraph
+    return `<p>${markdown}</p>`
+  }
+}
+```
 
 ### System Prompt for Journal Queries
 
@@ -331,41 +383,50 @@ Remember: Feeling overwhelmed is a signal to reassess your boundaries and priori
   - [ ] Verify HTML output passes sanitizeHtml() without stripping content
   - [ ] Test error handling for malformed markdown
 
-- [ ] **Task 3: Create AskAIDialog Component** (AC2, AC3, AC4)
+- [ ] **Task 3: Create AskAIDialog Component** (AC2, AC3, AC4, AC6)
   - [ ] Create `/src/components/journal/AskAIDialog.tsx`
   - [ ] Implement modal with shadcn Dialog component
-  - [ ] Add selected text display (readonly, styled box)
-  - [ ] Add query input field (editable, pre-filled with selected text)
-  - [ ] Add character counter (500 char limit with visual feedback)
+  - [ ] Add selected text display (readonly, styled box, max 200 chars with "...")
+  - [ ] Implement truncation logic: If `selectedText.length > 500`, truncate and show warning
+  - [ ] Add warning message component: "Selection truncated to 500 characters. Edit as needed."
+  - [ ] Add query input field (editable, pre-filled with truncated selected text if >500 chars)
+  - [ ] Add live character counter (e.g., "485/500")
+  - [ ] Character counter turns red when >480 chars
   - [ ] Implement "Generate Answer" button with state management (idle/loading/success/error)
+  - [ ] Button disabled when query empty OR >500 chars
   - [ ] Implement "Cancel" button
   - [ ] Add ESC key handler to close dialog
   - [ ] Integrate API call to `/api/ai/answer`
-  - [ ] Handle success: Open NoteViewer with new note
+  - [ ] Handle success: Open NoteViewer with new note (only if dialog still open)
   - [ ] Handle errors: Show toast notifications
   - [ ] Add loading spinner and "Generating..." text during API call
   - [ ] Disable all inputs during loading
+  - [ ] Document that closing dialog during generation allows background completion (MVP limitation)
 
 - [ ] **Task 4: Modify SimpleRichEditor** (AC1)
   - [ ] Add "Ask AI" button next to "Make Note" button (lines 1123-1143)
   - [ ] Import Sparkles icon from lucide-react
   - [ ] Add dialog state management (isAskAIDialogOpen)
   - [ ] Pass selected text to dialog
-  - [ ] Pass entry ID to dialog (new prop needed)
+  - [ ] Pass entry ID to dialog (new prop needed: add `entryId?: string` to SimpleRichEditorProps)
   - [ ] Handle note created callback (open NoteViewer)
+  - [ ] Ensure button ONLY appears when text is selected (hidden otherwise, same as "Make Note")
   - [ ] Test button visibility on text selection
   - [ ] Test responsive layout (mobile, tablet, desktop)
 
 - [ ] **Task 5: Testing & Edge Cases** (AC6)
   - [ ] Test auth required scenario (not logged in)
-  - [ ] Test query validation (empty, too long)
-  - [ ] Test selected text edge cases (empty, very long)
-  - [ ] Test dialog close during generation
+  - [ ] Test query validation (empty query → button disabled)
+  - [ ] Test query validation (>500 chars → button disabled, counter red)
+  - [ ] Test selected text >500 chars (auto-truncate, warning shown)
+  - [ ] Test selected text edge cases (very short, emoji-heavy, special characters)
+  - [ ] Test dialog close during generation (verify note created in background, not opened)
   - [ ] Test network offline scenario
   - [ ] Test rate limiting (mock 429 response)
   - [ ] Test timeout scenario (mock slow API)
   - [ ] Test markdown rendering in created notes (verify bold, lists, headers work)
   - [ ] Test HTML sanitization (verify no XSS vulnerabilities)
+  - [ ] Test malformed markdown conversion (verify fallback to plain text)
 
 - [ ] **Task 6: PR Preparation** (All AC)
   - [ ] Update CLAUDE.md if needed with new patterns
@@ -549,6 +610,7 @@ const [showAskAI, setShowAskAI] = useState(false)
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
 | 2025-11-08 | 1.0 | Initial story creation | Claude (Sonnet 4.5) |
+| 2025-11-08 | 1.1 | Fixed Codex review findings: AC1/AC6 contradiction, >500 char handling, cancellation behavior | Claude (Sonnet 4.5) |
 
 ---
 
