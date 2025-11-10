@@ -2,8 +2,9 @@
 
 import React, { useRef, useCallback, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Bold, Italic, Underline, Highlighter, List, ListOrdered, Heading1, Heading2, Quote, AlignLeft, AlignCenter, AlignRight, FileText } from 'lucide-react'
+import { Bold, Italic, Underline, Highlighter, List, ListOrdered, Heading1, Heading2, Quote, AlignLeft, AlignCenter, AlignRight, FileText, Sparkles } from 'lucide-react'
 import { VoiceRecordButton } from '@/components/editor/VoiceRecordButton'
+import { AskAIDialog } from '@/components/journal/AskAIDialog'
 
 interface SimpleRichEditorProps {
   value?: string
@@ -15,6 +16,8 @@ interface SimpleRichEditorProps {
   autoFocus?: boolean
   onMakeNote?: (selectedText: string) => void
   onTranscription?: (text: string) => void
+  entryId?: string
+  onNoteCreated?: (noteId: string) => void
 }
 
 export function SimpleRichEditor({
@@ -26,11 +29,14 @@ export function SimpleRichEditor({
   onBlur,
   autoFocus = false,
   onMakeNote,
-  onTranscription
+  onTranscription,
+  entryId,
+  onNoteCreated
 }: SimpleRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const [selectedText, setSelectedText] = useState('')
   const [hasSelection, setHasSelection] = useState(false)
+  const [showAskAI, setShowAskAI] = useState(false)
   const isInternalChangeRef = useRef(false)
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
@@ -1120,25 +1126,44 @@ export function SimpleRichEditor({
           <Quote className="h-4 w-4" />
         </Button>
 
-        {/* Make Note - only show when text is selected and onMakeNote is provided */}
-        {hasSelection && onMakeNote && (
-          <div className="flex items-center border-l pl-2 ml-2" data-make-note-button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onMouseDown={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                handleMakeNoteClick()
-              }}
-              className="h-8 px-2 flex items-center gap-1"
-              type="button"
-              title="Create a note from selected text"
-              data-make-note-button
-            >
-              <FileText className="h-4 w-4" />
-              <span className="text-xs">Make Note</span>
-            </Button>
+        {/* Make Note & Ask AI - only show when text is selected */}
+        {hasSelection && (onMakeNote || entryId) && (
+          <div className="flex items-center gap-2 border-l pl-2 ml-2">
+            {onMakeNote && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleMakeNoteClick()
+                }}
+                className="h-8 px-2 flex items-center gap-1"
+                type="button"
+                title="Create a note from selected text"
+                data-make-note-button
+              >
+                <FileText className="h-4 w-4" />
+                <span className="text-xs">Make Note</span>
+              </Button>
+            )}
+            {entryId && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setShowAskAI(true)
+                }}
+                className="h-8 px-2 flex items-center gap-1 bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 dark:from-purple-900/30 dark:to-blue-900/30 dark:hover:from-purple-800/40 dark:hover:to-blue-800/40"
+                type="button"
+                title="Ask AI about this text"
+              >
+                <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <span className="text-xs font-medium">Ask AI</span>
+              </Button>
+            )}
           </div>
         )}
 
@@ -1147,6 +1172,20 @@ export function SimpleRichEditor({
           <VoiceRecordButton onTranscriptionComplete={handleTranscription} />
         </div>
       </div>
+
+      {/* Ask AI Dialog */}
+      <AskAIDialog
+        isOpen={showAskAI}
+        onClose={() => setShowAskAI(false)}
+        selectedText={selectedText}
+        entryId={entryId}
+        onAnswerCreated={(noteId) => {
+          setShowAskAI(false)
+          setHasSelection(false)
+          setSelectedText('')
+          onNoteCreated?.(noteId)
+        }}
+      />
 
     </div>
   )

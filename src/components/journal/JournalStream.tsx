@@ -845,6 +845,16 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     }
   }
 
+  const handleAskAIAnswerCreated = (noteId: string) => {
+    if (!noteId) {
+      console.warn('[Ask AI] Missing noteId from dialog callback')
+      return
+    }
+
+    setViewingNoteId(noteId)
+    setShowNoteViewer(true)
+  }
+
   const handleLinkClick = (noteId: string) => {
     setNoteLinkClicked(true)
     setViewingNoteId(noteId)
@@ -1251,6 +1261,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                       setEditingEntryId(null)
                     }}
                     onMakeNote={handleMakeNote}
+                    entryId={entry.id}
+                    onNoteCreated={handleAskAIAnswerCreated}
                     onFocus={() => {
                       // Phase 2: Link rehydration from Supabase will be implemented here
                       // For now, links already in HTML remain functional
