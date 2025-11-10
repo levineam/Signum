@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { Bell, ChevronDown, CheckCircle, Clock, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,9 @@ interface RemindersWidgetProps {
 export function RemindersWidget({ className }: RemindersWidgetProps) {
   // Initialize to false to match server render, avoiding hydration mismatch
   const [isExpanded, setIsExpanded] = useState(false);
+  const baseId = useId();
+  const headerId = `${baseId}-header`;
+  const panelId = `${baseId}-panel`;
 
   // Sync from localStorage after mount
   useEffect(() => {
@@ -34,27 +37,38 @@ export function RemindersWidget({ className }: RemindersWidgetProps) {
 
   return (
     <Card className={cn('transition-all duration-300', className)}>
-      <CardHeader
-        className="flex cursor-pointer flex-row items-center justify-between space-y-0 py-2 px-4 hover:bg-accent/50"
-        onClick={toggleExpanded}
-      >
-        <div className="flex items-center gap-2">
-          <Bell className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">Reminders</h3>
-          <Badge variant="secondary" className="ml-1">
-            {pendingCount}
-          </Badge>
-        </div>
-        <ChevronDown
-          className={cn(
-            'h-4 w-4 text-muted-foreground transition-transform duration-300',
-            isExpanded && 'rotate-180'
-          )}
-        />
+      <CardHeader className="p-0">
+        <button
+          id={headerId}
+          type="button"
+          onClick={toggleExpanded}
+          className="flex w-full cursor-pointer flex-row items-center justify-between space-y-0 py-2 px-4 text-left hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-expanded={isExpanded}
+          aria-controls={panelId}
+        >
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold">Reminders</h3>
+            <Badge variant="secondary" className="ml-1">
+              {pendingCount}
+            </Badge>
+          </div>
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 text-muted-foreground transition-transform duration-300',
+              isExpanded && 'rotate-180'
+            )}
+          />
+        </button>
       </CardHeader>
 
       {isExpanded && (
-        <CardContent className="space-y-2 pt-0">
+        <CardContent
+          id={panelId}
+          role="region"
+          aria-labelledby={headerId}
+          className="space-y-2 pt-0"
+        >
           {mockReminders.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Bell className="mb-2 h-12 w-12 text-muted-foreground/50" />
