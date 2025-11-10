@@ -7,14 +7,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || (cd "$SCRIPT_DIR/.." && pwd))"
-ENV_FILE="${REPO_ROOT}/.env.local"
-
-if [ ! -f "$ENV_FILE" ]; then
-    echo "❌ Error: ${ENV_FILE} not found!"
-    echo "Please create .env.local with the required values before syncing."
-    exit 1
-fi
-
 worktrees=()
 while IFS= read -r line; do
     case "$line" in
@@ -27,6 +19,15 @@ done < <(git -C "$REPO_ROOT" worktree list --porcelain)
 if [ ${#worktrees[@]} -eq 0 ]; then
     echo "⚠️  No worktrees detected. Nothing to sync."
     exit 0
+fi
+
+SOURCE_WORKTREE="${worktrees[0]}"
+ENV_FILE="${SOURCE_WORKTREE}/.env.local"
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo "❌ Error: Source .env.local not found at ${ENV_FILE}!"
+    echo "Please ensure the primary worktree contains the canonical .env.local before syncing."
+    exit 1
 fi
 
 echo "🔄 Syncing .env.local to all git worktrees..."
@@ -42,7 +43,7 @@ for worktree in "${worktrees[@]}"; do
         continue
     fi
 
-    if [ "$worktree" = "$REPO_ROOT" ]; then
+    if [ "$worktree" = "$SOURCE_WORKTREE" ]; then
         continue
     fi
 
@@ -59,4 +60,4 @@ if [ $skipped -gt 0 ]; then
     echo "   Skipped: $skipped paths"
 fi
 echo ""
-echo "💡 Tip: Run this script (or rely on the git hooks) whenever .env.local changes."
+echo "💡 Tip: Run this script (or rely on the git hooks) whenever the canonical .env.local changes."
