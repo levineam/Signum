@@ -36,7 +36,7 @@ test.describe('Incremental Ontology Analysis', () => {
     }
   })
 
-  test('manual analysis button shows last run info', async ({ page }) => {
+  test('<CHORUS_TAG>smoke</CHORUS_TAG> @smoke manual analysis button shows last run info', async ({ page }) => {
     // Navigate to Notes page
     await page.getByRole('link', { name: /notes/i }).click()
     await expect(page).toHaveURL(/\/notes/)
@@ -54,7 +54,7 @@ test.describe('Incremental Ontology Analysis', () => {
     }
   })
 
-  test('incremental analysis processes only new notes', async ({ page }) => {
+  test('<CHORUS_TAG>smoke</CHORUS_TAG> @smoke incremental analysis processes only new notes', async ({ page }) => {
     // Step 1: Navigate to Notes page
     await page.getByRole('link', { name: /notes/i }).click()
     await expect(page).toHaveURL(/\/notes/)

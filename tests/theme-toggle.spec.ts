@@ -9,7 +9,7 @@ async function isDarkTheme(page: Page) {
 }
 
 test.describe('Theme toggle', () => {
-  test('toggles theme and persists choice across reloads', async ({ page }) => {
+test('<CHORUS_TAG>smoke</CHORUS_TAG> @smoke toggles theme and persists choice across reloads', async ({ page }) => {
     await page.goto('/')
 
     const toggle = page.getByRole('switch', TOGGLE_ROLE)
