@@ -1159,6 +1159,7 @@ export function SimpleRichEditor({
                 className="h-8 px-2 flex items-center gap-1 bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 dark:from-purple-900/30 dark:to-blue-900/30 dark:hover:from-purple-800/40 dark:hover:to-blue-800/40"
                 type="button"
                 title="Ask AI about this text"
+                data-make-note-button
               >
                 <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 <span className="text-xs font-medium">Ask AI</span>
