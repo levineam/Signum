@@ -38,6 +38,7 @@ export function SimpleRichEditor({
   const [hasSelection, setHasSelection] = useState(false)
   const [showAskAI, setShowAskAI] = useState(false)
   const isInternalChangeRef = useRef(false)
+  const canShowAskAIButton = Boolean(entryId || onNoteCreated)
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
@@ -1127,7 +1128,7 @@ export function SimpleRichEditor({
         </Button>
 
         {/* Make Note & Ask AI - only show when text is selected */}
-        {hasSelection && (onMakeNote || entryId) && (
+        {hasSelection && (onMakeNote || canShowAskAIButton) && (
           <div className="flex items-center gap-2 border-l pl-2 ml-2">
             {onMakeNote && (
               <Button
@@ -1147,7 +1148,7 @@ export function SimpleRichEditor({
                 <span className="text-xs">Make Note</span>
               </Button>
             )}
-            {entryId && (
+            {canShowAskAIButton && (
               <Button
                 size="sm"
                 variant="ghost"

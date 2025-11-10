@@ -299,6 +299,16 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     }
   }
 
+  const handleAskAIAnswerCreated = (noteId: string) => {
+    if (!noteId) {
+      console.warn('[Ask AI] Missing noteId when trying to open NoteViewer')
+      return
+    }
+
+    setViewingNoteId(noteId)
+    setShowNoteViewer(true)
+  }
+
   // Note Viewer functionality
   const handleLinkClick = (noteId: string) => {
     setViewingNoteId(noteId)
@@ -442,6 +452,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                   onChange={handleContentChange}
                   onBlur={() => setIsEditing(false)}
                   onMakeNote={handleMakeNote}
+                  onNoteCreated={handleAskAIAnswerCreated}
                   autoFocus
                 />
               ) : (
