@@ -67,4 +67,16 @@ export const HELPER_TILES: Record<HelperType, HelperTileData> = {
     fullTitle: 'Loving-Kindness Meditation',
     icon: '💝',
   },
+  morning: {
+    shortTitle: 'Morning Practice',
+    description: 'Start your day with intention and reflection',
+    fullTitle: 'Morning Daily Practice',
+    icon: '☀️',
+  },
+  'day-planning': {
+    shortTitle: 'Plan Your Day',
+    description: 'Clarify priorities and commit to action',
+    fullTitle: 'Day Planning Helper',
+    icon: '📅',
+  },
 }
