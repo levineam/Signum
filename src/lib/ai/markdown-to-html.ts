@@ -8,7 +8,38 @@
  */
 
 import { remark } from 'remark'
-import html from 'remark-html'
+import remarkRehype from 'remark-rehype'
+import rehypeStringify from 'rehype-stringify'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
+import type { Schema } from 'hast-util-sanitize'
+
+// Allow the same general formatting tags that the client-side sanitizer permits.
+// This prevents unsafe HTML (script tags, event handlers, etc.) from being stored
+// while still letting legitimate formatting through.
+const allowedTagNames = [
+  'p', 'br', 'strong', 'em', 'u', 's', 'b', 'i',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'ul', 'ol', 'li',
+  'a', 'span', 'div',
+  'blockquote', 'code', 'pre', 'mark'
+]
+
+const sanitizeSchema: Schema = {
+  ...defaultSchema,
+  tagNames: Array.from(new Set([...(defaultSchema.tagNames || []), ...allowedTagNames])),
+  attributes: {
+    ...defaultSchema.attributes,
+    '*': Array.from(new Set([...(defaultSchema.attributes?.['*'] || []), 'className'])),
+    a: Array.from(new Set([...(defaultSchema.attributes?.a || []), 'href', 'title', 'target', 'rel'])),
+    span: Array.from(new Set([...(defaultSchema.attributes?.span || []), 'data-note-id'])),
+    div: Array.from(new Set([...(defaultSchema.attributes?.div || []), 'data-note-id'])),
+  },
+  clobberPrefix: '',
+  protocols: {
+    ...defaultSchema.protocols,
+    href: ['http', 'https', 'mailto', 'tel', 'sms', 'relative']
+  }
+}
 
 /**
  * Converts markdown text to HTML
@@ -26,9 +57,9 @@ import html from 'remark-html'
 export async function convertMarkdownToHtml(markdown: string): Promise<string> {
   try {
     const result = await remark()
-      .use(html, {
-        sanitize: false, // We sanitize separately with DOMPurify in sanitizeHtml()
-      })
+      .use(remarkRehype, { allowDangerousHtml: false })
+      .use(rehypeSanitize, sanitizeSchema)
+      .use(rehypeStringify)
       .process(markdown)
 
     return String(result)
