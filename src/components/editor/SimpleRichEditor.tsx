@@ -828,7 +828,12 @@ export function SimpleRichEditor({
 
   const handleClickOutside = useCallback((e: Event) => {
     const target = e.target as HTMLElement
-    if (target && !target.closest('[contenteditable]') && !target.closest('[data-make-note-button]')) {
+    if (
+      target &&
+      !target.closest('[contenteditable]') &&
+      !target.closest('[data-make-note-button]') &&
+      !target.closest('[data-ask-ai-dialog]')
+    ) {
       setHasSelection(false)
       setSelectedText('')
     }

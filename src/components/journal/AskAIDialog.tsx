@@ -162,6 +162,7 @@ export function AskAIDialog({
       <DialogContent
         className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
         onKeyDown={handleKeyDown}
+        data-ask-ai-dialog
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
