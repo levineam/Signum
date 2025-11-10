@@ -38,6 +38,7 @@ export function SimpleRichEditor({
   const [hasSelection, setHasSelection] = useState(false)
   const [showAskAI, setShowAskAI] = useState(false)
   const isInternalChangeRef = useRef(false)
+  const suppressBlurRef = useRef(false)
   const canShowAskAIButton = Boolean(entryId || onNoteCreated)
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
@@ -772,6 +773,10 @@ export function SimpleRichEditor({
     document.execCommand('insertText', false, text)
   }, [])
 
+  useEffect(() => {
+    suppressBlurRef.current = showAskAI
+  }, [showAskAI])
+
   const handleTextSelection = useCallback(() => {
     // Add a small delay to ensure the selection has been processed
     setTimeout(() => {
@@ -807,6 +812,20 @@ export function SimpleRichEditor({
     }
   }, [selectedText, onMakeNote])
 
+  const handleAskAIButtonMouseDown = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    suppressBlurRef.current = true
+    setShowAskAI(true)
+  }, [setShowAskAI])
+
+  const handleEditorBlur = useCallback((event: React.FocusEvent<HTMLDivElement>) => {
+    if (suppressBlurRef.current) {
+      return
+    }
+    onBlur?.(event)
+  }, [onBlur])
+
   const handleClickOutside = useCallback((e: Event) => {
     const target = e.target as HTMLElement
     if (target && !target.closest('[contenteditable]') && !target.closest('[data-make-note-button]')) {
@@ -814,6 +833,18 @@ export function SimpleRichEditor({
       setSelectedText('')
     }
   }, [])
+
+  const handleAskAIDialogClose = useCallback(() => {
+    suppressBlurRef.current = false
+    setShowAskAI(false)
+
+    // Restore focus to the editor so the user stays in edit mode
+    setTimeout(() => {
+      if (editorRef.current) {
+        editorRef.current.focus()
+      }
+    }, 0)
+  }, [setShowAskAI])
 
   const handleTranscription = useCallback((text: string) => {
     if (editorRef.current && onChange) {
@@ -938,7 +969,7 @@ export function SimpleRichEditor({
           suppressContentEditableWarning={true}
           onInput={handleInput}
           onFocus={onFocus}
-          onBlur={onBlur}
+          onBlur={handleEditorBlur}
           onPaste={handlePaste}
           className="rich-editor-body min-h-[120px] w-full resize-none border-0 bg-transparent p-4 text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed"
           style={{ whiteSpace: 'pre-wrap' }}
@@ -1152,11 +1183,7 @@ export function SimpleRichEditor({
               <Button
                 size="sm"
                 variant="ghost"
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setShowAskAI(true)
-                }}
+                onMouseDown={handleAskAIButtonMouseDown}
                 className="h-8 px-2 flex items-center gap-1 bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 dark:from-purple-900/30 dark:to-blue-900/30 dark:hover:from-purple-800/40 dark:hover:to-blue-800/40"
                 type="button"
                 title="Ask AI about this text"
@@ -1178,11 +1205,11 @@ export function SimpleRichEditor({
       {/* Ask AI Dialog */}
       <AskAIDialog
         isOpen={showAskAI}
-        onClose={() => setShowAskAI(false)}
+        onClose={handleAskAIDialogClose}
         selectedText={selectedText}
         entryId={entryId}
         onAnswerCreated={(noteId) => {
-          setShowAskAI(false)
+          handleAskAIDialogClose()
           setHasSelection(false)
           setSelectedText('')
           onNoteCreated?.(noteId)
