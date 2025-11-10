@@ -8,11 +8,11 @@ Complete map of all BMad Method v6 documentation with recommended reading paths.
 
 **New users:** Start with one of these based on your situation:
 
-| Your Situation         | Start Here                                                      | Then Read                                                     |
-| ---------------------- | --------------------------------------------------------------- | ------------------------------------------------------------- |
-| **Brand new to BMad**  | [Quick Start Guide](../src/modules/bmm/docs/quick-start.md)     | [BMM Workflows Guide](../src/modules/bmm/workflows/README.md) |
-| **Upgrading from v4**  | [v4 to v6 Upgrade Guide](./v4-to-v6-upgrade.md)                 | [Quick Start Guide](../src/modules/bmm/docs/quick-start.md)   |
-| **Brownfield project** | [Brownfield Guide](../src/modules/bmm/docs/brownfield-guide.md) | [Quick Start Guide](../src/modules/bmm/docs/quick-start.md)   |
+| Your Situation         | Start Here                                              | Then Read                                               |
+| ---------------------- | ------------------------------------------------------- | ------------------------------------------------------- |
+| **Brand new to BMad**  | [Quick Start Guide](../bmad/bmm/docs/quick-start.md)     | [BMM Workflows Guide](../bmad/bmm/workflows/README.md) |
+| **Upgrading from v4**  | [v4 to v6 Upgrade Guide](./v4-to-v6-upgrade.md)         | [Quick Start Guide](../bmad/bmm/docs/quick-start.md)   |
+| **Brownfield project** | [Brownfield Guide](../bmad/bmm/docs/brownfield-guide.md) | [Quick Start Guide](../bmad/bmm/docs/quick-start.md)   |
 
 ---
 
@@ -38,27 +38,21 @@ Complete map of all BMad Method v6 documentation with recommended reading paths.
 
 The flagship module for agile AI-driven development.
 
-- **[BMM Module README](../src/modules/bmm/README.md)** - Module overview, agents, and complete documentation index
-- **[BMM Documentation](../src/modules/bmm/docs/)** - All BMM-specific guides and references:
-  - [Quick Start Guide](../src/modules/bmm/docs/quick-start.md) - Step-by-step guide to building your first project
-  - [Quick Spec Flow](../src/modules/bmm/docs/quick-spec-flow.md) - Rapid Level 0-1 development
-  - [Scale Adaptive System](../src/modules/bmm/docs/scale-adaptive-system.md) - Understanding the 5-level system
-  - [Brownfield Guide](../src/modules/bmm/docs/brownfield-guide.md) - Working with existing codebases
-- **[BMM Workflows Guide](../src/modules/bmm/workflows/README.md)** - **ESSENTIAL READING**
-- **[Test Architect Guide](../src/modules/bmm/testarch/README.md)** - Testing strategy and quality assurance
+- **[BMM Module README](../bmad/bmm/README.md)** - Module overview, agents, and complete documentation index
+- **[BMM Documentation](../bmad/bmm/docs/)** - All BMM-specific guides and references:
+  - [Quick Start Guide](../bmad/bmm/docs/quick-start.md) - Step-by-step guide to building your first project
+  - [Quick Spec Flow](../bmad/bmm/docs/quick-spec-flow.md) - Rapid Level 0-1 development
+  - [Scale Adaptive System](../bmad/bmm/docs/scale-adaptive-system.md) - Understanding the 5-level system
+  - [Brownfield Guide](../bmad/bmm/docs/brownfield-guide.md) - Working with existing codebases
+- **[BMM Workflows Guide](../bmad/bmm/workflows/README.md)** - **ESSENTIAL READING**
+- **[Test Architect Guide](../bmad/bmm/testarch/README.md)** - Testing strategy and quality assurance
 
 ### BMad Builder (BMB) - Create Custom Solutions
 
 Build your own agents, workflows, and modules.
 
-- **[BMB Module README](../src/modules/bmb/README.md)** - Module overview and capabilities
-- **[Agent Creation Guide](../src/modules/bmb/workflows/create-agent/README.md)** - Design custom agents
-
-### Creative Intelligence Suite (CIS) - Innovation & Creativity
-
-AI-powered creative thinking and brainstorming.
-
-- **[CIS Module README](../src/modules/cis/README.md)** - Module overview and workflows
+- **[BMB Module README](../bmad/bmb/README.md)** - Module overview and capabilities
+- **[Agent Creation Guide](../bmad/bmb/workflows/create-agent/README.md)** - Design custom agents
 
 ---
 
@@ -118,7 +112,7 @@ docs/                              # Core/cross-module documentation
     ├── installers-modules-platforms-reference.md
     └── web-bundler-usage.md
 
-src/modules/
+bmad/
 ├── bmm/                           # BMad Method module
 │   ├── README.md                  # Module overview & docs index
 │   ├── docs/                      # BMM-specific documentation
@@ -128,11 +122,9 @@ src/modules/
 │   │   └── brownfield-guide.md
 │   ├── workflows/README.md        # ESSENTIAL workflow guide
 │   └── testarch/README.md         # Testing strategy
-├── bmb/                           # BMad Builder module
-│   ├── README.md
-│   └── workflows/create-agent/README.md
-└── cis/                           # Creative Intelligence Suite
-    └── README.md
+└── bmb/                           # BMad Builder module
+    ├── README.md
+    └── workflows/create-agent/README.md
 ```
 
 ---
@@ -142,36 +134,36 @@ src/modules/
 ### Path 1: Brand New to BMad (Software Project)
 
 1. [README.md](../README.md) - Understand the vision
-2. [Quick Start Guide](../src/modules/bmm/docs/quick-start.md) - Get hands-on
-3. [BMM Module README](../src/modules/bmm/README.md) - Understand agents
-4. [BMM Workflows Guide](../src/modules/bmm/workflows/README.md) - Master the methodology
+2. [Quick Start Guide](../bmad/bmm/docs/quick-start.md) - Get hands-on
+3. [BMM Module README](../bmad/bmm/README.md) - Understand agents
+4. [BMM Workflows Guide](../bmad/bmm/workflows/README.md) - Master the methodology
 5. [Your IDE guide](./ide-info/) - Optimize your workflow
 
 ### Path 2: Game Development Project
 
 1. [README.md](../README.md) - Understand the vision
-2. [Quick Start Guide](../src/modules/bmm/docs/quick-start.md) - Get hands-on
-3. [BMM Module README](../src/modules/bmm/README.md) - Game agents are included
-4. [BMM Workflows Guide](../src/modules/bmm/workflows/README.md) - Game workflows
+2. [Quick Start Guide](../bmad/bmm/docs/quick-start.md) - Get hands-on
+3. [BMM Module README](../bmad/bmm/README.md) - Game agents are included
+4. [BMM Workflows Guide](../bmad/bmm/workflows/README.md) - Game workflows
 5. [Your IDE guide](./ide-info/) - Optimize your workflow
 
 ### Path 3: Upgrading from v4
 
 1. [v4 to v6 Upgrade Guide](./v4-to-v6-upgrade.md) - Understand what changed
-2. [Quick Start Guide](../src/modules/bmm/docs/quick-start.md) - Reorient yourself
-3. [BMM Workflows Guide](../src/modules/bmm/workflows/README.md) - Learn new v6 workflows
+2. [Quick Start Guide](../bmad/bmm/docs/quick-start.md) - Reorient yourself
+3. [BMM Workflows Guide](../bmad/bmm/workflows/README.md) - Learn new v6 workflows
 
 ### Path 4: Working with Existing Codebase (Brownfield)
 
-1. [Brownfield Guide](../src/modules/bmm/docs/brownfield-guide.md) - Approach for legacy code
-2. [Quick Start Guide](../src/modules/bmm/docs/quick-start.md) - Follow the process
-3. [BMM Workflows Guide](../src/modules/bmm/workflows/README.md) - Master the methodology
+1. [Brownfield Guide](../bmad/bmm/docs/brownfield-guide.md) - Approach for legacy code
+2. [Quick Start Guide](../bmad/bmm/docs/quick-start.md) - Follow the process
+3. [BMM Workflows Guide](../bmad/bmm/workflows/README.md) - Master the methodology
 
 ### Path 5: Building Custom Solutions
 
-1. [BMB Module README](../src/modules/bmb/README.md) - Understand capabilities
-2. [Agent Creation Guide](../src/modules/bmb/workflows/create-agent/README.md) - Create agents
-3. [BMM Workflows Guide](../src/modules/bmm/workflows/README.md) - Understand workflow structure
+1. [BMB Module README](../bmad/bmb/README.md) - Understand capabilities
+2. [Agent Creation Guide](../bmad/bmb/workflows/create-agent/README.md) - Create agents
+3. [BMM Workflows Guide](../bmad/bmm/workflows/README.md) - Understand workflow structure
 
 ### Path 6: Contributing to BMad
 
@@ -187,13 +179,12 @@ src/modules/
 
 - **BMM** - AI-driven software and game development
 - **BMB** - Create custom agents and workflows
-- **CIS** - Creative thinking and brainstorming
 
 **How do I load an agent?**
 → See [ide-info](./ide-info/) folder for your IDE
 
 **I'm stuck, what's next?**
-→ Check the [BMM Workflows Guide](../src/modules/bmm/workflows/README.md) or run `workflow-status`
+→ Check the [BMM Workflows Guide](../bmad/bmm/workflows/README.md) or run `workflow-status`
 
 **I want to contribute**
 → Start with [CONTRIBUTING.md](../CONTRIBUTING.md)

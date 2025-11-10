@@ -18,7 +18,7 @@ Files that support IDE-specific content define injection points using HTML comme
 
 Each module that needs IDE-specific content creates a sub-module folder:
 
-```
+```plaintext
 src/modules/{module-name}/sub-modules/{ide-name}/
   ├── injections.yaml    # Injection configuration
   ├── sub-agents/        # IDE-specific subagents (if applicable)
@@ -131,7 +131,7 @@ async processModuleInjections(projectDir, bmadDir, options) {
 
 ### File Structure
 
-```
+```plaintext
 src/modules/bmm/
 ├── agents/pm.md                         # Has injection point
 ├── templates/prd.md                     # Has multiple injection points

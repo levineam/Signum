@@ -198,6 +198,8 @@ _Suggestions for further improvements or considerations_
 
 ---
 
+## Validation Summary
+
 **Validation Result:** [ ] PASSED / [ ] FAILED
 
 **Validator:** {{user_name}}

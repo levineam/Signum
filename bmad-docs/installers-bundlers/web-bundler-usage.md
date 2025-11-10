@@ -34,7 +34,7 @@ node tools/cli/bundlers/bundle-web.js agent bmm analyst -o ./custom-folder
 
 Bundles are generated in `web-bundles/` directory by default when run from the root of the clones project:
 
-```
+```plaintext
 web-bundles/
 ├── [module-name]/
 │   └── agents/
