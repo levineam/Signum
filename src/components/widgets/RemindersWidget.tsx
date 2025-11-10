@@ -35,19 +35,19 @@ export function RemindersWidget({ className }: RemindersWidgetProps) {
   return (
     <Card className={cn('transition-all duration-300', className)}>
       <CardHeader
-        className="flex cursor-pointer flex-row items-center justify-between space-y-0 py-3 hover:bg-accent/50"
+        className="flex cursor-pointer flex-row items-center justify-between space-y-0 py-2 px-4 hover:bg-accent/50"
         onClick={toggleExpanded}
       >
         <div className="flex items-center gap-2">
-          <Bell className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-base font-semibold">Reminders</h3>
+          <Bell className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Reminders</h3>
           <Badge variant="secondary" className="ml-1">
             {pendingCount}
           </Badge>
         </div>
         <ChevronDown
           className={cn(
-            'h-5 w-5 text-muted-foreground transition-transform duration-300',
+            'h-4 w-4 text-muted-foreground transition-transform duration-300',
             isExpanded && 'rotate-180'
           )}
         />

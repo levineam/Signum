@@ -42,20 +42,20 @@ export function TasksWidget({ className }: TasksWidgetProps) {
           id={headerId}
           type="button"
           onClick={toggleExpanded}
-          className="flex w-full cursor-pointer flex-row items-center justify-between space-y-0 py-3 px-6 text-left hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="flex w-full cursor-pointer flex-row items-center justify-between space-y-0 py-2 px-4 text-left hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-expanded={isExpanded}
           aria-controls={panelId}
         >
           <div className="flex items-center gap-2">
-            <CheckSquare className="h-5 w-5 text-muted-foreground" />
-            <h3 className="text-base font-semibold">Tasks</h3>
+            <CheckSquare className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold">Tasks</h3>
             <Badge variant="secondary" className="ml-1">
               {pendingCount}
             </Badge>
           </div>
           <ChevronDown
             className={cn(
-              'h-5 w-5 text-muted-foreground transition-transform duration-300',
+              'h-4 w-4 text-muted-foreground transition-transform duration-300',
               isExpanded && 'rotate-180'
             )}
           />

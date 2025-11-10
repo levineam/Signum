@@ -38,11 +38,13 @@ export default function Home() {
     switch (activeSection) {
       case 'journal':
         return (
-          <div className="space-y-4">
+          <div>
             {/* Tasks & Reminders Widgets (Prototype) */}
-            <div className="mx-auto grid max-w-4xl gap-4 px-4 pt-4 md:grid-cols-2">
-              <RemindersWidget />
-              <TasksWidget />
+            <div className="mx-auto max-w-4xl px-6 pt-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <RemindersWidget />
+                <TasksWidget />
+              </div>
             </div>
             {/* Journal Stream */}
             <JournalStream isGuest={isGuest} />
