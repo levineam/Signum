@@ -1,54 +1,62 @@
 #!/bin/bash
 
-# Sync .env.local from main repo to all Conductor worktrees
-# This ensures all workspaces have the same environment variables (Sentry, API keys, etc.)
+# Sync .env.local from the current worktree to every git worktree
+# Ensures all workspaces share identical environment variables
 
-set -e
+set -euo pipefail
 
-MAIN_REPO="/Users/andrewleveiss/Signum"
-CONDUCTOR_DIR="${MAIN_REPO}/.conductor"
-ENV_FILE="${MAIN_REPO}/.env.local"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || (cd "$SCRIPT_DIR/.." && pwd))"
+ENV_FILE="${REPO_ROOT}/.env.local"
 
-# Check if main .env.local exists
 if [ ! -f "$ENV_FILE" ]; then
     echo "❌ Error: ${ENV_FILE} not found!"
-    echo "Please ensure .env.local exists in the main repo with all required variables."
+    echo "Please create .env.local with the required values before syncing."
     exit 1
 fi
 
-echo "🔄 Syncing .env.local to all Conductor worktrees..."
+worktrees=()
+while IFS= read -r line; do
+    case "$line" in
+        worktree\ *)
+            worktrees+=("${line#worktree }")
+            ;;
+    esac
+done < <(git -C "$REPO_ROOT" worktree list --porcelain)
+
+if [ ${#worktrees[@]} -eq 0 ]; then
+    echo "⚠️  No worktrees detected. Nothing to sync."
+    exit 0
+fi
+
+echo "🔄 Syncing .env.local to all git worktrees..."
 echo ""
 
-# Counter for tracking
 synced=0
 skipped=0
 
-# Loop through all directories in .conductor
-for worktree_dir in "$CONDUCTOR_DIR"/*; do
-    if [ -d "$worktree_dir" ]; then
-        worktree_name=$(basename "$worktree_dir")
-        target_env="${worktree_dir}/.env.local"
-
-        # Skip if it's not a valid worktree (e.g., doha which appears empty)
-        if [ ! -d "${worktree_dir}/.git" ] && [ ! -f "${worktree_dir}/.git" ]; then
-            echo "⏭️  Skipping ${worktree_name} (not a valid worktree)"
-            ((skipped++))
-            continue
-        fi
-
-        # Copy .env.local
-        cp "$ENV_FILE" "$target_env"
-        echo "✅ Synced to ${worktree_name}"
-        ((synced++))
+for worktree in "${worktrees[@]}"; do
+    if [ ! -d "$worktree" ]; then
+        echo "⏭️  Skipping ${worktree} (missing directory)"
+        ((skipped++))
+        continue
     fi
+
+    if [ "$worktree" = "$REPO_ROOT" ]; then
+        continue
+    fi
+
+    target_env="${worktree}/.env.local"
+    cp "$ENV_FILE" "$target_env"
+    echo "✅ Synced to ${worktree}"
+    ((synced++))
 done
 
 echo ""
 echo "✨ Sync complete!"
 echo "   Synced: $synced worktrees"
 if [ $skipped -gt 0 ]; then
-    echo "   Skipped: $skipped directories"
+    echo "   Skipped: $skipped paths"
 fi
 echo ""
-echo "💡 Tip: Run this script whenever you update .env.local in the main repo"
-echo "   or after creating a new Conductor workspace."
+echo "💡 Tip: Run this script (or rely on the git hooks) whenever .env.local changes."

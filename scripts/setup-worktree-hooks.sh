@@ -1,65 +1,96 @@
 #!/bin/bash
 
-# Setup git hooks to automatically sync .env.local to worktrees
-# This runs the sync script after certain git operations
+# Setup git hooks to automatically sync .env.local to every git worktree
+# Hooks call the sync script after key git operations (checkout, merge)
 
-set -e
+set -euo pipefail
 
-MAIN_REPO="/Users/andrewleveiss/Signum"
-HOOKS_DIR="${MAIN_REPO}/.git/hooks"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || (cd "$SCRIPT_DIR/.." && pwd))"
 
 echo "🔧 Setting up git hooks for automatic .env.local sync..."
 echo ""
 
-# Create post-checkout hook
-cat > "${HOOKS_DIR}/post-checkout" << 'EOF'
+if ! git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "❌ Error: Unable to locate git repository from $REPO_ROOT" >&2
+    exit 1
+fi
+
+worktrees=()
+while IFS= read -r line; do
+    case "$line" in
+        worktree\ *)
+            worktrees+=("${line#worktree }")
+            ;;
+    esac
+done < <(git -C "$REPO_ROOT" worktree list --porcelain)
+
+if [ ${#worktrees[@]} -eq 0 ]; then
+    echo "❌ Error: No worktrees found. Run this script from a git worktree." >&2
+    exit 1
+fi
+
+install_hook() {
+    local hook_dir="$1"
+    local hook_name="$2"
+    local hook_path="${hook_dir}/${hook_name}"
+
+    mkdir -p "$hook_dir"
+
+    cat > "$hook_path" <<'HOOK'
 #!/bin/bash
+set -euo pipefail
 
-# Auto-sync .env.local to all worktrees after checkout
-# This ensures new worktrees get the latest environment config
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 
-MAIN_REPO="/Users/andrewleveiss/Signum"
-SYNC_SCRIPT="${MAIN_REPO}/scripts/sync-env-to-worktrees.sh"
+if [ -z "$REPO_ROOT" ]; then
+    exit 0
+fi
 
-# Only run if we're in the main repo and the sync script exists
-if [ -f "$SYNC_SCRIPT" ] && [ "$PWD" = "$MAIN_REPO" ]; then
+SYNC_SCRIPT="${REPO_ROOT}/scripts/sync-env-to-worktrees.sh"
+
+if [ -f "$SYNC_SCRIPT" ]; then
     echo ""
     echo "🔄 Auto-syncing .env.local to worktrees..."
-    "$SYNC_SCRIPT"
+    bash "$SYNC_SCRIPT"
 fi
-EOF
+HOOK
 
-chmod +x "${HOOKS_DIR}/post-checkout"
-echo "✅ Created post-checkout hook"
+    chmod +x "$hook_path"
+    echo "   • Installed ${hook_name}"
+}
 
-# Create post-merge hook
-cat > "${HOOKS_DIR}/post-merge" << 'EOF'
-#!/bin/bash
+resolve_hooks_dir() {
+    local worktree_path="$1"
+    local hooks_path
+    hooks_path="$(git -C "$worktree_path" rev-parse --git-path hooks)"
 
-# Auto-sync .env.local to all worktrees after merge
-# Ensures worktrees stay in sync when main repo updates
+    if [[ "$hooks_path" != /* ]]; then
+        hooks_path="${worktree_path}/${hooks_path}"
+    fi
 
-MAIN_REPO="/Users/andrewleveiss/Signum"
-SYNC_SCRIPT="${MAIN_REPO}/scripts/sync-env-to-worktrees.sh"
+    echo "$hooks_path"
+}
 
-# Only run if we're in the main repo and the sync script exists
-if [ -f "$SYNC_SCRIPT" ] && [ "$PWD" = "$MAIN_REPO" ]; then
+for worktree in "${worktrees[@]}"; do
+    if [ ! -d "$worktree" ]; then
+        echo "⏭️  Skipping missing worktree: $worktree"
+        continue
+    fi
+
+    echo "🔗 Installing hooks for ${worktree}"
+    hooks_dir="$(resolve_hooks_dir "$worktree")"
+
+    install_hook "$hooks_dir" "post-checkout"
+    install_hook "$hooks_dir" "post-merge"
+    echo "✅ Hooks ready for ${worktree}"
     echo ""
-    echo "🔄 Auto-syncing .env.local to worktrees..."
-    "$SYNC_SCRIPT"
-fi
-EOF
+done
 
-chmod +x "${HOOKS_DIR}/post-merge"
-echo "✅ Created post-merge hook"
-
-echo ""
 echo "✨ Git hooks installed successfully!"
 echo ""
 echo "📋 Hooks will auto-sync .env.local to worktrees after:"
-echo "   • git checkout (switching branches)"
-echo "   • git merge (merging branches)"
-echo "   • Creating new worktrees (via post-checkout)"
+echo "   • git checkout (branch switches)"
+echo "   • git merge"
 echo ""
-echo "💡 You can still manually sync anytime with:"
-echo "   ./scripts/sync-env-to-worktrees.sh"
+echo "💡 Run ./scripts/sync-env-to-worktrees.sh anytime for a manual sync."
