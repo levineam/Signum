@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
-const TOGGLE_ROLE = { name: /switch to (dark|light) mode/i }
+const TOGGLE_ROLE = { name: /toggle theme/i }
 const THEME_STORAGE_KEY = 'signum-theme'
 
 async function isDarkTheme(page: Page) {

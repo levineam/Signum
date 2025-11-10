@@ -41,6 +41,7 @@ Signum uses a comprehensive GitHub Actions CI/CD pipeline to ensure code quality
   - OpenAI API mocked via `OPENAI_MOCK=1`
   - Artifacts uploaded on failure (traces, screenshots, videos)
   - Browser binary caching for faster runs
+  - Deterministic fixtures enabled via `E2E_TEST_MODE=1` / `NEXT_PUBLIC_E2E_TEST_MODE=1` so auth + ontology tests can run without seeded data
 
 ### 5. E2E Full Suite (< 30 min)
 

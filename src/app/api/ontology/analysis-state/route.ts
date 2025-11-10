@@ -13,8 +13,22 @@ import { getAnalysisState } from '@/lib/ontology/state'
 import { hasAdminKey } from '@/lib/supabase-admin'
 import logger from '@/utils/logger'
 
+const isTestMode = ['1', 'true'].includes(process.env.E2E_TEST_MODE ?? '')
+
 export async function GET() {
   try {
+    if (isTestMode) {
+      const now = new Date().toISOString()
+      return NextResponse.json({
+        success: true,
+        state: {
+          lastAnalyzedAt: now,
+          lastRunSummary: {
+            timestamp: now,
+          },
+        },
+      })
+    }
     if (!hasAdminKey()) {
       return NextResponse.json(
         { success: false, error: 'Server configuration incomplete: missing SUPABASE_SERVICE_ROLE_KEY' },
