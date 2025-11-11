@@ -14,7 +14,13 @@ This document tracks all secrets and environment variables required for the Cont
 
 **Status**: ✅ Complete
 
-No secrets required. OpenAI API is mocked via `OPENAI_MOCK=1` environment variable.
+No secrets required. OpenAI API is mocked via `OPENAI_MOCK=1`, and deterministic smoke tests run with the following non-secret env vars (set in the workflow):
+
+- `E2E_TEST_MODE=1` / `NEXT_PUBLIC_E2E_TEST_MODE=1`
+- `NEXT_PUBLIC_TEST_USER_EMAIL=dev-test-1@signum.dev`
+- `NEXT_PUBLIC_TEST_USER_PASSWORD=test1234`
+
+These values activate the in-app test harness so CI never needs Supabase credentials for smoke coverage.
 
 ---
 

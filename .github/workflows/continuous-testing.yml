@@ -119,6 +119,11 @@ jobs:
     timeout-minutes: 15
     # Only run on PRs from non-forked repos (secrets available)
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    env:
+      E2E_TEST_MODE: '1'
+      NEXT_PUBLIC_E2E_TEST_MODE: '1'
+      NEXT_PUBLIC_TEST_USER_EMAIL: dev-test-1@signum.dev
+      NEXT_PUBLIC_TEST_USER_PASSWORD: test1234
 
     steps:
       - name: Checkout code
@@ -249,6 +254,11 @@ jobs:
     timeout-minutes: 60
     # Only run on workflow_dispatch or scheduled runs
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    env:
+      E2E_TEST_MODE: '1'
+      NEXT_PUBLIC_E2E_TEST_MODE: '1'
+      NEXT_PUBLIC_TEST_USER_EMAIL: dev-test-1@signum.dev
+      NEXT_PUBLIC_TEST_USER_PASSWORD: test1234
 
     steps:
       - name: Checkout code
