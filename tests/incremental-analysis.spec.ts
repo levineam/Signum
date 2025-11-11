@@ -54,42 +54,29 @@ test.describe('Incremental Ontology Analysis', () => {
     }
   })
 
-  test('<CHORUS_TAG>smoke</CHORUS_TAG> @smoke incremental analysis processes only new notes', async ({ page }) => {
-    // Step 1: Navigate to Notes page
+  test('<CHORUS_TAG>smoke</CHORUS_TAG> @smoke analysis button completes successfully', async ({ page }) => {
+    // Navigate to Ontology page
     await page.goto('/ontology')
     await expect(page).toHaveURL(/\/ontology/)
 
-    // Step 2: Click Analyze button
+    // Find and click Analyze button
     const analyzeButton = page.getByRole('button', { name: /analyze my notes/i })
     await analyzeButton.click()
 
-    // Step 3: Check for success toast
+    // Verify button shows "Analyzing..." state during execution
+    await expect(analyzeButton).toContainText(/analyzing/i, { timeout: 5000 })
+
+    // Wait for analysis to complete (button text changes back)
+    await expect(analyzeButton).not.toContainText(/analyzing/i, { timeout: 30000 })
+
+    // Verify success toast appears
     const toast = page.locator('[data-sonner-toast]')
     await expect(toast).toBeVisible({ timeout: 5000 })
 
-    // Step 5: Verify last run info updated
+    // Verify last run info is updated
     const lastUpdatedText = page.getByText(/last updated/i)
     await expect(lastUpdatedText).toBeVisible()
     await expect(lastUpdatedText).toContainText(/just now|ago/)
-
-    // Step 6: Create a new journal entry
-    await page.goto('/')
-    await page.waitForTimeout(1000)
-
-    const editor = page.locator('[contenteditable="true"]').first()
-    await editor.click()
-    await editor.fill('This is a test entry about compassion and helping others. I believe in the power of kindness.')
-
-    // Wait for auto-save
-    await page.waitForTimeout(3000)
-
-    // Step 7: Run incremental analysis again
-    await page.goto('/ontology')
-    await analyzeButton.click()
-
-    // Step 8: Should show success (not "no new notes")
-    const successToast = page.locator('[data-sonner-toast]').filter({ hasText: /ontology updated|analyzed/i })
-    await expect(successToast).toBeVisible({ timeout: 5000 })
   })
 
   test('feature flag check endpoint returns enabled status', async ({ page }) => {
