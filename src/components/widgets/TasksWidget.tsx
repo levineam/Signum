@@ -36,7 +36,7 @@ export function TasksWidget({ className }: TasksWidgetProps) {
   const pendingCount = mockTasks.filter((t) => t.status === 'pending').length;
 
   return (
-    <Card className={cn('transition-all duration-300', className)}>
+    <Card className={cn('py-0 transition-all duration-300', className)}>
       <CardHeader className="p-0">
         <button
           id={headerId}
