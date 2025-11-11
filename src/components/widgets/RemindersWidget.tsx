@@ -42,7 +42,7 @@ export function RemindersWidget({ className }: RemindersWidgetProps) {
           id={headerId}
           type="button"
           onClick={toggleExpanded}
-          className="flex w-full cursor-pointer flex-row items-center justify-between space-y-0 py-2 px-4 text-left hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="flex w-full cursor-pointer flex-row items-center justify-between space-y-0 p-4 text-left hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-expanded={isExpanded}
           aria-controls={panelId}
         >
