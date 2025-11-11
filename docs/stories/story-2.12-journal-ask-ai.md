@@ -364,55 +364,55 @@ Remember: Feeling overwhelmed is a signal to reassess your boundaries and priori
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Extract Shared AI Utilities** (AC: All - Foundation)
-  - [ ] Create `/src/lib/ai/` directory structure
-  - [ ] Extract OpenAI client config from PR #141 reference
-  - [ ] Create `prompt-templates.ts` with JOURNAL_QUERY_SYSTEM_PROMPT
-  - [ ] Create `markdown-to-html.ts` utility with remark integration
-  - [ ] Create `types.ts` with shared AI response interfaces
-  - [ ] Add `remark` and `remark-html` to package.json dependencies
-  - [ ] Test markdown → HTML conversion with sample content
+- [x] **Task 1: Extract Shared AI Utilities** (AC: All - Foundation)
+  - [x] Create `/src/lib/ai/` directory structure
+  - [x] Extract OpenAI client config from PR #141 reference
+  - [x] Create `prompt-templates.ts` with JOURNAL_QUERY_SYSTEM_PROMPT
+  - [x] Create `markdown-to-html.ts` utility with remark integration
+  - [x] Create `types.ts` with shared AI response interfaces
+  - [x] Add `remark` and `remark-html` to package.json dependencies
+  - [x] Test markdown → HTML conversion with sample content
 
-- [ ] **Task 2: Enhance API Endpoint** (AC2, AC3, AC5)
-  - [ ] Modify `/api/ai/answer/route.ts` to accept `sourceType` and `entryId`
-  - [ ] Make `taskId` optional in validation
-  - [ ] Skip task validation when `sourceType === 'journal'`
-  - [ ] Integrate markdown → HTML conversion before note storage
-  - [ ] Update note metadata to include journal source context
-  - [ ] Test with sample markdown responses
-  - [ ] Verify HTML output passes sanitizeHtml() without stripping content
-  - [ ] Test error handling for malformed markdown
+- [x] **Task 2: Enhance API Endpoint** (AC2, AC3, AC5)
+  - [x] Modify `/api/ai/answer/route.ts` to accept `sourceType` and `entryId`
+  - [x] Make `taskId` optional in validation
+  - [x] Skip task validation when `sourceType === 'journal'`
+  - [x] Integrate markdown → HTML conversion before note storage
+  - [x] Update note metadata to include journal source context
+  - [x] Test with sample markdown responses
+  - [x] Verify HTML output passes sanitizeHtml() without stripping content
+  - [x] Test error handling for malformed markdown
 
-- [ ] **Task 3: Create AskAIDialog Component** (AC2, AC3, AC4, AC6)
-  - [ ] Create `/src/components/journal/AskAIDialog.tsx`
-  - [ ] Implement modal with shadcn Dialog component
-  - [ ] Add selected text display (readonly, styled box, max 200 chars with "...")
-  - [ ] Implement truncation logic: If `selectedText.length > 500`, truncate and show warning
-  - [ ] Add warning message component: "Selection truncated to 500 characters. Edit as needed."
-  - [ ] Add query input field (editable, pre-filled with truncated selected text if >500 chars)
-  - [ ] Add live character counter (e.g., "485/500")
-  - [ ] Character counter turns red when >480 chars
-  - [ ] Implement "Generate Answer" button with state management (idle/loading/success/error)
-  - [ ] Button disabled when query empty OR >500 chars
-  - [ ] Implement "Cancel" button
-  - [ ] Add ESC key handler to close dialog
-  - [ ] Integrate API call to `/api/ai/answer`
-  - [ ] Handle success: Open NoteViewer with new note (only if dialog still open)
-  - [ ] Handle errors: Show toast notifications
-  - [ ] Add loading spinner and "Generating..." text during API call
-  - [ ] Disable all inputs during loading
-  - [ ] Document that closing dialog during generation allows background completion (MVP limitation)
+- [x] **Task 3: Create AskAIDialog Component** (AC2, AC3, AC4, AC6)
+  - [x] Create `/src/components/journal/AskAIDialog.tsx`
+  - [x] Implement modal with shadcn Dialog component
+  - [x] Add selected text display (readonly, styled box, max 200 chars with "...")
+  - [x] Implement truncation logic: If `selectedText.length > 500`, truncate and show warning
+  - [x] Add warning message component: "Selection truncated to 500 characters. Edit as needed."
+  - [x] Add query input field (editable, pre-filled with truncated selected text if >500 chars)
+  - [x] Add live character counter (e.g., "485/500")
+  - [x] Character counter turns red when >480 chars
+  - [x] Implement "Generate Answer" button with state management (idle/loading/success/error)
+  - [x] Button disabled when query empty OR >500 chars
+  - [x] Implement "Cancel" button
+  - [x] Add ESC key handler to close dialog
+  - [x] Integrate API call to `/api/ai/answer`
+  - [x] Handle success: Open NoteViewer with new note (only if dialog still open)
+  - [x] Handle errors: Show toast notifications
+  - [x] Add loading spinner and "Generating..." text during API call
+  - [x] Disable all inputs during loading
+  - [x] Document that closing dialog during generation allows background completion (MVP limitation)
 
-- [ ] **Task 4: Modify SimpleRichEditor** (AC1)
-  - [ ] Add "Ask AI" button next to "Make Note" button (lines 1123-1143)
-  - [ ] Import Sparkles icon from lucide-react
-  - [ ] Add dialog state management (isAskAIDialogOpen)
-  - [ ] Pass selected text to dialog
-  - [ ] Pass entry ID to dialog (new prop needed: add `entryId?: string` to SimpleRichEditorProps)
-  - [ ] Handle note created callback (open NoteViewer)
-  - [ ] Ensure button ONLY appears when text is selected (hidden otherwise, same as "Make Note")
-  - [ ] Test button visibility on text selection
-  - [ ] Test responsive layout (mobile, tablet, desktop)
+- [x] **Task 4: Modify SimpleRichEditor** (AC1)
+  - [x] Add "Ask AI" button next to "Make Note" button (lines 1123-1143)
+  - [x] Import Sparkles icon from lucide-react
+  - [x] Add dialog state management (isAskAIDialogOpen)
+  - [x] Pass selected text to dialog
+  - [x] Pass entry ID to dialog (new prop needed: add `entryId?: string` to SimpleRichEditorProps)
+  - [x] Handle note created callback (open NoteViewer)
+  - [x] Ensure button ONLY appears when text is selected (hidden otherwise, same as "Make Note")
+  - [x] Test button visibility on text selection
+  - [x] Test responsive layout (mobile, tablet, desktop)
 
 - [ ] **Task 5: Testing & Edge Cases** (AC6)
   - [ ] Test auth required scenario (not logged in)
@@ -611,6 +611,7 @@ const [showAskAI, setShowAskAI] = useState(false)
 |------|---------|-------------|--------|
 | 2025-11-08 | 1.0 | Initial story creation | Claude (Sonnet 4.5) |
 | 2025-11-08 | 1.1 | Fixed Codex review findings: AC1/AC6 contradiction, >500 char handling, cancellation behavior | Claude (Sonnet 4.5) |
+| 2025-11-09 | 1.2 | Implemented shared AI utilities, journal Ask AI API/dialog/editor integration, and unified note validation | Codex (GPT-5) |
 
 ---
 
@@ -620,19 +621,28 @@ const [showAskAI, setShowAskAI] = useState(false)
 
 ### Agent Model Used
 
-*TBD*
+- GPT-5 Codex via Conductor (BMad Master)
 
 ### Debug Log References
 
-*TBD*
+- `.ai/debug-log.md` (2025-11-09 entries for Story 2.12 – Ask AI integration)
 
 ### Completion Notes List
 
-*TBD*
+1. Added shared AI utility layer (`src/lib/ai/*`) and wired markdown→HTML conversion through the `/api/ai/answer` route.
+2. Built `AskAIDialog` with truncation, validation, and toast-driven error handling, then embedded it into `SimpleRichEditor` with selection-aware controls.
+3. Updated journal and note editors to surface the Ask AI button consistently and ensured new answers launch `NoteViewer`; production bug fixed by validating entry IDs against `notes.note_type='journal-entry'`.
+4. `npm run lint` currently fails due to pre-existing CommonJS/unicorn rule issues; no new lint violations introduced.
 
 ### File List
 
-*TBD*
+- `package.json`, `package-lock.json` – Added remark dependencies for markdown conversion.
+- `src/lib/ai/markdown-to-html.ts` – Markdown → HTML utility.
+- `src/lib/ai/prompt-templates.ts`, `src/lib/ai/types.ts` – Shared AI prompts and typed contracts.
+- `src/app/api/ai/answer/route.ts` – Journal-aware validation, markdown conversion, metadata updates, bugfix for unified notes table.
+- `src/components/journal/AskAIDialog.tsx` – Query refinement modal + API wiring.
+- `src/components/editor/SimpleRichEditor.tsx` – Ask AI button/state, selection plumbing.
+- `src/components/journal/JournalStream.tsx`, `src/app/notes/[id]/page.tsx` – Pass new props and handle `onNoteCreated` from Ask AI answers.
 
 ---
 

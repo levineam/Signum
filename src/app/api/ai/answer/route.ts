@@ -105,15 +105,23 @@ export async function POST(request: NextRequest) {
       // Journal source: Optional entry ID validation
       // Note: We don't strictly require entryId since user might be asking about selected text without a specific entry
       if (entryId) {
-        // If provided, verify it exists and belongs to user
+        // If provided, verify it exists and belongs to user. Journal entries live in the unified notes table.
         const { data: entry, error: entryError } = await supabase
-          .from('journal_entries')
-          .select('id, user_id')
+          .from('notes')
+          .select('id, user_id, note_type')
           .eq('id', entryId)
           .single();
 
         if (entryError || !entry) {
           console.error('[AI Answer] Journal entry not found or access denied:', entryError);
+          return NextResponse.json<AIAnswerErrorResponse>(
+            { error: 'Journal entry not found', code: 'ENTRY_NOT_FOUND' as AIAnswerErrorCode },
+            { status: 404 }
+          );
+        }
+
+        if (entry.user_id !== user.id || entry.note_type !== 'journal-entry') {
+          console.error('[AI Answer] Entry exists but is not a journal entry or belongs to another user');
           return NextResponse.json<AIAnswerErrorResponse>(
             { error: 'Journal entry not found', code: 'ENTRY_NOT_FOUND' as AIAnswerErrorCode },
             { status: 404 }
