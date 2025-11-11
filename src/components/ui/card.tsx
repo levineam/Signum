@@ -2,12 +2,19 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+interface CardProps extends React.ComponentProps<"div"> {
+  spacing?: "default" | "compact"
+}
+
+function Card({ className, spacing = "default", ...props }: CardProps) {
+  const spacingClass = spacing === "compact" ? "py-0 gap-0" : "py-6 gap-6"
+
   return (
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
+        "bg-card text-card-foreground flex flex-col rounded-xl border shadow-sm",
+        spacingClass,
         className
       )}
       {...props}
@@ -15,12 +22,19 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
+interface CardHeaderProps extends React.ComponentProps<"div"> {
+  spacing?: "default" | "compact"
+}
+
+function CardHeader({ className, spacing = "default", ...props }: CardHeaderProps) {
+  const headerSpacingClass = spacing === "compact" ? "[.border-b]:pb-0" : "[.border-b]:pb-6"
+
   return (
     <div
       data-slot="card-header"
       className={cn(
-        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
+        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto]",
+        headerSpacingClass,
         className
       )}
       {...props}
