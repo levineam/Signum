@@ -18,6 +18,7 @@ import { WoopContent } from './WoopHelper'
 import { BestPossibleSelfContent } from './BestPossibleSelfHelper'
 import { SavoringContent } from './SavoringHelper'
 import { LovingKindnessContent } from './LovingKindnessHelper'
+import { DayPlanningContent } from './DayPlanningHelper'
 
 interface HelperDialogContentProps {
   helperType: HelperType
@@ -119,6 +120,15 @@ export function HelperDialogContent({
     case 'loving-kindness':
       return (
         <LovingKindnessContent
+          entryId={entryId}
+          userId={userId}
+          onInsert={handleInsert}
+        />
+      )
+
+    case 'day-planning':
+      return (
+        <DayPlanningContent
           entryId={entryId}
           userId={userId}
           onInsert={handleInsert}

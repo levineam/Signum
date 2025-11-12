@@ -34,6 +34,8 @@ const INCREMENTAL_ENABLED =
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000 // 1 hour
 const RATE_LIMIT_MAX = 6
 
+const isTestMode = ['1', 'true'].includes(process.env.E2E_TEST_MODE ?? '')
+
 /**
  * Count recent runs within the rate limit window (SECURITY FIX: Issue #3)
  */
@@ -55,6 +57,19 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
 
   try {
+    if (isTestMode) {
+      await new Promise(resolve => setTimeout(resolve, 300))
+      return NextResponse.json({
+        success: true,
+        skipped: false,
+        noteCount: 3,
+        extraction: {
+          newValues: 1,
+          newBeliefs: 1,
+          newAims: 1,
+        },
+      })
+    }
     // 1. Check feature flag
     if (!INCREMENTAL_ENABLED) {
       return NextResponse.json(

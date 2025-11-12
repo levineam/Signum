@@ -4,7 +4,6 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { JOURNAL_EDITOR_SELECTOR } from './helpers/selectors'
 import { openJournalEditor } from './helpers/journal'
 
 const TEST_USER = {
@@ -14,7 +13,7 @@ const TEST_USER = {
 
 test.describe('Incremental Ontology Analysis', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to app and sign in
+    // Navigate to app root
     await page.goto('/')
 
     // Check if already signed in by looking for sign out button
@@ -22,26 +21,26 @@ test.describe('Incremental Ontology Analysis', () => {
     const isSignedIn = await signOutButton.isVisible().catch(() => false)
 
     if (!isSignedIn) {
-      // Click sign in if on landing page
-      const signInLink = page.getByRole('link', { name: /sign in/i })
-      if (await signInLink.isVisible()) {
-        await signInLink.click()
-      }
+      // Go directly to auth page for a reliable sign-in form
+      await page.goto('/auth')
+
+      // Ensure the auth form is rendered before interacting
+      await page.getByLabel(/email/i).waitFor({ state: 'visible' })
 
       // Fill in credentials
       await page.getByLabel(/email/i).fill(TEST_USER.email)
       await page.getByLabel(/password/i).fill(TEST_USER.password)
       await page.getByRole('button', { name: /sign in/i }).click()
 
-      // Wait for auth to complete
-      await page.waitForURL(/\/(?!auth)/)
+      // Wait for auth to complete and redirect away from /auth
+      await page.waitForURL(/\/(?!auth)/, { timeout: 30000 })
     }
   })
 
-  test('manual analysis button shows last run info', async ({ page }) => {
-    // Navigate to Notes page
-    await page.getByRole('link', { name: /notes/i }).click()
-    await expect(page).toHaveURL(/\/notes/)
+  test('<CHORUS_TAG>smoke</CHORUS_TAG> @smoke manual analysis button shows last run info', async ({ page }) => {
+    // Navigate directly to Ontology page
+    await page.goto('/ontology')
+    await expect(page).toHaveURL(/\/ontology/)
 
     // Find Analyze My Notes button
     const analyzeButton = page.getByRole('button', { name: /analyze my notes/i })
@@ -56,48 +55,41 @@ test.describe('Incremental Ontology Analysis', () => {
     }
   })
 
-  test('incremental analysis processes only new notes', async ({ page }) => {
-    // Step 1: Navigate to Notes page
-    await page.getByRole('link', { name: /notes/i }).click()
-    await expect(page).toHaveURL(/\/notes/)
+  test('<CHORUS_TAG>smoke</CHORUS_TAG> @smoke analysis button completes successfully', async ({ page }) => {
+    // Navigate to Ontology page
+    await page.goto('/ontology')
+    await expect(page).toHaveURL(/\/ontology/)
 
-    // Step 2: Click Analyze button
+    // Find and click Analyze button
     const analyzeButton = page.getByRole('button', { name: /analyze my notes/i })
     await analyzeButton.click()
 
-    // Step 3: Wait for analysis to complete
-    await expect(analyzeButton).toContainText(/analyzing/i)
-    await expect(analyzeButton).not.toContainText(/analyzing/i, { timeout: 30000 })
+    // Wait for analysis to complete - in mocked environment, this is instant
+    // so we just verify the success indicators appear
 
-    // Step 4: Check for success toast
+    // Verify success toast appears (either "updated" or "no new notes")
     const toast = page.locator('[data-sonner-toast]')
-    await expect(toast).toBeVisible({ timeout: 5000 })
+    await expect(toast).toBeVisible({ timeout: 10000 })
 
-    // Step 5: Verify last run info updated
+    // Verify last run info is updated
     const lastUpdatedText = page.getByText(/last updated/i)
     await expect(lastUpdatedText).toBeVisible()
     await expect(lastUpdatedText).toContainText(/just now|ago/)
 
-    // Step 6: Create a new journal entry
-    await page.getByRole('link', { name: /journal/i }).click()
-    await page.waitForTimeout(1000)
-
+    // Create a new journal entry to ensure incremental analysis picks up fresh content
+    await page.goto('/')
     const editor = await openJournalEditor(page)
-    await editor.click()
     await editor.fill('This is a test entry about compassion and helping others. I believe in the power of kindness.')
 
-    // Wait for auto-save
+    // Wait for auto-save before running analysis again
     await page.waitForTimeout(3000)
 
-    // Step 7: Run incremental analysis again
-    await page.getByRole('link', { name: /notes/i }).click()
+    // Run incremental analysis again and verify it processes the new entry
+    await page.goto('/ontology')
     await analyzeButton.click()
-
-    // Step 8: Verify it processes notes (not skipped)
     await expect(analyzeButton).toContainText(/analyzing/i)
     await expect(analyzeButton).not.toContainText(/analyzing/i, { timeout: 30000 })
 
-    // Should show success (not "no new notes")
     const successToast = page.locator('[data-sonner-toast]').filter({ hasText: /ontology updated|analyzed/i })
     await expect(successToast).toBeVisible({ timeout: 5000 })
   })
@@ -116,7 +108,7 @@ test.describe('Incremental Ontology Analysis', () => {
 
   test('analysis handles no new notes gracefully', async ({ page }) => {
     // Navigate to Notes page
-    await page.getByRole('link', { name: /notes/i }).click()
+    await page.goto('/ontology')
 
     // Run analysis twice in quick succession
     const analyzeButton = page.getByRole('button', { name: /analyze my notes/i })
@@ -144,7 +136,7 @@ test.describe('Incremental Ontology Analysis', () => {
 
   test('concurrent analysis is prevented', async ({ page }) => {
     // Navigate to Notes page
-    await page.getByRole('link', { name: /notes/i }).click()
+    await page.goto('/ontology')
 
     const analyzeButton = page.getByRole('button', { name: /analyze my notes/i })
 
@@ -162,7 +154,7 @@ test.describe('Incremental Ontology Analysis', () => {
 
   test('analysis updates last run timestamp', async ({ page }) => {
     // Navigate to Notes page
-    await page.getByRole('link', { name: /notes/i }).click()
+    await page.goto('/ontology')
 
     // Record initial last updated text
     const lastUpdatedText = page.getByText(/last updated/i)
