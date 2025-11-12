@@ -151,6 +151,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-playwright-
 
+      - name: Build Next.js app for smoke tests
+        run: npm run build
+
+      - name: Start Next.js server
+        run: |
+          npm run start -- --hostname 0.0.0.0 --port 3001 > .next/server.log 2>&1 &
+          echo $! > .next/server.pid
+
+      - name: Wait for Next.js server
+        run: |
+          for i in {1..60}; do
+            if nc -z localhost 3001; then
+              echo "Next.js server is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Next.js server failed to start"
+          cat .next/server.log || true
+          exit 1
+
       - name: Run smoke tests
         id: smoke-tests
         run: |
@@ -182,6 +203,13 @@ jobs:
           # Add other env vars as needed
           # SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           # SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Stop Next.js server
+        if: always()
+        run: |
+          if [ -f .next/server.pid ]; then
+            kill $(cat .next/server.pid) || true
+          fi
 
       - name: Upload test artifacts on failure
         if: failure()
