@@ -177,13 +177,17 @@ export const itemQueries = {
     if (req.reminderTime !== undefined)
       updatePayload.reminder_time = req.reminderTime
     if (req.snoozeUntil !== undefined) updatePayload.snooze_until = req.snoozeUntil
-    if (req.status !== undefined) updatePayload.status = req.status
-    if (req.metadata !== undefined) updatePayload.metadata = req.metadata
-
-    // Auto-set completed_at when status changes to completed
-    if (req.status === 'completed' && !updatePayload.completed_at) {
-      updatePayload.completed_at = new Date().toISOString()
+    if (req.status !== undefined) {
+      updatePayload.status = req.status
+      if (req.status === 'completed') {
+        updatePayload.completed_at =
+          updatePayload.completed_at ?? new Date().toISOString()
+      } else {
+        updatePayload.completed_at = null
+      }
     }
+
+    if (req.metadata !== undefined) updatePayload.metadata = req.metadata
 
     const { data, error } = await supabase
       .from('items')
