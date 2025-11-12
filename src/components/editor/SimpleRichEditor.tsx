@@ -18,6 +18,7 @@ interface SimpleRichEditorProps {
   onTranscription?: (text: string) => void
   entryId?: string
   onNoteCreated?: (noteId: string) => void
+  onAskAISelection?: (selectedText: string) => void
 }
 
 export function SimpleRichEditor({
@@ -31,7 +32,8 @@ export function SimpleRichEditor({
   onMakeNote,
   onTranscription,
   entryId,
-  onNoteCreated
+  onNoteCreated,
+  onAskAISelection
 }: SimpleRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const [selectedText, setSelectedText] = useState('')
@@ -816,8 +818,11 @@ export function SimpleRichEditor({
     e.preventDefault()
     e.stopPropagation()
     suppressBlurRef.current = true
+    if (selectedText) {
+      onAskAISelection?.(selectedText)
+    }
     setShowAskAI(true)
-  }, [setShowAskAI])
+  }, [onAskAISelection, selectedText])
 
   const handleEditorBlur = useCallback((event: React.FocusEvent<HTMLDivElement>) => {
     if (suppressBlurRef.current) {

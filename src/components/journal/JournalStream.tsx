@@ -753,6 +753,13 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     setShowNoteModal(true)
   }
 
+  const handleLinkClick = useCallback((noteId: string) => {
+    setNoteLinkClicked(true)
+    setViewingNoteId(noteId)
+    setShowNoteViewer(true)
+    setTimeout(() => setNoteLinkClicked(false), 100)
+  }, [])
+
   const linkSelectionToNote = useCallback(async (noteId: string) => {
     const entryId = currentEditingEntry
     const selectionText = selectedText
@@ -844,38 +851,10 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       return
     }
 
-    if (!editingEntryId || !selectedText || !user) {
-      console.warn('[Ask AI] Missing context for linking', { editingEntryId, hasSelection: !!selectedText, hasUser: !!user })
-      setViewingNoteId(noteId)
-      setShowNoteViewer(true)
-      return
-    }
-
-    // Reuse the existing link + DOM creation flow from handleNoteCreated
-    await handleNoteCreated({
-      id: noteId,
-      title: '',
-      content: '',
-      userId: user.id,
-      noteType: 'custom',
-      metadata: {
-        sourceType: 'journal',
-        selectedText,
-        journalEntryId: editingEntryId,
-      }
-    } as Note)
-
+    await linkSelectionToNote(noteId)
     setViewingNoteId(noteId)
     setShowNoteViewer(true)
-  }, [editingEntryId, handleNoteCreated, selectedText, user])
-
-  const handleLinkClick = (noteId: string) => {
-    setNoteLinkClicked(true)
-    setViewingNoteId(noteId)
-    setShowNoteViewer(true)
-    // Reset the flag after a short delay
-    setTimeout(() => setNoteLinkClicked(false), 100)
-  }
+  }, [linkSelectionToNote])
 
   const handleCloseNoteModal = () => {
     setShowNoteModal(false)
