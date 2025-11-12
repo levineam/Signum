@@ -19,6 +19,12 @@ CREATE TABLE ontology_updates (
   UNIQUE(user_id, note_id, update_type, created_at)
 );
 
+-- Stream ontology_updates changes via Supabase realtime subscription
+ALTER PUBLICATION supabase_realtime ADD TABLE ontology_updates;
+
+-- Ensure realtime payloads include the full row for update/delete events
+ALTER TABLE ontology_updates REPLICA IDENTITY FULL;
+
 -- ============================================================================
 -- Create indexes for performance
 -- ============================================================================
