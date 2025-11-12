@@ -89,8 +89,8 @@ BEGIN
 
     -- UPDATE: Existing ontology item modified (content changed)
     ELSIF TG_OP = 'UPDATE' AND (
-      OLD.content != NEW.content OR
-      OLD.metadata != NEW.metadata
+      OLD.content IS DISTINCT FROM NEW.content OR
+      OLD.metadata IS DISTINCT FROM NEW.metadata
     ) THEN
       INSERT INTO ontology_updates (user_id, note_id, update_type)
       VALUES (NEW.user_id, NEW.id, 'item_modified')
