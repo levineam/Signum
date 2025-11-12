@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 import { Card } from '@/components/ui/card'
@@ -736,124 +736,138 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     }
   }
 
-  const handleMakeNote = (selectedText: string) => {
-    setSelectedText(selectedText)
+  const captureSelectionContext = useCallback((selection: string) => {
+    if (!selection) return
+    setSelectedText(selection)
     setCurrentEditingEntry(editingEntryId)
 
-    // Phase 1 bug fix: Cache editor element BEFORE opening modal
-    // Modal opening causes entry to exit edit mode, losing contenteditable
     if (editingEntryId) {
-      const editorElement = document.querySelector(`[data-entry-id="${editingEntryId}"] [contenteditable]`) as HTMLElement
+      const editorElement = document.querySelector(`[data-entry-id="${editingEntryId}"] [contenteditable]`) as HTMLElement | null
       cachedEditorRef.current = editorElement
       console.log('💾 Cached editor element:', !!editorElement)
     }
+  }, [editingEntryId])
 
+  const handleMakeNote = (selection: string) => {
+    captureSelectionContext(selection)
     setShowNoteModal(true)
   }
 
-  const handleNoteCreated = async (note: Note) => {
-    if (!currentEditingEntry || !selectedText || !user) {
-      console.log('❌ Missing currentEditingEntry, selectedText, or user', { currentEditingEntry, selectedText, user: !!user })
-      return
+  const linkSelectionToNote = useCallback(async (noteId: string) => {
+    const entryId = currentEditingEntry
+    const selectionText = selectedText
+
+    if (!entryId || !selectionText || !user) {
+      console.log('❌ Missing context for linking', { entryId, selectionTextLength: selectionText?.length, hasUser: !!user })
+      return false
     }
 
-    console.log('📝 Creating note link', { selectedText, noteId: note.id, entryId: currentEditingEntry })
-
-    // Set flag to prevent content change interference
+    console.log('📝 Creating note link', { selectedText: selectionText, noteId, entryId })
     setCreatingLink(true)
 
-    // Phase 1 bug fix: Use cached editor ref and re-enter edit mode if needed
     let editorElement = cachedEditorRef.current
 
-    // If cached ref is stale, try to find editor and re-enter edit mode
     if (!editorElement || !document.contains(editorElement)) {
       console.log('⚠️ Cached editor stale, re-entering edit mode')
-
-      // Re-enter edit mode
-      setEditingEntryId(currentEditingEntry)
-
-      // Wait for edit mode to be active
+      setEditingEntryId(entryId)
       await new Promise(resolve => setTimeout(resolve, 100))
-
-      // Try to find editor again
-      editorElement = document.querySelector(`[data-entry-id="${currentEditingEntry}"] [contenteditable]`) as HTMLElement
+      editorElement = document.querySelector(`[data-entry-id="${entryId}"] [contenteditable]`) as HTMLElement | null
     }
 
-    // Hard fail with toast if editor still missing
     if (!editorElement) {
       console.error('❌ Could not find editor element after re-entry attempt')
       toast.error('Failed to create link: editor not found. Please try again.')
       setCreatingLink(false)
       cachedEditorRef.current = null
-      return
+      return false
     }
 
     try {
-      // Phase 1: Capture metadata BEFORE DOM manipulation
-      const metadata = captureSelectionMetadata(editorElement, selectedText)
+      const metadata = captureSelectionMetadata(editorElement, selectionText)
       console.log('📊 Captured selection metadata:', metadata)
 
-      // Phase 1: Create link in Supabase with metadata
       const link = await createLink({
-        sourceNoteId: currentEditingEntry,
-        targetNoteId: note.id,
+        sourceNoteId: entryId,
+        targetNoteId: noteId,
         linkType: 'created_from',
         metadata: metadata || undefined
       }, user.id)
       console.log('💾 Link created in Supabase:', link)
 
-      // Convert the selected text to a link in the DOM with linkId
-      const linkCreated = convertTextToLink(editorElement, selectedText, note.id, link.id, handleLinkClick)
+      const linkCreated = convertTextToLink(editorElement, selectionText, noteId, link.id, handleLinkClick)
 
       if (!linkCreated) {
         console.error('❌ Failed to create link in editor')
         setCreatingLink(false)
-        return
+        return false
       }
 
       console.log('🔗 Created link in editor DOM')
 
-      // Now read the updated HTML from the editor after the link was created
-      // Wait for DOM to settle, then read the actual content
       setTimeout(() => {
-        const updatedContent = editorElement.innerHTML
+        const updatedContent = editorElement?.innerHTML ?? ''
         console.log('📄 Read updated content from editor after link creation')
 
-        // Update state with the content that includes the link at the correct position
         setEntries(prev => prev.map(entry => {
-          if (entry.id === currentEditingEntry) {
+          if (entry.id === entryId) {
             return { ...entry, content: updatedContent, lastModified: new Date().toISOString() }
           }
           return entry
         }))
 
-        // Persist the linked content to Supabase
-        updateNoteInDb(currentEditingEntry, { content: updatedContent }, user.id)
+        updateNoteInDb(entryId, { content: updatedContent }, user.id)
           .then(() => console.log('💾 Persisted link to Supabase'))
           .catch(error => console.error('Error persisting link to Supabase:', error))
 
         setCreatingLink(false)
-
-        // Clear cached ref after successful link creation
         cachedEditorRef.current = null
+        setSelectedText('')
       }, 50)
+
+      return true
     } catch (error) {
       console.error('❌ Error creating link:', error)
       toast.error('Failed to create link. Please try again.')
       setCreatingLink(false)
       cachedEditorRef.current = null
+      return false
     }
-  }
+  }, [currentEditingEntry, selectedText, user, handleLinkClick, setEntries])
 
-  const handleAskAIAnswerCreated = (noteId: string) => {
+  const handleNoteCreated = useCallback(async (note: Note) => {
+    await linkSelectionToNote(note.id)
+  }, [linkSelectionToNote])
+
+  const handleAskAIAnswerCreated = useCallback(async (noteId: string) => {
     if (!noteId) {
       console.warn('[Ask AI] Missing noteId from dialog callback')
       return
     }
 
+    if (!editingEntryId || !selectedText || !user) {
+      console.warn('[Ask AI] Missing context for linking', { editingEntryId, hasSelection: !!selectedText, hasUser: !!user })
+      setViewingNoteId(noteId)
+      setShowNoteViewer(true)
+      return
+    }
+
+    // Reuse the existing link + DOM creation flow from handleNoteCreated
+    await handleNoteCreated({
+      id: noteId,
+      title: '',
+      content: '',
+      userId: user.id,
+      noteType: 'custom',
+      metadata: {
+        sourceType: 'journal',
+        selectedText,
+        journalEntryId: editingEntryId,
+      }
+    } as Note)
+
     setViewingNoteId(noteId)
     setShowNoteViewer(true)
-  }
+  }, [editingEntryId, handleNoteCreated, selectedText, user])
 
   const handleLinkClick = (noteId: string) => {
     setNoteLinkClicked(true)
@@ -1263,6 +1277,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                     onMakeNote={handleMakeNote}
                     entryId={entry.id}
                     onNoteCreated={handleAskAIAnswerCreated}
+                    onAskAISelection={captureSelectionContext}
                     onFocus={() => {
                       // Phase 2: Link rehydration from Supabase will be implemented here
                       // For now, links already in HTML remain functional
