@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -30,6 +30,7 @@ export function AskAIDialog({
   const [query, setQuery] = useState('')
   const [state, setState] = useState<ButtonState>('idle')
   const [isTruncated, setIsTruncated] = useState(false)
+  const suppressAutoOpenRef = useRef(false)
 
   // Initialize query from selected text when dialog opens
   useEffect(() => {
@@ -54,6 +55,15 @@ export function AskAIDialog({
     }
   }, [isOpen])
 
+  // Track if user manually closed dialog while a request is in-flight
+  useEffect(() => {
+    if (!isOpen && state === 'loading') {
+      suppressAutoOpenRef.current = true
+    } else if (isOpen && state === 'idle') {
+      suppressAutoOpenRef.current = false
+    }
+  }, [isOpen, state])
+
   const handleGenerateAnswer = async () => {
     if (!session?.access_token) {
       toast.error('Please sign in to use AI features')
@@ -65,6 +75,7 @@ export function AskAIDialog({
       return
     }
 
+    suppressAutoOpenRef.current = false
     setState('loading')
 
     try {
@@ -109,16 +120,22 @@ export function AskAIDialog({
       })
 
       if (data.noteId) {
-        // Notify parent component
-        onAnswerCreated?.(data.noteId)
-        toast.success('AI answer created! Opening note...', {
-          duration: 2000
-        })
+        if (!suppressAutoOpenRef.current) {
+          // Notify parent component
+          onAnswerCreated?.(data.noteId)
+          toast.success('AI answer created! Opening note...', {
+            duration: 2000
+          })
 
-        // Close dialog after short delay
-        setTimeout(() => {
-          onClose()
-        }, 500)
+          // Close dialog after short delay
+          setTimeout(() => {
+            onClose()
+          }, 500)
+        } else {
+          toast.success('AI answer created. Open the note when you are ready.', {
+            duration: 2000
+          })
+        }
       } else if (data.warning) {
         toast.warning(data.warning)
         onClose()
