@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAsTestUser } from './helpers/auth';
+import { JOURNAL_EDITOR_SELECTOR } from './helpers/selectors';
+import { openJournalEditor } from './helpers/journal';
 
 /**
  * Story 1.2.1 UI Requirements Test
@@ -20,7 +22,7 @@ test.describe('Story 1.2.1 - TaskCard UI Improvements', () => {
 
   test('should create a task and verify pending state UI', async ({ page }) => {
     // Type a task in the journal
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await openJournalEditor(page);
     await editor.click();
     await editor.fill('I need to test the task card UI');
     await editor.press('Enter');
@@ -40,7 +42,7 @@ test.describe('Story 1.2.1 - TaskCard UI Improvements', () => {
 
   test('Requirement 1: Accepted task should NOT show "Accepted" badge', async ({ page }) => {
     // Create and accept a task
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await openJournalEditor(page);
     await editor.click();
     await editor.fill('Task for testing accepted state');
     await editor.press('Enter');
@@ -65,7 +67,7 @@ test.describe('Story 1.2.1 - TaskCard UI Improvements', () => {
 
   test('Requirement 2: Checkbox should appear to LEFT of title', async ({ page }) => {
     // Create and accept a task
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await openJournalEditor(page);
     await editor.click();
     await editor.fill('Task for checkbox position test');
     await editor.press('Enter');
@@ -98,7 +100,7 @@ test.describe('Story 1.2.1 - TaskCard UI Improvements', () => {
 
   test('Requirement 3: Edit/Delete buttons with tooltips for accepted tasks', async ({ page }) => {
     // Create and accept a task
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await openJournalEditor(page);
     await editor.click();
     await editor.fill('Task for button tooltip test');
     await editor.press('Enter');
@@ -132,7 +134,7 @@ test.describe('Story 1.2.1 - TaskCard UI Improvements', () => {
 
   test('Clicking checkbox should toggle completion and strikethrough title', async ({ page }) => {
     // Create and accept a task
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = await openJournalEditor(page);
     await editor.click();
     await editor.fill('Task for completion toggle test');
     await editor.press('Enter');

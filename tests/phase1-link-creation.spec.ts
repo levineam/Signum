@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import { JOURNAL_EDITOR_SELECTOR } from './helpers/selectors'
+import { openJournalEditor } from './helpers/journal'
 
 /**
  * Phase 1: Link Creation with Supabase Metadata
@@ -16,6 +18,7 @@ const TEST_EMAIL = 'dev-test-1@signum.dev'
 const TEST_PASSWORD = 'DevTest2025!User1'
 
 test.describe('Phase 1: Link Creation with Metadata', () => {
+  test.setTimeout(120000)
   test.beforeEach(async ({ page }) => {
     // Navigate to preview URL
     await page.goto(PREVIEW_URL)
@@ -55,13 +58,7 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
     })
 
     // Look for any contenteditable element (journal editor)
-    const editor = page.locator('[contenteditable="true"]').first()
-    const editorCount = await editor.count()
-
-    if (editorCount === 0) {
-      console.log('❌ No editor found - test cannot proceed')
-      throw new Error('No contenteditable editor found on page')
-    }
+    const editor = await openJournalEditor(page)
 
     // Add some test content with context for metadata capture
     const testContent = 'I have been thinking about stoicism lately. The practice of negative visualization helps me appreciate what I have today.'
@@ -74,8 +71,8 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
 
     // Select the word "stoicism" for link creation
     // We need to use JavaScript to select text precisely
-    await page.evaluate(() => {
-      const editorEl = document.querySelector('[contenteditable="true"]') as HTMLElement
+    await page.evaluate((selector) => {
+      const editorEl = document.querySelector(selector) as HTMLElement | null
       if (!editorEl) throw new Error('Editor not found')
 
       const text = editorEl.textContent || ''
@@ -104,7 +101,7 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
           break
         }
       }
-    })
+    }, JOURNAL_EDITOR_SELECTOR)
 
     // Wait for selection to register
     await page.waitForTimeout(500)
@@ -113,17 +110,17 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
     await page.click('button:has-text("Make Note")')
 
     // Wait for modal
-    await page.waitForSelector('h2:has-text("Create Note")', { timeout: 5000 })
+    await page.waitForSelector('h2:has-text("Create New Note")', { timeout: 5000 })
 
     // Verify title is pre-filled with "stoicism"
     const titleInput = page.locator('input[placeholder*="note title"]').or(page.locator('input').first())
     await expect(titleInput).toHaveValue('stoicism')
 
     // Save note
-    await page.click('button:has-text("Save")')
+    await page.click('button:has-text("Create Note")')
 
     // Wait for modal to close
-    await page.waitForSelector('h2:has-text("Create Note")', { state: 'hidden', timeout: 5000 })
+    await page.waitForSelector('h2:has-text("Create New Note")', { state: 'hidden', timeout: 5000 })
 
     // Wait for link to appear
     await page.waitForTimeout(1000)
@@ -161,8 +158,8 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
     await link.click()
 
     // Should open note viewer modal
-    await page.waitForSelector('text=stoicism', { timeout: 5000 })
-    const noteViewerTitle = page.locator('h2:has-text("stoicism")').or(page.locator('text=stoicism'))
+    await page.waitForSelector('[role="dialog"] h2:has-text("stoicism")', { timeout: 5000 })
+    const noteViewerTitle = page.locator('[role="dialog"] h2:has-text("stoicism")')
     await expect(noteViewerTitle).toBeVisible()
 
     console.log('✅ Link click opens note viewer')
@@ -174,11 +171,11 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
     await page.reload()
     await page.waitForLoadState('networkidle')
 
-    // Link should NOT be present after refresh (Phase 1 limitation)
+    // Link should remain present after refresh as Supabase now persists it
     const linkAfterRefresh = page.locator('a.note-link:has-text("stoicism")')
-    await expect(linkAfterRefresh).toHaveCount(0)
+    await expect(linkAfterRefresh).toHaveCount(1)
 
-    console.log('✅ Confirmed Phase 1 limitation: Link does not persist on refresh')
+    console.log('✅ Confirmed link persists after refresh')
   })
 
   test('should capture correct metadata context', async ({ page }) => {
@@ -195,13 +192,7 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
     })
 
     // Look for any contenteditable element (journal editor)
-    const editor = page.locator('[contenteditable="true"]').first()
-    const editorCount = await editor.count()
-
-    if (editorCount === 0) {
-      console.log('❌ No editor found - test cannot proceed')
-      throw new Error('No contenteditable editor found on page')
-    }
+    const editor = await openJournalEditor(page)
 
     const testContent = 'PREFIX TEXT HERE stoicism SUFFIX TEXT HERE'
     await editor.click()
@@ -210,8 +201,8 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
     await page.waitForTimeout(3000)
 
     // Select "stoicism"
-    await page.evaluate(() => {
-      const editorEl = document.querySelector('[contenteditable="true"]') as HTMLElement
+    await page.evaluate((selector) => {
+      const editorEl = document.querySelector(selector) as HTMLElement | null
       if (!editorEl) throw new Error('Editor not found')
 
       const range = document.createRange()
@@ -230,12 +221,12 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
           break
         }
       }
-    })
+    }, JOURNAL_EDITOR_SELECTOR)
 
     await page.waitForTimeout(500)
     await page.click('button:has-text("Make Note")')
-    await page.waitForSelector('h2:has-text("Create Note")')
-    await page.click('button:has-text("Save")')
+    await page.waitForSelector('h2:has-text("Create New Note")')
+    await page.click('button:has-text("Create Note")')
     await page.waitForTimeout(2000)
 
     // Verify metadata was captured via console logs

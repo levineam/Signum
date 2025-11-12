@@ -4,6 +4,8 @@
  */
 
 import { test, expect } from '@playwright/test'
+import { JOURNAL_EDITOR_SELECTOR } from './helpers/selectors'
+import { openJournalEditor } from './helpers/journal'
 
 const TEST_USER = {
   email: 'dev-test-1@signum.dev',
@@ -80,7 +82,7 @@ test.describe('Incremental Ontology Analysis', () => {
     await page.getByRole('link', { name: /journal/i }).click()
     await page.waitForTimeout(1000)
 
-    const editor = page.locator('[contenteditable="true"]').first()
+    const editor = await openJournalEditor(page)
     await editor.click()
     await editor.fill('This is a test entry about compassion and helping others. I believe in the power of kindness.')
 

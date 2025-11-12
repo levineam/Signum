@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TEXT_INPUT_SELECTOR } from './helpers/selectors'
 
 const PREVIEW_URL = 'https://signum-git-story-241-auth-integration-levineams-projects.vercel.app'
 
@@ -57,7 +58,7 @@ test.describe('Phase 2 - Authenticated User Testing', () => {
     }
 
     // Look for any editor or textarea
-    const editors = await page.locator('textarea, [contenteditable="true"]').count()
+    const editors = await page.locator(TEXT_INPUT_SELECTOR).count()
     console.log('Editable elements found:', editors)
 
     await page.screenshot({ path: 'tests/screenshots/journal-unauthenticated.png', fullPage: true })

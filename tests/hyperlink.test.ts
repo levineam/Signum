@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { JOURNAL_EDITOR_SELECTOR, DIALOG_EDITOR_SELECTOR } from './helpers/selectors';
+import { openJournalEditor } from './helpers/journal';
 
 test.describe('Hyperlink Creation from Selected Text', () => {
   test.beforeEach(async ({ page }) => {
@@ -12,19 +14,15 @@ test.describe('Hyperlink Creation from Selected Text', () => {
   test('should create hyperlink from selected text and open note viewer', async ({ page }) => {
     // Step 1: Click on today's entry to start editing
     const todayEntry = page.locator('[data-entry-id*="2025"]').first();
-    await todayEntry.click();
-
-    // Wait for the editor to become active
-    await page.waitForSelector('[contenteditable="true"]', { state: 'visible' });
+    const editor = await openJournalEditor(page, todayEntry);
 
     // Step 2: Type some text with a word we'll make into a note
     const testText = 'I am feeling contentment today and it brings me peace.';
-    const editor = page.locator('[contenteditable="true"]');
     await editor.fill(testText);
 
     // Step 3: Select the word "contentment" using JavaScript
-    await page.evaluate(() => {
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+    await page.evaluate((selector) => {
+      const editor = document.querySelector(selector) as HTMLElement | null;
       if (!editor) return;
 
       const textNode = editor.firstChild;
@@ -50,7 +48,7 @@ test.describe('Hyperlink Creation from Selected Text', () => {
       // Trigger mouseup event to ensure selection is detected
       const mouseUpEvent = new MouseEvent('mouseup', { bubbles: true });
       editor.dispatchEvent(mouseUpEvent);
-    });
+    }, JOURNAL_EDITOR_SELECTOR);
 
     // Wait a bit for the selection to be processed
     await page.waitForTimeout(100);
@@ -68,7 +66,7 @@ test.describe('Hyperlink Creation from Selected Text', () => {
     await expect(titleInput).toHaveValue('contentment');
 
     // Step 6: Add some content to the note
-    const noteContent = page.locator('[role="dialog"] [contenteditable="true"]');
+    const noteContent = page.locator(DIALOG_EDITOR_SELECTOR);
     await noteContent.fill('Contentment is a state of satisfaction and peace.');
 
     // Step 7: Save the note
@@ -111,8 +109,7 @@ test.describe('Hyperlink Creation from Selected Text', () => {
     await closeButton.click();
 
     // Step 13: Click back into editing mode
-    await todayEntry.click();
-    await page.waitForSelector('[contenteditable="true"]', { state: 'visible' });
+    await openJournalEditor(page, todayEntry);
 
     // Step 14: Verify the hyperlink is still visible and clickable in editing mode
     const linkInEditMode = page.locator('a[data-note-id]:has-text("contentment")');
@@ -129,19 +126,15 @@ test.describe('Hyperlink Creation from Selected Text', () => {
   test('should create multiple hyperlinks in the same entry', async ({ page }) => {
     // Step 1: Click on today's entry to start editing
     const todayEntry = page.locator('[data-entry-id*="2025"]').first();
-    await todayEntry.click();
-
-    // Wait for the editor to become active
-    await page.waitForSelector('[contenteditable="true"]', { state: 'visible' });
+    const editor = await openJournalEditor(page, todayEntry);
 
     // Step 2: Type text with multiple words to link
     const testText = 'My journey involves mindfulness and gratitude daily.';
-    const editor = page.locator('[contenteditable="true"]');
     await editor.fill(testText);
 
     // Step 3: Create first note for "mindfulness"
-    await page.evaluate(() => {
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+    await page.evaluate((selector) => {
+      const editor = document.querySelector(selector) as HTMLElement | null;
       if (!editor) return;
 
       const textNode = editor.firstChild;
@@ -167,7 +160,7 @@ test.describe('Hyperlink Creation from Selected Text', () => {
       // Trigger mouseup event to ensure selection is detected
       const mouseUpEvent = new MouseEvent('mouseup', { bubbles: true });
       editor.dispatchEvent(mouseUpEvent);
-    });
+    }, JOURNAL_EDITOR_SELECTOR);
 
     await page.waitForTimeout(100);
 
@@ -178,7 +171,7 @@ test.describe('Hyperlink Creation from Selected Text', () => {
     await page.waitForSelector('[role="dialog"]', { state: 'visible' });
 
     // Add content to the note
-    const noteContent = page.locator('[role="dialog"] [contenteditable="true"]');
+    const noteContent = page.locator(DIALOG_EDITOR_SELECTOR);
     await noteContent.fill('Mindfulness is the practice of being present in the moment.');
 
     const saveButton = page.locator('button:has-text("Create Note")');
@@ -186,8 +179,8 @@ test.describe('Hyperlink Creation from Selected Text', () => {
     await page.waitForSelector('[role="dialog"]', { state: 'hidden' });
 
     // Step 4: Create second note for "gratitude"
-    await page.evaluate(() => {
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+    await page.evaluate((selector) => {
+      const editor = document.querySelector(selector) as HTMLElement | null;
       if (!editor) return;
 
       // After first note creation, content might have changed - need to find text node again
@@ -230,7 +223,7 @@ test.describe('Hyperlink Creation from Selected Text', () => {
       // Trigger mouseup event to ensure selection is detected
       const mouseUpEvent = new MouseEvent('mouseup', { bubbles: true });
       editor.dispatchEvent(mouseUpEvent);
-    });
+    }, JOURNAL_EDITOR_SELECTOR);
 
     await page.waitForTimeout(100);
 

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { openJournalEditor } from './helpers/journal'
 
 const TEST_URL = 'http://localhost:3000'
 
@@ -10,6 +11,9 @@ test.describe('CBT Distortions Helper', () => {
 
     // Wait for journal entry to load (assumes authentication is already set up)
     await page.waitForSelector('[data-entry-id]', { timeout: 10000 })
+
+    // Activate editor for the current entry so helper interactions can insert text
+    await openJournalEditor(page)
   })
 
   test('expands and collapses helper panel', async ({ page }) => {

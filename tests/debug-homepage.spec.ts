@@ -3,6 +3,7 @@
  */
 
 import { test } from '@playwright/test';
+import { JOURNAL_EDITOR_SELECTOR } from './helpers/selectors';
 
 const TEST_URL = process.env.TEST_URL || 'https://signum-git-story-121-inline-task-cards-levineams-projects.vercel.app';
 
@@ -42,7 +43,7 @@ test('debug: screenshot homepage after auth', async ({ page }) => {
   console.log('Has contenteditable:', html.includes('contenteditable'));
 
   // Check for editor
-  const editors = await page.locator('[contenteditable="true"]').count();
+  const editors = await page.locator(JOURNAL_EDITOR_SELECTOR).count();
   console.log('Number of contenteditable elements:', editors);
 
   // Check for all contenteditable (including hidden ones)

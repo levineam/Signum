@@ -11,6 +11,7 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
+import { JOURNAL_EDITOR_SELECTOR } from './helpers/selectors';
 
 // Use environment variable or skip tests
 const TEST_URL = process.env.TEST_URL || process.env.PLAYWRIGHT_BASE_URL;
@@ -69,7 +70,7 @@ async function getJournalEditor(page: Page) {
   await clickableArea.click();
 
   // Now wait for the contenteditable editor to appear within the clicked card
-  const editor = entryCard.locator('[contenteditable="true"]').or(entryCard.locator('div[contenteditable]'));
+  const editor = entryCard.locator(JOURNAL_EDITOR_SELECTOR).first();
   await editor.waitFor({ state: 'visible', timeout: 10000 });
   return editor;
 }

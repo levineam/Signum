@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { JOURNAL_EDITOR_SELECTOR, DIALOG_EDITOR_SELECTOR } from './helpers/selectors';
+import { openJournalEditor } from './helpers/journal';
 
 test.describe('Hyperlink Verification', () => {
   test.beforeEach(async ({ page }) => {
@@ -12,14 +14,11 @@ test.describe('Hyperlink Verification', () => {
   test('should show hyperlinks in both read-only and edit modes', async ({ page }) => {
     // Step 1: Create a new note from "contentment" in Yesterday's entry
     const yesterdayEntry = page.locator('[data-entry-id*="2025"]:has-text("Yesterday")').first();
-    await yesterdayEntry.click();
-
-    // Wait for the editor to become active
-    await page.waitForSelector('[contenteditable="true"]', { state: 'visible' });
+    await openJournalEditor(page, yesterdayEntry);
 
     // Step 2: Select the word "contentment" using JavaScript
-    await page.evaluate(() => {
-      const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+    await page.evaluate((selector) => {
+      const editor = document.querySelector(selector) as HTMLElement | null;
       if (!editor) return;
 
       // Find text node containing "contentment"
@@ -60,7 +59,7 @@ test.describe('Hyperlink Verification', () => {
       // Trigger mouseup event to ensure selection is detected
       const mouseUpEvent = new MouseEvent('mouseup', { bubbles: true });
       editor.dispatchEvent(mouseUpEvent);
-    });
+    }, JOURNAL_EDITOR_SELECTOR);
 
     // Wait for selection to be processed
     await page.waitForTimeout(200);
@@ -76,7 +75,7 @@ test.describe('Hyperlink Verification', () => {
       await page.waitForSelector('[role="dialog"]', { state: 'visible' });
 
       // Add some content to the note
-      const noteContent = page.locator('[role="dialog"] [contenteditable="true"]');
+      const noteContent = page.locator(DIALOG_EDITOR_SELECTOR);
       await noteContent.fill('A state of peaceful happiness and satisfaction.');
 
       // Save the note
@@ -118,8 +117,7 @@ test.describe('Hyperlink Verification', () => {
     }
 
     // Step 7: Go back to edit mode and verify hyperlink still works
-    await yesterdayEntry.click();
-    await page.waitForSelector('[contenteditable="true"]', { state: 'visible' });
+    await openJournalEditor(page, yesterdayEntry);
 
     // Take a screenshot for verification
     await page.screenshot({

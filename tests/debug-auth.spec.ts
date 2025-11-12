@@ -1,4 +1,5 @@
 import { test } from '@playwright/test';
+import { JOURNAL_EDITOR_SELECTOR } from './helpers/selectors';
 
 const TEST_URL = 'https://signum-git-story-121-inline-task-cards-levineams-projects.vercel.app';
 const TEST_USER = {
@@ -25,7 +26,7 @@ test('debug authentication', async ({ page }) => {
   await page.screenshot({ path: 'tests/screenshots/debug-after-auth.png', fullPage: true });
 
   // Check for editor
-  const editors = await page.locator('[contenteditable="true"]').count();
+  const editors = await page.locator(JOURNAL_EDITOR_SELECTOR).count();
   console.log('Number of contenteditable elements:', editors);
   
   if (editors === 0) {
