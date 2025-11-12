@@ -3,6 +3,7 @@ import {
   Schedule,
   CreateScheduleRequest,
   UpdateScheduleRequest,
+  JsonValue,
 } from '@/types/temporal'
 
 const supabase = createClient()
@@ -22,7 +23,7 @@ export const scheduleQueries = {
       .order('created_at', { ascending: false })
 
     if (error) throw new Error(`Failed to fetch schedules: ${error.message}`)
-    return data || []
+    return (data as Schedule[] | null) ?? []
   },
 
   /**
@@ -37,29 +38,29 @@ export const scheduleQueries = {
 
     if (error) throw new Error(`Failed to fetch schedule: ${error.message}`)
     if (!data) throw new Error('Schedule not found')
-    return data
+    return data as Schedule
   },
 
   /**
    * Create a new schedule with recurrence rule
    */
   async createSchedule(req: CreateScheduleRequest): Promise<Schedule> {
+    const payload: Record<string, JsonValue> = {
+      rrule: req.rrule,
+      timezone: req.timezone,
+      exception_dates: req.exceptionDates || [],
+      recurrence_dates: req.recurrenceDates || [],
+    }
+
     const { data, error } = await supabase
       .from('schedules')
-      .insert([
-        {
-          rrule: req.rrule,
-          timezone: req.timezone,
-          exception_dates: req.exceptionDates || [],
-          recurrence_dates: req.recurrenceDates || [],
-        },
-      ])
+      .insert([payload])
       .select()
       .single()
 
     if (error) throw new Error(`Failed to create schedule: ${error.message}`)
     if (!data) throw new Error('Schedule creation failed')
-    return data
+    return data as Schedule
   },
 
   /**
@@ -69,7 +70,7 @@ export const scheduleQueries = {
     id: string,
     req: UpdateScheduleRequest
   ): Promise<Schedule> {
-    const updatePayload: Record<string, string | string[]> = {}
+    const updatePayload: Record<string, JsonValue> = {}
 
     if (req.rrule !== undefined) updatePayload.rrule = req.rrule
     if (req.timezone !== undefined) updatePayload.timezone = req.timezone
@@ -87,7 +88,7 @@ export const scheduleQueries = {
 
     if (error) throw new Error(`Failed to update schedule: ${error.message}`)
     if (!data) throw new Error('Schedule not found')
-    return data
+    return data as Schedule
   },
 
   /**

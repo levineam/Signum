@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { itemQueries } from '@/lib/supabase/items'
+import type { Item } from '@/types/temporal'
 import {
   CreateItemRequest,
   UpdateItemRequest,
@@ -20,7 +21,7 @@ const ITEMS_QUERY_KEY = ['items']
  * })
  */
 export function useItems(query?: ItemsQuery) {
-  return useQuery({
+  return useQuery<Item[]>({
     queryKey: [ITEMS_QUERY_KEY, query],
     queryFn: () => itemQueries.getItems(query),
     staleTime: 30 * 1000, // 30 seconds
@@ -34,7 +35,7 @@ export function useItems(query?: ItemsQuery) {
  * const { data: item } = useItem('item-id-123')
  */
 export function useItem(id: string) {
-  return useQuery({
+  return useQuery<Item | undefined>({
     queryKey: [ITEMS_QUERY_KEY, id],
     queryFn: () => itemQueries.getItem(id),
     enabled: !!id,
@@ -55,8 +56,8 @@ export function useItem(id: string) {
  */
 export function useCreateItem() {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (req: CreateItemRequest) => itemQueries.createItem(req),
+  return useMutation<Item, Error, CreateItemRequest>({
+    mutationFn: (req) => itemQueries.createItem(req),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY })
     },
@@ -75,9 +76,8 @@ export function useCreateItem() {
  */
 export function useUpdateItem() {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, req }: { id: string; req: UpdateItemRequest }) =>
-      itemQueries.updateItem(id, req),
+  return useMutation<Item, Error, { id: string; req: UpdateItemRequest }>({
+    mutationFn: ({ id, req }) => itemQueries.updateItem(id, req),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY })
       queryClient.setQueryData([ITEMS_QUERY_KEY, data.id], data)
@@ -94,8 +94,8 @@ export function useUpdateItem() {
  */
 export function useDeleteItem() {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => itemQueries.deleteItem(id),
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => itemQueries.deleteItem(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY })
     },
@@ -111,8 +111,8 @@ export function useDeleteItem() {
  */
 export function useCompleteItem() {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => itemQueries.completeItem(id),
+  return useMutation<Item, Error, string>({
+    mutationFn: (id) => itemQueries.completeItem(id),
     onSuccess: (data) => {
       queryClient.setQueryData([ITEMS_QUERY_KEY, data.id], data)
       queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY })
@@ -132,9 +132,8 @@ export function useCompleteItem() {
  */
 export function useSnoozeReminder() {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, until }: { id: string; until: string }) =>
-      itemQueries.snoozeReminder(id, until),
+  return useMutation<Item, Error, { id: string; until: string }>({
+    mutationFn: ({ id, until }) => itemQueries.snoozeReminder(id, until),
     onSuccess: (data) => {
       queryClient.setQueryData([ITEMS_QUERY_KEY, data.id], data)
       queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY })

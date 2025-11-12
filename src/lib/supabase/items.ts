@@ -4,6 +4,7 @@ import {
   CreateItemRequest,
   UpdateItemRequest,
   ItemsQuery,
+  JsonValue,
 } from '@/types/temporal'
 
 const supabase = createClient()
@@ -52,7 +53,7 @@ export const itemQueries = {
     const { data, error } = await q
 
     if (error) throw new Error(`Failed to fetch items: ${error.message}`)
-    return data || []
+    return (data as Item[] | null) ?? []
   },
 
   /**
@@ -67,42 +68,43 @@ export const itemQueries = {
 
     if (error) throw new Error(`Failed to fetch item: ${error.message}`)
     if (!data) throw new Error('Item not found')
-    return data
+    return data as Item
   },
 
   /**
    * Create a new item (task or reminder)
    */
   async createItem(req: CreateItemRequest): Promise<Item> {
+    const payload: Record<string, JsonValue> = {
+      item_type: req.itemType,
+      title: req.title,
+      priority: req.priority || 'medium',
+      metadata: req.metadata || {},
+    }
+
+    if (req.description !== undefined) payload.description = req.description
+    if (req.scheduleId !== undefined) payload.schedule_id = req.scheduleId
+    if (req.dueAt !== undefined) payload.due_at = req.dueAt
+    if (req.estimateMinutes !== undefined)
+      payload.estimate_minutes = req.estimateMinutes
+    if (req.reminderTime !== undefined) payload.reminder_time = req.reminderTime
+
     const { data, error } = await supabase
       .from('items')
-      .insert([
-        {
-          item_type: req.itemType,
-          title: req.title,
-          description: req.description,
-          schedule_id: req.scheduleId,
-          due_at: req.dueAt,
-          priority: req.priority || 'medium',
-          estimate_minutes: req.estimateMinutes,
-          reminder_time: req.reminderTime,
-          metadata: req.metadata || {},
-        },
-      ])
+      .insert([payload])
       .select()
       .single()
 
     if (error) throw new Error(`Failed to create item: ${error.message}`)
     if (!data) throw new Error('Item creation failed')
-    return data
+    return data as Item
   },
 
   /**
    * Update an existing item
    */
   async updateItem(id: string, req: UpdateItemRequest): Promise<Item> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updatePayload: Record<string, any> = {}
+    const updatePayload: Record<string, JsonValue> = {}
 
     if (req.title !== undefined) updatePayload.title = req.title
     if (req.description !== undefined) updatePayload.description = req.description
@@ -130,7 +132,7 @@ export const itemQueries = {
 
     if (error) throw new Error(`Failed to update item: ${error.message}`)
     if (!data) throw new Error('Item not found')
-    return data
+    return data as Item
   },
 
   /**
@@ -158,7 +160,7 @@ export const itemQueries = {
 
     if (error) throw new Error(`Failed to complete item: ${error.message}`)
     if (!data) throw new Error('Item not found')
-    return data
+    return data as Item
   },
 
   /**
@@ -174,6 +176,6 @@ export const itemQueries = {
 
     if (error) throw new Error(`Failed to snooze reminder: ${error.message}`)
     if (!data) throw new Error('Reminder not found')
-    return data
+    return data as Item
   },
 }

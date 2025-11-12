@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { occurrenceQueries } from '@/lib/supabase/occurrences'
+import type { Occurrence } from '@/types/temporal'
 import {
   CreateOccurrenceRequest,
   UpdateOccurrenceRequest,
@@ -20,7 +21,7 @@ const OCCURRENCES_QUERY_KEY = ['occurrences']
  * })
  */
 export function useOccurrences(query?: OccurrencesQuery) {
-  return useQuery({
+  return useQuery<Occurrence[]>({
     queryKey: [OCCURRENCES_QUERY_KEY, query],
     queryFn: () => occurrenceQueries.getOccurrences(query),
     staleTime: 30 * 1000,
@@ -34,7 +35,7 @@ export function useOccurrences(query?: OccurrencesQuery) {
  * const { data: occurrence } = useOccurrence('occurrence-id-123')
  */
 export function useOccurrence(id: string) {
-  return useQuery({
+  return useQuery<Occurrence | undefined>({
     queryKey: [OCCURRENCES_QUERY_KEY, id],
     queryFn: () => occurrenceQueries.getOccurrence(id),
     enabled: !!id,
@@ -57,7 +58,7 @@ export function useOccurrencesByDateRange(
   endDate: string,
   itemId?: string
 ) {
-  return useQuery({
+  return useQuery<Occurrence[]>({
     queryKey: [OCCURRENCES_QUERY_KEY, 'dateRange', startDate, endDate, itemId],
     queryFn: () =>
       occurrenceQueries.getOccurrencesByDateRange(startDate, endDate, itemId),
@@ -77,9 +78,8 @@ export function useOccurrencesByDateRange(
  */
 export function useCreateOccurrence() {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (req: CreateOccurrenceRequest) =>
-      occurrenceQueries.createOccurrence(req),
+  return useMutation<Occurrence, Error, CreateOccurrenceRequest>({
+    mutationFn: (req) => occurrenceQueries.createOccurrence(req),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: OCCURRENCES_QUERY_KEY })
     },
@@ -98,9 +98,12 @@ export function useCreateOccurrence() {
  */
 export function useUpdateOccurrence() {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, req }: { id: string; req: UpdateOccurrenceRequest }) =>
-      occurrenceQueries.updateOccurrence(id, req),
+  return useMutation<
+    Occurrence,
+    Error,
+    { id: string; req: UpdateOccurrenceRequest }
+  >({
+    mutationFn: ({ id, req }) => occurrenceQueries.updateOccurrence(id, req),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: OCCURRENCES_QUERY_KEY })
       queryClient.setQueryData([OCCURRENCES_QUERY_KEY, data.id], data)
@@ -117,8 +120,8 @@ export function useUpdateOccurrence() {
  */
 export function useDeleteOccurrence() {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => occurrenceQueries.deleteOccurrence(id),
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => occurrenceQueries.deleteOccurrence(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: OCCURRENCES_QUERY_KEY })
     },
@@ -134,8 +137,8 @@ export function useDeleteOccurrence() {
  */
 export function useCompleteOccurrence() {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => occurrenceQueries.completeOccurrence(id),
+  return useMutation<Occurrence, Error, string>({
+    mutationFn: (id) => occurrenceQueries.completeOccurrence(id),
     onSuccess: (data) => {
       queryClient.setQueryData([OCCURRENCES_QUERY_KEY, data.id], data)
       queryClient.invalidateQueries({ queryKey: OCCURRENCES_QUERY_KEY })
@@ -152,8 +155,8 @@ export function useCompleteOccurrence() {
  */
 export function useSkipOccurrence() {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => occurrenceQueries.skipOccurrence(id),
+  return useMutation<Occurrence, Error, string>({
+    mutationFn: (id) => occurrenceQueries.skipOccurrence(id),
     onSuccess: (data) => {
       queryClient.setQueryData([OCCURRENCES_QUERY_KEY, data.id], data)
       queryClient.invalidateQueries({ queryKey: OCCURRENCES_QUERY_KEY })

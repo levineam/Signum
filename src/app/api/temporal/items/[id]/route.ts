@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+type ItemRouteContext = {
+  params: Promise<{ id?: string | string[] | undefined }>
+}
+
+const getIdFromContext = async (context: ItemRouteContext) => {
+  const params = await context.params
+  const identifier = Array.isArray(params?.id) ? params?.id[0] : params?.id
+  if (!identifier) {
+    throw new Error('Missing item id in route parameters')
+  }
+  return identifier
+}
+
 /**
  * GET /api/temporal/items/[id]
  *
@@ -17,10 +30,8 @@ import { NextRequest, NextResponse } from 'next/server'
  * 4. Return item with 200 status
  * 5. Return 404 if not found
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, context: ItemRouteContext) {
+  const id = await getIdFromContext(context)
   try {
     // TODO: Implement in Phase 5
     return NextResponse.json(
@@ -33,7 +44,7 @@ export async function GET(
       { status: 501 }
     )
   } catch (error) {
-    console.error(`[GET /api/temporal/items/${params.id}]`, error)
+    console.error(`[GET /api/temporal/items/${id}]`, error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -73,10 +84,8 @@ export async function GET(
  * 6. Return updated item with 200 status
  * 7. Return 404 if not found
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, context: ItemRouteContext) {
+  const id = await getIdFromContext(context)
   try {
     // TODO: Implement in Phase 5
     return NextResponse.json(
@@ -89,7 +98,7 @@ export async function PATCH(
       { status: 501 }
     )
   } catch (error) {
-    console.error(`[PATCH /api/temporal/items/${params.id}]`, error)
+    console.error(`[PATCH /api/temporal/items/${id}]`, error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -119,10 +128,8 @@ export async function PATCH(
  * - Delete all occurrences for this item
  * - Set schedule_id to NULL if item is deleted (schedule remains)
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, context: ItemRouteContext) {
+  const id = await getIdFromContext(context)
   try {
     // TODO: Implement in Phase 5
     return NextResponse.json(
@@ -135,7 +142,7 @@ export async function DELETE(
       { status: 501 }
     )
   } catch (error) {
-    console.error(`[DELETE /api/temporal/items/${params.id}]`, error)
+    console.error(`[DELETE /api/temporal/items/${id}]`, error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
