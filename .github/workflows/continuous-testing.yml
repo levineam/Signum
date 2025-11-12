@@ -200,6 +200,7 @@ jobs:
           CI: true
           # Mock OpenAI API in CI
           OPENAI_MOCK: "1"
+          PLAYWRIGHT_SKIP_WEBSERVER: "1"
           # Add other env vars as needed
           # SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           # SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}

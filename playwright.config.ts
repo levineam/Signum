@@ -1,8 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3001'
+const shouldStartWebServer = process.env.PLAYWRIGHT_SKIP_WEBSERVER !== '1'
 
-export default defineConfig({
+const config = defineConfig({
   testDir: './tests',
   timeout: 60 * 1000,
   expect: {
@@ -32,11 +33,15 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
   ],
-  // Auto-start Next.js server before tests
-  webServer: {
-    command: 'npm run build && PORT=3001 npm run start',
-    url: baseURL,
-    timeout: 120 * 1000,
-    reuseExistingServer: !process.env.CI,
-  },
+  // Auto-start Next.js server before tests unless explicitly skipped
+  webServer: shouldStartWebServer
+    ? {
+        command: 'npm run build && PORT=3001 npm run start',
+        url: baseURL,
+        timeout: 120 * 1000,
+        reuseExistingServer: !process.env.CI,
+      }
+    : undefined,
 })
+
+export default config
