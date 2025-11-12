@@ -8,6 +8,23 @@ import {
 
 const supabase = createClient()
 
+async function requireUserId() {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (error) {
+    throw new Error(`Failed to load user session: ${error.message}`)
+  }
+
+  if (!user?.id) {
+    throw new Error('User not authenticated')
+  }
+
+  return user.id
+}
+
 type ScheduleRow = {
   id: string
   user_id: string
@@ -70,11 +87,13 @@ export const scheduleQueries = {
    * Create a new schedule with recurrence rule
    */
   async createSchedule(req: CreateScheduleRequest): Promise<Schedule> {
+    const userId = await requireUserId()
     const payload: Record<string, JsonValue> = {
       rrule: req.rrule,
       timezone: req.timezone,
       exception_dates: req.exceptionDates || [],
       recurrence_dates: req.recurrenceDates || [],
+      user_id: userId,
     }
 
     const { data, error } = await supabase

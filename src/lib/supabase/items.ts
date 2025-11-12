@@ -9,6 +9,23 @@ import {
 
 const supabase = createClient()
 
+async function requireUserId() {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (error) {
+    throw new Error(`Failed to load user session: ${error.message}`)
+  }
+
+  if (!user?.id) {
+    throw new Error('User not authenticated')
+  }
+
+  return user.id
+}
+
 type Maybe<T> = T | null | undefined
 
 type ItemRow = {
@@ -118,11 +135,13 @@ export const itemQueries = {
    * Create a new item (task or reminder)
    */
   async createItem(req: CreateItemRequest): Promise<Item> {
+    const userId = await requireUserId()
     const payload: Record<string, JsonValue> = {
       item_type: req.itemType,
       title: req.title,
       priority: req.priority || 'medium',
       metadata: req.metadata || {},
+      user_id: userId,
     }
 
     if (req.description !== undefined) payload.description = req.description
