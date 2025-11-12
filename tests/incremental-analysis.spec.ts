@@ -11,30 +11,31 @@ const TEST_USER = {
   password: 'test1234'
 }
 
+const IS_E2E_TEST_MODE = ['1', 'true'].includes(process.env.E2E_TEST_MODE ?? '')
+
 test.describe('Incremental Ontology Analysis', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to app root
     await page.goto('/')
 
-    // Check if already signed in by looking for sign out button
+    if (IS_E2E_TEST_MODE) {
+      // AuthProvider will auto-authenticate in test mode
+      await page.waitForLoadState('networkidle')
+      return
+    }
+
     const signOutButton = page.getByRole('button', { name: /sign out/i })
     const isSignedIn = await signOutButton.isVisible().catch(() => false)
 
-    if (!isSignedIn) {
-      // Go directly to auth page for a reliable sign-in form
-      await page.goto('/auth')
-
-      // Ensure the auth form is rendered before interacting
-      await page.getByLabel(/email/i).waitFor({ state: 'visible' })
-
-      // Fill in credentials
-      await page.getByLabel(/email/i).fill(TEST_USER.email)
-      await page.getByLabel(/password/i).fill(TEST_USER.password)
-      await page.getByRole('button', { name: /sign in/i }).click()
-
-      // Wait for auth to complete and redirect away from /auth
-      await page.waitForURL(/\/(?!auth)/, { timeout: 30000 })
+    if (isSignedIn) {
+      return
     }
+
+    await page.goto('/auth')
+    await page.getByLabel(/email/i).waitFor({ state: 'visible' })
+    await page.getByLabel(/email/i).fill(TEST_USER.email)
+    await page.getByLabel(/password/i).fill(TEST_USER.password)
+    await page.getByRole('button', { name: /sign in/i }).click()
+    await page.waitForURL(/\/(?!auth)/, { timeout: 30000 })
   })
 
   test('<CHORUS_TAG>smoke</CHORUS_TAG> @smoke manual analysis button shows last run info', async ({ page }) => {
