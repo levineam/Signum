@@ -67,8 +67,15 @@ export async function convertMarkdownToHtml(markdown: string): Promise<string> {
     console.error('[Markdown Conversion] Failed to convert markdown to HTML:', error)
     console.error('[Markdown Conversion] Input:', markdown)
 
-    // Fallback: return original text wrapped in paragraph tag
-    // This ensures content is never lost, even if markdown parsing fails
-    return `<p>${markdown}</p>`
+    // Fallback: return escaped text wrapped in a paragraph so dangerous HTML
+    // cannot slip through if the conversion pipeline fails
+    const escaped = markdown
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+
+    return `<p>${escaped}</p>`
   }
 }
