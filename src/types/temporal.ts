@@ -18,7 +18,6 @@ export type JsonValue =
   | null
   | JsonValue[]
   | { [key: string]: JsonValue }
-
 export type ItemType = 'task' | 'reminder'
 export type ItemStatus = 'pending' | 'completed' | 'cancelled'
 export type PriorityLevel = 'low' | 'medium' | 'high'
