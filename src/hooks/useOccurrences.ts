@@ -9,7 +9,7 @@ import {
   OccurrencesQuery,
 } from '@/types/temporal'
 
-const OCCURRENCES_QUERY_KEY = ['occurrences']
+const OCCURRENCES_QUERY_KEY = 'occurrences' as const
 
 /**
  * Query hook for fetching occurrences with optional filtering
@@ -81,7 +81,7 @@ export function useCreateOccurrence() {
   return useMutation<Occurrence, Error, CreateOccurrenceRequest>({
     mutationFn: (req) => occurrenceQueries.createOccurrence(req),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: OCCURRENCES_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: [OCCURRENCES_QUERY_KEY] })
     },
   })
 }
@@ -105,7 +105,7 @@ export function useUpdateOccurrence() {
   >({
     mutationFn: ({ id, req }) => occurrenceQueries.updateOccurrence(id, req),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: OCCURRENCES_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: [OCCURRENCES_QUERY_KEY] })
       queryClient.setQueryData([OCCURRENCES_QUERY_KEY, data.id], data)
     },
   })
@@ -123,7 +123,7 @@ export function useDeleteOccurrence() {
   return useMutation<void, Error, string>({
     mutationFn: (id) => occurrenceQueries.deleteOccurrence(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: OCCURRENCES_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: [OCCURRENCES_QUERY_KEY] })
     },
   })
 }
@@ -141,7 +141,7 @@ export function useCompleteOccurrence() {
     mutationFn: (id) => occurrenceQueries.completeOccurrence(id),
     onSuccess: (data) => {
       queryClient.setQueryData([OCCURRENCES_QUERY_KEY, data.id], data)
-      queryClient.invalidateQueries({ queryKey: OCCURRENCES_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: [OCCURRENCES_QUERY_KEY] })
     },
   })
 }
@@ -159,7 +159,7 @@ export function useSkipOccurrence() {
     mutationFn: (id) => occurrenceQueries.skipOccurrence(id),
     onSuccess: (data) => {
       queryClient.setQueryData([OCCURRENCES_QUERY_KEY, data.id], data)
-      queryClient.invalidateQueries({ queryKey: OCCURRENCES_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: [OCCURRENCES_QUERY_KEY] })
     },
   })
 }

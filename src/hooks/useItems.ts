@@ -9,7 +9,7 @@ import {
   ItemsQuery,
 } from '@/types/temporal'
 
-const ITEMS_QUERY_KEY = ['items']
+const ITEMS_QUERY_KEY = 'items' as const
 
 /**
  * Query hook for fetching items with optional filtering
@@ -59,7 +59,7 @@ export function useCreateItem() {
   return useMutation<Item, Error, CreateItemRequest>({
     mutationFn: (req) => itemQueries.createItem(req),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: [ITEMS_QUERY_KEY] })
     },
   })
 }
@@ -79,7 +79,7 @@ export function useUpdateItem() {
   return useMutation<Item, Error, { id: string; req: UpdateItemRequest }>({
     mutationFn: ({ id, req }) => itemQueries.updateItem(id, req),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: [ITEMS_QUERY_KEY] })
       queryClient.setQueryData([ITEMS_QUERY_KEY, data.id], data)
     },
   })
@@ -97,7 +97,7 @@ export function useDeleteItem() {
   return useMutation<void, Error, string>({
     mutationFn: (id) => itemQueries.deleteItem(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: [ITEMS_QUERY_KEY] })
     },
   })
 }
@@ -115,7 +115,7 @@ export function useCompleteItem() {
     mutationFn: (id) => itemQueries.completeItem(id),
     onSuccess: (data) => {
       queryClient.setQueryData([ITEMS_QUERY_KEY, data.id], data)
-      queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: [ITEMS_QUERY_KEY] })
     },
   })
 }
@@ -136,7 +136,7 @@ export function useSnoozeReminder() {
     mutationFn: ({ id, until }) => itemQueries.snoozeReminder(id, until),
     onSuccess: (data) => {
       queryClient.setQueryData([ITEMS_QUERY_KEY, data.id], data)
-      queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: [ITEMS_QUERY_KEY] })
     },
   })
 }

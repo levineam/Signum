@@ -8,6 +8,31 @@ import {
 
 const supabase = createClient()
 
+type ScheduleRow = {
+  id: string
+  user_id: string
+  rrule: string
+  timezone: string
+  exception_dates: string[] | null
+  recurrence_dates: string[] | null
+  created_at: string
+  updated_at: string
+}
+
+const mapScheduleRow = (row: ScheduleRow): Schedule => ({
+  id: row.id,
+  userId: row.user_id,
+  rrule: row.rrule,
+  timezone: row.timezone,
+  exceptionDates: row.exception_dates ?? [],
+  recurrenceDates: row.recurrence_dates ?? [],
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+})
+
+const mapScheduleRows = (rows: ScheduleRow[] | null): Schedule[] =>
+  (rows ?? []).map((row) => mapScheduleRow(row))
+
 /**
  * Schedule database queries
  * Handles CRUD operations for RFC 5545 recurrence rules
@@ -23,7 +48,7 @@ export const scheduleQueries = {
       .order('created_at', { ascending: false })
 
     if (error) throw new Error(`Failed to fetch schedules: ${error.message}`)
-    return (data as Schedule[] | null) ?? []
+    return mapScheduleRows(data as ScheduleRow[] | null)
   },
 
   /**
@@ -38,7 +63,7 @@ export const scheduleQueries = {
 
     if (error) throw new Error(`Failed to fetch schedule: ${error.message}`)
     if (!data) throw new Error('Schedule not found')
-    return data as Schedule
+    return mapScheduleRow(data as ScheduleRow)
   },
 
   /**
@@ -60,7 +85,7 @@ export const scheduleQueries = {
 
     if (error) throw new Error(`Failed to create schedule: ${error.message}`)
     if (!data) throw new Error('Schedule creation failed')
-    return data as Schedule
+    return mapScheduleRow(data as ScheduleRow)
   },
 
   /**
@@ -88,7 +113,7 @@ export const scheduleQueries = {
 
     if (error) throw new Error(`Failed to update schedule: ${error.message}`)
     if (!data) throw new Error('Schedule not found')
-    return data as Schedule
+    return mapScheduleRow(data as ScheduleRow)
   },
 
   /**

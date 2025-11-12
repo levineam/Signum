@@ -9,6 +9,49 @@ import {
 
 const supabase = createClient()
 
+type Maybe<T> = T | null | undefined
+
+type ItemRow = {
+  id: string
+  user_id: string
+  item_type: Item['itemType']
+  title: string
+  description: Maybe<string>
+  schedule_id: Maybe<string>
+  due_at: Maybe<string>
+  priority: Maybe<Item['priority']>
+  estimate_minutes: Maybe<number>
+  reminder_time: Maybe<string>
+  snooze_until: Maybe<string>
+  status: Item['status']
+  completed_at: Maybe<string>
+  metadata: Maybe<Record<string, JsonValue>>
+  created_at: string
+  updated_at: string
+}
+
+const mapItemRow = (row: ItemRow): Item => ({
+  id: row.id,
+  userId: row.user_id,
+  itemType: row.item_type,
+  title: row.title,
+  description: row.description ?? undefined,
+  scheduleId: row.schedule_id ?? undefined,
+  dueAt: row.due_at ?? undefined,
+  priority: row.priority ?? undefined,
+  estimateMinutes: row.estimate_minutes ?? undefined,
+  reminderTime: row.reminder_time ?? undefined,
+  snoozeUntil: row.snooze_until ?? undefined,
+  status: row.status,
+  completedAt: row.completed_at ?? undefined,
+  metadata: row.metadata ?? {},
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+})
+
+const mapItemRows = (rows: ItemRow[] | null): Item[] =>
+  (rows ?? []).map((row) => mapItemRow(row))
+
 /**
  * Item (task/reminder) database queries
  * Handles CRUD operations for tasks and reminders
@@ -53,7 +96,7 @@ export const itemQueries = {
     const { data, error } = await q
 
     if (error) throw new Error(`Failed to fetch items: ${error.message}`)
-    return (data as Item[] | null) ?? []
+    return mapItemRows(data as ItemRow[] | null)
   },
 
   /**
@@ -68,7 +111,7 @@ export const itemQueries = {
 
     if (error) throw new Error(`Failed to fetch item: ${error.message}`)
     if (!data) throw new Error('Item not found')
-    return data as Item
+    return mapItemRow(data as ItemRow)
   },
 
   /**
@@ -97,7 +140,7 @@ export const itemQueries = {
 
     if (error) throw new Error(`Failed to create item: ${error.message}`)
     if (!data) throw new Error('Item creation failed')
-    return data as Item
+    return mapItemRow(data as ItemRow)
   },
 
   /**
@@ -132,7 +175,7 @@ export const itemQueries = {
 
     if (error) throw new Error(`Failed to update item: ${error.message}`)
     if (!data) throw new Error('Item not found')
-    return data as Item
+    return mapItemRow(data as ItemRow)
   },
 
   /**
@@ -160,7 +203,7 @@ export const itemQueries = {
 
     if (error) throw new Error(`Failed to complete item: ${error.message}`)
     if (!data) throw new Error('Item not found')
-    return data as Item
+    return mapItemRow(data as ItemRow)
   },
 
   /**
@@ -176,6 +219,6 @@ export const itemQueries = {
 
     if (error) throw new Error(`Failed to snooze reminder: ${error.message}`)
     if (!data) throw new Error('Reminder not found')
-    return data as Item
+    return mapItemRow(data as ItemRow)
   },
 }

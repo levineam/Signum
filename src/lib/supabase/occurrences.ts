@@ -9,6 +9,45 @@ import {
 
 const supabase = createClient()
 
+type Maybe<T> = T | null | undefined
+
+type OccurrenceRow = {
+  id: string
+  user_id: string
+  item_id: string
+  scheduled_at: string
+  title: Maybe<string>
+  description: Maybe<string>
+  due_at: Maybe<string>
+  reminder_time: Maybe<string>
+  status: Occurrence['status']
+  completed_at: Maybe<string>
+  is_skipped: Maybe<boolean>
+  metadata: Maybe<Record<string, JsonValue>>
+  created_at: string
+  updated_at: string
+}
+
+const mapOccurrenceRow = (row: OccurrenceRow): Occurrence => ({
+  id: row.id,
+  userId: row.user_id,
+  itemId: row.item_id,
+  scheduledAt: row.scheduled_at,
+  title: row.title ?? undefined,
+  description: row.description ?? undefined,
+  dueAt: row.due_at ?? undefined,
+  reminderTime: row.reminder_time ?? undefined,
+  status: row.status,
+  completedAt: row.completed_at ?? undefined,
+  isSkipped: Boolean(row.is_skipped),
+  metadata: row.metadata ?? {},
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+})
+
+const mapOccurrenceRows = (rows: OccurrenceRow[] | null): Occurrence[] =>
+  (rows ?? []).map((row) => mapOccurrenceRow(row))
+
 /**
  * Occurrence (recurring instance) database queries
  * Handles CRUD operations for materialized recurring instances
@@ -37,7 +76,7 @@ export const occurrenceQueries = {
     const { data, error } = await q
 
     if (error) throw new Error(`Failed to fetch occurrences: ${error.message}`)
-    return (data as Occurrence[] | null) ?? []
+    return mapOccurrenceRows(data as OccurrenceRow[] | null)
   },
 
   /**
@@ -52,7 +91,7 @@ export const occurrenceQueries = {
 
     if (error) throw new Error(`Failed to fetch occurrence: ${error.message}`)
     if (!data) throw new Error('Occurrence not found')
-    return data as Occurrence
+    return mapOccurrenceRow(data as OccurrenceRow)
   },
 
   /**
@@ -77,7 +116,7 @@ export const occurrenceQueries = {
 
     if (error)
       throw new Error(`Failed to fetch occurrences: ${error.message}`)
-    return (data as Occurrence[] | null) ?? []
+    return mapOccurrenceRows(data as OccurrenceRow[] | null)
   },
 
   /**
@@ -105,7 +144,7 @@ export const occurrenceQueries = {
 
     if (error) throw new Error(`Failed to create occurrence: ${error.message}`)
     if (!data) throw new Error('Occurrence creation failed')
-    return data as Occurrence
+    return mapOccurrenceRow(data as OccurrenceRow)
   },
 
   /**
@@ -140,7 +179,7 @@ export const occurrenceQueries = {
 
     if (error) throw new Error(`Failed to update occurrence: ${error.message}`)
     if (!data) throw new Error('Occurrence not found')
-    return data as Occurrence
+    return mapOccurrenceRow(data as OccurrenceRow)
   },
 
   /**
@@ -172,7 +211,7 @@ export const occurrenceQueries = {
     if (error)
       throw new Error(`Failed to complete occurrence: ${error.message}`)
     if (!data) throw new Error('Occurrence not found')
-    return data as Occurrence
+    return mapOccurrenceRow(data as OccurrenceRow)
   },
 
   /**
@@ -189,6 +228,6 @@ export const occurrenceQueries = {
 
     if (error) throw new Error(`Failed to skip occurrence: ${error.message}`)
     if (!data) throw new Error('Occurrence not found')
-    return data as Occurrence
+    return mapOccurrenceRow(data as OccurrenceRow)
   },
 }
