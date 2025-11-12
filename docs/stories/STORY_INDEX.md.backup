@@ -1,6 +1,6 @@
 # Signum Story Index
 
-**Last Updated:** November 6, 2025
+**Last Updated:** November 3, 2025
 **Purpose:** Comprehensive tracking of all stories across the Signum project
 
 ---
@@ -13,46 +13,43 @@ Greenfield foundation stories documented in `/docs/prd.md`
 ### Epic 1 (Issue #50): Content Intelligence & Feedback System
 Brownfield enhancement stories for NLP, tasks, and analytics
 
-### Epic 1.10: Unified Tasks & Reminders System
-**NEW**: Clean rebuild replacing Stories 1.1-1.2 with PRD-spec architecture
-
 ---
 
 ## Content Intelligence Stories (Epic 1 / Issue #50)
 
-### ⚠️ DEPRECATED (Replaced by Epic 1.10)
+### ✅ Completed
 
-| Story | Title | Status | PR | Notes |
-|-------|-------|--------|-----|-------|
-| ~~1.1~~ | Core NLP Infrastructure & Database Schema | ⚠️ Deprecated | #56 | **Replaced by Epic 1.10** - Clean rebuild approach |
-| ~~1.2~~ | Natural Language Task/Reminder Parsing | ⚠️ Deprecated | #65 | **Replaced by Epic 1.10** - Clean rebuild approach |
-| ~~1.2.1~~ | Inline Task Cards with Accept/Reject/Edit | ⚠️ Deprecated | #79 | **Replaced by Epic 1.10** - Clean rebuild approach |
-| ~~1.2.2~~ | Fix Duplicate Task Creation & Rejected Task Re-appearance | ⚠️ Obsolete | #130 | **Obsolete after Epic 1.10** - New architecture eliminates issues |
-| ~~1.4~~ | Today Header & Task Management UI | ⚠️ Deprecated | Draft | **Replaced by Epic 1.10 Phase 2** - Widget-based UI |
+| Story | Title | Status | PR | Merged |
+|-------|-------|--------|-----|--------|
+| 1.1 | Core NLP Infrastructure & Database Schema | ✅ Complete | #56 | Oct 21, 2025 |
+| 1.2 | Natural Language Task/Reminder Parsing | ✅ Complete | #65 | Oct 24, 2025 |
+| 1.2.1 | Inline Task Cards with Accept/Reject/Edit | ✅ Complete | #79 | Oct 28, 2025 |
 
-**Location:** `docs/stories/completed/` (to be moved with deprecation notices)
-
-**Deprecation Rationale**: Zero users + incomplete implementation + OSS consistency → Clean rebuild with PRD-spec schema (schedules/items/occurrences)
-
----
+**Location:** `docs/stories/completed/`
 
 ### ⏸️ Partially Complete
 
 | Story | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 1.3 | Paragraph Detection & Suggestion Card UI | ⏸️ Partial | Task cards implemented (PR #79). Real-time detection deferred. **NOT affected by Epic 1.10** |
+| 1.3 | Paragraph Detection & Suggestion Card UI | ⏸️ Partial | Task cards implemented (PR #79). Real-time detection deferred. |
 
 **Location:** `docs/stories/story-1.3-paragraph-suggestions.md`
 
----
+### 🚧 In Progress
+
+| Story | Title | Status | Issue |
+|-------|-------|--------|-------|
+| 1.2.2 | Fix Duplicate Task Creation & Rejected Task Re-appearance | In Progress | #130 |
+
+**Location:** `docs/stories/story-1.2.2-fix-duplicate-task-creation.md`
 
 ### 📋 Planned
 
 | Story | Title | Status | Epic |
 |-------|-------|--------|------|
+| 1.4 | Today Header & Task Management UI | Draft | Issue #50 |
 | 1.5 | Weekly Snapshot & Rising Themes Analytics | Draft | Issue #50 |
 | 1.6 | Keywords Visualization & C3 Progress Bars | Draft | Issue #50 |
-| 1.8 | Guest Journaling Before Sign-Up | Planned | High Priority |
 | 1.9 | AI-Powered Task Assistance | Planned | Issue #119 |
 
 **Story 1.9 Sub-Stories:**
@@ -71,47 +68,6 @@ Brownfield enhancement stories for NLP, tasks, and analytics
 **Related Issues:** [#119](https://github.com/levineam/Signum/issues/119) (Epic), [#121-#128](https://github.com/levineam/Signum/issues) (Sub-stories)
 **Location:** `docs/stories/story-1.9-ai-task-assistance.md` (epic), `docs/stories/story-1.9.{1-8}-*.md` (sub-stories)
 **Total Effort:** 13-21 days (3-4 weeks), 21 story points
-
-**Note**: Story 1.9 may integrate with Epic 1.10 after completion
-
----
-
-## Epic 1.10: Unified Tasks & Reminders System (NEW)
-
-### 📋 Ready for Implementation
-
-**Epic Document:** `docs/stories/epic-1.10-tasks-reminders-system.md`
-
-**Status**: 📋 Draft - Awaiting Final User Approval
-
-**Type**: Greenfield Rebuild (Clean Slate)
-
-**Duration**: 4-5 weeks (27 stories)
-
-**Approach**:
-- **Phase 0**: Remove existing tasks/reminders code (Stories 1.1-1.2 implementation)
-- **Phase 1-5**: Rebuild with PRD-spec schema (schedules, items, occurrences)
-- **Rationale**: Zero users + incomplete implementation + OSS consistency
-
-**Key Features**:
-- RFC 5545 recurrence (rrule.js native)
-- Timezone-aware scheduling (IANA tzid)
-- Widget-based UI (Reminders | Tasks boxes above journal)
-- Supabase Edge Functions for notifications (pg_cron + web push)
-- Journal integration (source linking, completion write-back)
-
-**Story Breakdown**:
-- Phase 0 (Clean Slate): Stories 1.10.1-1.10.7 (2.5 days)
-- Phase 1 (PRD Schema): Stories 1.10.8-1.10.11 (2.5 days)
-- Phase 2 (UI Foundation): Stories 1.10.12-1.10.17 (2 weeks)
-- Phase 3 (Temporal Core): Stories 1.10.18-1.10.22 (1.5 weeks)
-- Phase 4 (Actions): Stories 1.10.23-1.10.29 (1.5 weeks)
-- Phase 5 (Journal Integration): Stories 1.10.30-1.10.33 (4 days)
-- Phase 1.5 (Optional): Stories 1.10.34-1.10.38 (1 week)
-
-**Replaces**: Stories 1.1, 1.2, 1.2.1, 1.2.2, 1.4
-
-**Next Action**: User approval → Create GitHub issue → Begin Story 1.10.1
 
 ---
 
@@ -198,27 +154,6 @@ See `docs/stories/completed/` for:
 
 ---
 
-## Epic 2.10: Sidebar Responsive Redesign
-
-**Epic Document:** `docs/stories/epic-2.10-sidebar-responsive-redesign.md`
-
-**Status**: ✅ Ready for Implementation
-
-**Type**: Brownfield Enhancement (UX Polish)
-
-**Duration**: 5-7 days
-
-**Related Issue:** [#29](https://github.com/levineam/Signum/issues/29)
-
-**Story Breakdown**:
-- Story 2.10.1: Logo Asset Preparation & Integration (1-2 days)
-- Story 2.10.2: Sidebar Responsive Collapse Refactoring (2-3 days)
-- Story 2.10.3: Tooltip Implementation & Testing (2 days)
-
-**Renumbered From**: Previously Epic 2.5 → Now Epic 2.10 (aligns with Helper System family)
-
----
-
 ## Story File Organization
 
 ### Active Stories
@@ -231,10 +166,6 @@ See `docs/stories/completed/` for:
 - Stories marked ✅ Complete with merged PRs
 - Historical reference for implementation details
 
-### Deprecated Stories
-**Location:** `docs/stories/completed/` (with ⚠️ DEPRECATED prefix)
-- Stories 1.1, 1.2, 1.2.1, 1.2.2, 1.4 (replaced by Epic 1.10)
-
 ---
 
 ## Numbering Conventions
@@ -243,10 +174,6 @@ See `docs/stories/completed/` for:
 - **Major:** `1.1, 1.2, 1.3` (core feature implementations)
 - **Minor:** `1.2.1` (sub-stories or iterations)
 - **Patch:** `1.2.1.1` (rare, for hotfixes)
-
-### Epic Stories
-- **Epic-level:** `1.10, 2.10` (major feature sets, 20+ stories)
-- Use `.10+` suffix to avoid collision with minor versions
 
 ### Helper Stories
 - Use minor versions: `2.5.5, 2.5.6, 2.5.7`
@@ -262,20 +189,17 @@ See `docs/stories/completed/` for:
 
 | Epic | GitHub Issue | Description | Story Range |
 |------|--------------|-------------|-------------|
-| Epic 1 (PRD) | N/A | Greenfield Foundation | 1.1-1.9 (PRD) |
+| Epic 1 (PRD) | N/A | Greenfield Foundation | 1.1-1.8 (PRD) |
 | Epic 1 (Brownfield) | #50, #119 | Content Intelligence & AI Task Assistance | 1.1-1.6, 1.9 (docs) |
-| **Epic 1.10** | **TBD** | **Unified Tasks & Reminders (Clean Rebuild)** | **1.10.1-1.10.38** |
 | Epic 2 | N/A | AI Personal Ontology | 2.1-2.4.x |
 | Epic 2.5 | N/A | Helper System | 2.5.x |
-| **Epic 2.10** | **#29** | **Sidebar Responsive Redesign** | **2.10.1-2.10.3** |
-| Epic 4 | N/A | Social Layer (Future) | 4.x |
+| Epic 3 | N/A | Social Layer | 3.x |
 
 ---
 
 ## Status Definitions
 
 - **✅ Complete:** Merged to production, fully functional
-- **⚠️ Deprecated:** Replaced by newer implementation (Epic 1.10)
 - **⏸️ Partial:** Some features implemented, others deferred
 - **🚧 In Progress:** Active development
 - **📋 Planned:** Documented, awaiting implementation
@@ -285,33 +209,24 @@ See `docs/stories/completed/` for:
 
 ## Quick Reference: Active Stories
 
-**Ready for Implementation:**
-1. **Epic 1.10**: Unified Tasks & Reminders (📋 Awaiting approval) - 27 stories, 4-5 weeks
-2. **Epic 2.10**: Sidebar Responsive Redesign (✅ Ready) - 3 stories, 5-7 days
+**Launch Blockers:**
+1. Story 2.4.6: Production Security Hardening (P0 - Critical) - [Issue #118](https://github.com/levineam/Signum/issues/118)
 
 **High Priority:**
 1. Story 1.9: AI-Powered Task Assistance (Planned) - 21 story points, 3-4 weeks
 2. Story 1.8: Guest Journaling Before Sign-Up (Planned)
+3. Story 1.4: Today Header & Task Management (Draft)
 
 **Deferred Features:**
 - Story 1.3: Real-time paragraph detection (partial completion acceptable)
 - Story 1.5: Weekly Snapshot Analytics
 - Story 1.6: Keywords & C3 Visualization
 
-**Deprecated (Replaced by Epic 1.10)**:
-- ~~Story 1.1~~: Core NLP Infrastructure
-- ~~Story 1.2~~: Task/Reminder Parsing
-- ~~Story 1.2.1~~: Inline Task Cards
-- ~~Story 1.2.2~~: Fix Duplicate Task Creation
-- ~~Story 1.4~~: Today Header & Task Management
-
 ---
 
 ## Related Documentation
 
 - **PRD:** `/docs/prd.md`
-- **Epic 1.10:** `docs/stories/epic-1.10-tasks-reminders-system.md`
-- **Epic 2.10:** `docs/stories/epic-2.10-sidebar-responsive-redesign.md`
 - **Epic 1 (Content Intelligence):** Issue #50
 - **Completed Stories:** `/docs/stories/completed/`
 - **CLAUDE.md:** Project instructions and workflow
@@ -322,12 +237,4 @@ See `docs/stories/completed/` for:
 - New stories are created
 - Story statuses change
 - Stories are completed and moved to `completed/`
-- Stories are deprecated (moved to `completed/` with ⚠️ prefix)
 - PRs are merged
-- Epic numbering changes
-
----
-
-**Change Log:**
-- **2025-11-06**: Renumbered Epic 3 → Epic 1.10 (Tasks & Reminders), Epic 2.5 (Sidebar) → Epic 2.10. Deprecated Stories 1.1-1.2.2, 1.4 (replaced by Epic 1.10).
-- **2025-11-03**: Added Story 2.4.6 completion details

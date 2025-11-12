@@ -1,8 +1,8 @@
-# Epic 2.5: Sidebar Responsive Redesign - Brownfield Enhancement
+# Epic 2.10: Sidebar Responsive Redesign - Brownfield Enhancement
 
-**Epic ID**: 2.5
+**Epic ID**: 2.10
 **Epic Type**: Brownfield Enhancement
-**Parent Epic**: Epic 2 (Production Readiness & UX Polish)
+**Parent Epic**: Epic 2 (AI-Powered Personal Ontology & UX Polish)
 **Related Issue**: [#29 - Update Sidebar: Twitter-Style Icon-Only Collapse + New Logo](https://github.com/levineam/Signum/issues/29)
 **Status**: ✅ Ready for Implementation
 **Estimated Duration**: 5-7 days
@@ -94,7 +94,7 @@ A Twitter-style responsive sidebar that provides:
 
 This epic consists of 3 coordinated stories that can be parallelized partially:
 
-### Story 2.5.1: Logo Asset Preparation & Integration (1-2 days)
+### Story 2.10.1: Logo Asset Preparation & Integration (1-2 days)
 
 **Goal**: Prepare logo assets (SVG, theme variants) and integrate into sidebar component.
 
@@ -128,7 +128,7 @@ This epic consists of 3 coordinated stories that can be parallelized partially:
 
 ---
 
-### Story 2.5.2: Sidebar Responsive Collapse Refactoring (2-3 days)
+### Story 2.10.2: Sidebar Responsive Collapse Refactoring (2-3 days)
 
 **Goal**: Refactor sidebar to use icon-only collapse pattern instead of burger menu.
 
@@ -158,7 +158,7 @@ This epic consists of 3 coordinated stories that can be parallelized partially:
 - Added: Conditional CSS classes for expanded/collapsed/drawer states
 - Added: Smooth transitions for width, opacity, padding (300ms)
 
-**Dependencies**: Story 2.5.1 (logo should be integrated first for visual consistency)
+**Dependencies**: Story 2.10.1 (logo should be integrated first for visual consistency)
 
 **Testing**:
 - Manual: Test at 1280px+ (full sidebar, manual toggle works)
@@ -178,7 +178,7 @@ This epic consists of 3 coordinated stories that can be parallelized partially:
 
 ---
 
-### Story 2.5.3: Tooltip Implementation & Testing (2 days)
+### Story 2.10.3: Tooltip Implementation & Testing (2 days)
 
 **Goal**: Add tooltips for collapsed sidebar, comprehensive testing, and accessibility validation.
 
@@ -201,7 +201,7 @@ This epic consists of 3 coordinated stories that can be parallelized partially:
 - Vercel preview checklist: Functionality, visual, responsive, accessibility, performance
 - Test report: Summary with screenshots
 
-**Dependencies**: Story 2.5.2 (collapsed state must exist before adding tooltips)
+**Dependencies**: Story 2.10.2 (collapsed state must exist before adding tooltips)
 
 **Testing**:
 - Playwright: `npx playwright test tests/sidebar-responsive.test.ts`
@@ -261,7 +261,7 @@ This epic consists of 3 coordinated stories that can be parallelized partially:
 **Mitigation Applied**:
 1. ✅ **Decision Finalized**: Using slide-out drawer for mobile (<768px), not icon-only column
 2. ✅ **Hidden by Default**: Drawer hidden, full content width available on mobile
-3. ✅ **Test on Real Devices**: Mandatory in Story 2.5.3 (iOS Safari, Android Chrome)
+3. ✅ **Test on Real Devices**: Mandatory in Story 2.10.3 (iOS Safari, Android Chrome)
 4. ✅ **Full Content Width**: Mobile gets 100% content width when drawer closed
 
 **Rollback Plan**: If mobile drawer UX is poor:
@@ -343,21 +343,21 @@ Each story must meet:
 ## Timeline Estimate
 
 ### Optimistic (5 days)
-- Story 2.5.1: 1 day (logo conversion straightforward)
-- Story 2.5.2: 2 days (refactoring goes smoothly)
-- Story 2.5.3: 1.5 days (testing passes on first run)
+- Story 2.10.1: 1 day (logo conversion straightforward)
+- Story 2.10.2: 2 days (refactoring goes smoothly)
+- Story 2.10.3: 1.5 days (testing passes on first run)
 - Buffer: 0.5 days for review and minor fixes
 
 ### Realistic (6 days)
-- Story 2.5.1: 1.5 days (theme variant tweaking)
-- Story 2.5.2: 2.5 days (responsive breakpoint refinement)
-- Story 2.5.3: 2 days (Playwright tests need iteration)
+- Story 2.10.1: 1.5 days (theme variant tweaking)
+- Story 2.10.2: 2.5 days (responsive breakpoint refinement)
+- Story 2.10.3: 2 days (Playwright tests need iteration)
 - Buffer: 1 day for mobile device testing and fixes
 
 ### Pessimistic (7 days)
-- Story 2.5.1: 2 days (logo sizing/positioning issues)
-- Story 2.5.2: 3 days (layout shift debugging required)
-- Story 2.5.3: 2.5 days (accessibility issues found, need fixes)
+- Story 2.10.1: 2 days (logo sizing/positioning issues)
+- Story 2.10.2: 3 days (layout shift debugging required)
+- Story 2.10.3: 2.5 days (accessibility issues found, need fixes)
 - Buffer: 1.5 days for cross-device testing and polish
 
 **Recommended Target**: 6 days (realistic)
@@ -372,9 +372,9 @@ Each story must meet:
 - ✅ **Responsive Layout**: COMPLETE - Main layout supports sidebar changes
 
 ### Internal Dependencies (Story Sequence)
-1. **Story 2.5.1 (Logo) → Story 2.5.2 (Sidebar)**: Logo should be integrated before sidebar refactor for visual consistency
-2. **Story 2.5.2 (Sidebar) → Story 2.5.3 (Tooltips)**: Collapsed state must exist before adding tooltips
-3. **Story 2.5.3 (Testing) → PR Merge**: All tests must pass before merge approval
+1. **Story 2.10.1 (Logo) → Story 2.10.2 (Sidebar)**: Logo should be integrated before sidebar refactor for visual consistency
+2. **Story 2.10.2 (Sidebar) → Story 2.10.3 (Tooltips)**: Collapsed state must exist before adding tooltips
+3. **Story 2.10.3 (Testing) → PR Merge**: All tests must pass before merge approval
 
 **Note**: Stories 2.5.1 and 2.5.2 can be partially parallelized (logo work can happen independently), but 2.5.3 must wait for 2.5.2.
 
@@ -465,9 +465,9 @@ All critical decisions have been finalized by the user on October 17, 2025:
   - Theme switching must not break logo or tooltips
 
 - **Each story must include verification that existing functionality remains intact:**
-  - Story 2.5.1: Verify theme switching works with new logo
-  - Story 2.5.2: Verify navigation works correctly in collapsed state, no layout overlap
-  - Story 2.5.3: Verify tooltips don't interfere with existing interactions
+  - Story 2.10.1: Verify theme switching works with new logo
+  - Story 2.10.2: Verify navigation works correctly in collapsed state, no layout overlap
+  - Story 2.10.3: Verify tooltips don't interfere with existing interactions
 
 The epic should improve mobile/tablet UX with a Twitter-style sidebar that never fully hides, and establish stronger brand identity with the new S logo.
 
@@ -529,4 +529,4 @@ This pattern provides:
 
 **Epic Status**: ✅ **READY FOR IMPLEMENTATION**
 
-**Next Action**: Dev can start Story 2.5.1 (Logo Asset Preparation) immediately. Story Manager may develop detailed user stories if additional granularity needed.
+**Next Action**: Dev can start Story 2.10.1 (Logo Asset Preparation) immediately. Story Manager may develop detailed user stories if additional granularity needed.
