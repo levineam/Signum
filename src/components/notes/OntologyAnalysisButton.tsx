@@ -147,6 +147,7 @@ export function OntologyAnalysisButton({
   return (
     <div className="flex flex-col gap-2">
       <Button
+        data-testid="ontology-analyze-button"
         onClick={handleAnalyze}
         disabled={isAnalyzing}
         className="gap-2"

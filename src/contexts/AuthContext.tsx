@@ -49,17 +49,16 @@ function createTestSession(user: User): Session {
   }
 }
 
+const INITIAL_TEST_USER = TEST_MODE ? createTestUser() : null
+const INITIAL_TEST_SESSION = INITIAL_TEST_USER ? createTestSession(INITIAL_TEST_USER) : null
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(INITIAL_TEST_USER)
+  const [session, setSession] = useState<Session | null>(INITIAL_TEST_SESSION)
+  const [loading, setLoading] = useState(!TEST_MODE)
 
   useEffect(() => {
     if (TEST_MODE) {
-      const stubUser = createTestUser()
-      setUser(stubUser)
-      setSession(createTestSession(stubUser))
-      setLoading(false)
       return
     }
 
