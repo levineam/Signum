@@ -69,6 +69,12 @@ const mapItemRow = (row: ItemRow): Item => ({
 const mapItemRows = (rows: ItemRow[] | null): Item[] =>
   (rows ?? []).map((row) => mapItemRow(row))
 
+const sanitizeSearchInput = (value: string): string =>
+  value
+    .replace(/[%_]/g, '') // prevent wildcard injection
+    .replace(/[(),]/g, ' ') // prevent OR clause injection
+    .trim()
+
 /**
  * Item (task/reminder) database queries
  * Handles CRUD operations for tasks and reminders
@@ -97,9 +103,11 @@ export const itemQueries = {
 
     // Full-text search on title and description
     if (query?.search) {
-      q = q.or(
-        `title.ilike.%${query.search}%,description.ilike.%${query.search}%`
-      )
+      const sanitizedSearch = sanitizeSearchInput(query.search)
+      if (sanitizedSearch.length > 0) {
+        const pattern = `%${sanitizedSearch}%`
+        q = q.or(`title.ilike.${pattern},description.ilike.${pattern}`)
+      }
     }
 
     q = q.order('created_at', { ascending: false })
