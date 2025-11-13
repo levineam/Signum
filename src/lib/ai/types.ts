@@ -29,8 +29,12 @@ export interface AIAnswerRequest {
 export interface AIAnswerResponse {
   /** The AI-generated answer (HTML format) */
   answer: string
-  /** ID of the created note */
+  /** ID of the created note (empty string if client-side creation pending) */
   noteId: string
+  /** Suggested title for the note */
+  title?: string
+  /** Metadata to store with the note */
+  metadata?: AIAnswerNoteMetadata
   /** Number of tokens used in the API call */
   tokensUsed: number
   /** Model used for generation */

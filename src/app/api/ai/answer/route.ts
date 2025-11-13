@@ -187,10 +187,11 @@ export async function POST(request: NextRequest) {
       console.log('[AI Answer] Converting markdown to HTML...');
       const htmlAnswer = await convertMarkdownToHtml(markdownAnswer);
 
-      // 8. Create note with AI-generated answer
+      // 8. Build metadata for client-side note creation
+      // SECURITY FIX (PR #164 P1): Note creation moved to client to support encryption
+      // The client will create the note using createNote() which respects user's encryption settings
       const noteTitle = query.length > 100 ? query.substring(0, 97) + '...' : query;
 
-      // Build metadata object based on source type
       const metadata: AIAnswerNoteMetadata = {
         sourceType,
         query,
@@ -207,46 +208,23 @@ export async function POST(request: NextRequest) {
         }),
       };
 
-      const { data: note, error: noteError } = await supabase
-        .from('notes')
-        .insert({
-          user_id: user.id,
-          title: noteTitle,
-          content: htmlAnswer, // Store as HTML, not markdown
-          note_type: 'custom',
-          is_pinned: false,
-          metadata,
-        })
-        .select('id')
-        .single();
-
-      if (noteError) {
-        console.error('[AI Answer] Failed to create note:', noteError);
-        // Don't fail the request - we got the answer, just couldn't save it
-        return NextResponse.json<AIAnswerResponse>({
-          answer: htmlAnswer,
-          noteId: '',
-          tokensUsed,
-          model: 'gpt-4o-mini',
-          warning: 'Answer generated but failed to save as note'
-        });
-      }
-
       // 9. Log usage for cost tracking
       console.log('[AI Answer] Request completed', {
         userId: user.id,
         sourceType,
         taskId,
         entryId,
-        noteId: note.id,
         tokensUsed,
         answerLength: htmlAnswer.length,
         timestamp: new Date().toISOString()
       });
 
+      // Return answer with metadata for client-side note creation
       return NextResponse.json<AIAnswerResponse>({
         answer: htmlAnswer,
-        noteId: note.id,
+        noteId: '', // Client will create note and populate this
+        title: noteTitle,
+        metadata,
         tokensUsed,
         model: 'gpt-4o-mini',
       });

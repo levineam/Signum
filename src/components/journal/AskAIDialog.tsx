@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Sparkles, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
+import { createNote } from '@/lib/supabase/notes'
 import type { AIAnswerRequest, AIAnswerResponse, AIAnswerErrorResponse } from '@/lib/ai/types'
 
 interface AskAIDialogProps {
@@ -112,18 +113,42 @@ export function AskAIDialog({
       }
 
       const data: AIAnswerResponse = await response.json()
-      setState('success')
 
       // Log for debugging
       console.log('[Ask AI] Answer received:', {
-        noteId: data.noteId,
         tokensUsed: data.tokensUsed,
-        model: data.model
+        model: data.model,
+        hasTitle: !!data.title,
+        hasMetadata: !!data.metadata
       })
 
-      if (data.noteId) {
+      // SECURITY FIX (PR #164 P1): Create note client-side to support encryption
+      // The createNote function checks hasEncryptionKey() and encrypts if enabled
+      if (!session?.user?.id) {
+        throw new Error('User session lost')
+      }
+
+      try {
+        const note = await createNote(
+          {
+            title: data.title || 'AI Answer',
+            content: data.answer,
+            noteType: 'custom',
+            isPinned: false,
+            metadata: data.metadata || {},
+          },
+          session.user.id
+        )
+
+        console.log('[Ask AI] Note created with encryption support:', {
+          noteId: note.id,
+          isEncrypted: !!note.encryptedTitle
+        })
+
+        setState('success')
+
         // P1 FIX: Always call onAnswerCreated to link the note, regardless of suppressAutoOpenRef
-        onAnswerCreated?.(data.noteId)
+        onAnswerCreated?.(note.id)
 
         if (!suppressAutoOpenRef.current) {
           toast.success('AI answer created! Opening note...', {
@@ -140,16 +165,16 @@ export function AskAIDialog({
             duration: 2000
           })
         }
-      } else if (data.warning) {
+      } catch (noteError) {
+        console.error('[Ask AI] Failed to create note:', noteError)
+        setState('success') // AI succeeded, just note creation failed
+
         // P2 FIX: When note creation fails, display the generated answer so it's not lost
         setGeneratedAnswer(data.answer)
-        toast.warning(data.warning, {
+        toast.warning('Answer generated but failed to save as note. See below.', {
           duration: 4000
         })
         // Keep dialog open so user can see the answer
-      } else {
-        toast.success('AI answer generated!')
-        onClose()
       }
 
     } catch (error) {
