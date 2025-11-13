@@ -130,31 +130,45 @@ export function DayPlanningContent({ entryId, userId, onInsert }: DayPlanningHel
 
     // Add each field with its label on a separate line
     if (fields.brainDump.trim()) {
-      lines.push(`Brain Dump: ${escapeHtml(fields.brainDump.trim())}`)
+      lines.push(
+        `<strong>Brain Dump:</strong> ${escapeHtml(fields.brainDump.trim())}`
+      )
     }
 
     if (fields.bigThing.trim()) {
-      lines.push(`Big Thing: ${escapeHtml(fields.bigThing.trim())}`)
+      lines.push(
+        `<strong>Big Thing:</strong> ${escapeHtml(fields.bigThing.trim())}`
+      )
     }
 
     if (fields.firstStep.trim()) {
-      lines.push(`First Step: ${escapeHtml(fields.firstStep.trim())}`)
+      lines.push(
+        `<strong>First Step:</strong> ${escapeHtml(fields.firstStep.trim())}`
+      )
     }
 
     if (fields.timeCommitment.trim()) {
-      lines.push(`Time: ${escapeHtml(fields.timeCommitment.trim())}`)
+      lines.push(
+        `<strong>Time:</strong> ${escapeHtml(fields.timeCommitment.trim())}`
+      )
     }
 
     if (fields.enjoyableElement.trim()) {
-      lines.push(`Indulgence: ${escapeHtml(fields.enjoyableElement.trim())}`)
+      lines.push(
+        `<strong>Indulgence:</strong> ${escapeHtml(fields.enjoyableElement.trim())}`
+      )
     }
 
     if (fields.obstaclePlan.trim()) {
-      lines.push(`Obstacles: ${escapeHtml(fields.obstaclePlan.trim())}`)
+      lines.push(
+        `<strong>Obstacles:</strong> ${escapeHtml(fields.obstaclePlan.trim())}`
+      )
     }
 
     if (fields.futureVision.trim()) {
-      lines.push(`Vision: ${escapeHtml(fields.futureVision.trim())}`)
+      lines.push(
+        `<strong>Vision:</strong> ${escapeHtml(fields.futureVision.trim())}`
+      )
     }
 
     // Join lines with <br> tags for line breaks

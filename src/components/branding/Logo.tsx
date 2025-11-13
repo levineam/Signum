@@ -34,7 +34,7 @@ export function Logo({ className = '', size = 40 }: LogoProps) {
         src={logoSrc}
         alt="Signum"
         width={size}
-        height={size * 1.5} // S logo is taller than it is wide (600/400 = 3/2 ratio)
+        height={size} // Logo is square (500x500 = 1:1 ratio)
         priority
         className="object-contain"
       />

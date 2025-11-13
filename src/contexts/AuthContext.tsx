@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabase, hasPublicSupabase } from '@/lib/supabase'
 
 interface AuthContextType {
   user: User | null
@@ -56,66 +56,104 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null
+    let subscription: { unsubscribe: () => void } | null = null
 
-    // CRITICAL: Fallback timer ensures loading NEVER hangs indefinitely
-    // This is essential for E2E tests in CI where timing can be unpredictable
-    const fallbackTimer = setTimeout(() => {
-      if (mounted) {
-        console.warn('[AuthContext] Fallback timer fired - forcing loading=false after 3s')
-        setLoading(false)
+    const shouldLog = TEST_MODE || process.env.NODE_ENV !== 'production'
+    const log = (...args: unknown[]) => {
+      if (shouldLog) {
+        console.log('[AuthContext]', ...args)
       }
-    }, 3000)
-
-    // Log for debugging E2E test issues
-    console.log('[AuthContext] Initializing auth, TEST_MODE:', TEST_MODE, 'env var:', process.env.NEXT_PUBLIC_E2E_TEST_MODE)
-
-    if (TEST_MODE) {
-      console.log('[AuthContext] Using test mode stub user')
-      const stubUser = createTestUser()
-      setUser(stubUser)
-      setSession(createTestSession(stubUser))
+    }
+    const warn = (...args: unknown[]) => {
+      console.warn('[AuthContext]', ...args)
+    }
+    const finishLoading = (reason: string) => {
+      if (!mounted) return
+      log('finishLoading:', reason)
       setLoading(false)
-      clearTimeout(fallbackTimer)
-      return () => {
-        mounted = false
+      if (fallbackTimer) {
         clearTimeout(fallbackTimer)
+        fallbackTimer = null
       }
     }
 
-    // Get initial session with error handling
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        if (mounted) {
+    fallbackTimer = setTimeout(() => {
+      warn('Fallback timer fired - forcing loading=false after 5s')
+      finishLoading('fallback')
+    }, 5000)
+
+    log('Initializing auth', { TEST_MODE, env: process.env.NEXT_PUBLIC_E2E_TEST_MODE })
+
+    if (TEST_MODE) {
+      log('Using test mode stub user')
+      const stubUser = createTestUser()
+      setUser(stubUser)
+      setSession(createTestSession(stubUser))
+      finishLoading('test-mode stub')
+      return () => {
+        mounted = false
+        if (fallbackTimer) {
+          clearTimeout(fallbackTimer)
+          fallbackTimer = null
+        }
+      }
+    }
+
+    if (!hasPublicSupabase()) {
+      warn('Supabase environment variables not configured. Running in guest mode.')
+      setUser(null)
+      setSession(null)
+      finishLoading('guest-mode')
+      return () => {
+        mounted = false
+        if (fallbackTimer) {
+          clearTimeout(fallbackTimer)
+          fallbackTimer = null
+        }
+      }
+    }
+
+    try {
+      supabase.auth
+        .getSession()
+        .then(({ data: { session } }) => {
+          if (!mounted) return
+          log('Initial session resolved', { hasSession: Boolean(session) })
           setSession(session)
           setUser(session?.user ?? null)
-          setLoading(false)
-          clearTimeout(fallbackTimer)
-        }
-      })
-      .catch((error) => {
-        console.error('[AuthContext] getSession failed:', error)
-        if (mounted) {
-          // Still set loading to false even on error - auth is "ready" (just not authenticated)
-          setLoading(false)
-          clearTimeout(fallbackTimer)
-        }
-      })
+          finishLoading('getSession')
+        })
+        .catch((error) => {
+          console.error('[AuthContext] getSession failed:', error)
+          finishLoading('getSession-error')
+        })
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
+      const {
+        data: { subscription: authSubscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!mounted) return
+        log('Auth state changed', { hasSession: Boolean(session) })
         setSession(session)
         setUser(session?.user ?? null)
-        setLoading(false)
-      }
-    })
+        finishLoading('auth-change')
+      })
+
+      subscription = authSubscription
+    } catch (error) {
+      console.error('[AuthContext] Error initializing Supabase auth:', error)
+      finishLoading('init-error')
+    }
 
     return () => {
       mounted = false
-      clearTimeout(fallbackTimer)
-      subscription.unsubscribe()
+      if (fallbackTimer) {
+        clearTimeout(fallbackTimer)
+        fallbackTimer = null
+      }
+      if (subscription) {
+        subscription.unsubscribe()
+      }
     }
   }, [])
 
@@ -125,6 +163,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(stubUser)
       setSession(createTestSession(stubUser))
       return { data: { user: stubUser }, error: null }
+    }
+    if (!hasPublicSupabase()) {
+      return { data: null, error: { message: 'Supabase not configured' } }
     }
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -139,6 +180,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(stubUser)
       setSession(createTestSession(stubUser))
       return { data: { user: stubUser }, error: null }
+    }
+
+    if (!hasPublicSupabase()) {
+      return { data: null, error: { message: 'Supabase not configured' } }
     }
 
     console.log('SignIn called with:', { email: email ? 'present' : 'missing', password: password ? 'present' : 'missing' })
@@ -169,12 +214,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null)
       return
     }
+    if (!hasPublicSupabase()) {
+      setUser(null)
+      setSession(null)
+      return
+    }
     await supabase.auth.signOut()
   }
 
   const resetPassword = async (email: string) => {
     if (TEST_MODE) {
       return { data: { email }, error: null }
+    }
+    if (!hasPublicSupabase()) {
+      return { data: null, error: { message: 'Supabase not configured' } }
     }
     const { data, error } = await supabase.auth.resetPasswordForEmail(email)
     return { data, error }
