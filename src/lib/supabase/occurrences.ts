@@ -76,11 +76,13 @@ export const occurrenceQueries = {
   async getOccurrences(query?: OccurrencesQuery): Promise<Occurrence[]> {
     let q = supabase.from('occurrences').select('*')
 
+    const shouldExcludeSkipped = query?.excludeSkipped ?? true
+
     if (query?.itemId) q = q.eq('item_id', query.itemId)
     if (query?.status) q = q.eq('status', query.status)
     if (query?.scheduledBefore) q = q.lte('scheduled_at', query.scheduledBefore)
     if (query?.scheduledAfter) q = q.gte('scheduled_at', query.scheduledAfter)
-    if (query?.excludeSkipped) q = q.eq('is_skipped', false)
+    if (shouldExcludeSkipped) q = q.eq('is_skipped', false)
 
     q = q.order('scheduled_at', { ascending: true })
 
