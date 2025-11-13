@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { JournalStream } from '@/components/journal/JournalStream'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { RemindersWidget } from '@/components/widgets/RemindersWidget'
+import { TasksWidget } from '@/components/widgets/TasksWidget'
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth()
@@ -35,7 +37,19 @@ export default function Home() {
 
     switch (activeSection) {
       case 'journal':
-        return <JournalStream isGuest={isGuest} />
+        return (
+          <div>
+            {/* Tasks & Reminders Widgets (Prototype) */}
+            <div className="mx-auto max-w-4xl px-6 pt-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <RemindersWidget />
+                <TasksWidget />
+              </div>
+            </div>
+            {/* Journal Stream */}
+            <JournalStream isGuest={isGuest} />
+          </div>
+        )
       case 'feedback':
         return <div className="p-6 text-center text-muted-foreground">Feedback feature coming soon...</div>
       case 'articles':
