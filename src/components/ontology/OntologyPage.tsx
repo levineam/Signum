@@ -60,7 +60,7 @@ export function OntologyPage() {
     }
   }, [expandedCards, isHydrated])
 
-  // Story 2.4.7: Fetch unread updates for highlighting
+  // Story 2.4.7: Fetch unread updates for highlighting with realtime subscription
   useEffect(() => {
     if (!user) {
       setUnreadNoteIds(new Set())
@@ -81,8 +81,33 @@ export function OntologyPage() {
       }
     }
 
+    // Fetch initial unread updates
     fetchUnreadUpdates()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    // Subscribe to real-time changes on ontology_updates table
+    // This ensures new updates are highlighted immediately after analysis completes
+    const channel = supabase
+      .channel(`ontology-highlights-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'ontology_updates',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[OntologyPage] Realtime event for highlights:', payload)
+          // Refetch unread IDs on any change to ontology_updates
+          fetchUnreadUpdates()
+        }
+      )
+      .subscribe()
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [user])
 
   // Story 2.4.7: Mark updates as viewed when user leaves page
