@@ -87,8 +87,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null)
   const [noteLinkClicked, setNoteLinkClicked] = useState(false)
   const [creatingLink, setCreatingLink] = useState(false)
-  const [entryTasks, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
-  const [rejectedTaskHashes, setRejectedTaskHashes] = useState<Map<string, Set<string>>>(new Map())
+  const [, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
+  const rejectedTaskHashes = useRef<Map<string, Set<string>>>(new Map())
 
   // Guest mode state
   const { draft: guestDraft, saveDraft: saveGuestDraft, clearDraft: clearGuestDraft } = useGuestDraft()
@@ -359,6 +359,14 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       return // Skip Supabase saves for guests
     }
 
+    // Debounce task detection to avoid duplicate tasks while typing (Story 1.2)
+    if (taskDetectionTimeoutRef.current) {
+      clearTimeout(taskDetectionTimeoutRef.current)
+    }
+    taskDetectionTimeoutRef.current = setTimeout(() => {
+      detectTasksInContent(newContent, entryId)
+    }, 3000)
+
     // Auto-save after 2 seconds of no typing (longer delay to reduce noise)
     saveTimeoutRef.current = setTimeout(async () => {
       const previousContent = currentEntry?.content || ''
@@ -395,7 +403,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     if (!user || !session?.access_token) return
 
     // Story 1.2.2: Get rejected task hashes from state
-    const rejectedHashes = rejectedTaskHashes.get(entryId) || new Set<string>()
+    const rejectedHashes = rejectedTaskHashes.current.get(entryId) || new Set<string>()
 
     if (DEBUG_TASK_DETECTION && rejectedHashes.size > 0) {
       console.log(`[Task Detection] Loaded ${rejectedHashes.size} rejected task hashes for entry ${entryId}`)
@@ -981,7 +989,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               )}
 
               <div
-                onClick={(event) => {
+                onClick={() => {
                   // Toggle edit mode
                   setEditingEntryId(entry.id);
                 }}
