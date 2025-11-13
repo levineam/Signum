@@ -14,10 +14,8 @@ test('<CHORUS_TAG>smoke</CHORUS_TAG> @smoke toggles theme and persists choice ac
     await page.goto('/')
 
     if (IS_E2E_TEST_MODE) {
-      // Wait for auth to initialize and page to fully load
-      await page.waitForLoadState('networkidle')
-      await page.waitForLoadState('domcontentloaded')
-      await page.getByRole('button', { name: /sign out/i }).waitFor({ state: 'visible', timeout: 10000 })
+      // Wait for auth to initialize by checking the data-auth-ready attribute
+      await page.locator('header[data-auth-ready="true"]').waitFor({ state: 'attached', timeout: 15000 })
     }
 
     const toggle = page.getByRole('switch', TOGGLE_ROLE)
