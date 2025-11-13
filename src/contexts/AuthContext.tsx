@@ -55,31 +55,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let mounted = true
+
+    // CRITICAL: Fallback timer ensures loading NEVER hangs indefinitely
+    // This is essential for E2E tests in CI where timing can be unpredictable
+    const fallbackTimer = setTimeout(() => {
+      if (mounted) {
+        console.warn('[AuthContext] Fallback timer fired - forcing loading=false after 3s')
+        setLoading(false)
+      }
+    }, 3000)
+
+    // Log for debugging E2E test issues
+    console.log('[AuthContext] Initializing auth, TEST_MODE:', TEST_MODE, 'env var:', process.env.NEXT_PUBLIC_E2E_TEST_MODE)
+
     if (TEST_MODE) {
+      console.log('[AuthContext] Using test mode stub user')
       const stubUser = createTestUser()
       setUser(stubUser)
       setSession(createTestSession(stubUser))
       setLoading(false)
-      return
+      clearTimeout(fallbackTimer)
+      return () => {
+        mounted = false
+        clearTimeout(fallbackTimer)
+      }
     }
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    // Get initial session with error handling
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (mounted) {
+          setSession(session)
+          setUser(session?.user ?? null)
+          setLoading(false)
+          clearTimeout(fallbackTimer)
+        }
+      })
+      .catch((error) => {
+        console.error('[AuthContext] getSession failed:', error)
+        if (mounted) {
+          // Still set loading to false even on error - auth is "ready" (just not authenticated)
+          setLoading(false)
+          clearTimeout(fallbackTimer)
+        }
+      })
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
+      if (mounted) {
+        setSession(session)
+        setUser(session?.user ?? null)
+        setLoading(false)
+      }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      clearTimeout(fallbackTimer)
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signUp = async (email: string, password: string) => {

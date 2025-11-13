@@ -22,12 +22,16 @@ test.describe('Incremental Ontology Analysis', () => {
 
     if (IS_E2E_TEST_MODE) {
       // AuthProvider will auto-authenticate in test mode
+      // Wait for ALL scripts to fully load before checking auth state
+      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
       // Wait for auth to initialize by checking the data-auth-ready attribute
       await page.locator('header[data-auth-ready="true"]').waitFor({ state: 'attached', timeout: 15000 })
       return
     }
 
     // Wait for auth to load first
+    await page.waitForLoadState('networkidle')
     await page.locator('header[data-auth-ready="true"]').waitFor({ state: 'attached', timeout: 15000 })
 
     const signOutButton = page.getByRole('button', { name: /sign out/i })
