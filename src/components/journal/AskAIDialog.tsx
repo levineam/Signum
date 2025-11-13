@@ -30,6 +30,7 @@ export function AskAIDialog({
   const [query, setQuery] = useState('')
   const [state, setState] = useState<ButtonState>('idle')
   const [isTruncated, setIsTruncated] = useState(false)
+  const [generatedAnswer, setGeneratedAnswer] = useState<string | null>(null)
   const suppressAutoOpenRef = useRef(false)
 
   // Initialize query from selected text when dialog opens
@@ -52,6 +53,7 @@ export function AskAIDialog({
       setState('idle')
       setQuery('')
       setIsTruncated(false)
+      setGeneratedAnswer(null)
     }
   }, [isOpen])
 
@@ -120,9 +122,10 @@ export function AskAIDialog({
       })
 
       if (data.noteId) {
+        // P1 FIX: Always call onAnswerCreated to link the note, regardless of suppressAutoOpenRef
+        onAnswerCreated?.(data.noteId)
+
         if (!suppressAutoOpenRef.current) {
-          // Notify parent component
-          onAnswerCreated?.(data.noteId)
           toast.success('AI answer created! Opening note...', {
             duration: 2000
           })
@@ -132,13 +135,18 @@ export function AskAIDialog({
             onClose()
           }, 500)
         } else {
+          // Dialog was closed during loading, but note was still created and linked
           toast.success('AI answer created. Open the note when you are ready.', {
             duration: 2000
           })
         }
       } else if (data.warning) {
-        toast.warning(data.warning)
-        onClose()
+        // P2 FIX: When note creation fails, display the generated answer so it's not lost
+        setGeneratedAnswer(data.answer)
+        toast.warning(data.warning, {
+          duration: 4000
+        })
+        // Keep dialog open so user can see the answer
       } else {
         toast.success('AI answer generated!')
         onClose()
@@ -192,101 +200,135 @@ export function AskAIDialog({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 py-4">
-          {/* Selected Text Display */}
-          <div>
-            <label className="text-sm font-medium text-muted-foreground mb-2 block">
-              Selected Text
-            </label>
-            <div className="p-3 bg-muted rounded-md text-sm border border-border">
-              {previewText}
-            </div>
-          </div>
-
-          {/* Truncation Warning */}
-          {isTruncated && (
-            <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
-              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-amber-900 dark:text-amber-100">
-                <strong>Selection truncated to 500 characters.</strong> Edit as needed.
+          {/* Display Generated Answer if note creation failed */}
+          {generatedAnswer && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium mb-2 block">
+                Generated Answer (Note creation failed, but here&apos;s your answer)
+              </label>
+              <div
+                className="p-4 bg-muted rounded-md text-sm border border-border prose prose-sm dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: generatedAnswer }}
+              />
+              <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-900 dark:text-amber-100">
+                  The AI generated this answer, but it couldn&apos;t be saved as a note. You can copy the text above.
+                </div>
               </div>
             </div>
           )}
 
-          {/* Query Input */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Your Question
-            </label>
-            <Textarea
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="What would you like to know about this text?"
-              className="min-h-[120px] resize-none"
-              disabled={state === 'loading'}
-              autoFocus
-            />
-            <div className="flex items-center justify-between mt-2">
-              <div className={`text-sm ${
-                isOverLimit
-                  ? 'text-destructive font-medium'
-                  : isNearLimit
-                  ? 'text-amber-600 dark:text-amber-500'
-                  : 'text-muted-foreground'
-              }`}>
-                {charCount}/500
+          {/* Only show input fields if no answer is being displayed */}
+          {!generatedAnswer && (
+            <>
+              {/* Selected Text Display */}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Selected Text
+                </label>
+                <div className="p-3 bg-muted rounded-md text-sm border border-border">
+                  {previewText}
+                </div>
               </div>
-              {isOverLimit && (
-                <div className="text-sm text-destructive">
-                  Query too long
+
+              {/* Truncation Warning */}
+              {isTruncated && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                  <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-amber-900 dark:text-amber-100">
+                    <strong>Selection truncated to 500 characters.</strong> Edit as needed.
+                  </div>
                 </div>
               )}
-            </div>
-          </div>
+
+              {/* Query Input */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Your Question
+                </label>
+                <Textarea
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="What would you like to know about this text?"
+                  className="min-h-[120px] resize-none"
+                  disabled={state === 'loading'}
+                  autoFocus
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <div className={`text-sm ${
+                    isOverLimit
+                      ? 'text-destructive font-medium'
+                      : isNearLimit
+                      ? 'text-amber-600 dark:text-amber-500'
+                      : 'text-muted-foreground'
+                  }`}>
+                    {charCount}/500
+                  </div>
+                  {isOverLimit && (
+                    <div className="text-sm text-destructive">
+                      Query too long
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={state === 'loading'}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleGenerateAnswer}
-            disabled={isDisabled}
-            className={
-              state === 'idle'
-                ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700'
-                : state === 'loading'
-                ? 'bg-gradient-to-r from-blue-600 to-blue-700'
-                : state === 'success'
-                ? 'bg-gradient-to-r from-green-600 to-green-700'
-                : 'bg-destructive hover:bg-destructive/90'
-            }
-          >
-            {state === 'loading' ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : state === 'success' ? (
-              <>
-                Answer Created
-              </>
-            ) : state === 'error' ? (
-              <>
-                <AlertCircle className="mr-2 h-4 w-4" />
-                Try Again
-              </>
-            ) : (
-              <>
-                <Sparkles className="mr-2 h-4 w-4" />
-                Generate Answer
-              </>
-            )}
-          </Button>
+          {generatedAnswer ? (
+            // If answer is displayed (note creation failed), just show a close button
+            <Button onClick={onClose}>
+              Close
+            </Button>
+          ) : (
+            // Normal flow: Cancel and Generate buttons
+            <>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                disabled={state === 'loading'}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleGenerateAnswer}
+                disabled={isDisabled}
+                className={
+                  state === 'idle'
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700'
+                    : state === 'loading'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700'
+                    : state === 'success'
+                    ? 'bg-gradient-to-r from-green-600 to-green-700'
+                    : 'bg-destructive hover:bg-destructive/90'
+                }
+              >
+                {state === 'loading' ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : state === 'success' ? (
+                  <>
+                    Answer Created
+                  </>
+                ) : state === 'error' ? (
+                  <>
+                    <AlertCircle className="mr-2 h-4 w-4" />
+                    Try Again
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Answer
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
