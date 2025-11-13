@@ -26,6 +26,8 @@ import { useIdleTimer } from '@/hooks/useIdleTimer'
 import { GuestAuthModal } from '@/components/auth/GuestAuthModal'
 import { IDLE_TIMER_MS } from '@/types/guest'
 
+const DEBUG_TASK_DETECTION = process.env.NODE_ENV === 'development'
+
 interface JournalEntry {
   id: string
   date: string  // YYYY-MM-DD format
@@ -37,6 +39,15 @@ interface JournalEntry {
     prompt?: string
     [key: string]: unknown  // Allow other metadata fields
   } | null
+}
+
+interface ParsedTask {
+  id: string
+  title: string
+  paragraphHash: string
+  dueAt: string | null
+  rrule: string | null
+  status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
 }
 
 // Helper: Get today's date in local timezone as YYYY-MM-DD
@@ -68,6 +79,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const taskDetectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [currentEditingEntry, setCurrentEditingEntry] = useState<string | null>(null)
@@ -75,6 +87,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null)
   const [noteLinkClicked, setNoteLinkClicked] = useState(false)
   const [creatingLink, setCreatingLink] = useState(false)
+  const [entryTasks, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
+  const [rejectedTaskHashes, setRejectedTaskHashes] = useState<Map<string, Set<string>>>(new Map())
 
   // Guest mode state
   const { draft: guestDraft, saveDraft: saveGuestDraft, clearDraft: clearGuestDraft } = useGuestDraft()
