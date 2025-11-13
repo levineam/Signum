@@ -126,7 +126,7 @@ export const occurrenceQueries = {
       .from('occurrences')
       .select('*')
       .gte('scheduled_at', startDate)
-      .lte('scheduled_at', endDate)
+      .lt('scheduled_at', endDate)
       .eq('is_skipped', false)
 
     if (itemId) q = q.eq('item_id', itemId)
@@ -182,14 +182,18 @@ export const occurrenceQueries = {
     if (req.dueAt !== undefined) updatePayload.due_at = req.dueAt
     if (req.reminderTime !== undefined)
       updatePayload.reminder_time = req.reminderTime
-    if (req.status !== undefined) updatePayload.status = req.status
+    if (req.status !== undefined) {
+      updatePayload.status = req.status
+      if (req.status === 'completed') {
+        updatePayload.completed_at =
+          updatePayload.completed_at ?? new Date().toISOString()
+      } else {
+        updatePayload.completed_at = null
+      }
+    }
+
     if (req.isSkipped !== undefined) updatePayload.is_skipped = req.isSkipped
     if (req.metadata !== undefined) updatePayload.metadata = req.metadata
-
-    // Auto-set completed_at when status changes to completed
-    if (req.status === 'completed' && !updatePayload.completed_at) {
-      updatePayload.completed_at = new Date().toISOString()
-    }
 
     const { data, error } = await supabase
       .from('occurrences')
