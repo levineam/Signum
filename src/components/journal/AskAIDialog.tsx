@@ -8,6 +8,7 @@ import { Sparkles, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { createNote } from '@/lib/supabase/notes'
+import type { NoteMetadata } from '@/types/note'
 import type { AIAnswerRequest, AIAnswerResponse, AIAnswerErrorResponse } from '@/lib/ai/types'
 
 interface AskAIDialogProps {
@@ -135,14 +136,14 @@ export function AskAIDialog({
             content: data.answer,
             noteType: 'custom',
             isPinned: false,
-            metadata: data.metadata || {},
+            metadata: data.metadata as Partial<NoteMetadata> | undefined,
           },
           session.user.id
         )
 
         console.log('[Ask AI] Note created with encryption support:', {
           noteId: note.id,
-          isEncrypted: !!note.encryptedTitle
+          hasMetadata: !!data.metadata
         })
 
         setState('success')
