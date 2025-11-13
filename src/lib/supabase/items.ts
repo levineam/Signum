@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase'
 import {
   Item,
   CreateItemRequest,
@@ -6,8 +6,6 @@ import {
   ItemsQuery,
   JsonValue,
 } from '@/types/temporal'
-
-const supabase = createClient()
 
 async function requireUserId() {
   const {

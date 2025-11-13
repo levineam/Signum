@@ -1,12 +1,10 @@
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase'
 import {
   Schedule,
   CreateScheduleRequest,
   UpdateScheduleRequest,
   JsonValue,
 } from '@/types/temporal'
-
-const supabase = createClient()
 
 async function requireUserId() {
   const {

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase'
 import {
   Occurrence,
   CreateOccurrenceRequest,
@@ -6,8 +6,6 @@ import {
   OccurrencesQuery,
   JsonValue,
 } from '@/types/temporal'
-
-const supabase = createClient()
 
 async function requireUserId() {
   const {
