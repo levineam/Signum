@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { initializePinnedNotes, getPinnedNotes } from '@/lib/notes'
@@ -28,6 +28,8 @@ export function OntologyPage() {
   const [isHydrated, setIsHydrated] = useState(false)
   // Story 2.4.7: Track unread note IDs for highlighting
   const [unreadNoteIds, setUnreadNoteIds] = useState<Set<string>>(new Set())
+  // Story 2.4.7: Ref to track latest unread IDs for cleanup (prevents premature mark-as-viewed)
+  const unreadNoteIdsRef = useRef<Set<string>>(new Set())
 
   const loadNotes = async () => {
     if (!user) return
@@ -75,7 +77,9 @@ export function OntologyPage() {
         .is('viewed_at', null)
 
       if (!error && data) {
-        setUnreadNoteIds(new Set(data.map((u) => u.note_id)))
+        const newUnreadIds = new Set(data.map((u) => u.note_id))
+        setUnreadNoteIds(newUnreadIds)
+        unreadNoteIdsRef.current = newUnreadIds
       } else if (error) {
         console.error('[OntologyPage] Error fetching unread updates:', error)
       }
@@ -111,10 +115,12 @@ export function OntologyPage() {
   }, [user])
 
   // Story 2.4.7: Mark updates as viewed when user leaves page
+  // CRITICAL: Only depends on [user] to prevent cleanup from running on every unreadNoteIds change.
+  // Uses ref to access latest unread IDs at cleanup time (on unmount or user change only).
   useEffect(() => {
     return () => {
       // Cleanup: mark all updates as viewed when user navigates away
-      if (user && unreadNoteIds.size > 0) {
+      if (user && unreadNoteIdsRef.current.size > 0) {
         fetch('/api/ontology/mark-viewed', {
           method: 'POST',
           credentials: 'include',
@@ -123,7 +129,7 @@ export function OntologyPage() {
         })
       }
     }
-  }, [user, unreadNoteIds])
+  }, [user])
 
   useEffect(() => {
     if (!user) {
