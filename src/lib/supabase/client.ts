@@ -28,6 +28,31 @@ interface Database {
 }
 
 let cachedClient: SupabaseClient<Database> | null = null
+let fallbackClient: SupabaseClient<Database> | null = null
+
+const missingConfigMessage =
+  'Supabase client is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+
+const proxyHandler: ProxyHandler<(...args: unknown[]) => void> = {
+  get(_target, prop) {
+    if (prop === 'then') {
+      return undefined
+    }
+    return new Proxy(() => {
+      throw new Error(missingConfigMessage)
+    }, proxyHandler)
+  },
+  apply() {
+    throw new Error(missingConfigMessage)
+  },
+}
+
+function createFallbackClient(): SupabaseClient<Database> {
+  if (!fallbackClient) {
+    fallbackClient = new Proxy(() => undefined, proxyHandler) as unknown as SupabaseClient<Database>
+  }
+  return fallbackClient
+}
 
 export function createClient() {
   if (cachedClient) {
@@ -38,7 +63,10 @@ export function createClient() {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !anonKey) {
-    throw new Error('Missing Supabase configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[supabase] Missing configuration, using fallback client for this environment.')
+    }
+    return createFallbackClient()
   }
 
   cachedClient = createSupabaseClient<Database>(supabaseUrl, anonKey)
