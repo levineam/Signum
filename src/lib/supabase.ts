@@ -46,21 +46,3 @@ export const supabase = new Proxy({} as SupabaseClient, {
     return typeof value === 'function' ? value.bind(client) : value
   }
 })
-
-export { scheduleQueries } from './supabase/schedules'
-export { itemQueries } from './supabase/items'
-export { occurrenceQueries } from './supabase/occurrences'
-
-export type {
-  Schedule,
-  Item,
-  Occurrence,
-  CreateScheduleRequest,
-  UpdateScheduleRequest,
-  CreateItemRequest,
-  UpdateItemRequest,
-  CreateOccurrenceRequest,
-  UpdateOccurrenceRequest,
-  ItemsQuery,
-  OccurrencesQuery
-} from '@/types/temporal'
