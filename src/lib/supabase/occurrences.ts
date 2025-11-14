@@ -72,7 +72,9 @@ export const occurrenceQueries = {
    * Get occurrences for the authenticated user with optional filtering
    */
   async getOccurrences(query?: OccurrencesQuery): Promise<Occurrence[]> {
-    let q = supabase.from('occurrences').select('*')
+    const userId = await requireUserId()
+
+    let q = supabase.from('occurrences').select('*').eq('user_id', userId)
 
     const shouldExcludeSkipped = query?.excludeSkipped ?? true
 
@@ -100,10 +102,12 @@ export const occurrenceQueries = {
    * Get a single occurrence by ID
    */
   async getOccurrence(id: string): Promise<Occurrence> {
+    const userId = await requireUserId()
     const { data, error } = await supabase
       .from('occurrences')
       .select('*')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (error) throw new Error(`Failed to fetch occurrence: ${error.message}`)
@@ -120,12 +124,14 @@ export const occurrenceQueries = {
     endDate: string,
     itemId?: string
   ): Promise<Occurrence[]> {
+    const userId = await requireUserId()
     let q = supabase
       .from('occurrences')
       .select('*')
       .gte('scheduled_at', startDate)
       .lt('scheduled_at', endDate)
       .eq('is_skipped', false)
+      .eq('user_id', userId)
 
     if (itemId) q = q.eq('item_id', itemId)
 

@@ -57,9 +57,11 @@ export const scheduleQueries = {
    * Get all schedules for the authenticated user
    */
   async getSchedules(): Promise<Schedule[]> {
+    const userId = await requireUserId()
     const { data, error } = await supabase
       .from('schedules')
       .select('*')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
     if (error) throw new Error(`Failed to fetch schedules: ${error.message}`)
@@ -70,10 +72,12 @@ export const scheduleQueries = {
    * Get a single schedule by ID
    */
   async getSchedule(id: string): Promise<Schedule> {
+    const userId = await requireUserId()
     const { data, error } = await supabase
       .from('schedules')
       .select('*')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (error) throw new Error(`Failed to fetch schedule: ${error.message}`)

@@ -82,7 +82,9 @@ export const itemQueries = {
    * Get items for the authenticated user with optional filtering
    */
   async getItems(query?: ItemsQuery): Promise<Item[]> {
-    let q = supabase.from('items').select('*')
+    const userId = await requireUserId()
+
+    let q = supabase.from('items').select('*').eq('user_id', userId)
 
     if (query?.itemType) q = q.eq('item_type', query.itemType)
     if (query?.status) q = q.eq('status', query.status)
@@ -126,10 +128,12 @@ export const itemQueries = {
    * Get a single item by ID
    */
   async getItem(id: string): Promise<Item> {
+    const userId = await requireUserId()
     const { data, error } = await supabase
       .from('items')
       .select('*')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (error) throw new Error(`Failed to fetch item: ${error.message}`)
