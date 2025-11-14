@@ -960,7 +960,10 @@ export function SimpleRichEditor({
       </div>
 
       {/* Formatting Toolbar */}
-      <div className="flex items-center gap-1 p-2 border-t bg-muted/50 flex-wrap">
+      <div className={cn(
+        "flex items-center gap-1 p-2 bg-muted/50 flex-wrap mt-2",
+        variant === 'flush' ? "border rounded-md" : "border-t"
+      )}>
         {/* Text Formatting */}
         <div className="flex items-center gap-1 border-r pr-2 mr-2">
           <Button
