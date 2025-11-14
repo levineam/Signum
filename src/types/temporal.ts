@@ -184,7 +184,6 @@ export interface CreateItemRequest {
  * Request to update an existing item
  */
 export interface UpdateItemRequest {
-  id: string
   title?: string
   description?: string
   dueAt?: string
@@ -213,7 +212,6 @@ export interface CreateOccurrenceRequest {
  * Request to update an existing occurrence
  */
 export interface UpdateOccurrenceRequest {
-  id: string
   title?: string
   description?: string
   dueAt?: string
