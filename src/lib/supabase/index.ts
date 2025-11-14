@@ -1,8 +1,4 @@
-/**
- * Supabase client utilities for temporal data (items, schedules, occurrences)
- * Re-exports all database query functions for easy importing
- */
-
+export { supabase, hasPublicSupabase } from './singleton'
 export { scheduleQueries } from './schedules'
 export { itemQueries } from './items'
 export { occurrenceQueries } from './occurrences'
