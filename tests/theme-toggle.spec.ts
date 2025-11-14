@@ -24,12 +24,15 @@ test('<CHORUS_TAG>smoke</CHORUS_TAG> @smoke toggles theme and persists choice ac
     await page.goto('/')
 
     if (IS_E2E_TEST_MODE) {
-      // Wait for ALL scripts to fully load before checking auth state
-      await page.waitForLoadState('networkidle')
+      // Wait for React hydration and AppHeader to render
       await page.waitForLoadState('domcontentloaded')
 
-      // DIAGNOSTIC: Check what data-auth-ready actually is before waiting
+      // CRITICAL: Wait for header element to actually exist in the DOM
       const header = page.locator('header')
+      await header.waitFor({ state: 'attached', timeout: 10000 })
+      console.log('[TEST] Header element found in DOM')
+
+      // Now safe to read attributes
       const authReady = await header.getAttribute('data-auth-ready')
       const authLoading = await header.getAttribute('data-auth-loading')
       const renderTime = await header.getAttribute('data-render-timestamp')
