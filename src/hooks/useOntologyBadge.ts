@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, hasPublicSupabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
 /**
@@ -18,7 +18,8 @@ export function useOntologyBadge(): number {
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
-    if (!user) {
+    // Skip if no user or Supabase not configured (e.g., in E2E test mode)
+    if (!user || !hasPublicSupabase()) {
       setUnreadCount(0)
       return
     }
