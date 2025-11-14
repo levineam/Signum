@@ -29,8 +29,8 @@ function getSupabase(): SupabaseClient {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: true
-    }
+      detectSessionInUrl: true,
+    },
   })
 
   return _supabase
@@ -39,10 +39,25 @@ function getSupabase(): SupabaseClient {
 // Export a Proxy that lazily initializes the client
 export const supabase = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
+    if (!hasPublicSupabase()) {
+      if (prop === 'auth') {
+        return {
+          getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+          onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+          signUp: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+          signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+          signOut: () => Promise.resolve({ error: null }),
+          resetPasswordForEmail: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+        }
+      }
+      return () => {
+        throw new Error('Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
+      }
+    }
+
     const client = getSupabase()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const value = (client as any)[prop]
-    // Bind methods to preserve 'this' context
     return typeof value === 'function' ? value.bind(client) : value
-  }
+  },
 })

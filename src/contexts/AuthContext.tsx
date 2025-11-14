@@ -1,8 +1,8 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { User, Session } from '@supabase/supabase-js'
+import { supabase, hasPublicSupabase } from '@/lib/supabase'
 
 interface AuthContextType {
   user: User | null
@@ -63,23 +63,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
-      setSession(data.session)
-      setUser(data.session?.user ?? null)
+    // If Supabase env vars are missing, run in guest mode
+    if (!hasPublicSupabase()) {
+      console.warn('Supabase environment variables not configured. Running in guest mode.')
+      setUser(null)
+      setSession(null)
       setLoading(false)
-    })
+      return
+    }
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      setSession(session)
-      setUser(session?.user ?? null)
+    let subscription: { unsubscribe: () => void } | null = null
+
+    try {
+      // Get initial session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session)
+        setUser(session?.user ?? null)
+        setLoading(false)
+      }).catch((error) => {
+        console.error('Error getting session:', error)
+        setLoading(false)
+      })
+
+      // Listen for auth changes
+      const {
+        data: { subscription: authSubscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session)
+        setUser(session?.user ?? null)
+        setLoading(false)
+      })
+
+      subscription = authSubscription
+    } catch (error) {
+      console.error('Error initializing Supabase auth:', error)
       setLoading(false)
-    })
+    }
 
-    return () => subscription.unsubscribe()
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe()
+      }
+    }
   }, [])
 
   const signUp = async (email: string, password: string) => {
@@ -88,6 +113,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(stubUser)
       setSession(createTestSession(stubUser))
       return { data: { user: stubUser }, error: null }
+    }
+    if (!hasPublicSupabase()) {
+      return { data: null, error: { message: 'Supabase not configured' } }
     }
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -102,6 +130,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(stubUser)
       setSession(createTestSession(stubUser))
       return { data: { user: stubUser }, error: null }
+    }
+
+    if (!hasPublicSupabase()) {
+      return { data: null, error: { message: 'Supabase not configured' } }
     }
 
     console.log('SignIn called with:', { email: email ? 'present' : 'missing', password: password ? 'present' : 'missing' })
@@ -132,12 +164,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null)
       return
     }
+    if (!hasPublicSupabase()) {
+      setUser(null)
+      setSession(null)
+      return
+    }
     await supabase.auth.signOut()
   }
 
   const resetPassword = async (email: string) => {
     if (TEST_MODE) {
       return { data: { email }, error: null }
+    }
+    if (!hasPublicSupabase()) {
+      return { data: null, error: { message: 'Supabase not configured' } }
     }
     const { data, error } = await supabase.auth.resetPasswordForEmail(email)
     return { data, error }
