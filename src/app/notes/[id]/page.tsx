@@ -176,44 +176,63 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     }, 2000)
   }
 
-  // Make Note functionality
-  const handleMakeNote = (text: string) => {
+  const cacheSelectionContext = (text: string) => {
+    if (!text) return
+
     setSelectedText(text)
 
     // Cache editor element BEFORE opening modal to prevent "editor not found" error
-    // Modal opening causes editor to blur (onBlur sets isEditing=false), removing contenteditable from DOM
+    // Modal opening (or Ask AI dialog) causes editor to blur, removing contenteditable from DOM
     const editorElement = document.querySelector('[contenteditable="true"]') as HTMLElement
     if (editorElement) {
       editorRef.current = editorElement
-      console.log('💾 Cached editor element before modal open')
+      console.log('💾 Cached editor element before modal/dialog open')
 
       // CRITICAL: Capture selection metadata NOW, while selection is still active
-      // After modal opens and editor blurs, window.getSelection() is lost and
-      // captureSelectionMetadata falls back to indexOf(), which finds the FIRST
-      // occurrence of the text, not the one the user actually selected
+      // After dialogs open and editor blurs, window.getSelection() is lost and
+      // captureSelectionMetadata falls back to indexOf(), potentially linking the wrong occurrence
       const metadata = captureSelectionMetadata(editorElement, text)
       selectionMetadataRef.current = metadata
       console.log('📍 Captured selection metadata before blur:', metadata)
     } else {
-      console.warn('⚠️ No contenteditable element found when caching')
+      console.warn('⚠️ No contenteditable element found when caching selection context')
     }
+  }
 
+  const clearSelectionContext = () => {
+    selectionMetadataRef.current = null
+    setSelectedText('')
+  }
+
+  // Make Note functionality
+  const handleMakeNote = (text: string) => {
+    cacheSelectionContext(text)
     setShowNoteModal(true)
+  }
+
+  const handleAskAISelection = (text: string) => {
+    cacheSelectionContext(text)
   }
 
   const handleCloseNoteModal = () => {
     setShowNoteModal(false)
-    setSelectedText('')
-    selectionMetadataRef.current = null // Clear cached metadata
+    clearSelectionContext()
   }
 
-  const handleNoteCreated = async (newNote: Note) => {
+  const linkSelectionToNote = async (targetNoteId: string) => {
     if (!note || !selectedText || !user) {
       console.log('❌ Missing note, selectedText, or user', { note, selectedText, user: !!user })
-      return
+      clearSelectionContext()
+      return false
     }
 
-    console.log('📝 Creating note link', { selectedText, noteId: newNote.id, sourceNoteId: note.id })
+    if (!targetNoteId) {
+      console.warn('⚠️ Missing targetNoteId when attempting to create link')
+      clearSelectionContext()
+      return false
+    }
+
+    console.log('📝 Creating note link', { selectedText, targetNoteId, sourceNoteId: note.id })
 
     // Clear any pending autosave to prevent stale content from overwriting the link
     if (saveTimeoutRef.current) {
@@ -225,43 +244,42 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     // Set flag to prevent content change interference
     setCreatingLink(true)
 
-    // Use cached editor element (cached in handleMakeNote before modal opened)
+    // Use cached editor element (cached before modal/dialog opened)
     const editorElement = editorRef.current
 
     // Hard fail with toast if editor missing (shouldn't happen if properly cached)
     if (!editorElement) {
-      console.error('❌ No cached editor element - modal may have opened before caching')
+      console.error('❌ No cached editor element - selection may not have been cached properly')
       toast.error('Failed to create link: editor not found. Please try again.')
       setCreatingLink(false)
-      return
+      clearSelectionContext()
+      return false
     }
 
     console.log('✅ Using cached editor element')
 
     try {
-      // Use cached selection metadata (captured in handleMakeNote before blur)
-      // This ensures we link the CORRECT occurrence when text appears multiple times
+      // Use cached selection metadata to link the exact occurrence
       const metadata = selectionMetadataRef.current
       console.log('📊 Using cached selection metadata:', metadata)
 
       // Create link in Supabase with metadata
       const link = await createLink({
         sourceNoteId: note.id,
-        targetNoteId: newNote.id,
+        targetNoteId,
         linkType: 'created_from',
         metadata: metadata || undefined
       }, user.id)
       console.log('💾 Link created in Supabase:', link)
 
       // Convert the selected text to a link in the DOM with linkId
-      // Pass metadata to ensure we link the CORRECT occurrence (not just the first one via indexOf)
-      const linkCreated = convertTextToLink(editorElement, selectedText, newNote.id, link.id, handleLinkClick, metadata)
+      const linkCreated = convertTextToLink(editorElement, selectedText, targetNoteId, link.id, handleLinkClick, metadata)
 
       if (!linkCreated) {
         console.error('❌ Failed to create link in editor')
         toast.error('Failed to create link in editor. Please try again.')
         setCreatingLink(false)
-        return
+        return false
       }
 
       console.log('🔗 Created link in editor DOM')
@@ -292,11 +310,21 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
           setCreatingLink(false)
         }, 100)
       }, 50)
+
+      return true
     } catch (error) {
-      console.error('❌ Error in handleNoteCreated:', error)
+      console.error('❌ Error creating linked note:', error)
       toast.error('Failed to create linked note. Please try again.')
       setCreatingLink(false)
+      return false
+    } finally {
+      // Clear cached selection metadata to avoid stale links on future operations
+      clearSelectionContext()
     }
+  }
+
+  const handleNoteCreated = async (newNote: Note) => {
+    await linkSelectionToNote(newNote.id)
   }
 
   const handleAskAIAnswerCreated = (noteId: string) => {
@@ -305,8 +333,14 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       return
     }
 
-    setViewingNoteId(noteId)
-    setShowNoteViewer(true)
+    void linkSelectionToNote(noteId)
+      .catch(error => {
+        console.error('❌ Failed to link Ask AI answer:', error)
+      })
+      .finally(() => {
+        setViewingNoteId(noteId)
+        setShowNoteViewer(true)
+      })
   }
 
   // Note Viewer functionality
@@ -453,6 +487,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                   onBlur={() => setIsEditing(false)}
                   onMakeNote={handleMakeNote}
                   onNoteCreated={handleAskAIAnswerCreated}
+                  onAskAISelection={handleAskAISelection}
                   autoFocus
                 />
               ) : (
