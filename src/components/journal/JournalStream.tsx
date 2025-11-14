@@ -742,7 +742,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               }`}
             >
               {/* Header Section */}
-              <div className="flex items-center justify-between px-3 md:px-2 py-4">
+              <div className="flex items-center justify-between px-3 md:px-2 py-3 md:py-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-3 w-3" />
                   <span className="font-medium">{formatDate(entry.date)}</span>
@@ -792,7 +792,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                   // Toggle edit mode
                   setEditingEntryId(entry.id);
                 }}
-                className="px-3 md:px-2 pb-4 pt-0 cursor-text hover:bg-muted/30 rounded-md transition-colors"
+                className="px-3 md:px-2 pb-3 md:pb-2 pt-0 cursor-text hover:bg-muted/30 rounded-md transition-colors"
               >
                 {isEditingThis ? (
                   <SimpleRichEditor
