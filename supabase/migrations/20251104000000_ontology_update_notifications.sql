@@ -75,20 +75,27 @@ CREATE POLICY "System can insert ontology updates"
 
 CREATE OR REPLACE FUNCTION create_ontology_update_notification()
 RETURNS TRIGGER AS $$
+DECLARE
+  item_count INTEGER;
 BEGIN
   -- Only track ontology notes (values, beliefs, goals)
   -- Ignore journal entries, reflections, and custom notes
   IF NEW.note_type IN ('ontology-value', 'ontology-belief', 'ontology-aim')
      AND NEW.is_pinned = TRUE THEN
 
-    -- INSERT: New ontology item created
-    IF TG_OP = 'INSERT' THEN
+    -- Check if metadata contains actual ontology items (not just bootstrap placeholders)
+    -- Bootstrap notes have empty metadata or metadata->items = []
+    item_count := COALESCE(jsonb_array_length(NEW.metadata->'items'), 0);
+
+    -- INSERT: New ontology item created (but skip empty bootstrap notes)
+    IF TG_OP = 'INSERT' AND item_count > 0 THEN
       INSERT INTO ontology_updates (user_id, note_id, update_type)
       VALUES (NEW.user_id, NEW.id, 'new_item')
       ON CONFLICT (user_id, note_id, update_type, created_at) DO NOTHING;
 
     -- UPDATE: Existing ontology item modified (content changed)
-    ELSIF TG_OP = 'UPDATE' AND (
+    -- Only create notification if items actually exist (not empty bootstrap)
+    ELSIF TG_OP = 'UPDATE' AND item_count > 0 AND (
       OLD.content IS DISTINCT FROM NEW.content OR
       OLD.metadata IS DISTINCT FROM NEW.metadata
     ) THEN
