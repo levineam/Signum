@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { supabase, hasPublicSupabase } from '@/lib/supabase'
 import { initializePinnedNotes, getPinnedNotes } from '@/lib/notes'
 import { Note } from '@/types/note'
 import { OntologyAnalysisButton } from '../notes/OntologyAnalysisButton'
@@ -64,7 +64,8 @@ export function OntologyPage() {
 
   // Story 2.4.7: Fetch unread updates for highlighting with realtime subscription
   useEffect(() => {
-    if (!user) {
+    // Skip if no user or Supabase not configured (e.g., in E2E test mode)
+    if (!user || !hasPublicSupabase()) {
       setUnreadNoteIds(new Set())
       return
     }
@@ -111,7 +112,7 @@ export function OntologyPage() {
     // Cleanup subscription on unmount
     return () => {
       supabase.removeChannel(channel)
-    }
+      }
   }, [user])
 
   // Story 2.4.7: Mark updates as viewed when user leaves page
@@ -135,6 +136,11 @@ export function OntologyPage() {
     if (!user) {
       // Clear notes when user signs out to prevent data leakage
       setPinnedNotes([])
+      return
+    }
+
+    // Skip Supabase operations if not configured (e.g., in E2E test mode)
+    if (!hasPublicSupabase()) {
       return
     }
 
