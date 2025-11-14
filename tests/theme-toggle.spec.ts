@@ -24,31 +24,29 @@ test('<CHORUS_TAG>smoke</CHORUS_TAG> @smoke toggles theme and persists choice ac
     await page.goto('/')
 
     if (IS_E2E_TEST_MODE) {
-      // Wait for React hydration and AppHeader to render
-      await page.waitForLoadState('domcontentloaded')
+      // Wait for initial page load
+      await page.waitForLoadState('load')
 
-      // CRITICAL: Wait for header element to actually exist in the DOM
-      const header = page.locator('header')
-      await header.waitFor({ state: 'attached', timeout: 10000 })
+      // DIAGNOSTIC: Check what's actually in the DOM
+      const htmlSnapshot = await page.evaluate(() => {
+        const headers = document.querySelectorAll('header')
+        return {
+          headerCount: headers.length,
+          bodyHTML: document.body ? document.body.innerHTML.substring(0, 500) : 'NO BODY',
+          hasMain: !!document.querySelector('main'),
+          hasSidebar: !!document.querySelector('[class*="sidebar"]'),
+        }
+      })
+      console.log('[TEST] DOM snapshot:', JSON.stringify(htmlSnapshot))
+
+      // Wait for header element to exist with reasonable timeout
+      const header = page.locator('header').first()
+      await header.waitFor({ state: 'attached', timeout: 15000 })
       console.log('[TEST] Header element found in DOM')
 
-      // Now safe to read attributes
-      const authReady = await header.getAttribute('data-auth-ready')
-      const authLoading = await header.getAttribute('data-auth-loading')
-      const renderTime = await header.getAttribute('data-render-timestamp')
-      console.log('[TEST] Before wait - data-auth-ready:', authReady, 'data-auth-loading:', authLoading, 'render-timestamp:', renderTime)
-
-      try {
-        // Wait for auth to initialize by checking the data-auth-ready attribute
-        await page.locator('header[data-auth-ready="true"]').waitFor({ state: 'attached', timeout: 15000 })
-        console.log('[TEST] Auth ready!')
-      } catch (error) {
-        // DIAGNOSTIC: On timeout, show what the actual values are
-        const finalAuthReady = await header.getAttribute('data-auth-ready')
-        const finalAuthLoading = await header.getAttribute('data-auth-loading')
-        console.error('[TEST] Timeout waiting for auth. Final state - data-auth-ready:', finalAuthReady, 'data-auth-loading:', finalAuthLoading)
-        throw error
-      }
+      // Wait for auth to initialize
+      await page.locator('header[data-auth-ready="true"]').waitFor({ state: 'attached', timeout: 15000 })
+      console.log('[TEST] Auth ready!')
     }
 
     const toggle = page.getByRole('switch', TOGGLE_ROLE)
