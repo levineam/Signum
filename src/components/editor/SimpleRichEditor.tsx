@@ -4,6 +4,7 @@ import React, { useRef, useCallback, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Bold, Italic, Underline, Highlighter, List, ListOrdered, Heading1, Heading2, Quote, AlignLeft, AlignCenter, AlignRight, FileText } from 'lucide-react'
 import { VoiceRecordButton } from '@/components/editor/VoiceRecordButton'
+import { cn } from '@/lib/utils'
 
 interface SimpleRichEditorProps {
   value?: string
@@ -15,6 +16,8 @@ interface SimpleRichEditorProps {
   autoFocus?: boolean
   onMakeNote?: (selectedText: string) => void
   onTranscription?: (text: string) => void
+  variant?: 'default' | 'flush'
+  className?: string
 }
 
 export function SimpleRichEditor({
@@ -26,7 +29,9 @@ export function SimpleRichEditor({
   onBlur,
   autoFocus = false,
   onMakeNote,
-  onTranscription
+  onTranscription,
+  variant = 'default',
+  className
 }: SimpleRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const [selectedText, setSelectedText] = useState('')
@@ -922,7 +927,11 @@ export function SimpleRichEditor({
   }, [handleTextSelection, handleClickOutside, hasSelection])
 
   return (
-    <div className="relative min-h-[120px] w-full border rounded-md overflow-hidden">
+    <div className={cn(
+      "relative min-h-[120px] w-full overflow-hidden",
+      variant === 'default' && "border rounded-md",
+      className
+    )}>
       {/* Editor */}
       <div className="relative">
         <div
@@ -933,12 +942,18 @@ export function SimpleRichEditor({
           onFocus={onFocus}
           onBlur={onBlur}
           onPaste={handlePaste}
-          className="rich-editor-body min-h-[120px] w-full resize-none border-0 bg-transparent p-4 text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed"
+          className={cn(
+            "rich-editor-body min-h-[120px] w-full resize-none border-0 bg-transparent text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed",
+            variant === 'default' ? "p-4" : "px-2 py-0"
+          )}
           style={{ whiteSpace: 'pre-wrap' }}
         />
         {/* Placeholder */}
         {(!value && !initialValue) && (
-          <div className="absolute left-4 top-4 text-muted-foreground pointer-events-none select-none text-base">
+          <div className={cn(
+            "absolute text-muted-foreground pointer-events-none select-none text-base",
+            variant === 'default' ? "left-4 top-4" : "left-2 top-0"
+          )}>
             {placeholder}
           </div>
         )}
