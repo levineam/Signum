@@ -83,10 +83,14 @@ export function AskAIDialog({
     setState('loading')
 
     try {
+      const truncatedSelectedText = selectedText.length > 500
+        ? selectedText.substring(0, 500)
+        : selectedText
+
       const requestBody: AIAnswerRequest = {
         sourceType: 'journal',
         query: query.trim(),
-        selectedText,
+        selectedText: truncatedSelectedText,
         ...(entryId && { entryId }),
       }
 

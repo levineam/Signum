@@ -488,6 +488,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                   onMakeNote={handleMakeNote}
                   onNoteCreated={handleAskAIAnswerCreated}
                   onAskAISelection={handleAskAISelection}
+                  entryId={note.id}
                   autoFocus
                 />
               ) : (
