@@ -76,7 +76,7 @@ export function HelperTileGrid({
   return (
     <div className={cn('mb-6', className)}>
       {/* Semantic header */}
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 text-center">
         Need help journaling? Check out our helpers.
       </h2>
 
