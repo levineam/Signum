@@ -699,9 +699,11 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       try {
         const metadata = captureSelectionMetadata(editorElement, capturedSelection)
 
+        // The link anchor lives inside the journal entry, so the entry needs to be the
+        // source for outgoing link rehydration (review feedback P2).
         const link = await createLink({
-          sourceNoteId: noteId,
-          targetNoteId: capturedEntryId,
+          sourceNoteId: capturedEntryId,
+          targetNoteId: noteId,
           linkType: 'created_from',
           metadata: metadata || undefined
         }, user.id)
