@@ -681,7 +681,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       return
     }
 
-    // P2 FIX: Use captured selection context instead of current state
+    // P2 FIX: Use captured selection context from dialog instead of current state
     // This prevents linking to wrong text if user changed selection during AI generation
     if (capturedEntryId && capturedSelection && user) {
       const editorElement = cachedEditorRef.current
@@ -693,37 +693,62 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         return
       }
 
-      const linkResult = await convertTextToLink(editorElement, capturedSelection, noteId)
+      setCreatingLink(true)
+      console.log('🔗 Linking AI answer with captured selection:', { noteId, entryId: capturedEntryId, selectionLength: capturedSelection.length })
 
-      if (linkResult.success) {
+      try {
         const metadata = captureSelectionMetadata(editorElement, capturedSelection)
-        console.log('📝 Creating link with metadata:', { noteId, targetId: capturedEntryId, metadata })
 
-        try {
-          await createLink(
-            noteId,
-            capturedEntryId,
-            user.id,
-            metadata.snippet,
-            metadata
-          )
+        const link = await createLink({
+          sourceNoteId: noteId,
+          targetNoteId: capturedEntryId,
+          linkType: 'created_from',
+          metadata: metadata || undefined
+        }, user.id)
+        console.log('💾 Link created in Supabase:', link)
 
-          const currentEntry = entries.find(e => e.id === capturedEntryId)
-          if (currentEntry && linkResult.newHtml) {
-            console.log('📝 Updating entry content with link')
-            await saveEntry(capturedEntryId, linkResult.newHtml, currentEntry.metadata, user.id, currentEntry.noteType)
+        const linkCreated = convertTextToLink(editorElement, capturedSelection, noteId, link.id, handleLinkClick)
+
+        if (!linkCreated) {
+          console.error('❌ Failed to create link in editor')
+          setCreatingLink(false)
+          setViewingNoteId(noteId)
+          setShowNoteViewer(true)
+          return
+        }
+
+        console.log('🔗 Created link in editor DOM')
+
+        setTimeout(() => {
+          const updatedContent = editorElement?.innerHTML ?? ''
+          console.log('📄 Read updated content from editor after link creation')
+
+          setEntries(prev => prev.map(entry => {
+            if (entry.id === capturedEntryId) {
+              return { ...entry, content: updatedContent }
+            }
+            return entry
+          }))
+
+          if (updatedContent && user) {
+            const currentEntry = entries.find(e => e.id === capturedEntryId)
+            if (currentEntry) {
+              void updateNoteInDb(capturedEntryId, { content: updatedContent }, user.id)
+            }
           }
 
           toast.success('Answer linked to journal entry')
-        } catch (error) {
-          console.error('Failed to create link:', error)
-        }
+          setCreatingLink(false)
+        }, 50)
+      } catch (error) {
+        console.error('Failed to link AI answer:', error)
+        setCreatingLink(false)
       }
     }
 
     setViewingNoteId(noteId)
     setShowNoteViewer(true)
-  }, [user, entries, cachedEditorRef])
+  }, [user, entries, cachedEditorRef, handleLinkClick])
 
   const handleCloseNoteModal = () => {
     setShowNoteModal(false)

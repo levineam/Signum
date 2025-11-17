@@ -335,25 +335,31 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
 
     // P2 FIX: Use captured selection from dialog callback instead of stale state
     // For note edit page, we only link if we have captured context
-    if (capturedSelection && capturedEntryId && editorRef.current) {
-      const linkResult = convertTextToLink(editorRef.current, capturedSelection, noteId)
+    if (capturedSelection && capturedEntryId && editorRef.current && user) {
+      console.log('🔗 Linking AI answer with captured selection:', { noteId, targetNoteId: capturedEntryId, selectionLength: capturedSelection.length })
 
-      if (linkResult.success && linkResult.newHtml) {
-        const metadata = captureSelectionMetadata(editorRef.current, capturedSelection)
+      const metadata = captureSelectionMetadata(editorRef.current, capturedSelection)
 
-        void createLink(
-          noteId,
-          capturedEntryId,
-          user?.id || '',
-          metadata.snippet,
-          metadata
-        ).then(() => {
-          setContent(linkResult.newHtml!)
-          toast.success('Answer linked to note')
-        }).catch(error => {
-          console.error('❌ Failed to create link:', error)
-        })
-      }
+      void createLink({
+        sourceNoteId: noteId,
+        targetNoteId: capturedEntryId,
+        linkType: 'created_from',
+        metadata: metadata || undefined
+      }, user.id).then((link) => {
+        const linkCreated = convertTextToLink(editorRef.current!, capturedSelection, noteId, link.id, handleLinkClick)
+
+        if (linkCreated) {
+          setTimeout(() => {
+            const updatedContent = editorRef.current?.innerHTML ?? ''
+            setContent(updatedContent)
+            toast.success('Answer linked to note')
+          }, 50)
+        } else {
+          console.error('❌ Failed to create link in editor')
+        }
+      }).catch(error => {
+        console.error('❌ Failed to create link:', error)
+      })
     }
 
     setViewingNoteId(noteId)

@@ -17,7 +17,7 @@ interface SimpleRichEditorProps {
   onMakeNote?: (selectedText: string) => void
   onTranscription?: (text: string) => void
   entryId?: string
-  onNoteCreated?: (noteId: string) => void
+  onNoteCreated?: (noteId: string, selectedText: string, entryId?: string) => void
   onAskAISelection?: (selectedText: string) => void
 }
 
@@ -1218,11 +1218,11 @@ export function SimpleRichEditor({
         onClose={handleAskAIDialogClose}
         selectedText={selectedText}
         entryId={entryId}
-        onAnswerCreated={(noteId) => {
+        onAnswerCreated={(noteId, capturedSelection, capturedEntryId) => {
           handleAskAIDialogClose()
           setHasSelection(false)
           setSelectedText('')
-          onNoteCreated?.(noteId)
+          onNoteCreated?.(noteId, capturedSelection, capturedEntryId)
         }}
       />
 
