@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Calendar, BookOpen } from 'lucide-react'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
@@ -1006,13 +1006,14 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             <Card
               key={entry.id}
               data-entry-id={entry.id}
-              className={`p-6 bg-card transition-all ${
+              className={`py-0 bg-card transition-all ${
                 isTodayEntry ? 'border-2 border-primary/20' : ''
               } ${
                 isEditingThis ? 'ring-2 ring-primary/30' : ''
               }`}
             >
-              <div className="flex items-center justify-between mb-4">
+              {/* Header Section */}
+              <div className="flex items-center justify-between px-3 md:px-2 py-3 md:py-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-3 w-3" />
                   <span className="font-medium">{formatDate(entry.date)}</span>
@@ -1033,36 +1034,40 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
               {/* Helpers (only on today's entry) - Story 2.8: Tile-based UI */}
               {isTodayEntry && (user || isGuest) && (
-                <HelperTileGrid
-                  helperTypes={[
-                    'day-planning',
-                    'cbt-distortions',
-                    'gratitude',
-                    'values-affirmation',
-                    'self-compassion',
-                    'woop',
-                    'best-possible-self',
-                    'savoring',
-                    'loving-kindness',
-                  ]}
-                  onTileClick={(helperType) => {
-                    setActiveHelper(helperType)
-                    setActiveEntryId(entry.id)
-                    setActiveHelperMode('use')
-                  }}
-                  onInfoClick={handleInfoClick}
-                />
+                <div className="px-3 md:px-2">
+                  <HelperTileGrid
+                    helperTypes={[
+                      'day-planning',
+                      'cbt-distortions',
+                      'gratitude',
+                      'values-affirmation',
+                      'self-compassion',
+                      'woop',
+                      'best-possible-self',
+                      'savoring',
+                      'loving-kindness',
+                    ]}
+                    onTileClick={(helperType) => {
+                      setActiveHelper(helperType)
+                      setActiveEntryId(entry.id)
+                      setActiveHelperMode('use')
+                    }}
+                    onInfoClick={handleInfoClick}
+                  />
+                </div>
               )}
 
-              <div
+              {/* Content Section */}
+              <CardContent
                 onClick={() => {
                   // Toggle edit mode
-                  setEditingEntryId(entry.id);
+                  setEditingEntryId(entry.id)
                 }}
-                className="cursor-text hover:bg-muted/30 p-2 rounded-md transition-colors"
+                className="px-3 md:px-2 pb-3 md:pb-2 pt-0 cursor-text hover:bg-muted/30 rounded-md transition-colors"
               >
                 {isEditingThis ? (
                   <SimpleRichEditor
+                    variant="flush"
                     value={entry.content}
                     placeholder={isTodayEntry ? "What's on your mind today? Start writing..." : "Continue your thoughts..."}
                     onChange={(content) => handleContentChange(entry.id, content)}
@@ -1100,7 +1105,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                     {!isContentEmpty(entry.content) ? (
                       isDOMPurifyReady ? (
                         <div
-                          className="text-base leading-relaxed prose prose-sm max-w-none"
+                          className="text-base leading-relaxed prose prose-sm max-w-none px-2"
                           dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.content) }}
                           onClick={(e) => {
                             // Handle link clicks in read-only mode
@@ -1128,16 +1133,16 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                         }}
                       />
                       ) : (
-                        <div className="text-muted-foreground">Loading content...</div>
+                        <div className="text-muted-foreground px-2">Loading content...</div>
                       )
                     ) : (
-                      <p className="text-muted-foreground italic">
+                      <p className="text-muted-foreground italic px-2">
                         {isTodayEntry ? "What's on your mind today? Start writing..." : "What's on your mind today? Start writing..."}
                       </p>
                     )}
                   </div>
                 )}
-              </div>
+              </CardContent>
 
             </Card>
           )
