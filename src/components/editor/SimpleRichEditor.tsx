@@ -961,8 +961,8 @@ export function SimpleRichEditor({
 
       {/* Formatting Toolbar */}
       <div className={cn(
-        "flex items-center gap-1 p-2 bg-muted/50 flex-wrap mt-2",
-        variant === 'flush' ? "border rounded-md" : "border-t"
+        "flex items-center gap-1 p-2 bg-muted/50 flex-wrap",
+        variant === 'flush' ? "border rounded-md" : "border-t mt-2"
       )}>
         {/* Text Formatting */}
         <div className="flex items-center gap-1 border-r pr-2 mr-2">

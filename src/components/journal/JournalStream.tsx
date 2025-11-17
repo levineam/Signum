@@ -735,7 +735,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             <Card
               key={entry.id}
               data-entry-id={entry.id}
-              className={`bg-card transition-all ${
+              className={`py-0 bg-card transition-all ${
                 isTodayEntry ? 'border-2 border-primary/20' : ''
               } ${
                 isEditingThis ? 'ring-2 ring-primary/30' : ''
