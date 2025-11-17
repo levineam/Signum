@@ -770,11 +770,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                       'cbt-distortions',
                       'gratitude',
                       'values-affirmation',
-                      'self-compassion',
                       'woop',
                       'best-possible-self',
-                      'savoring',
-                      'loving-kindness',
                     ]}
                     onTileClick={(helperType) => {
                       setActiveHelper(helperType)
