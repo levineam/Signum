@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Hyperlink Creation from Selected Text', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the application
-    await page.goto('http://localhost:3000');
+    await page.goto('/');
 
     // Wait for the journal stream to load
     await page.waitForSelector('[data-entry-id]', { timeout: 10000 });

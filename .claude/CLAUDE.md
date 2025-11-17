@@ -8,7 +8,7 @@ This project uses PR-based deployment with auto-deploy to Vercel. You MUST follo
 
 1. **Create feature branch**: `git checkout -b story-X.X-description`
 2. **Make changes & test locally**: `npm run build`, verify functionality
-3. **Commit & push**: `git add [files] && git commit` with `Co-Authored-By: Claude <noreply@anthropic.com>`, then `git push`
+3. **Commit & push**: `git add [files] && git commit`, then `git push`
 4. **Create PR**: `gh pr create` with description, test plan, screenshots. Apply appropriate labels (see GitHub Labels below).
 5. **🚨 Codex review**: CI auto-comments `@codex review` after push. If not posted within ~30s, run manually: `gh pr comment [PR#] --body '@codex review'`
 6. **Test on Vercel Preview**: Test thoroughly on preview URL
