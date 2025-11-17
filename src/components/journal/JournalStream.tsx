@@ -675,16 +675,55 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     await linkSelectionToNote(note.id)
   }, [linkSelectionToNote])
 
-  const handleAskAIAnswerCreated = useCallback(async (noteId: string) => {
+  const handleAskAIAnswerCreated = useCallback(async (noteId: string, capturedSelection: string, capturedEntryId?: string) => {
     if (!noteId) {
       console.warn('[Ask AI] Missing noteId from dialog callback')
       return
     }
 
-    await linkSelectionToNote(noteId)
+    // P2 FIX: Use captured selection context instead of current state
+    // This prevents linking to wrong text if user changed selection during AI generation
+    if (capturedEntryId && capturedSelection && user) {
+      const editorElement = cachedEditorRef.current
+
+      if (!editorElement) {
+        console.log('❌ No editor element cached for linking')
+        setViewingNoteId(noteId)
+        setShowNoteViewer(true)
+        return
+      }
+
+      const linkResult = await convertTextToLink(editorElement, capturedSelection, noteId)
+
+      if (linkResult.success) {
+        const metadata = captureSelectionMetadata(editorElement, capturedSelection)
+        console.log('📝 Creating link with metadata:', { noteId, targetId: capturedEntryId, metadata })
+
+        try {
+          await createLink(
+            noteId,
+            capturedEntryId,
+            user.id,
+            metadata.snippet,
+            metadata
+          )
+
+          const currentEntry = entries.find(e => e.id === capturedEntryId)
+          if (currentEntry && linkResult.newHtml) {
+            console.log('📝 Updating entry content with link')
+            await saveEntry(capturedEntryId, linkResult.newHtml, currentEntry.metadata, user.id, currentEntry.noteType)
+          }
+
+          toast.success('Answer linked to journal entry')
+        } catch (error) {
+          console.error('Failed to create link:', error)
+        }
+      }
+    }
+
     setViewingNoteId(noteId)
     setShowNoteViewer(true)
-  }, [linkSelectionToNote])
+  }, [user, entries, cachedEditorRef])
 
   const handleCloseNoteModal = () => {
     setShowNoteModal(false)

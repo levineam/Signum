@@ -16,7 +16,7 @@ interface AskAIDialogProps {
   onClose: () => void
   selectedText: string
   entryId?: string
-  onAnswerCreated?: (noteId: string) => void
+  onAnswerCreated?: (noteId: string, selectedText: string, entryId?: string) => void
 }
 
 type ButtonState = 'idle' | 'loading' | 'success' | 'error'
@@ -35,9 +35,18 @@ export function AskAIDialog({
   const [generatedAnswer, setGeneratedAnswer] = useState<string | null>(null)
   const suppressAutoOpenRef = useRef(false)
 
+  // P2 FIX: Capture selection context when dialog opens to prevent linking to wrong text
+  // if user changes selection while AI request is in-flight
+  const capturedSelectionRef = useRef<string>('')
+  const capturedEntryIdRef = useRef<string | undefined>(undefined)
+
   // Initialize query from selected text when dialog opens
   useEffect(() => {
     if (isOpen && selectedText) {
+      // Capture selection metadata at dialog open time
+      capturedSelectionRef.current = selectedText
+      capturedEntryIdRef.current = entryId
+
       // Truncate to 500 chars if needed
       if (selectedText.length > 500) {
         setQuery(selectedText.substring(0, 500))
@@ -47,7 +56,7 @@ export function AskAIDialog({
         setIsTruncated(false)
       }
     }
-  }, [isOpen, selectedText])
+  }, [isOpen, selectedText, entryId])
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -153,7 +162,8 @@ export function AskAIDialog({
         setState('success')
 
         // P1 FIX: Always call onAnswerCreated to link the note, regardless of suppressAutoOpenRef
-        onAnswerCreated?.(note.id)
+        // P2 FIX: Pass captured selection context to prevent linking to wrong text if selection changed
+        onAnswerCreated?.(note.id, capturedSelectionRef.current, capturedEntryIdRef.current)
 
         if (!suppressAutoOpenRef.current) {
           toast.success('AI answer created! Opening note...', {

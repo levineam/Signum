@@ -327,20 +327,37 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     await linkSelectionToNote(newNote.id)
   }
 
-  const handleAskAIAnswerCreated = (noteId: string) => {
+  const handleAskAIAnswerCreated = (noteId: string, capturedSelection: string, capturedEntryId?: string) => {
     if (!noteId) {
       console.warn('[Ask AI] Missing noteId when trying to open NoteViewer')
       return
     }
 
-    void linkSelectionToNote(noteId)
-      .catch(error => {
-        console.error('❌ Failed to link Ask AI answer:', error)
-      })
-      .finally(() => {
-        setViewingNoteId(noteId)
-        setShowNoteViewer(true)
-      })
+    // P2 FIX: Use captured selection from dialog callback instead of stale state
+    // For note edit page, we only link if we have captured context
+    if (capturedSelection && capturedEntryId && editorRef.current) {
+      const linkResult = convertTextToLink(editorRef.current, capturedSelection, noteId)
+
+      if (linkResult.success && linkResult.newHtml) {
+        const metadata = captureSelectionMetadata(editorRef.current, capturedSelection)
+
+        void createLink(
+          noteId,
+          capturedEntryId,
+          user?.id || '',
+          metadata.snippet,
+          metadata
+        ).then(() => {
+          setContent(linkResult.newHtml!)
+          toast.success('Answer linked to note')
+        }).catch(error => {
+          console.error('❌ Failed to create link:', error)
+        })
+      }
+    }
+
+    setViewingNoteId(noteId)
+    setShowNoteViewer(true)
   }
 
   // Note Viewer functionality
@@ -488,7 +505,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                   onMakeNote={handleMakeNote}
                   onNoteCreated={handleAskAIAnswerCreated}
                   onAskAISelection={handleAskAISelection}
-                  entryId={note.id}
+                  entryId={note.noteType === 'journal-entry' ? note.id : undefined}
                   autoFocus
                 />
               ) : (
