@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Ontology Page', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the ontology page
-    await page.goto('http://localhost:3000/ontology');
+    await page.goto('/ontology');
 
     // Wait for the page to load
     await page.waitForLoadState('networkidle');
