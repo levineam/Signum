@@ -20,8 +20,8 @@ test.describe('Ontology Page', () => {
     const container = page.locator('.max-w-5xl.mx-auto');
     await expect(container).toBeVisible();
 
-    // Verify the Analyze button section exists
-    const buttonSection = page.locator('.flex.items-center.justify-end');
+    // Verify the Analyze button section exists (use first() to handle multiple matches)
+    const buttonSection = page.locator('.flex.items-center.justify-end').first();
     await expect(buttonSection).toBeVisible();
   });
 
