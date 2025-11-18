@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
 import { Note, getNoteDisplayTitle } from '@/types/note'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Trash2 } from 'lucide-react'
 import { OntologyCardViewer } from '@/components/notes/OntologyCardViewer'
 import { useAuth } from '@/contexts/AuthContext'
@@ -430,13 +430,14 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
           </div>
         ) : (
           // Rich text editor for regular notes - matches JournalStream.tsx pattern
-          <Card className="p-6">
-            <div
+          <Card className="py-0">
+            <CardContent
               onClick={() => setIsEditing(true)}
-              className="cursor-text hover:bg-muted/30 p-2 rounded-md transition-colors"
+              className="px-3 md:px-2 pb-3 md:pb-2 pt-0 cursor-text hover:bg-muted/30 rounded-md transition-colors"
             >
               {isEditing ? (
                 <SimpleRichEditor
+                  variant="flush"
                   value={content}
                   placeholder={`Write your ${note.title.toLowerCase()} here...`}
                   onChange={handleContentChange}
@@ -449,7 +450,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                   {content ? (
                     isDOMPurifyReady ? (
                       <div
-                        className="text-base leading-relaxed prose prose-sm max-w-none"
+                        className="text-base leading-relaxed prose prose-sm max-w-none px-2"
                         dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
                         onClick={(e) => {
                           // Handle link clicks in read-only mode
@@ -476,7 +477,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                   )}
                 </div>
               )}
-            </div>
+            </CardContent>
           </Card>
         )}
       </div>

@@ -245,18 +245,19 @@ export function NoteViewer({
         </DialogHeader>
 
         <div
-          className="flex-1 overflow-y-auto py-4 cursor-pointer hover:bg-muted/30 transition-colors rounded-md"
+          className="flex-1 overflow-y-auto px-3 md:px-2 pb-3 md:pb-2 pt-0 cursor-pointer hover:bg-muted/30 transition-colors rounded-md"
           onClick={isEditing ? undefined : handleEdit}
         >
           {isEditing ? (
             <SimpleRichEditor
+              variant="flush"
               value={editContent}
               placeholder="Write your note content here..."
               onChange={setEditContent}
               autoFocus={false}
             />
           ) : (
-            <div className="prose prose-sm max-w-none">
+            <div className="prose prose-sm max-w-none px-2">
               {note.content ? (
                 isDOMPurifyReady ? (
                   <div
