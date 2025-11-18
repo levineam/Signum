@@ -11,6 +11,13 @@
 // ENUMs
 // ============================================================================
 
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue }
 export type ItemType = 'task' | 'reminder'
 export type ItemStatus = 'pending' | 'completed' | 'cancelled'
 export type PriorityLevel = 'low' | 'medium' | 'high'
@@ -87,7 +94,7 @@ export interface Item {
   completedAt?: string // ISO timestamp
 
   // Extensible metadata
-  metadata: Record<string, unknown>
+  metadata: Record<string, JsonValue>
 
   createdAt: string // ISO timestamp
   updatedAt: string // ISO timestamp
@@ -127,7 +134,7 @@ export interface Occurrence {
   isSkipped: boolean
 
   // Extensible metadata
-  metadata: Record<string, unknown>
+  metadata: Record<string, JsonValue>
 
   createdAt: string // ISO timestamp
   updatedAt: string // ISO timestamp
@@ -170,14 +177,13 @@ export interface CreateItemRequest {
   priority?: PriorityLevel
   estimateMinutes?: number
   reminderTime?: string
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, JsonValue>
 }
 
 /**
  * Request to update an existing item
  */
 export interface UpdateItemRequest {
-  id: string
   title?: string
   description?: string
   dueAt?: string
@@ -186,7 +192,7 @@ export interface UpdateItemRequest {
   reminderTime?: string
   snoozeUntil?: string
   status?: ItemStatus
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, JsonValue>
 }
 
 /**
@@ -199,21 +205,20 @@ export interface CreateOccurrenceRequest {
   description?: string // Override parent description
   dueAt?: string // Override parent dueAt
   reminderTime?: string // Override parent reminderTime
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, JsonValue>
 }
 
 /**
  * Request to update an existing occurrence
  */
 export interface UpdateOccurrenceRequest {
-  id: string
   title?: string
   description?: string
   dueAt?: string
   reminderTime?: string
   status?: ItemStatus
   isSkipped?: boolean
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, JsonValue>
 }
 
 // ============================================================================
