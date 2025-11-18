@@ -8,14 +8,9 @@ test.describe('Phase 2 - Authenticated User Testing', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // Verify Sign Up button is visible (may be hidden on smaller viewports due to responsive design)
+    // At 1400px viewport, Sign Up button must be visible for unauthenticated users
     const signUpButton = page.locator('button:has-text("Sign Up")')
-    // Use count check since button visibility depends on sidebar state
-    if (await signUpButton.count() > 0) {
-      await expect(signUpButton).toBeVisible()
-    } else {
-      console.log('⚠️ Sign Up button not visible (may be in collapsed sidebar)')
-    }
+    await expect(signUpButton).toBeVisible()
 
     await page.screenshot({ path: 'tests/screenshots/auth-unauthenticated.png', fullPage: true })
   })
