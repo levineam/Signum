@@ -341,25 +341,43 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       const metadata = captureSelectionMetadata(editorRef.current, capturedSelection)
 
       void createLink({
-        sourceNoteId: noteId,
-        targetNoteId: capturedEntryId,
+        // The anchor is inserted into the note being edited, so it must be the source
+        sourceNoteId: capturedEntryId,
+        targetNoteId: noteId,
         linkType: 'created_from',
         metadata: metadata || undefined
-      }, user.id).then((link) => {
-        const linkCreated = convertTextToLink(editorRef.current!, capturedSelection, noteId, link.id, handleLinkClick)
+      }, user.id)
+        .then(link => {
+          const editorElement = editorRef.current
+          const linkCreated = editorElement
+            ? convertTextToLink(editorElement, capturedSelection, noteId, link.id, handleLinkClick)
+            : false
 
-        if (linkCreated) {
+          if (!linkCreated) {
+            console.error('❌ Failed to create link in editor')
+            toast.error('Failed to insert link in editor. Please try again.')
+            return
+          }
+
           setTimeout(() => {
-            const updatedContent = editorRef.current?.innerHTML ?? ''
+            const updatedContent = editorElement?.innerHTML ?? ''
             setContent(updatedContent)
-            toast.success('Answer linked to note')
+            setNote(prev => (prev && prev.id === capturedEntryId) ? { ...prev, content: updatedContent } : prev)
+
+            updateNote(capturedEntryId, { content: updatedContent }, user.id)
+              .then(() => {
+                toast.success('Answer linked to note')
+              })
+              .catch(error => {
+                console.error('❌ Failed to persist Ask AI link:', error)
+                toast.error('Linked answer, but failed to save. Please try again.')
+              })
           }, 50)
-        } else {
-          console.error('❌ Failed to create link in editor')
-        }
-      }).catch(error => {
-        console.error('❌ Failed to create link:', error)
-      })
+        })
+        .catch(error => {
+          console.error('❌ Failed to create link:', error)
+          toast.error('Failed to create link. Please try again.')
+        })
     }
 
     setViewingNoteId(noteId)
