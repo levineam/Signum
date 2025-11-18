@@ -8,9 +8,10 @@ test.describe('Phase 2 - Authenticated User Testing', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // At 1400px viewport, Sign Up button must be visible for unauthenticated users
-    const signUpButton = page.locator('button:has-text("Sign Up")')
-    await expect(signUpButton).toBeVisible()
+    // At 1400px viewport, Sign Up link must be visible for unauthenticated users
+    // Note: shadcn Button with asChild renders as <a> tag, not <button>
+    const signUpLink = page.locator('a:has-text("Sign Up")')
+    await expect(signUpLink).toBeVisible()
 
     await page.screenshot({ path: 'tests/screenshots/auth-unauthenticated.png', fullPage: true })
   })
@@ -22,10 +23,10 @@ test.describe('Phase 2 - Authenticated User Testing', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // Click Sign Up
-    const signUpButton = page.locator('button:has-text("Sign Up")')
-    if (await signUpButton.count() > 0) {
-      await signUpButton.click()
+    // Click Sign Up link (shadcn Button with asChild renders as <a> tag)
+    const signUpLink = page.locator('a:has-text("Sign Up")')
+    if (await signUpLink.count() > 0) {
+      await signUpLink.click()
       await page.waitForLoadState('networkidle')
 
       await page.screenshot({ path: 'tests/screenshots/auth-signup-page.png', fullPage: true })
