@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Search } from 'lucide-react'
 import {
   Command,
   CommandEmpty,
@@ -106,14 +105,11 @@ export function NoteLinkPicker({ onSelect, isGuest = false }: NoteLinkPickerProp
 
   return (
     <Command className="rounded-lg border shadow-md">
-      <div className="flex items-center border-b px-3">
-        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-        <CommandInput
-          placeholder="Search notes and journal entries..."
-          value={searchQuery}
-          onValueChange={setSearchQuery}
-        />
-      </div>
+      <CommandInput
+        placeholder="Search notes and journal entries..."
+        value={searchQuery}
+        onValueChange={setSearchQuery}
+      />
       <CommandList>
         {loading ? (
           <div className="p-4 text-center text-sm text-muted-foreground">

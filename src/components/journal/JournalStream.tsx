@@ -810,6 +810,10 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                       if (relatedTarget && relatedTarget.closest('[data-voice-button]')) {
                         return
                       }
+                      // Don't exit edit mode if the user clicked on the note link picker
+                      if (relatedTarget && relatedTarget.closest('[data-note-link-button]')) {
+                        return
+                      }
                       // Don't exit edit mode if the user clicked on the helper expand/collapse toggle
                       if (relatedTarget && relatedTarget.closest('[data-helper-toggle]')) {
                         return

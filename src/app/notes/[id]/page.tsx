@@ -441,7 +441,21 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                   value={content}
                   placeholder={`Write your ${note.title.toLowerCase()} here...`}
                   onChange={handleContentChange}
-                  onBlur={() => setIsEditing(false)}
+                  onBlur={(e) => {
+                    const relatedTarget = e.relatedTarget as HTMLElement | null
+                    if (relatedTarget) {
+                      if (relatedTarget.closest('a[data-note-id]')) {
+                        return
+                      }
+                      if (relatedTarget.closest('[data-voice-button]')) {
+                        return
+                      }
+                      if (relatedTarget.closest('[data-note-link-button]')) {
+                        return
+                      }
+                    }
+                    setIsEditing(false)
+                  }}
                   onMakeNote={handleMakeNote}
                   autoFocus
                   isGuest={isGuest}
