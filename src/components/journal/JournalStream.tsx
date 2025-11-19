@@ -811,7 +811,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                         return
                       }
                       // Don't exit edit mode if the user clicked on the note link picker
-                      if (relatedTarget && relatedTarget.closest('[data-note-link-button]')) {
+                      if (relatedTarget && (relatedTarget.closest('[data-note-link-button]') || relatedTarget.closest('[data-note-link-popover]'))) {
                         return
                       }
                       // Don't exit edit mode if the user clicked on the helper expand/collapse toggle

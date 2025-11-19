@@ -1209,6 +1209,7 @@ export function SimpleRichEditor({
             <PopoverContent
               className="w-[400px] p-0"
               align="start"
+              data-note-link-popover
               onOpenAutoFocus={(e) => {
                 // Prevent focus from moving to popover trigger
                 e.preventDefault()

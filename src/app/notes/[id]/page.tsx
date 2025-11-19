@@ -450,7 +450,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                       if (relatedTarget.closest('[data-voice-button]')) {
                         return
                       }
-                      if (relatedTarget.closest('[data-note-link-button]')) {
+                      if (relatedTarget.closest('[data-note-link-button]') || relatedTarget.closest('[data-note-link-popover]')) {
                         return
                       }
                     }
