@@ -63,11 +63,12 @@ export function NoteCreationModal({
     }
 
     setIsSaving(true)
+    let timeoutId: NodeJS.Timeout | null = null
     try {
       const controller = new AbortController()
       const createTimeoutMs = 3000
       const createTimeoutPromise = new Promise<Note>((_, reject) => {
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           controller.abort()
           reject(new Error('createNote timeout exceeded'))
         }, createTimeoutMs)
@@ -81,9 +82,20 @@ export function NoteCreationModal({
         createTimeoutPromise
       ])
 
+      // Clear timeout if createNote won the race
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+        timeoutId = null
+      }
+
       onNoteCreated?.(newNote)
       handleClose()
     } catch (error) {
+      // Clear timeout if error occurred
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+        timeoutId = null
+      }
       console.error('Error creating note:', error)
       const fallbackNote = buildFallbackNote(user.id)
       onNoteCreated?.(fallbackNote)

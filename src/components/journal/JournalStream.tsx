@@ -245,11 +245,12 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         if (!todayEntry) {
           // Create today's entry if it doesn't exist
           console.log('[JournalStream] Creating today\'s entry...')
+          let timeoutId: NodeJS.Timeout | null = null
           try {
             const controller = new AbortController()
             const createTimeoutMs = 3000
             const createTimeoutPromise = new Promise<Note>((_, reject) => {
-              setTimeout(() => {
+              timeoutId = setTimeout(() => {
                 controller.abort()
                 reject(new Error('createNote timeout exceeded'))
               }, createTimeoutMs)
@@ -264,6 +265,13 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               }, user.id, controller.signal),
               createTimeoutPromise
             ])
+
+            // Clear timeout if createNote won the race
+            if (timeoutId) {
+              clearTimeout(timeoutId)
+              timeoutId = null
+            }
+
             console.log('[JournalStream] Created new note:', newNote.id)
 
             const newTodayEntry: JournalEntry = {
@@ -274,6 +282,11 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             }
             initialEntries = [newTodayEntry, ...journalEntries]
           } catch (creationError) {
+            // Clear timeout if error occurred
+            if (timeoutId) {
+              clearTimeout(timeoutId)
+              timeoutId = null
+            }
             console.error('[JournalStream] Failed to create today\'s entry, using local fallback:', creationError)
             initialEntries = [createLocalEntry(today), ...journalEntries]
           }
