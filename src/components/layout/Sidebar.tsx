@@ -218,14 +218,14 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                     <p className="text-base font-medium text-sidebar-foreground">Signed in as:</p>
                     <p className="text-base text-sidebar-foreground/60 truncate">{user.email}</p>
                   </div>
-                  <Button variant="outline" size="sm" onClick={signOut} className="w-full">
+                  <Button variant="outline" size="sm" onClick={signOut} className="w-full" data-testid="sign-out-button">
                     Sign Out
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <Button variant="outline" size="sm" asChild className="w-full">
-                    <a href="/auth">Sign Up</a>
+                    <a href="/auth" data-testid="sign-up-link">Sign Up</a>
                   </Button>
                 </div>
               )}

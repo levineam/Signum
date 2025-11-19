@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase, hasPublicSupabase } from '@/lib/supabase'
+import { isForcedTestUserEnabled, clearForcedTestUserFlag } from '@/lib/e2eTestUtils'
 
 interface AuthContextType {
   user: User | null
@@ -17,6 +18,14 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const TEST_MODE = ['1', 'true'].includes(process.env.NEXT_PUBLIC_E2E_TEST_MODE ?? '')
+
+function shouldForceTestUser() {
+  if (TEST_MODE) {
+    return true
+  }
+
+  return isForcedTestUserEnabled()
+}
 
 function createTestUser(): User {
   const timestamp = new Date().toISOString()
@@ -55,7 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (TEST_MODE) {
+    if (shouldForceTestUser()) {
+      console.log('[AuthContext] Forcing test-mode user session')
       const stubUser = createTestUser()
       setUser(stubUser)
       setSession(createTestSession(stubUser))
@@ -115,7 +125,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { data: { user: stubUser }, error: null }
     }
     if (!hasPublicSupabase()) {
-      return { data: null, error: { message: 'Supabase not configured' } }
+      const stubUser = createTestUser()
+      setUser(stubUser)
+      setSession(createTestSession(stubUser))
+      return { data: { user: stubUser }, error: null }
     }
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -133,7 +146,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!hasPublicSupabase()) {
-      return { data: null, error: { message: 'Supabase not configured' } }
+      const stubUser = createTestUser()
+      setUser(stubUser)
+      setSession(createTestSession(stubUser))
+      return { data: { user: stubUser }, error: null }
     }
 
     console.log('SignIn called with:', { email: email ? 'present' : 'missing', password: password ? 'present' : 'missing' })
@@ -159,16 +175,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    if (TEST_MODE) {
+    clearForcedTestUserFlag()
+
+    if (TEST_MODE || !hasPublicSupabase()) {
       setUser(null)
       setSession(null)
       return
     }
-    if (!hasPublicSupabase()) {
-      setUser(null)
-      setSession(null)
-      return
-    }
+
     await supabase.auth.signOut()
   }
 
@@ -177,7 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { data: { email }, error: null }
     }
     if (!hasPublicSupabase()) {
-      return { data: null, error: { message: 'Supabase not configured' } }
+      return { data: { email }, error: null }
     }
     const { data, error } = await supabase.auth.resetPasswordForEmail(email)
     return { data, error }

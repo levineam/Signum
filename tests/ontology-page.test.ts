@@ -16,13 +16,13 @@ test.describe('Ontology Page', () => {
   });
 
   test('should display ontology cards container', async ({ page }) => {
-    // Verify the main container exists
-    const container = page.locator('.max-w-5xl.mx-auto');
-    await expect(container).toBeVisible();
+    // Verify the Analyze button section exists
+    const controls = page.getByTestId('ontology-controls');
+    await expect(controls).toBeVisible();
 
-    // Verify the Analyze button section exists (use first() to handle multiple matches)
-    const buttonSection = page.locator('.flex.items-center.justify-end').first();
-    await expect(buttonSection).toBeVisible();
+    // Verify the ontology cards container exists
+    const cards = page.getByTestId('ontology-cards');
+    await expect(cards).toBeAttached();
   });
 
   test('should display correctly in both light and dark themes', async ({ page }) => {

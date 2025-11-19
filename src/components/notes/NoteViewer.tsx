@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 import { Note } from '@/types/note'
 import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
+import { hasPublicSupabase } from '@/lib/supabase'
 import { Calendar, Edit, Save, X, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
@@ -18,6 +19,7 @@ interface NoteViewerProps {
   noteId: string | null
   onNoteUpdated?: (note: Note) => void
   onNoteDeleted?: (noteId: string) => void
+  resolveLocalNote?: (noteId: string) => Note | undefined
 }
 
 export function NoteViewer({
@@ -25,7 +27,8 @@ export function NoteViewer({
   onClose,
   noteId,
   onNoteUpdated,
-  onNoteDeleted
+  onNoteDeleted,
+  resolveLocalNote
 }: NoteViewerProps) {
   const router = useRouter()
   const { user } = useAuth()
@@ -38,7 +41,28 @@ export function NoteViewer({
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
-    if (noteId && isOpen && user) {
+    if (noteId && isOpen) {
+      const localNote = resolveLocalNote?.(noteId)
+      if (localNote) {
+        setNote(localNote)
+        setEditTitle(localNote.title)
+        setEditContent(localNote.content || '')
+        return
+      }
+    }
+  }, [noteId, isOpen, resolveLocalNote])
+
+  useEffect(() => {
+    if (!noteId || !isOpen) {
+      return
+    }
+
+    // Skip Supabase fetches for local-only notes or when Supabase isn't configured
+    if (noteId.startsWith('local-note-') || !hasPublicSupabase()) {
+      return
+    }
+
+    if (user) {
       let isActive = true
 
       getNoteById(noteId, user.id).then(foundNote => {

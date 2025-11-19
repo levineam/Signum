@@ -15,6 +15,7 @@ interface SimpleRichEditorProps {
   onBlur?: (e: React.FocusEvent) => void
   autoFocus?: boolean
   onMakeNote?: (selectedText: string) => void
+  onLinkClick?: (noteId: string) => void
   onTranscription?: (text: string) => void
   variant?: 'default' | 'flush'
   className?: string
@@ -29,6 +30,7 @@ export function SimpleRichEditor({
   onBlur,
   autoFocus = false,
   onMakeNote,
+  onLinkClick,
   onTranscription,
   variant = 'default',
   className
@@ -1153,6 +1155,7 @@ export function SimpleRichEditor({
               type="button"
               title="Create a note from selected text"
               data-make-note-button
+              data-testid="make-note-button"
             >
               <FileText className="h-4 w-4" />
               <span className="text-xs">Make Note</span>
