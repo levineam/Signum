@@ -22,6 +22,7 @@ import { AppHeader } from '@/components/layout/AppHeader'
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { user } = useAuth()
+  const isGuest = !user
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
   const [content, setContent] = useState('')
@@ -443,6 +444,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                   onBlur={() => setIsEditing(false)}
                   onMakeNote={handleMakeNote}
                   autoFocus
+                  isGuest={isGuest}
                 />
               ) : (
                 <div className="min-h-[100px]">

@@ -29,6 +29,7 @@ export function NoteViewer({
 }: NoteViewerProps) {
   const router = useRouter()
   const { user } = useAuth()
+  const isGuest = !user
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -254,6 +255,7 @@ export function NoteViewer({
               placeholder="Write your note content here..."
               onChange={setEditContent}
               autoFocus={false}
+              isGuest={isGuest}
             />
           ) : (
             <div className="prose prose-sm max-w-none">

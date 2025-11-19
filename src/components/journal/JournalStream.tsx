@@ -817,6 +817,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                       setEditingEntryId(null)
                     }}
                     onMakeNote={handleMakeNote}
+                    isGuest={isGuest}
                     onFocus={() => {
                       // Phase 2: Link rehydration from Supabase will be implemented here
                       // For now, links already in HTML remain functional
