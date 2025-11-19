@@ -134,10 +134,10 @@ export async function getAllDecryptedNotes(userId: string): Promise<Note[]> {
 
   // Decrypt all notes
   const decryptedNotes = await Promise.all(
-    notes.map((note) => mapDatabaseNoteToNote(note as DatabaseNote, userId))
+    notes.map((note: DatabaseNote) => mapDatabaseNoteToNote(note, userId))
   )
 
-  return decryptedNotes.filter((note): note is Note => note !== null)
+  return decryptedNotes.filter((note: Note | null): note is Note => note !== null)
 }
 
 /**
