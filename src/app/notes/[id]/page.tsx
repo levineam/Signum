@@ -338,7 +338,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     if (capturedSelection && capturedEntryId && editorRef.current && user) {
       console.log('🔗 Linking AI answer with captured selection:', { noteId, targetNoteId: capturedEntryId, selectionLength: capturedSelection.length })
 
-      const metadata = captureSelectionMetadata(editorRef.current, capturedSelection)
+      const editorElement = editorRef.current
+      const metadata = selectionMetadataRef.current || captureSelectionMetadata(editorElement, capturedSelection)
 
       void createLink({
         // The anchor is inserted into the note being edited, so it must be the source
@@ -348,9 +349,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
         metadata: metadata || undefined
       }, user.id)
         .then(link => {
-          const editorElement = editorRef.current
           const linkCreated = editorElement
-            ? convertTextToLink(editorElement, capturedSelection, noteId, link.id, handleLinkClick)
+            ? convertTextToLink(editorElement, capturedSelection, noteId, link.id, handleLinkClick, metadata || undefined)
             : false
 
           if (!linkCreated) {
@@ -372,11 +372,13 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                 console.error('❌ Failed to persist Ask AI link:', error)
                 toast.error('Linked answer, but failed to save. Please try again.')
               })
+            clearSelectionContext()
           }, 50)
         })
         .catch(error => {
           console.error('❌ Failed to create link:', error)
           toast.error('Failed to create link. Please try again.')
+          clearSelectionContext()
         })
     }
 

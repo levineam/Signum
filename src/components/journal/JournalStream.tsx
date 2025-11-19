@@ -112,6 +112,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
   // Cache editor element reference before opening modal (Phase 1 bug fix)
   const cachedEditorRef = useRef<HTMLElement | null>(null)
+  const selectionMetadataRef = useRef<ReturnType<typeof captureSelectionMetadata> | null>(null)
 
   useEffect(() => {
     // Load journal entries from Supabase or create guest entry
@@ -566,6 +567,11 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     }
   }
 
+  const clearSelectionContext = useCallback(() => {
+    selectionMetadataRef.current = null
+    setSelectedText('')
+  }, [])
+
   const captureSelectionContext = useCallback((selection: string) => {
     if (!selection) return
     setSelectedText(selection)
@@ -575,6 +581,16 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       const editorElement = document.querySelector(`[data-entry-id="${editingEntryId}"] [contenteditable]`) as HTMLElement | null
       cachedEditorRef.current = editorElement
       console.log('💾 Cached editor element:', !!editorElement)
+
+      if (editorElement) {
+        const metadata = captureSelectionMetadata(editorElement, selection)
+        selectionMetadataRef.current = metadata
+        console.log('📍 Cached selection metadata for entry', editingEntryId, metadata)
+      } else {
+        selectionMetadataRef.current = null
+      }
+    } else {
+      selectionMetadataRef.current = null
     }
   }, [editingEntryId])
 
@@ -620,8 +636,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     }
 
     try {
-      const metadata = captureSelectionMetadata(editorElement, selectionText)
-      console.log('📊 Captured selection metadata:', metadata)
+      const metadata = selectionMetadataRef.current || captureSelectionMetadata(editorElement, selectionText)
+      console.log('📊 Using selection metadata:', metadata)
 
       const link = await createLink({
         sourceNoteId: entryId,
@@ -631,7 +647,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       }, user.id)
       console.log('💾 Link created in Supabase:', link)
 
-      const linkCreated = convertTextToLink(editorElement, selectionText, noteId, link.id, handleLinkClick)
+      const linkCreated = convertTextToLink(editorElement, selectionText, noteId, link.id, handleLinkClick, metadata || undefined)
 
       if (!linkCreated) {
         console.error('❌ Failed to create link in editor')
@@ -658,7 +674,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
         setCreatingLink(false)
         cachedEditorRef.current = null
-        setSelectedText('')
+        clearSelectionContext()
       }, 50)
 
       return true
@@ -667,9 +683,10 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       toast.error('Failed to create link. Please try again.')
       setCreatingLink(false)
       cachedEditorRef.current = null
+      clearSelectionContext()
       return false
     }
-  }, [currentEditingEntry, selectedText, user, handleLinkClick, setEntries])
+  }, [currentEditingEntry, selectedText, user, handleLinkClick, setEntries, clearSelectionContext])
 
   const handleNoteCreated = useCallback(async (note: Note) => {
     await linkSelectionToNote(note.id)
@@ -697,7 +714,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       console.log('🔗 Linking AI answer with captured selection:', { noteId, entryId: capturedEntryId, selectionLength: capturedSelection.length })
 
       try {
-        const metadata = captureSelectionMetadata(editorElement, capturedSelection)
+        const metadata = selectionMetadataRef.current || captureSelectionMetadata(editorElement, capturedSelection)
 
         // The link anchor lives inside the journal entry, so the entry needs to be the
         // source for outgoing link rehydration (review feedback P2).
@@ -709,7 +726,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         }, user.id)
         console.log('💾 Link created in Supabase:', link)
 
-        const linkCreated = convertTextToLink(editorElement, capturedSelection, noteId, link.id, handleLinkClick)
+        const linkCreated = convertTextToLink(editorElement, capturedSelection, noteId, link.id, handleLinkClick, metadata || undefined)
 
         if (!linkCreated) {
           console.error('❌ Failed to create link in editor')
@@ -740,21 +757,23 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
           }
 
           toast.success('Answer linked to journal entry')
+          clearSelectionContext()
           setCreatingLink(false)
         }, 50)
       } catch (error) {
         console.error('Failed to link AI answer:', error)
         setCreatingLink(false)
+        clearSelectionContext()
       }
     }
 
     setViewingNoteId(noteId)
     setShowNoteViewer(true)
-  }, [user, entries, cachedEditorRef, handleLinkClick])
+  }, [user, entries, cachedEditorRef, handleLinkClick, clearSelectionContext])
 
   const handleCloseNoteModal = () => {
     setShowNoteModal(false)
-    setSelectedText('')
+    clearSelectionContext()
   }
 
   const handleCloseNoteViewer = () => {
