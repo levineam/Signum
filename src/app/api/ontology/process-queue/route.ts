@@ -68,8 +68,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const { queueId, userId, importId, importSnapshotTimestamp, remainingNotes } =
-      job
+    const {
+      queueId,
+      userId,
+      importId,
+      importSnapshotTimestamp,
+      remainingNotes,
+      retryAttempts,
+      maxRetries
+    } = job
 
     console.log(
       `[Queue] Processing job ${queueId} for user ${userId}. Remaining notes: ${remainingNotes}`
@@ -116,11 +123,22 @@ export async function POST(request: NextRequest) {
       const errorMsg =
         e instanceof Error ? e.message : 'Unknown extraction error'
       batchError = errorMsg
-      console.error(`[Queue] Extraction failed for batch: ${errorMsg}`)
+      const nextRetryAttempt = (retryAttempts ?? 0) + 1
+      const retryLimit = maxRetries ?? 3
+      const retriesExhausted = nextRetryAttempt >= retryLimit
 
-      // P1 FIX: Mark queue as failed and exit without marking notes as processed
-      // This allows the batch to be retried
-      await updateQueueStatus(queueId, 'failed')
+      console.error(
+        `[Queue] Extraction failed for batch (attempt ${nextRetryAttempt}/${retryLimit}): ${errorMsg}`
+      )
+
+      // Keep the queue pending until we exhaust retries, then mark as failed.
+      await updateQueueStatus(
+        queueId,
+        retriesExhausted ? 'failed' : 'pending',
+        undefined,
+        errorMsg,
+        nextRetryAttempt
+      )
 
       // Track failure in telemetry
       await insertTelemetry({
@@ -135,7 +153,12 @@ export async function POST(request: NextRequest) {
         extractedBeliefs: 0,
         extractedAims: 0,
         errorMessage: errorMsg,
-        metadata: { failedNoteIds: notesToProcess.map((n) => n.id) }
+        metadata: {
+          failedNoteIds: notesToProcess.map((n) => n.id),
+          retryAttempt: nextRetryAttempt,
+          maxRetries: retryLimit,
+          queueFailed: retriesExhausted
+        }
       })
 
       return NextResponse.json(
@@ -144,9 +167,11 @@ export async function POST(request: NextRequest) {
           error: 'Extraction failed',
           details: errorMsg,
           queueId,
-          noteCount: notesToProcess.length
+          noteCount: notesToProcess.length,
+          retryAttempt: nextRetryAttempt,
+          maxRetries: retryLimit
         },
-        { status: 500 }
+        { status: retriesExhausted ? 500 : 503 }
       )
     }
 

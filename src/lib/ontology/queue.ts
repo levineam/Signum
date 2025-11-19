@@ -24,6 +24,8 @@ export interface QueueJob {
   processedNotes: number
   status: 'pending' | 'in_progress' | 'completed' | 'failed'
   errorMessage?: string
+  retryAttempts: number
+  maxRetries: number
   createdAt: string
   updatedAt: string
 }
@@ -121,6 +123,8 @@ export async function createQueueJob(
     totalNotes: queueData.total_notes,
     processedNotes: queueData.processed_notes,
     status: queueData.status,
+    retryAttempts: queueData.retry_attempts,
+    maxRetries: queueData.max_retries,
     createdAt: queueData.created_at,
     updatedAt: queueData.updated_at
   }
@@ -140,6 +144,8 @@ export async function getNextPendingJob(): Promise<{
   importId: string
   importSnapshotTimestamp: string
   remainingNotes: number
+  retryAttempts: number
+  maxRetries: number
 } | null> {
   const { data, error } = await supabaseAdmin.rpc('get_next_queue_job')
 
@@ -157,7 +163,9 @@ export async function getNextPendingJob(): Promise<{
     userId: data[0].user_id,
     importId: data[0].import_id,
     importSnapshotTimestamp: data[0].import_snapshot_timestamp,
-    remainingNotes: data[0].remaining_notes
+    remainingNotes: data[0].remaining_notes,
+    retryAttempts: data[0].retry_attempts,
+    maxRetries: data[0].max_retries
   }
 }
 
@@ -222,13 +230,15 @@ export async function updateQueueStatus(
   queueId: string,
   status: 'pending' | 'in_progress' | 'completed' | 'failed',
   processedNotes?: number,
-  errorMessage?: string
+  errorMessage?: string,
+  retryAttempts?: number
 ): Promise<void> {
   const { error } = await supabaseAdmin.rpc('update_queue_status', {
     p_queue_id: queueId,
     p_status: status,
     p_processed_notes: processedNotes || null,
-    p_error_message: errorMessage || null
+    p_error_message: errorMessage || null,
+    p_retry_attempts: typeof retryAttempts === 'number' ? retryAttempts : null
   })
 
   if (error) {
