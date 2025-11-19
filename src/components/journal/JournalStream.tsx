@@ -246,9 +246,13 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
           // Create today's entry if it doesn't exist
           console.log('[JournalStream] Creating today\'s entry...')
           try {
+            const controller = new AbortController()
             const createTimeoutMs = 3000
             const createTimeoutPromise = new Promise<Note>((_, reject) => {
-              setTimeout(() => reject(new Error('createNote timeout exceeded')), createTimeoutMs)
+              setTimeout(() => {
+                controller.abort()
+                reject(new Error('createNote timeout exceeded'))
+              }, createTimeoutMs)
             })
 
             const newNote = await Promise.race([
@@ -257,7 +261,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                 content: '',
                 noteType: 'journal-entry',
                 metadata: { journalDate: today }
-              }, user.id),
+              }, user.id, controller.signal),
               createTimeoutPromise
             ])
             console.log('[JournalStream] Created new note:', newNote.id)

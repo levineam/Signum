@@ -113,7 +113,8 @@ export async function getNoteById(
  */
 export async function createNote(
   request: CreateNoteRequest,
-  userId: string
+  userId: string,
+  signal?: AbortSignal
 ): Promise<Note> {
 
 
@@ -157,11 +158,16 @@ export async function createNote(
     }
   }
 
-  const { data, error } = await supabase
+  const builder = supabase
     .from('notes')
     .insert(insertData)
     .select()
-    .single()
+
+  if (signal) {
+    builder.abortSignal(signal)
+  }
+
+  const { data, error } = await builder.single()
 
   if (error) {
     console.error('Error creating note:', error)

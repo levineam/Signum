@@ -64,16 +64,20 @@ export function NoteCreationModal({
 
     setIsSaving(true)
     try {
+      const controller = new AbortController()
       const createTimeoutMs = 3000
       const createTimeoutPromise = new Promise<Note>((_, reject) => {
-        setTimeout(() => reject(new Error('createNote timeout exceeded')), createTimeoutMs)
+        setTimeout(() => {
+          controller.abort()
+          reject(new Error('createNote timeout exceeded'))
+        }, createTimeoutMs)
       })
       const newNote = await Promise.race([
         createNote({
           title: title.trim(),
           content: content.trim(),
           noteType: 'custom' // Notes created from UI are custom notes
-        }, user.id),
+        }, user.id, controller.signal),
         createTimeoutPromise
       ])
 
