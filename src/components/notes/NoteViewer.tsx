@@ -12,6 +12,7 @@ import { hasPublicSupabase } from '@/lib/supabase'
 import { Calendar, Edit, Save, X, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
+import { toast } from 'sonner'
 
 interface NoteViewerProps {
   isOpen: boolean
@@ -84,11 +85,23 @@ export function NoteViewer({
       return () => {
         isActive = false
       }
+    } else {
+      setNote(null)
+      setEditTitle('')
+      setEditContent('')
     }
   }, [noteId, isOpen, resolveLocalNote, user])
 
   const handleEdit = () => {
-    // Navigate to the dedicated note page instead of editing in modal
+    // Don't navigate for local-only notes - they don't exist in the database
+    if (note?.id.startsWith('local-note-')) {
+      toast.error('Cannot edit local notes', {
+        description: 'This note was created offline and cannot be edited. Please sign in to save and edit notes.'
+      })
+      return
+    }
+
+    // Navigate to the dedicated note page for persisted notes
     if (note) {
       onClose()
       router.push(`/notes/${note.id}`)

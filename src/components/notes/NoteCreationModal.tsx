@@ -11,6 +11,7 @@ import { Note } from '@/types/note'
 import { Save, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
+import { hasPublicSupabase } from '@/lib/supabase'
 
 interface NoteCreationModalProps {
   isOpen: boolean
@@ -56,9 +57,10 @@ export function NoteCreationModal({
   const handleSave = async () => {
     if (!title.trim()) return
 
-    if (!user) {
-      const guestNote = buildFallbackNote('guest-user')
-      onNoteCreated?.(guestNote)
+    // Route to local fallback for: guests, test users, or when Supabase unavailable
+    if (!user || !hasPublicSupabase()) {
+      const localNote = buildFallbackNote(user?.id || 'guest-user')
+      onNoteCreated?.(localNote)
       handleClose()
       return
     }
