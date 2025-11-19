@@ -45,21 +45,22 @@ export function NoteLinkPicker({ onSelect, isGuest = false }: NoteLinkPickerProp
         const supabase = createClient()
 
         // Fetch all notes and journal entries
+        // Note: Database columns use snake_case (note_type, created_at, updated_at)
         const { data, error } = await supabase
           .from('notes')
-          .select('id, title, noteType, createdAt, metadata')
-          .in('noteType', ['custom', 'journal-entry'])
-          .order('updatedAt', { ascending: false })
+          .select('id, title, note_type, created_at, metadata')
+          .in('note_type', ['custom', 'journal-entry'])
+          .order('updated_at', { ascending: false })
           .limit(100)
 
         if (error) throw error
 
-        // Cast Supabase data to our Note interface
+        // Cast Supabase data to our Note interface (snake_case -> camelCase)
         const notes = (data || []).map(row => ({
           id: String(row.id),
           title: String(row.title),
-          noteType: String(row.noteType),
-          createdAt: String(row.createdAt),
+          noteType: String(row.note_type),
+          createdAt: String(row.created_at),
           metadata: row.metadata as { journalDate?: string } | undefined
         }))
 
