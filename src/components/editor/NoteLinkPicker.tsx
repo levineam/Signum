@@ -128,7 +128,7 @@ export function NoteLinkPicker({ onSelect, isGuest = false }: NoteLinkPickerProp
                 {customNotes.map((note) => (
                   <CommandItem
                     key={note.id}
-                    value={note.id}
+                    value={`${note.title} ${note.metadata?.journalDate ?? ''}`.trim()}
                     onSelect={() => onSelect(note)}
                     className="cursor-pointer"
                   >
@@ -148,7 +148,7 @@ export function NoteLinkPicker({ onSelect, isGuest = false }: NoteLinkPickerProp
                 {journalEntries.map((note) => (
                   <CommandItem
                     key={note.id}
-                    value={note.id}
+                    value={`${note.title} ${note.metadata?.journalDate ?? ''}`.trim()}
                     onSelect={() => onSelect(note)}
                     className="cursor-pointer"
                   >
