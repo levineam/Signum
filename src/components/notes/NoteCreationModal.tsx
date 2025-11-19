@@ -10,6 +10,7 @@ import { createNote } from '@/lib/notes'
 import { Note } from '@/types/note'
 import { Save, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { toast } from 'sonner'
 
 interface NoteCreationModalProps {
   isOpen: boolean
@@ -97,9 +98,18 @@ export function NoteCreationModal({
         timeoutId = null
       }
       console.error('Error creating note:', error)
-      const fallbackNote = buildFallbackNote(user.id)
-      onNoteCreated?.(fallbackNote)
-      handleClose()
+      
+      // Show error notification to user
+      const errorMessage = error instanceof Error && error.message === 'createNote timeout exceeded'
+        ? 'Note creation timed out. Please check your connection and try again.'
+        : 'Failed to create note. Please try again.'
+      
+      toast.error('Failed to create note', {
+        description: errorMessage
+      })
+      
+      // Keep modal open so user can retry - don't create fallback note
+      // Fallback notes only exist in memory and disappear on refresh
     } finally {
       setIsSaving(false)
     }
