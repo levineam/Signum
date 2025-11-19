@@ -41,24 +41,24 @@ export function NoteViewer({
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
-    if (noteId && isOpen) {
-      const localNote = resolveLocalNote?.(noteId)
-      if (localNote) {
-        setNote(localNote)
-        setEditTitle(localNote.title)
-        setEditContent(localNote.content || '')
-        return
-      }
-    }
-  }, [noteId, isOpen, resolveLocalNote])
-
-  useEffect(() => {
     if (!noteId || !isOpen) {
       return
     }
 
-    // Skip Supabase fetches for local-only notes or when Supabase isn't configured
+    // 1. Try to resolve locally first
+    const localNote = resolveLocalNote?.(noteId)
+    if (localNote) {
+      setNote(localNote)
+      setEditTitle(localNote.title)
+      setEditContent(localNote.content || '')
+      return
+    }
+
+    // 2. Skip Supabase fetches for local-only notes or when Supabase isn't configured
     if (noteId.startsWith('local-note-') || !hasPublicSupabase()) {
+      setNote(null)
+      setEditTitle('')
+      setEditContent('')
       return
     }
 
@@ -74,6 +74,8 @@ export function NoteViewer({
             setEditContent(foundNote.content || '')
           } else {
             setNote(null)
+            setEditTitle('')
+            setEditContent('')
           }
         }
       })
@@ -83,7 +85,7 @@ export function NoteViewer({
         isActive = false
       }
     }
-  }, [noteId, isOpen, user])
+  }, [noteId, isOpen, resolveLocalNote, user])
 
   const handleEdit = () => {
     // Navigate to the dedicated note page instead of editing in modal
