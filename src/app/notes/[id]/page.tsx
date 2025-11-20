@@ -353,6 +353,13 @@ const linkSelectionToNote = async (targetNoteId: string, createdNote?: Note) => 
     // P2 FIX: Use captured selection from dialog callback instead of stale state
     // For note edit page, we only link if we have captured context
     if (capturedSelection && capturedEntryId && editorRef.current && user) {
+      // Clear pending autosave to avoid overwriting the linked content with stale HTML
+      if (saveTimeoutRef.current) {
+        console.log('🛑 Clearing pending autosave timeout before linking AI answer')
+        clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = null
+      }
+
       console.log('🔗 Linking AI answer with captured selection:', { noteId, targetNoteId: capturedEntryId, selectionLength: capturedSelection.length })
 
       const editorElement = editorRef.current
