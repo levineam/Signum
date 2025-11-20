@@ -27,7 +27,7 @@
 -- Create test entity (if not exists)
 INSERT INTO entities (id, user_id, entity_name, entity_type, centrality)
 VALUES (
-  'test-entity-id'::uuid,
+  '00000000-0000-0000-0000-000000000001'::uuid,
   (SELECT id FROM auth.users LIMIT 1),
   'Test Entity',
   'concept',
@@ -38,15 +38,15 @@ ON CONFLICT (id) DO NOTHING;
 -- Get current centrality
 SELECT id, entity_name, centrality
 FROM entities
-WHERE id = 'test-entity-id'::uuid;
+WHERE id = '00000000-0000-0000-0000-000000000001'::uuid;
 
 -- Increment centrality
-SELECT increment_entity_centrality('test-entity-id'::uuid, 1);
+SELECT increment_entity_centrality('00000000-0000-0000-0000-000000000001'::uuid, 1);
 
 -- Verify increment worked
 SELECT id, entity_name, centrality
 FROM entities
-WHERE id = 'test-entity-id'::uuid;
+WHERE id = '00000000-0000-0000-0000-000000000001'::uuid;
 
 \echo 'Expected: Centrality should have incremented by 1'
 \echo ''
@@ -97,7 +97,7 @@ AND period = 'all_time';
 -- ============================================================================
 
 -- Uncomment to clean up test data:
--- DELETE FROM entities WHERE id = 'test-entity-id'::uuid;
+-- DELETE FROM entities WHERE id = '00000000-0000-0000-0000-000000000001'::uuid;
 -- DELETE FROM term_frequencies WHERE user_id = :test_user_id::uuid AND term = 'test';
 
 \echo '=== Story 1.11.1 Test Complete ==='

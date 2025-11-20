@@ -188,7 +188,9 @@ SELECT frequency FROM term_frequencies WHERE user_id = 'test-user-id'::uuid AND 
 - ✅ Given indexes added, when comparing before/after execution times, then no query regressed by >10%
 
 **Testing**:
-**Environment**: Local dev database with seed data (`npm run seed`)
+**Environment**: Local Supabase database reset with current migrations (`supabase db reset`).
+  - This command recreates the database, runs all migrations, and loads any seed SQL embedded in the migrations.
+  - If additional fixture data is required, create it using the provided test scripts (e.g., inserts in `scripts/test-story-1.11.2-before.sql`).
 
 **Pre-Migration Baseline** (`scripts/test-story-1.11.2-before.sql`):
 ```sql
@@ -324,7 +326,9 @@ ORDER BY indexname;
 - ✅ Given migration runs, when application smoke tests execute, then all features work without errors
 
 **Testing**:
-**Environment**: Local dev database with seed data (`npm run seed`)
+**Environment**: Local Supabase database reset with current migrations (`supabase db reset`).
+  - This ensures a clean slate and loads all schema/data defined in migrations.
+  - Populate any extra helper data using the verification scripts in this story before running performance comparisons.
 
 **Step 1: Verify Unused** (`scripts/test-story-1.11.3-verify-unused.sql`):
 ```sql
