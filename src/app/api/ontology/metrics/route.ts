@@ -15,9 +15,10 @@ import { getAnalyticsMetrics } from '@/lib/ontology/queue'
 export async function GET(request: NextRequest) {
   try {
     // Optional query param for days to look back
-    const daysBack = parseInt(request.nextUrl.searchParams.get('days') || '7')
+    const daysParam = request.nextUrl.searchParams.get('days')
+    const daysBack = daysParam === null ? 7 : Number(daysParam)
 
-    if (daysBack < 1 || daysBack > 90) {
+    if (!Number.isInteger(daysBack) || daysBack < 1 || daysBack > 90) {
       return NextResponse.json(
         { error: 'Days must be between 1 and 90' },
         { status: 400 }

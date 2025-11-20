@@ -30,6 +30,11 @@ const QUEUE_PROCESSING_ENABLED =
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
+  let jobContext: {
+    queueId: string
+    retryAttempts: number
+    maxRetries: number
+  } | null = null
 
   try {
     // 1. Check feature flag
@@ -77,6 +82,8 @@ export async function POST(request: NextRequest) {
       retryAttempts,
       maxRetries
     } = job
+
+    jobContext = { queueId, retryAttempts, maxRetries }
 
     console.log(
       `[Queue] Processing job ${queueId} for user ${userId}. Remaining notes: ${remainingNotes}`
@@ -198,7 +205,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     const currentProcessedCount = queueData?.processed_notes || 0
+    const totalNotes =
+      queueData?.total_notes ?? currentProcessedCount + remainingNotes
     const newProcessedCount = currentProcessedCount + unprocessedNotes.length
+    const remainingCount = Math.max(totalNotes - newProcessedCount, 0)
     await updateQueueStatus(queueId, 'pending', newProcessedCount)
 
     // 9. Track in telemetry (Codex Finding #4)
@@ -216,13 +226,13 @@ export async function POST(request: NextRequest) {
       errorMessage: batchError || undefined,
       metadata: {
         processedCount: newProcessedCount,
-        remainingCount: (queueData?.total_notes || 0) - newProcessedCount,
+        remainingCount,
         batchNumber: Math.ceil(newProcessedCount / 20)
       }
     })
 
     // 10. Check if queue is complete
-    if (newProcessedCount >= (queueData?.total_notes || 0)) {
+    if (newProcessedCount >= totalNotes) {
       // All notes processed! Advance lastAnalyzedAt (Codex Finding #1)
       try {
         await completeQueueJob(
@@ -261,7 +271,7 @@ export async function POST(request: NextRequest) {
       jobId: queueId,
       notesProcessed: unprocessedNotes.length,
       totalProcessed: newProcessedCount,
-      remainingNotes: remainingNotes - newProcessedCount,
+      remainingNotes: remainingCount,
       runtime
     })
   } catch (error) {
@@ -269,6 +279,28 @@ export async function POST(request: NextRequest) {
 
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error'
+
+    // Reset stuck in_progress jobs so they can be retried
+    if (jobContext) {
+      const nextRetryAttempt = (jobContext.retryAttempts ?? 0) + 1
+      const retryLimit = jobContext.maxRetries ?? 3
+      const retriesExhausted = nextRetryAttempt >= retryLimit
+
+      try {
+        await updateQueueStatus(
+          jobContext.queueId,
+          retriesExhausted ? 'failed' : 'pending',
+          undefined,
+          errorMessage,
+          nextRetryAttempt
+        )
+      } catch (statusError) {
+        console.error(
+          '[Queue] Failed to reset queue after unexpected error:',
+          statusError
+        )
+      }
+    }
 
     return NextResponse.json(
       {
