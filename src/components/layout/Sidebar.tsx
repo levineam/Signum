@@ -147,7 +147,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                   </TooltipTrigger>
                   <TooltipContent side="right" className="max-w-xs">
                     <p className="text-sm">
-                      Test Mode Active: Using local-only data that won't persist. Great for fast iteration without Supabase!
+                      Test Mode Active: Using local-only data that won&apos;t persist. Great for fast iteration without Supabase!
                     </p>
                   </TooltipContent>
                 </Tooltip>

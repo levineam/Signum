@@ -78,7 +78,7 @@ interface JournalStreamProps {
 
 export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const router = useRouter()
-  const { user, session } = useAuth()
+  const { user } = useAuth()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -888,7 +888,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
               {/* Content Section */}
               <CardContent
-                onClick={(event) => {
+                onClick={() => {
                   // Toggle edit mode
                   setEditingEntryId(entry.id);
                 }}

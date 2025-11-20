@@ -30,7 +30,7 @@ export function SimpleRichEditor({
   onBlur,
   autoFocus = false,
   onMakeNote,
-  onLinkClick,
+  // onLinkClick, // TODO: Implement link click handling in editor
   onTranscription,
   variant = 'default',
   className
