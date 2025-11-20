@@ -85,8 +85,19 @@ export function NoteLinkPicker({ onSelect, isGuest = false }: NoteLinkPickerProp
   const customNotes = filteredNotes.filter((n) => n.noteType === 'custom')
   const journalEntries = filteredNotes.filter((n) => n.noteType === 'journal-entry')
 
+  const parseDate = (value: string) => {
+    if (!value) return null
+    // Treat YYYY-MM-DD strings as local dates to avoid timezone shifts
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split('-').map(Number)
+      return new Date(year, month - 1, day)
+    }
+    return new Date(value)
+  }
+
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    const date = parseDate(dateString)
+    if (!date || Number.isNaN(date.getTime())) return dateString
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
