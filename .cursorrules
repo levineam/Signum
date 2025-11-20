@@ -1,0 +1,95 @@
+# Cursor AI Assistant Rules for Signum Project
+
+## Local Development Workflow
+
+When working on this project, ALWAYS check the current development mode before suggesting commands:
+
+### Automatic Test Mode Detection
+
+**Before suggesting `npm run dev`, check:**
+1. Is the change UI/component-focused? → Suggest `npm run dev:test`
+2. Does it require database testing? → Suggest `npm run dev`
+3. Unsure? → Suggest `npm run dev:test` first (faster feedback)
+
+**Test Mode Indicator:**
+- When test mode is active, sidebar shows "Test Mode Active" banner
+- Console logs: `[AuthContext] Forcing test-mode user session`
+
+### Command Recommendations
+
+**For UI Changes (80% of work):**
+```bash
+npm run dev:test  # Fast iteration, no Supabase needed
+```
+
+**For Database Changes:**
+```bash
+npm run dev  # Requires .env.local with Supabase credentials
+```
+
+**For Final Validation:**
+- Push to GitHub → test on Vercel preview
+- Only needed for DB features or before merge
+
+### Testing Workflow
+
+**Local E2E Tests:**
+```bash
+npm run test:e2e  # Uses forced test user automatically
+```
+
+**Specific Test:**
+```bash
+npx playwright test tests/hyperlink.test.ts --headed
+```
+
+## Code Patterns
+
+### Supabase Availability Checks
+
+When adding features that use Supabase, ALWAYS check availability upfront:
+
+```typescript
+// ✅ Good - check upfront
+if (!hasPublicSupabase()) {
+  // Use local fallback
+  return localImplementation()
+}
+
+// Then proceed with Supabase call
+const result = await supabaseOperation()
+
+// ❌ Bad - check after timeout
+try {
+  await Promise.race([supabaseCall(), timeout()])
+} catch {
+  // Too late - already wasted 3 seconds
+}
+```
+
+### Local Note Handling
+
+Local notes (created in test mode) have IDs starting with `local-note-`:
+
+```typescript
+// Always check before operations requiring DB
+if (noteId.startsWith('local-note-')) {
+  // Handle as local-only note
+  return
+}
+```
+
+## Documentation References
+
+- Local testing guide: `docs/runbooks/local-testing-guide.md`
+- Architecture docs: `docs/architecture/*.md`
+- Story files: `docs/stories/*.md`
+
+## Key Principles
+
+1. **Fast Feedback First**: Prefer `npm run dev:test` for rapid iteration
+2. **Validate on Vercel**: Use previews for DB features and final checks
+3. **Check Availability Early**: Use `hasPublicSupabase()` before Supabase calls
+4. **Clear Error Messages**: Toast errors for user-facing failures
+5. **Test Mode Aware**: Design features that gracefully degrade without Supabase
+

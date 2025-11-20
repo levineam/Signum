@@ -7,10 +7,10 @@ import { supabase } from '@/lib/supabase'
 import { encryptNote } from './encryption'
 import { getUserEncryptionKey } from './keyManagement'
 
-interface MigrationProgress {
-  current: number
-  total: number
-}
+// interface MigrationProgress {
+//   current: number
+//   total: number
+// }
 
 interface PlainNoteRow {
   id: string

@@ -31,19 +31,45 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+### Local Development
+
+**Quick Start (Test Mode - Recommended):**
+
+```bash
+npm run dev:test
+```
+
+This starts the dev server with test mode enabled - no Supabase credentials needed! Perfect for:
+- UI/component changes
+- Fast iteration (30-second cycles)
+- E2E test development
+
+Open [http://localhost:3000](http://localhost:3000) - you'll be automatically "logged in" with a test user.
+
+**Full Mode (Requires Supabase):**
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Requires `.env.local` with Supabase credentials. Use this for:
+- Database schema testing
+- RLS policy validation
+- Supabase-dependent features
+
+### Development Modes Comparison
+
+| Mode | Command | Setup | Speed | Best For |
+|------|---------|-------|-------|----------|
+| Test Mode | `npm run dev:test` | None | 30 sec | UI changes, components |
+| Full Mode | `npm run dev` | Needs `.env.local` | 2-3 min | DB features, RLS |
+| Vercel Preview | Push to GitHub | Automatic | 5-10 min | Final validation |
+
+**When in doubt:** Start with `npm run dev:test` for fast feedback!
+
+See `docs/runbooks/local-testing-guide.md` for complete testing workflow guide.
+
+---
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
