@@ -15,7 +15,6 @@ interface SimpleRichEditorProps {
   onBlur?: (e: React.FocusEvent) => void
   autoFocus?: boolean
   onMakeNote?: (selectedText: string) => void
-  onLinkClick?: (noteId: string) => void
   onTranscription?: (text: string) => void
   variant?: 'default' | 'flush'
   className?: string
@@ -30,7 +29,6 @@ export function SimpleRichEditor({
   onBlur,
   autoFocus = false,
   onMakeNote,
-  // onLinkClick, // TODO: Implement link click handling in editor
   onTranscription,
   variant = 'default',
   className

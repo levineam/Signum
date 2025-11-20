@@ -106,10 +106,9 @@ test.describe('Phase 2 - Authenticated User Testing', () => {
     await page.goto('/notes')
     await page.waitForLoadState('networkidle')
 
-    // Check that the notes page loads (shows empty state or similar)
-    const emptyMessage = page.locator('text=/no notes yet/i')
-    // For unauthenticated users, the page should load without errors
-    // We're not asserting visibility since auth state may vary
+    // Check that the notes page loads without errors
+    // For unauthenticated users, the page should load (showing empty state or similar)
+    // We're not asserting specific content since auth state may vary
 
     await page.screenshot({ path: 'tests/screenshots/notes-unauthenticated.png', fullPage: true })
   })
