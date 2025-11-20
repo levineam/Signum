@@ -7,8 +7,11 @@ This project uses PR-based deployment with auto-deploy to Vercel. You MUST follo
 ## Workflow (MANDATORY)
 
 1. **Create feature branch**: `git checkout -b story-X.X-description`
-2. **Make changes & test locally**: `npm run build`, verify functionality
-3. **Commit & push**: `git add [files] && git commit` with `Co-Authored-By: Claude <noreply@anthropic.com>`, then `git push`
+2. **Make changes & test locally**:
+   - **UI/component changes**: `npm run dev:test` (fast iteration, no Supabase needed)
+   - **Database changes**: Skip local testing, rely on Vercel preview
+   - Verify functionality, run `npm run lint`
+3. **Commit & push**: `git add [files] && git commit`, then `git push`
 4. **Create PR**: `gh pr create` with description, test plan, screenshots. Apply appropriate labels (see GitHub Labels below).
 5. **🚨 Codex review**: CI auto-comments `@codex review` after push. If not posted within ~30s, run manually: `gh pr comment [PR#] --body '@codex review'`
 6. **Test on Vercel Preview**: Test thoroughly on preview URL
@@ -54,7 +57,7 @@ When creating issues, apply relevant labels:
 
 Journaling-first social platform. Next.js 15.5.3, Supabase, shadcn/ui. See @docs/prd.md and @package.json.
 
-**Commands**: `npm run dev` | `npm run build` | `npm run lint`
+**Commands**: `npm run dev:test` (UI work) | `npm run dev` (DB work) | `npm run build` | `npm run lint`
 
 ## Stack
 
@@ -74,6 +77,54 @@ Next.js 15.5.3 (Turbopack) • Supabase (Auth, DB, RLS) • shadcn/ui • TypeSc
 - `/src/utils/journalPrompts.ts` - ACT-inspired prompts
 - `/src/utils/sanitizeHtml.ts` - HTML sanitization for security
 - `/docs/prd.md` - Product requirements
+
+## Local Development Modes
+
+**ALWAYS use the appropriate mode for the change type:**
+
+### Test Mode (Default for UI/Component Work)
+
+**Command:** `npm run dev:test`
+
+**What it does:**
+- Auto-enables forced test user (no Supabase needed)
+- Provides instant feedback (30-second iteration cycles)
+- Shows "Test Mode Active" banner in sidebar
+- All auth flows work without real authentication
+- Data doesn't persist (resets on refresh)
+
+**Use for:**
+- UI changes (components, styling, layouts)
+- Component interactions and state management
+- E2E test development
+- Quick iteration on non-DB logic
+
+### Production Mode (For Database Testing)
+
+**Command:** `npm run dev` (requires `.env.local`)
+
+**Use for:**
+- Database schema changes
+- RLS policy testing
+- Supabase-specific features
+
+### Vercel Preview (Final Validation)
+
+**When:** After pushing to GitHub
+
+**Use for:**
+- Database-dependent features
+- Full integration testing
+- Final validation before merge
+
+**Decision Rule:**
+- UI change? → `npm run dev:test`
+- DB change? → Vercel preview
+- Unsure? → Start with `npm run dev:test`
+
+See `docs/runbooks/local-testing-guide.md` for complete guide.
+
+---
 
 ## CRITICAL: HTML Formatting in Edit & Read-Only Modes
 

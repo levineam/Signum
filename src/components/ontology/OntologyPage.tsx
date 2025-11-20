@@ -174,12 +174,12 @@ export function OntologyPage() {
     <div className="max-w-5xl mx-auto p-6 space-y-8">
       {/* Ontology Cards Section */}
       <section>
-        <div className="flex items-center justify-end mb-4">
+        <div className="flex items-center justify-end mb-4" data-testid="ontology-controls">
           <OntologyAnalysisButton onComplete={loadNotes} />
         </div>
 
         {/* Expandable rows stacked vertically */}
-        <div className="space-y-4">
+        <div className="space-y-4" data-testid="ontology-cards">
           {sortedNotes.map((note) => {
             const category = note.noteType.replace('ontology-', '')
             return (

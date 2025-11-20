@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { Logo } from '@/components/branding/Logo'
-import { Menu, X, BookOpen, StickyNote, Target, MessageCircle, FileText, Users, Coins, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Menu, X, BookOpen, StickyNote, Target, MessageCircle, FileText, Users, Coins, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
 import { useOntologyBadge } from '@/hooks/useOntologyBadge'
+import { isForcedTestUserEnabled } from '@/lib/e2eTestUtils'
 
 interface SidebarProps {
   activeSection: string
@@ -22,6 +23,12 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const { user, signOut } = useAuth()
   // Story 2.4.7: Ontology update notification badge
   const unreadCount = useOntologyBadge()
+  const [isTestMode, setIsTestMode] = useState(false)
+
+  // Check for test mode on mount
+  useEffect(() => {
+    setIsTestMode(isForcedTestUserEnabled())
+  }, [])
 
   // Load manual collapse preference from localStorage on mount
   useEffect(() => {
@@ -120,6 +127,38 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               : 'md:p-4 xl:p-6'
           }
         `}>
+          {/* Test Mode Banner */}
+          {isTestMode && (
+            <div className={`
+              mb-4 p-2 rounded-md bg-warning/10 border border-warning/20
+              ${manuallyCollapsed !== null ? (isCollapsed ? 'px-1' : '') : 'md:px-1 xl:px-2'}
+            `}>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={`
+                      flex items-center gap-2
+                      ${manuallyCollapsed !== null ? (isCollapsed ? 'justify-center' : '') : 'md:justify-center xl:justify-start'}
+                    `}>
+                      <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" />
+                      <span className={`
+                        text-xs font-medium text-warning
+                        ${manuallyCollapsed !== null ? (isCollapsed ? 'hidden' : '') : 'md:hidden xl:inline'}
+                      `}>
+                        Test Mode
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p className="text-sm">
+                      Test Mode Active: Using local-only data that won&apos;t persist. Great for fast iteration without Supabase!
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
+
           {/* Header */}
           <div className={`
             mb-8 flex
@@ -240,14 +279,14 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                     <p className="text-base font-medium text-sidebar-foreground">Signed in as:</p>
                     <p className="text-base text-sidebar-foreground/60 truncate">{user.email}</p>
                   </div>
-                  <Button variant="outline" size="sm" onClick={signOut} className="w-full">
+                  <Button variant="outline" size="sm" onClick={signOut} className="w-full" data-testid="sign-out-button">
                     Sign Out
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <Button variant="outline" size="sm" asChild className="w-full">
-                    <a href="/auth">Sign Up</a>
+                    <a href="/auth" data-testid="sign-up-link">Sign Up</a>
                   </Button>
                 </div>
               )}

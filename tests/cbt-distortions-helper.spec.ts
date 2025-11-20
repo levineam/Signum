@@ -1,12 +1,10 @@
 import { test, expect } from '@playwright/test'
 import { openJournalEditor } from './helpers/journal'
 
-const TEST_URL = 'http://localhost:3000'
-
 test.describe('CBT Distortions Helper', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to journal page
-    await page.goto(TEST_URL)
+    await page.goto('/')
     await page.waitForLoadState('networkidle')
 
     // Wait for journal entry to load (assumes authentication is already set up)

@@ -13,15 +13,14 @@ import { openJournalEditor } from './helpers/journal'
  * Known Limitation: Links do NOT rehydrate on page refresh (Phase 2)
  */
 
-const PREVIEW_URL = 'https://signum-git-story-242-links-to-supabase-levineams-projects.vercel.app'
 const TEST_EMAIL = 'dev-test-1@signum.dev'
 const TEST_PASSWORD = 'DevTest2025!User1'
 
 test.describe('Phase 1: Link Creation with Metadata', () => {
   test.setTimeout(120000)
   test.beforeEach(async ({ page }) => {
-    // Navigate to preview URL
-    await page.goto(PREVIEW_URL)
+    // Navigate to home page (uses baseURL from playwright.config.ts)
+    await page.goto('/')
     await page.waitForLoadState('networkidle')
 
     // Check if we're already on the journal page (signed in via cookie)
@@ -33,7 +32,7 @@ test.describe('Phase 1: Link Creation with Metadata', () => {
 
       if (hasEmailInput === 0) {
         // Go to /auth page
-        await page.goto(`${PREVIEW_URL}/auth`)
+        await page.goto('/auth')
         await page.waitForSelector('input[type="email"]', { timeout: 10000 })
       }
 
