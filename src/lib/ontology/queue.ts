@@ -260,13 +260,29 @@ export async function completeQueueJob(
   // Update queue status
   await updateQueueStatus(queueId, 'completed')
 
+  // Preserve newer cursors if a manual run advanced them while the queue was processing
+  const { data: existingState } = await supabaseAdmin
+    .from('ontology_analysis_state')
+    .select('last_analyzed_at, last_run_summary')
+    .eq('user_id', userId)
+    .single()
+
+  const existingTimestamp = existingState?.last_analyzed_at
+    ? new Date(existingState.last_analyzed_at)
+    : null
+  const effectiveTimestamp =
+    existingTimestamp && existingTimestamp > importSnapshotTimestamp
+      ? existingTimestamp
+      : importSnapshotTimestamp
+
   // Advance user's lastAnalyzedAt to snapshot timestamp
   const { error } = await supabaseAdmin
     .from('ontology_analysis_state')
     .upsert(
       {
         user_id: userId,
-        last_analyzed_at: importSnapshotTimestamp.toISOString()
+        last_analyzed_at: effectiveTimestamp.toISOString(),
+        last_run_summary: existingState?.last_run_summary || {}
       },
       {
         onConflict: 'user_id'
