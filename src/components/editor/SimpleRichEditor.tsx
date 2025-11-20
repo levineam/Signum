@@ -2,8 +2,9 @@
 
 import React, { useRef, useCallback, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Bold, Italic, Underline, Highlighter, List, ListOrdered, Heading1, Heading2, Quote, AlignLeft, AlignCenter, AlignRight, FileText } from 'lucide-react'
+import { Bold, Italic, Underline, Highlighter, List, ListOrdered, Heading1, Heading2, Quote, AlignLeft, AlignCenter, AlignRight, FileText, Sparkles } from 'lucide-react'
 import { VoiceRecordButton } from '@/components/editor/VoiceRecordButton'
+import { AskAIDialog } from '@/components/journal/AskAIDialog'
 import { cn } from '@/lib/utils'
 
 interface SimpleRichEditorProps {
@@ -16,6 +17,9 @@ interface SimpleRichEditorProps {
   autoFocus?: boolean
   onMakeNote?: (selectedText: string) => void
   onTranscription?: (text: string) => void
+  entryId?: string
+  onNoteCreated?: (noteId: string, selectedText: string, entryId?: string) => void
+  onAskAISelection?: (selectedText: string) => void
   variant?: 'default' | 'flush'
   className?: string
 }
@@ -30,13 +34,19 @@ export function SimpleRichEditor({
   autoFocus = false,
   onMakeNote,
   onTranscription,
+  entryId,
+  onNoteCreated,
+  onAskAISelection,
   variant = 'default',
   className
 }: SimpleRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const [selectedText, setSelectedText] = useState('')
   const [hasSelection, setHasSelection] = useState(false)
+  const [showAskAI, setShowAskAI] = useState(false)
   const isInternalChangeRef = useRef(false)
+  const suppressBlurRef = useRef(false)
+  const canShowAskAIButton = Boolean(entryId || onNoteCreated)
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
@@ -770,6 +780,10 @@ export function SimpleRichEditor({
     document.execCommand('insertText', false, text)
   }, [])
 
+  useEffect(() => {
+    suppressBlurRef.current = showAskAI
+  }, [showAskAI])
+
   const handleTextSelection = useCallback(() => {
     // Add a small delay to ensure the selection has been processed
     setTimeout(() => {
@@ -805,13 +819,47 @@ export function SimpleRichEditor({
     }
   }, [selectedText, onMakeNote])
 
+  const handleAskAIButtonMouseDown = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    suppressBlurRef.current = true
+    if (selectedText) {
+      onAskAISelection?.(selectedText)
+    }
+    setShowAskAI(true)
+  }, [onAskAISelection, selectedText])
+
+  const handleEditorBlur = useCallback((event: React.FocusEvent<HTMLDivElement>) => {
+    if (suppressBlurRef.current) {
+      return
+    }
+    onBlur?.(event)
+  }, [onBlur])
+
   const handleClickOutside = useCallback((e: Event) => {
     const target = e.target as HTMLElement
-    if (target && !target.closest('[contenteditable]') && !target.closest('[data-make-note-button]')) {
+    if (
+      target &&
+      !target.closest('[contenteditable]') &&
+      !target.closest('[data-make-note-button]') &&
+      !target.closest('[data-ask-ai-dialog]')
+    ) {
       setHasSelection(false)
       setSelectedText('')
     }
   }, [])
+
+  const handleAskAIDialogClose = useCallback(() => {
+    suppressBlurRef.current = false
+    setShowAskAI(false)
+
+    // Restore focus to the editor so the user stays in edit mode
+    setTimeout(() => {
+      if (editorRef.current) {
+        editorRef.current.focus()
+      }
+    }, 0)
+  }, [setShowAskAI])
 
   const handleTranscription = useCallback((text: string) => {
     if (editorRef.current && onChange) {
@@ -940,7 +988,7 @@ export function SimpleRichEditor({
           suppressContentEditableWarning={true}
           onInput={handleInput}
           onFocus={onFocus}
-          onBlur={onBlur}
+          onBlur={handleEditorBlur}
           onPaste={handlePaste}
           className={cn(
             "rich-editor-body min-h-[120px] w-full resize-none border-0 bg-transparent text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed",
@@ -1138,26 +1186,42 @@ export function SimpleRichEditor({
           <Quote className="h-4 w-4" />
         </Button>
 
-        {/* Make Note - only show when text is selected and onMakeNote is provided */}
-        {hasSelection && onMakeNote && (
-          <div className="flex items-center border-l pl-2 ml-2" data-make-note-button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onMouseDown={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                handleMakeNoteClick()
-              }}
-              className="h-8 px-2 flex items-center gap-1"
-              type="button"
-              title="Create a note from selected text"
-              data-make-note-button
-              data-testid="make-note-button"
-            >
-              <FileText className="h-4 w-4" />
-              <span className="text-xs">Make Note</span>
-            </Button>
+        {/* Make Note & Ask AI - only show when text is selected */}
+        {hasSelection && (onMakeNote || canShowAskAIButton) && (
+          <div className="flex items-center gap-2 border-l pl-2 ml-2">
+            {onMakeNote && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleMakeNoteClick()
+                }}
+                className="h-8 px-2 flex items-center gap-1"
+                type="button"
+                title="Create a note from selected text"
+                data-make-note-button
+                data-testid="make-note-button"
+              >
+                <FileText className="h-4 w-4" />
+                <span className="text-xs">Make Note</span>
+              </Button>
+            )}
+            {canShowAskAIButton && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onMouseDown={handleAskAIButtonMouseDown}
+                className="h-8 px-2 flex items-center gap-1 bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 dark:from-purple-900/30 dark:to-blue-900/30 dark:hover:from-purple-800/40 dark:hover:to-blue-800/40"
+                type="button"
+                title="Ask AI about this text"
+                data-make-note-button
+              >
+                <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <span className="text-xs font-medium">Ask AI</span>
+              </Button>
+            )}
           </div>
         )}
 
@@ -1166,6 +1230,20 @@ export function SimpleRichEditor({
           <VoiceRecordButton onTranscriptionComplete={handleTranscription} />
         </div>
       </div>
+
+      {/* Ask AI Dialog */}
+      <AskAIDialog
+        isOpen={showAskAI}
+        onClose={handleAskAIDialogClose}
+        selectedText={selectedText}
+        entryId={entryId}
+        onAnswerCreated={(noteId, capturedSelection, capturedEntryId) => {
+          handleAskAIDialogClose()
+          setHasSelection(false)
+          setSelectedText('')
+          onNoteCreated?.(noteId, capturedSelection, capturedEntryId)
+        }}
+      />
 
     </div>
   )

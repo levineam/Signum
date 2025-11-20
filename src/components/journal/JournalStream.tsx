@@ -28,6 +28,8 @@ import { GuestAuthModal } from '@/components/auth/GuestAuthModal'
 import { IDLE_TIMER_MS } from '@/types/guest'
 import { isForcedTestUserEnabled } from '@/lib/e2eTestUtils'
 
+const DEBUG_TASK_DETECTION = process.env.NODE_ENV === 'development'
+
 interface JournalEntry {
   id: string
   date: string  // YYYY-MM-DD format
@@ -39,6 +41,15 @@ interface JournalEntry {
     prompt?: string
     [key: string]: unknown  // Allow other metadata fields
   } | null
+}
+
+interface ParsedTask {
+  id: string
+  title: string
+  paragraphHash: string
+  dueAt: string | null
+  rrule: string | null
+  status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
 }
 
 // Helper: Get today's date in local timezone as YYYY-MM-DD
@@ -79,13 +90,14 @@ interface JournalStreamProps {
 
 export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const { addLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const taskDetectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [currentEditingEntry, setCurrentEditingEntry] = useState<string | null>(null)
@@ -93,6 +105,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null)
   const [noteLinkClicked, setNoteLinkClicked] = useState(false)
   const [creatingLink, setCreatingLink] = useState(false)
+  const [, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
+  const rejectedTaskHashes = useRef<Map<string, Set<string>>>(new Map())
   const [hasBootstrappedEntry, setHasBootstrappedEntry] = useState(false)
 
   // Guest mode state
@@ -135,6 +149,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
   // Cache editor element reference before opening modal (Phase 1 bug fix)
   const cachedEditorRef = useRef<HTMLElement | null>(null)
+  const selectionMetadataRef = useRef<ReturnType<typeof captureSelectionMetadata> | null>(null)
 
   useEffect(() => {
     // Load journal entries from Supabase or create guest entry
@@ -431,6 +446,14 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       return // Skip Supabase saves for guests
     }
 
+    // Debounce task detection to avoid duplicate tasks while typing (Story 1.2)
+    if (taskDetectionTimeoutRef.current) {
+      clearTimeout(taskDetectionTimeoutRef.current)
+    }
+    taskDetectionTimeoutRef.current = setTimeout(() => {
+      detectTasksInContent(newContent, entryId)
+    }, 3000)
+
     // Auto-save after 2 seconds of no typing (longer delay to reduce noise)
     saveTimeoutRef.current = setTimeout(async () => {
       const previousContent = currentEntry?.content || ''
@@ -450,66 +473,261 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     }, 2000)
   }
 
-  const handleMakeNote = (selectedText: string) => {
-    setSelectedText(selectedText)
-    setCurrentEditingEntry(editingEntryId)
+  // Task detection from journal paragraphs (Story 1.2)
+  const processedParagraphs = useRef<Set<string>>(new Set())
 
-    // Phase 1 bug fix: Cache editor element BEFORE opening modal
-    // Modal opening causes entry to exit edit mode, losing contenteditable
-    if (editingEntryId) {
-      const editorElement = document.querySelector(`[data-entry-id="${editingEntryId}"] [contenteditable]`) as HTMLElement
-      cachedEditorRef.current = editorElement
-      console.log('💾 Cached editor element:', !!editorElement)
-    }
-
-    setShowNoteModal(true)
+  // Story 1.2.2: Normalize paragraph text for consistent hashing
+  // Handles punctuation, whitespace, and case variations
+  const normalizeParagraphText = (text: string): string => {
+    return text
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ') // Collapse multiple spaces
+      .replace(/[.,;!?]+$/, '') // Remove trailing punctuation
   }
 
-  const handleNoteCreated = async (note: Note) => {
-    if (!currentEditingEntry || !selectedText) {
-      console.log('❌ Missing currentEditingEntry or selectedText', { currentEditingEntry, selectedText })
-      return
+  const detectTasksInContent = async (content: string, entryId: string) => {
+    if (!user || !session?.access_token) return
+
+    // Story 1.2.2: Get rejected task hashes from state
+    const rejectedHashes = rejectedTaskHashes.current.get(entryId) || new Set<string>()
+
+    if (DEBUG_TASK_DETECTION && rejectedHashes.size > 0) {
+      console.log(`[Task Detection] Loaded ${rejectedHashes.size} rejected task hashes for entry ${entryId}`)
     }
 
-    addLocalNote(note)
+    // Extract paragraphs from HTML content
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = content
 
-    console.log('📝 Creating note link', { selectedText, noteId: note.id, entryId: currentEditingEntry })
+    // Get all block-level elements (p, div, or split by br)
+    // ContentEditable creates different structures in different browsers
+    const blockElements = Array.from(tempDiv.querySelectorAll('p, div'))
 
-    // Set flag to prevent content change interference
+    // Filter out container elements that have other block-level children
+    // to avoid processing the same paragraph twice (e.g., <div><p>Task</p></div>)
+    const leafParagraphs = blockElements.filter(el => {
+      const hasBlockChildren = el.querySelector('p, div') !== null
+      return !hasBlockChildren
+    })
+
+    // If no leaf paragraphs, treat whole content as one paragraph
+    const paragraphs = leafParagraphs.length > 0
+      ? leafParagraphs
+      : [tempDiv]
+
+    if (DEBUG_TASK_DETECTION) {
+      console.log(`[Task Detection] Checking ${paragraphs.length} leaf paragraphs in entry ${entryId}`)
+    }
+
+    for (const para of paragraphs) {
+      const paragraphText = para.textContent?.trim() || ''
+
+      // Story 1.2.2: Use normalized text for hashing
+      const normalizedText = normalizeParagraphText(paragraphText)
+      const paraHash = `${entryId}-${normalizedText}`
+
+      if (DEBUG_TASK_DETECTION) {
+        console.log('[Task Detection] Examining paragraph:', {
+          paragraphText: paragraphText.substring(0, 50),
+          normalizedText: normalizedText.substring(0, 50),
+          isEmpty: !paragraphText,
+          paraHash
+        })
+      }
+
+      // Skip empty paragraphs
+      if (!paragraphText) {
+        if (DEBUG_TASK_DETECTION) {
+          console.log('[Task Detection] Skipping empty paragraph')
+        }
+        continue
+      }
+
+      // Story 1.2.2: Skip paragraphs that are too long (API limit is 1000 chars)
+      if (paragraphText.length > 1000) {
+        if (DEBUG_TASK_DETECTION) {
+          console.log('[Task Detection] Skipping paragraph too long:', paragraphText.length, 'chars')
+        }
+        continue
+      }
+
+      // Story 1.2.2: Check if this paragraph was rejected
+      if (rejectedHashes.has(paraHash)) {
+        if (DEBUG_TASK_DETECTION) {
+          console.log('[Task Detection] Skipping rejected paragraph:', paragraphText.substring(0, 50))
+        }
+        continue
+      }
+
+      // Check if already processed - but only mark as processed AFTER successful task creation
+      if (processedParagraphs.current.has(paraHash)) {
+        if (DEBUG_TASK_DETECTION) {
+          console.log('[Task Detection] Skipping already processed paragraph:', paragraphText.substring(0, 50))
+        }
+        continue
+      }
+
+      if (DEBUG_TASK_DETECTION) {
+        console.log('[Task Detection] Processing paragraph:', paragraphText)
+      }
+
+      // Call task parsing API (with user's timezone info for DST handling)
+      try {
+        const response = await fetch('/api/tasks/parse', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            paragraphText,
+            userId: user.id,
+            entryId,
+            timezoneOffset: new Date().getTimezoneOffset(), // Offset in minutes
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone // IANA timezone ID for DST
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.task) {
+            const { task, alreadyExisted } = data
+
+            // Check if this task already exists in entryTasks to avoid duplicates
+            setEntryTasks(prev => {
+              const updated = new Map(prev)
+              const existing = updated.get(entryId) || []
+
+              // Story 1.2.2: Check for duplicates by both ID and paragraphHash
+              const taskExistsById = existing.some(t => t.id === task.id)
+              const taskExistsByHash = existing.some(t => t.paragraphHash === paraHash)
+
+              if (taskExistsById) {
+                console.log('⏭️ Task already exists in entryTasks (by ID), skipping:', task.id)
+                return prev
+              }
+
+              if (taskExistsByHash) {
+                console.log('⏭️ Task already exists in entryTasks (by hash), skipping:', paraHash)
+                return prev
+              }
+
+              // Use the status from the server (for existing tasks) or 'pending' for new tasks
+              const parsedTask: ParsedTask = {
+                id: task.id,
+                title: task.title,
+                paragraphHash: paraHash,
+                dueAt: task.dueAt,
+                rrule: task.rrule,
+                status: task.status || 'pending'
+              }
+
+              updated.set(entryId, [...existing, parsedTask])
+
+              // Mark paragraph as processed now that task was successfully created
+              processedParagraphs.current.add(paraHash)
+
+              // Only show toast for newly created tasks
+              if (!alreadyExisted) {
+                console.log('✅ New task created from paragraph:', task)
+                toast.success(`Task created: ${task.title}`)
+              } else {
+                console.log('✅ Loaded existing task from paragraph:', task)
+              }
+
+              return updated
+            })
+          } else {
+            if (DEBUG_TASK_DETECTION) {
+              console.log('[Task Detection] No task detected in:', paragraphText.substring(0, 50))
+            }
+          }
+        } else {
+          const error = await response.json()
+          console.error('[Task Detection] API error:', error)
+        }
+      } catch (error) {
+        console.error('[Task Detection] Failed to parse task:', error)
+      }
+    }
+  }
+
+  const clearSelectionContext = useCallback(() => {
+    selectionMetadataRef.current = null
+    setSelectedText('')
+  }, [])
+
+  const captureSelectionContext = useCallback((selection: string) => {
+    if (!selection) return
+    setSelectedText(selection)
+    setCurrentEditingEntry(editingEntryId)
+
+    if (editingEntryId) {
+      const editorElement = document.querySelector(`[data-entry-id="${editingEntryId}"] [contenteditable]`) as HTMLElement | null
+      cachedEditorRef.current = editorElement
+      console.log('💾 Cached editor element:', !!editorElement)
+
+      if (editorElement) {
+        const metadata = captureSelectionMetadata(editorElement, selection)
+        selectionMetadataRef.current = metadata
+        console.log('📍 Cached selection metadata for entry', editingEntryId, metadata)
+      } else {
+        selectionMetadataRef.current = null
+      }
+    } else {
+      selectionMetadataRef.current = null
+    }
+  }, [editingEntryId])
+
+  const handleMakeNote = (selection: string) => {
+    captureSelectionContext(selection)
+    setShowNoteModal(true)
+  }
+  const handleLinkClick = useCallback((noteId: string) => {
+    setNoteLinkClicked(true)
+    setViewingNoteId(noteId)
+    setShowNoteViewer(true)
+    setTimeout(() => setNoteLinkClicked(false), 100)
+  }, [])
+
+  const linkSelectionToNote = useCallback(async (noteId: string, createdNote?: Note) => {
+    const entryId = currentEditingEntry
+    const selectionText = selectedText
+
+    if (!entryId || !selectionText) {
+      console.log('❌ Missing context for linking', { entryId, selectionTextLength: selectionText?.length })
+      return false
+    }
+
+    if (createdNote) {
+      addLocalNote(createdNote)
+    }
+
+    console.log('📝 Creating note link', { selectedText: selectionText, noteId, entryId })
     setCreatingLink(true)
 
-    // Phase 1 bug fix: Use cached editor ref and re-enter edit mode if needed
     let editorElement = cachedEditorRef.current
 
-    // If cached ref is stale, try to find editor and re-enter edit mode
     if (!editorElement || !document.contains(editorElement)) {
       console.log('⚠️ Cached editor stale, re-entering edit mode')
-
-      // Re-enter edit mode
-      setEditingEntryId(currentEditingEntry)
-
-      // Wait for edit mode to be active
+      setEditingEntryId(entryId)
       await new Promise(resolve => setTimeout(resolve, 100))
-
-      // Try to find editor again
-      editorElement = document.querySelector(`[data-entry-id="${currentEditingEntry}"] [contenteditable]`) as HTMLElement
+      editorElement = document.querySelector(`[data-entry-id="${entryId}"] [contenteditable]`) as HTMLElement | null
     }
 
-    // Hard fail with toast if editor still missing
     if (!editorElement) {
       console.error('❌ Could not find editor element after re-entry attempt')
       toast.error('Failed to create link: editor not found. Please try again.')
       setCreatingLink(false)
       cachedEditorRef.current = null
-      return
+      return false
     }
 
     try {
-      // Phase 1: Capture metadata BEFORE DOM manipulation
-      const metadata = captureSelectionMetadata(editorElement, selectedText)
-      console.log('📊 Captured selection metadata:', metadata)
+      const metadata = selectionMetadataRef.current || captureSelectionMetadata(editorElement, selectionText)
+      console.log('📊 Using selection metadata:', metadata)
 
-      // Phase 1: Create link in Supabase with metadata (or stub locally)
       let linkId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
         : `local-link-${Date.now()}`
@@ -517,8 +735,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       if (user) {
         try {
           const link = await createLink({
-            sourceNoteId: currentEditingEntry,
-            targetNoteId: note.id,
+            sourceNoteId: entryId,
+            targetNoteId: noteId,
             linkType: 'created_from',
             metadata: metadata || undefined
           }, user.id)
@@ -531,62 +749,135 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         console.warn('⚠️ No authenticated user, creating local-only link')
       }
 
-      // Convert the selected text to a link in the DOM with linkId
-      const linkCreated = convertTextToLink(editorElement, selectedText, note.id, linkId, handleLinkClick)
+      const linkCreated = convertTextToLink(editorElement, selectionText, noteId, linkId, handleLinkClick, metadata || undefined)
 
       if (!linkCreated) {
         console.error('❌ Failed to create link in editor')
         setCreatingLink(false)
-        return
+        return false
       }
 
       console.log('🔗 Created link in editor DOM')
 
-      // Now read the updated HTML from the editor after the link was created
-      // Wait for DOM to settle, then read the actual content
       setTimeout(() => {
-        const updatedContent = editorElement.innerHTML
-        console.log('📄 Read updated content from editor after link creation:', updatedContent)
+        const updatedContent = editorElement?.innerHTML ?? ''
+        console.log('📄 Read updated content from editor after link creation')
 
-        // Update state with the content that includes the link at the correct position
         setEntries(prev => prev.map(entry => {
-          if (entry.id === currentEditingEntry) {
+          if (entry.id === entryId) {
             return { ...entry, content: updatedContent, lastModified: new Date().toISOString() }
           }
           return entry
         }))
 
-        // Persist the linked content to Supabase
         if (user) {
-          updateNoteInDb(currentEditingEntry, { content: updatedContent }, user.id)
+          updateNoteInDb(entryId, { content: updatedContent }, user.id)
             .then(() => console.log('💾 Persisted link to Supabase'))
             .catch(error => console.error('Error persisting link to Supabase:', error))
         }
 
         setCreatingLink(false)
-
-        // Clear cached ref after successful link creation
         cachedEditorRef.current = null
+        clearSelectionContext()
       }, 50)
+
+      return true
     } catch (error) {
       console.error('❌ Error creating link:', error)
       toast.error('Failed to create link. Please try again.')
       setCreatingLink(false)
       cachedEditorRef.current = null
+      clearSelectionContext()
+      return false
     }
-  }
+  }, [currentEditingEntry, selectedText, user, handleLinkClick, setEntries, clearSelectionContext, addLocalNote])
 
-  const handleLinkClick = (noteId: string) => {
-    setNoteLinkClicked(true)
+  const handleNoteCreated = useCallback(async (note: Note) => {
+    await linkSelectionToNote(note.id, note)
+  }, [linkSelectionToNote])
+
+  const handleAskAIAnswerCreated = useCallback(async (noteId: string, capturedSelection: string, capturedEntryId?: string) => {
+    if (!noteId) {
+      console.warn('[Ask AI] Missing noteId from dialog callback')
+      return
+    }
+
+    // P2 FIX: Use captured selection context from dialog instead of current state
+    // This prevents linking to wrong text if user changed selection during AI generation
+    if (capturedEntryId && capturedSelection && user) {
+      const editorElement = cachedEditorRef.current
+
+      if (!editorElement) {
+        console.log('❌ No editor element cached for linking')
+        setViewingNoteId(noteId)
+        setShowNoteViewer(true)
+        return
+      }
+
+      setCreatingLink(true)
+      console.log('🔗 Linking AI answer with captured selection:', { noteId, entryId: capturedEntryId, selectionLength: capturedSelection.length })
+
+      try {
+        const metadata = selectionMetadataRef.current || captureSelectionMetadata(editorElement, capturedSelection)
+
+        // The link anchor lives inside the journal entry, so the entry needs to be the
+        // source for outgoing link rehydration (review feedback P2).
+        const link = await createLink({
+          sourceNoteId: capturedEntryId,
+          targetNoteId: noteId,
+          linkType: 'created_from',
+          metadata: metadata || undefined
+        }, user.id)
+        console.log('💾 Link created in Supabase:', link)
+
+        const linkCreated = convertTextToLink(editorElement, capturedSelection, noteId, link.id, handleLinkClick, metadata || undefined)
+
+        if (!linkCreated) {
+          console.error('❌ Failed to create link in editor')
+          setCreatingLink(false)
+          setViewingNoteId(noteId)
+          setShowNoteViewer(true)
+          return
+        }
+
+        console.log('🔗 Created link in editor DOM')
+
+        setTimeout(() => {
+          const updatedContent = editorElement?.innerHTML ?? ''
+          console.log('📄 Read updated content from editor after link creation')
+
+          setEntries(prev => prev.map(entry => {
+            if (entry.id === capturedEntryId) {
+              return { ...entry, content: updatedContent }
+            }
+            return entry
+          }))
+
+          if (updatedContent && user) {
+            const currentEntry = entries.find(e => e.id === capturedEntryId)
+            if (currentEntry) {
+              void updateNoteInDb(capturedEntryId, { content: updatedContent }, user.id)
+            }
+          }
+
+          toast.success('Answer linked to journal entry')
+          clearSelectionContext()
+          setCreatingLink(false)
+        }, 50)
+      } catch (error) {
+        console.error('Failed to link AI answer:', error)
+        setCreatingLink(false)
+        clearSelectionContext()
+      }
+    }
+
     setViewingNoteId(noteId)
     setShowNoteViewer(true)
-    // Reset the flag after a short delay
-    setTimeout(() => setNoteLinkClicked(false), 100)
-  }
+  }, [user, entries, cachedEditorRef, handleLinkClick, clearSelectionContext])
 
   const handleCloseNoteModal = () => {
     setShowNoteModal(false)
-    setSelectedText('')
+    clearSelectionContext()
   }
 
   const handleCloseNoteViewer = () => {
@@ -890,7 +1181,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               <CardContent
                 onClick={() => {
                   // Toggle edit mode
-                  setEditingEntryId(entry.id);
+                  setEditingEntryId(entry.id)
                 }}
                 className="px-3 md:px-2 pb-3 md:pb-2 pt-0 cursor-text hover:bg-muted/30 rounded-md transition-colors"
               >
@@ -920,6 +1211,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                       setEditingEntryId(null)
                     }}
                     onMakeNote={handleMakeNote}
+                    entryId={entry.id}
+                    onNoteCreated={handleAskAIAnswerCreated}
+                    onAskAISelection={captureSelectionContext}
                     onFocus={() => {
                       // Phase 2: Link rehydration from Supabase will be implemented here
                       // For now, links already in HTML remain functional
