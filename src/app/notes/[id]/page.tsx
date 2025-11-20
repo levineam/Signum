@@ -10,9 +10,11 @@ import { Trash2 } from 'lucide-react'
 import { OntologyCardViewer } from '@/components/notes/OntologyCardViewer'
 import { useAuth } from '@/contexts/AuthContext'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
+import type { NoteLinkSearchResult } from '@/components/editor/NoteLinkPicker'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
 import { NoteViewer } from '@/components/notes/NoteViewer'
 import { createLink } from '@/lib/supabase/notes'
+import { hasPublicSupabase } from '@/lib/supabase'
 import { convertTextToLink, captureSelectionMetadata } from '@/utils/textToLink'
 import { toast } from 'sonner'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
@@ -23,6 +25,7 @@ import { useLocalNotes } from '@/contexts/LocalNotesContext'
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { user } = useAuth()
+  const isGuest = !user
   const { addLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
@@ -63,6 +66,19 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   // Note Viewer functionality
   const [showNoteViewer, setShowNoteViewer] = useState(false)
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null)
+
+  const handleInlineNoteLinkInsert = useCallback(async (targetNote: NoteLinkSearchResult) => {
+    if (!user || !note || !hasPublicSupabase()) return
+    try {
+      await createLink({
+        sourceNoteId: note.id,
+        targetNoteId: targetNote.id,
+        linkType: 'references'
+      }, user.id)
+    } catch (error) {
+      console.error('Error creating inline note link:', error)
+    }
+  }, [note, user])
 
   useEffect(() => {
     if (!user) return
@@ -456,9 +472,25 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                   value={content}
                   placeholder={`Write your ${note.title.toLowerCase()} here...`}
                   onChange={handleContentChange}
-                  onBlur={() => setIsEditing(false)}
+                  onBlur={(e) => {
+                    const relatedTarget = e.relatedTarget as HTMLElement | null
+                    if (relatedTarget) {
+                      if (relatedTarget.closest('a[data-note-id]')) {
+                        return
+                      }
+                      if (relatedTarget.closest('[data-voice-button]')) {
+                        return
+                      }
+                      if (relatedTarget.closest('[data-note-link-button]') || relatedTarget.closest('[data-note-link-popover]')) {
+                        return
+                      }
+                    }
+                    setIsEditing(false)
+                  }}
                   onMakeNote={handleMakeNote}
                   autoFocus
+                  isGuest={isGuest}
+                  onNoteLinkInsert={handleInlineNoteLinkInsert}
                 />
               ) : (
                 <div className="min-h-[100px]">

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
+import type { NoteLinkSearchResult } from '@/components/editor/NoteLinkPicker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Calendar, BookOpen } from 'lucide-react'
@@ -10,6 +11,7 @@ import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
 import { NoteViewer } from '@/components/notes/NoteViewer'
 import { Note } from '@/types/note'
 import { createLink, getOutgoingLinks } from '@/lib/supabase/notes'
+import { hasPublicSupabase } from '@/lib/supabase'
 import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata } from '@/utils/textToLink'
 import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
@@ -584,6 +586,19 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     setTimeout(() => setNoteLinkClicked(false), 100)
   }
 
+  const handleInlineNoteLinkInsert = useCallback(async (entryId: string, targetNote: NoteLinkSearchResult) => {
+    if (!user || !hasPublicSupabase()) return
+    try {
+      await createLink({
+        sourceNoteId: entryId,
+        targetNoteId: targetNote.id,
+        linkType: 'references'
+      }, user.id)
+    } catch (error) {
+      console.error('Error creating inline note link:', error)
+    }
+  }, [user])
+
   const handleCloseNoteModal = () => {
     setShowNoteModal(false)
     setSelectedText('')
@@ -913,6 +928,10 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                       if (relatedTarget && relatedTarget.closest('[data-voice-button]')) {
                         return
                       }
+                      // Don't exit edit mode if the user clicked on the note link picker
+                      if (relatedTarget && (relatedTarget.closest('[data-note-link-button]') || relatedTarget.closest('[data-note-link-popover]'))) {
+                        return
+                      }
                       // Don't exit edit mode if the user clicked on the helper expand/collapse toggle
                       if (relatedTarget && relatedTarget.closest('[data-helper-toggle]')) {
                         return
@@ -920,6 +939,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                       setEditingEntryId(null)
                     }}
                     onMakeNote={handleMakeNote}
+                    onNoteLinkInsert={(linkedNote) => handleInlineNoteLinkInsert(entry.id, linkedNote)}
+                    isGuest={isGuest}
                     onFocus={() => {
                       // Phase 2: Link rehydration from Supabase will be implemented here
                       // For now, links already in HTML remain functional

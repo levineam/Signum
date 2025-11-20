@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
+import type { NoteLinkSearchResult } from '@/components/editor/NoteLinkPicker'
 import { Note } from '@/types/note'
 import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
 import { hasPublicSupabase } from '@/lib/supabase'
+import { createLink } from '@/lib/supabase/notes'
 import { Calendar, Edit, Save, X, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
@@ -34,6 +36,7 @@ export function NoteViewer({
 }: NoteViewerProps) {
   const router = useRouter()
   const { user } = useAuth()
+  const isGuest = !user
   const { getLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
@@ -42,6 +45,19 @@ export function NoteViewer({
   const [editContent, setEditContent] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleInlineNoteLinkInsert = useCallback(async (targetNote: NoteLinkSearchResult) => {
+    if (!user || !note || !hasPublicSupabase()) return
+    try {
+      await createLink({
+        sourceNoteId: note.id,
+        targetNoteId: targetNote.id,
+        linkType: 'references'
+      }, user.id)
+    } catch (error) {
+      console.error('Error creating inline note link (viewer):', error)
+    }
+  }, [note, user])
 
   useEffect(() => {
     if (!noteId || !isOpen) {
@@ -92,7 +108,7 @@ export function NoteViewer({
       setEditTitle('')
       setEditContent('')
     }
-  }, [noteId, isOpen, resolveLocalNote, user])
+  }, [noteId, isOpen, resolveLocalNote, getLocalNote, user])
 
   const handleEdit = () => {
     // Don't navigate for local-only notes - they don't exist in the database
@@ -296,6 +312,8 @@ export function NoteViewer({
               placeholder="Write your note content here..."
               onChange={setEditContent}
               autoFocus={false}
+              isGuest={isGuest}
+              onNoteLinkInsert={handleInlineNoteLinkInsert}
             />
           ) : (
             <div className="prose prose-sm max-w-none px-2">

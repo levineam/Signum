@@ -27,6 +27,7 @@ export function NoteCreationModal({
   onNoteCreated
 }: NoteCreationModalProps) {
   const { user } = useAuth()
+  const isGuest = !user
   const [title, setTitle] = useState(initialTitle)
   const [content, setContent] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -163,6 +164,7 @@ export function NoteCreationModal({
                 value={content}
                 placeholder="Start writing your note content..."
                 onChange={setContent}
+                isGuest={isGuest}
               />
             </div>
           </div>

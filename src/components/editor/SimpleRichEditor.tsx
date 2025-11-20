@@ -2,8 +2,11 @@
 
 import React, { useRef, useCallback, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Bold, Italic, Underline, Highlighter, List, ListOrdered, Heading1, Heading2, Quote, AlignLeft, AlignCenter, AlignRight, FileText } from 'lucide-react'
+import { Bold, Italic, Underline, Highlighter, List, ListOrdered, Heading1, Heading2, Quote, AlignLeft, AlignCenter, AlignRight, FileText, Search } from 'lucide-react'
 import { VoiceRecordButton } from '@/components/editor/VoiceRecordButton'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { NoteLinkPicker, type NoteLinkSearchResult } from '@/components/editor/NoteLinkPicker'
+import { useNoteLinkInsertion } from '@/hooks/useNoteLinkInsertion'
 import { cn } from '@/lib/utils'
 
 interface SimpleRichEditorProps {
@@ -18,6 +21,8 @@ interface SimpleRichEditorProps {
   onTranscription?: (text: string) => void
   variant?: 'default' | 'flush'
   className?: string
+  isGuest?: boolean
+  onNoteLinkInsert?: (note: NoteLinkSearchResult) => Promise<void> | void
 }
 
 export function SimpleRichEditor({
@@ -31,12 +36,15 @@ export function SimpleRichEditor({
   onMakeNote,
   onTranscription,
   variant = 'default',
-  className
+  className,
+  isGuest = false,
+  onNoteLinkInsert,
 }: SimpleRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const [selectedText, setSelectedText] = useState('')
   const [hasSelection, setHasSelection] = useState(false)
   const isInternalChangeRef = useRef(false)
+  const [showNotePicker, setShowNotePicker] = useState(false)
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
@@ -48,6 +56,9 @@ export function SimpleRichEditor({
     ol: false,
     blockquote: false
   })
+
+  // Hook for note link insertion
+  const { saveCursorPosition, insertNoteLinkAtCursor } = useNoteLinkInsertion()
 
   const updateActiveFormats = useCallback(() => {
     if (!editorRef.current) return
@@ -851,6 +862,31 @@ export function SimpleRichEditor({
     }
   }, [onChange, onTranscription])
 
+  // Handle opening note picker - save cursor position
+  const handleSearchClick = useCallback(() => {
+    saveCursorPosition()
+    setShowNotePicker(true)
+  }, [saveCursorPosition])
+
+  // Handle note selection - insert link at saved cursor position
+  const handleNoteSelect = useCallback((note: NoteLinkSearchResult) => {
+    const inserted = insertNoteLinkAtCursor(note, editorRef)
+    if (inserted) {
+      // Trigger onChange
+      if (onChange && editorRef.current) {
+        const content = editorRef.current.innerHTML || ''
+        isInternalChangeRef.current = true
+        onChange(content)
+      }
+      if (onNoteLinkInsert) {
+        Promise.resolve(onNoteLinkInsert(note)).catch(error => {
+          console.error('Error persisting note link:', error)
+        })
+      }
+    }
+    setShowNotePicker(false)
+  }, [insertNoteLinkAtCursor, onChange, onNoteLinkInsert])
+
   // Set initial content when value changes
   React.useEffect(() => {
     console.log('[useEffect] value changed, isInternalChangeRef:', isInternalChangeRef.current)
@@ -1160,6 +1196,38 @@ export function SimpleRichEditor({
             </Button>
           </div>
         )}
+
+        {/* Note Link Search */}
+        <div className="flex items-center border-l pl-2 ml-2" data-note-link-button>
+          <Popover open={showNotePicker} onOpenChange={setShowNotePicker}>
+            <PopoverTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                }}
+                onClick={handleSearchClick}
+                className="h-8 w-8 p-0"
+                type="button"
+                title="Link to a note or journal entry"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-[400px] p-0"
+              align="start"
+              data-note-link-popover
+              onOpenAutoFocus={(e) => {
+                // Prevent focus from moving to popover trigger
+                e.preventDefault()
+              }}
+            >
+              <NoteLinkPicker onSelect={handleNoteSelect} isGuest={isGuest} />
+            </PopoverContent>
+          </Popover>
+        </div>
 
         {/* Voice Transcription Button */}
         <div className="flex items-center border-l pl-2 ml-2" data-voice-button>
