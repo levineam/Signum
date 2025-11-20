@@ -12,8 +12,7 @@
 -- Enable timing to measure execution time
 \timing on
 
--- Set test user (use first available user)
-\set test_user_id (SELECT id FROM auth.users LIMIT 1)
+SELECT id AS test_user_id FROM auth.users LIMIT 1 \gset
 
 \echo '=== PART 1: Verify Indexes Dropped ==='
 \echo ''
@@ -85,7 +84,7 @@ LIMIT 100;
 \echo '=== Query 2: tasks by user and due date ==='
 EXPLAIN ANALYZE
 SELECT * FROM tasks
-WHERE user_id = :'test_user_id'::uuid
+WHERE user_id = :test_user_id::uuid
 AND due_at < NOW()
 LIMIT 100;
 
@@ -96,7 +95,7 @@ LIMIT 100;
 \echo '=== Query 3: entities by user and type ==='
 EXPLAIN ANALYZE
 SELECT * FROM entities
-WHERE user_id = :'test_user_id'::uuid
+WHERE user_id = :test_user_id::uuid
 AND entity_type = 'person'
 LIMIT 100;
 
@@ -107,7 +106,7 @@ LIMIT 100;
 \echo '=== Query 4: reminders by user ==='
 EXPLAIN ANALYZE
 SELECT * FROM reminders
-WHERE user_id = :'test_user_id'::uuid
+WHERE user_id = :test_user_id::uuid
 LIMIT 100;
 
 \echo ''
@@ -117,7 +116,7 @@ LIMIT 100;
 \echo '=== Query 5: meters_daily by user and date ==='
 EXPLAIN ANALYZE
 SELECT * FROM meters_daily
-WHERE user_id = :'test_user_id'::uuid
+WHERE user_id = :test_user_id::uuid
 AND date = CURRENT_DATE;
 
 \echo ''
@@ -127,7 +126,7 @@ AND date = CURRENT_DATE;
 \echo '=== Query 6: term_frequencies by user and term ==='
 EXPLAIN ANALYZE
 SELECT * FROM term_frequencies
-WHERE user_id = :'test_user_id'::uuid
+WHERE user_id = :test_user_id::uuid
 AND term = 'test'
 LIMIT 100;
 
@@ -148,7 +147,7 @@ LIMIT 1;
 \echo '=== Query 8: journal_entries by created_at ==='
 EXPLAIN ANALYZE
 SELECT * FROM journal_entries
-WHERE user_id = :'test_user_id'::uuid
+WHERE user_id = :test_user_id::uuid
 ORDER BY created_at DESC
 LIMIT 50;
 
@@ -159,7 +158,7 @@ LIMIT 50;
 \echo '=== Query 9: links by user ==='
 EXPLAIN ANALYZE
 SELECT * FROM links
-WHERE user_id = :'test_user_id'::uuid
+WHERE user_id = :test_user_id::uuid
 LIMIT 100;
 
 \echo ''
@@ -169,7 +168,7 @@ LIMIT 100;
 \echo '=== Query 10: ontology_updates by created ==='
 EXPLAIN ANALYZE
 SELECT * FROM ontology_updates
-WHERE user_id = :'test_user_id'::uuid
+WHERE user_id = :test_user_id::uuid
 ORDER BY created_at DESC
 LIMIT 50;
 

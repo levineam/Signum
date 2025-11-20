@@ -57,19 +57,18 @@ WHERE id = 'test-entity-id'::uuid;
 
 \echo '=== Testing term frequency increment ==='
 
--- Get test user
-\set test_user_id (SELECT id FROM auth.users LIMIT 1)
+SELECT id AS test_user_id FROM auth.users LIMIT 1 \gset
 
 -- Check current frequency for test term
 SELECT user_id, term, period, frequency
 FROM term_frequencies
-WHERE user_id = :'test_user_id'::uuid
+WHERE user_id = :test_user_id::uuid
 AND term = 'test'
 AND period = 'all_time';
 
 -- Increment term frequency
 SELECT increment_term_frequency(
-  :'test_user_id'::uuid,
+  :test_user_id::uuid,
   'test',
   CURRENT_DATE,
   'all_time'
@@ -78,7 +77,7 @@ SELECT increment_term_frequency(
 -- Verify increment worked
 SELECT user_id, term, period, frequency
 FROM term_frequencies
-WHERE user_id = :'test_user_id'::uuid
+WHERE user_id = :test_user_id::uuid
 AND term = 'test'
 AND period = 'all_time';
 
@@ -99,7 +98,7 @@ AND period = 'all_time';
 
 -- Uncomment to clean up test data:
 -- DELETE FROM entities WHERE id = 'test-entity-id'::uuid;
--- DELETE FROM term_frequencies WHERE user_id = :'test_user_id'::uuid AND term = 'test';
+-- DELETE FROM term_frequencies WHERE user_id = :test_user_id::uuid AND term = 'test';
 
 \echo '=== Story 1.11.1 Test Complete ==='
 \echo ''

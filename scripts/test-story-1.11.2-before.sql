@@ -12,15 +12,14 @@
 -- Enable timing to measure execution time
 \timing on
 
--- Set test user (use first available user)
-\set test_user_id (SELECT id FROM auth.users LIMIT 1)
+SELECT id AS test_user_id FROM auth.users LIMIT 1 \gset
 
 \echo ''
 \echo '=== Query 1: links JOIN notes (target_note_id) ==='
 EXPLAIN ANALYZE
 SELECT l.*, n.title FROM links l
 JOIN notes n ON l.target_note_id = n.id
-WHERE l.user_id = :'test_user_id'::uuid
+WHERE l.user_id = :test_user_id::uuid
 LIMIT 100;
 
 \echo ''
@@ -31,7 +30,7 @@ LIMIT 100;
 EXPLAIN ANALYZE
 SELECT t.*, e.entity_name FROM tasks t
 JOIN entities e ON t.person_id = e.id
-WHERE t.user_id = :'test_user_id'::uuid
+WHERE t.user_id = :test_user_id::uuid
 LIMIT 100;
 
 \echo ''
@@ -42,7 +41,7 @@ LIMIT 100;
 EXPLAIN ANALYZE
 SELECT t.*, e.entity_name FROM tasks t
 JOIN entities e ON t.project_id = e.id
-WHERE t.user_id = :'test_user_id'::uuid
+WHERE t.user_id = :test_user_id::uuid
 LIMIT 100;
 
 \echo ''
@@ -53,7 +52,7 @@ LIMIT 100;
 EXPLAIN ANALYZE
 SELECT t.*, j.content FROM tasks t
 JOIN journal_entries j ON t.source_entry_id = j.id
-WHERE t.user_id = :'test_user_id'::uuid
+WHERE t.user_id = :test_user_id::uuid
 LIMIT 100;
 
 \echo ''
@@ -64,7 +63,7 @@ LIMIT 100;
 EXPLAIN ANALYZE
 SELECT t.*, e.entity_name FROM tasks t
 JOIN entities e ON t.value_id = e.id
-WHERE t.user_id = :'test_user_id'::uuid
+WHERE t.user_id = :test_user_id::uuid
 LIMIT 100;
 
 \echo ''
