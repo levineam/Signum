@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Bold, Italic, Underline, Highlighter, List, ListOrdered, Heading1, Heading2, Quote, AlignLeft, AlignCenter, AlignRight, FileText, Search } from 'lucide-react'
 import { VoiceRecordButton } from '@/components/editor/VoiceRecordButton'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { NoteLinkPicker } from '@/components/editor/NoteLinkPicker'
+import { NoteLinkPicker, type NoteLinkSearchResult } from '@/components/editor/NoteLinkPicker'
 import { useNoteLinkInsertion } from '@/hooks/useNoteLinkInsertion'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +22,7 @@ interface SimpleRichEditorProps {
   variant?: 'default' | 'flush'
   className?: string
   isGuest?: boolean
+  onNoteLinkInsert?: (note: NoteLinkSearchResult) => Promise<void> | void
 }
 
 export function SimpleRichEditor({
@@ -36,7 +37,8 @@ export function SimpleRichEditor({
   onTranscription,
   variant = 'default',
   className,
-  isGuest = false
+  isGuest = false,
+  onNoteLinkInsert,
 }: SimpleRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const [selectedText, setSelectedText] = useState('')
@@ -867,17 +869,23 @@ export function SimpleRichEditor({
   }, [saveCursorPosition])
 
   // Handle note selection - insert link at saved cursor position
-  const handleNoteSelect = useCallback((note: { id: string; title: string; noteType: string; metadata?: { journalDate?: string } }) => {
-    if (insertNoteLinkAtCursor(note, editorRef)) {
+  const handleNoteSelect = useCallback((note: NoteLinkSearchResult) => {
+    const inserted = insertNoteLinkAtCursor(note, editorRef)
+    if (inserted) {
       // Trigger onChange
       if (onChange && editorRef.current) {
         const content = editorRef.current.innerHTML || ''
         isInternalChangeRef.current = true
         onChange(content)
       }
+      if (onNoteLinkInsert) {
+        Promise.resolve(onNoteLinkInsert(note)).catch(error => {
+          console.error('Error persisting note link:', error)
+        })
+      }
     }
     setShowNotePicker(false)
-  }, [insertNoteLinkAtCursor, onChange])
+  }, [insertNoteLinkAtCursor, onChange, onNoteLinkInsert])
 
   // Set initial content when value changes
   React.useEffect(() => {

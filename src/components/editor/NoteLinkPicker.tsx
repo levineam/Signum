@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   Command,
   CommandEmpty,
@@ -10,8 +10,9 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { createClient } from '@/lib/supabase/client'
+import { hasPublicSupabase } from '@/lib/supabase'
 
-interface Note {
+export interface NoteLinkSearchResult {
   id: string
   title: string
   noteType: string
@@ -22,19 +23,20 @@ interface Note {
 }
 
 interface NoteLinkPickerProps {
-  onSelect: (note: Note) => void
+  onSelect: (note: NoteLinkSearchResult) => void
   isGuest?: boolean
 }
 
 export function NoteLinkPicker({ onSelect, isGuest = false }: NoteLinkPickerProps) {
-  const [notes, setNotes] = useState<Note[]>([])
+  const [notes, setNotes] = useState<NoteLinkSearchResult[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const supabaseAvailable = useMemo(() => hasPublicSupabase(), [])
 
   useEffect(() => {
     async function fetchNotes() {
-      if (isGuest) {
-        // In guest mode, no notes available
+      if (isGuest || !supabaseAvailable) {
+        // In guest or offline mode, no notes available
         setNotes([])
         setLoading(false)
         return
@@ -73,7 +75,7 @@ export function NoteLinkPicker({ onSelect, isGuest = false }: NoteLinkPickerProp
     }
 
     fetchNotes()
-  }, [isGuest])
+  }, [isGuest, supabaseAvailable])
 
   // Filter notes based on search query
   const filteredNotes = notes.filter((note) => {
@@ -110,6 +112,15 @@ export function NoteLinkPicker({ onSelect, isGuest = false }: NoteLinkPickerProp
       <div className="p-4 text-center text-sm text-muted-foreground">
         <p>Note linking is not available in guest mode.</p>
         <p className="mt-2">Sign in to link notes and journal entries.</p>
+      </div>
+    )
+  }
+
+  if (!supabaseAvailable) {
+    return (
+      <div className="p-4 text-center text-sm text-muted-foreground">
+        <p>Note linking is disabled while Supabase is not configured.</p>
+        <p className="mt-2">Add Supabase credentials to enable note search.</p>
       </div>
     )
   }
