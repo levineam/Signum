@@ -367,14 +367,27 @@ export async function getAnalyticsMetrics(daysBack: number = 7) {
   // Query 3: Success rate (target: >95%)
   const { data: queueCompletions } = await supabaseAdmin
     .from('ontology_analysis_telemetry')
-    .select('error_message')
-    .eq('event_type', 'queue_complete')
+    .select('event_type, error_message')
+    .in('event_type', ['queue_complete', 'queue_batch_failed'])
     .gte('created_at', cutoffDate.toISOString())
 
-  const successRate = queueCompletions
-    ? (queueCompletions.filter((e) => !e.error_message).length /
-        Math.max(queueCompletions.length, 1)) * 100
-    : 0
+  const totalQueueEvents = queueCompletions?.length || 0
+  const successfulCompletions =
+    queueCompletions?.filter(
+      (e) => e.event_type === 'queue_complete' && !e.error_message
+    ).length || 0
+  const failedCompletions =
+    queueCompletions?.filter(
+      (e) => e.event_type === 'queue_complete' && e.error_message
+    ).length || 0
+  const failedBatches =
+    queueCompletions?.filter((e) => e.event_type === 'queue_batch_failed').length || 0
+
+  const successRate =
+    totalQueueEvents > 0
+      ? (successfulCompletions / (successfulCompletions + failedCompletions + failedBatches)) *
+        100
+      : 0
 
   // Query 4: Cost per 1000 notes
   const { data: costEvents } = await supabaseAdmin

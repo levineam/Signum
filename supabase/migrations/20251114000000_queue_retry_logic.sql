@@ -52,11 +52,11 @@ BEGIN
   FROM ontology_analysis_queue q
   LEFT JOIN ontology_analysis_queue_notes qn ON q.id = qn.queue_id
   WHERE q.status = 'pending'
+  GROUP BY q.id, q.user_id, q.import_id, q.import_snapshot_timestamp,
+           q.retry_attempts, q.max_retries
   ORDER BY q.created_at ASC
   LIMIT 1
-  FOR UPDATE OF q
-  GROUP BY q.id, q.user_id, q.import_id, q.import_snapshot_timestamp,
-           q.retry_attempts, q.max_retries;
+  FOR UPDATE OF q;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
