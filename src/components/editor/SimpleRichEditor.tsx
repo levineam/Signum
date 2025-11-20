@@ -1153,6 +1153,7 @@ export function SimpleRichEditor({
               type="button"
               title="Create a note from selected text"
               data-make-note-button
+              data-testid="make-note-button"
             >
               <FileText className="h-4 w-4" />
               <span className="text-xs">Make Note</span>

@@ -8,9 +8,12 @@ import { Input } from '@/components/ui/input'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
 import { Note } from '@/types/note'
 import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
+import { hasPublicSupabase } from '@/lib/supabase'
 import { Calendar, Edit, Save, X, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
+import { toast } from 'sonner'
+import { useLocalNotes } from '@/contexts/LocalNotesContext'
 
 interface NoteViewerProps {
   isOpen: boolean
@@ -18,6 +21,7 @@ interface NoteViewerProps {
   noteId: string | null
   onNoteUpdated?: (note: Note) => void
   onNoteDeleted?: (noteId: string) => void
+  resolveLocalNote?: (noteId: string) => Note | undefined
 }
 
 export function NoteViewer({
@@ -25,10 +29,12 @@ export function NoteViewer({
   onClose,
   noteId,
   onNoteUpdated,
-  onNoteDeleted
+  onNoteDeleted,
+  resolveLocalNote
 }: NoteViewerProps) {
   const router = useRouter()
   const { user } = useAuth()
+  const { getLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -38,7 +44,28 @@ export function NoteViewer({
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
-    if (noteId && isOpen && user) {
+    if (!noteId || !isOpen) {
+      return
+    }
+
+    // 1. Try to resolve locally first (via prop or context)
+    const localNote = resolveLocalNote?.(noteId) || getLocalNote(noteId)
+    if (localNote) {
+      setNote(localNote)
+      setEditTitle(localNote.title)
+      setEditContent(localNote.content || '')
+      return
+    }
+
+    // 2. Skip Supabase fetches for local-only notes or when Supabase isn't configured
+    if (noteId.startsWith('local-note-') || !hasPublicSupabase()) {
+      setNote(null)
+      setEditTitle('')
+      setEditContent('')
+      return
+    }
+
+    if (user) {
       let isActive = true
 
       getNoteById(noteId, user.id).then(foundNote => {
@@ -50,6 +77,8 @@ export function NoteViewer({
             setEditContent(foundNote.content || '')
           } else {
             setNote(null)
+            setEditTitle('')
+            setEditContent('')
           }
         }
       })
@@ -58,11 +87,23 @@ export function NoteViewer({
       return () => {
         isActive = false
       }
+    } else {
+      setNote(null)
+      setEditTitle('')
+      setEditContent('')
     }
-  }, [noteId, isOpen, user])
+  }, [noteId, isOpen, resolveLocalNote, user])
 
   const handleEdit = () => {
-    // Navigate to the dedicated note page instead of editing in modal
+    // Don't navigate for local-only notes - they don't exist in the database
+    if (note?.id.startsWith('local-note-')) {
+      toast.error('Cannot edit local notes', {
+        description: 'This note was created offline and cannot be edited. Please sign in to save and edit notes.'
+      })
+      return
+    }
+
+    // Navigate to the dedicated note page for persisted notes
     if (note) {
       onClose()
       router.push(`/notes/${note.id}`)
