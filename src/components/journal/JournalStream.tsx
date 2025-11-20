@@ -90,7 +90,7 @@ interface JournalStreamProps {
 
 export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const { addLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [entries, setEntries] = useState<JournalEntry[]>([])

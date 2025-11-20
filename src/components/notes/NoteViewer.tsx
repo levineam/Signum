@@ -92,7 +92,7 @@ export function NoteViewer({
       setEditTitle('')
       setEditContent('')
     }
-  }, [noteId, isOpen, resolveLocalNote, user])
+  }, [noteId, isOpen, resolveLocalNote, getLocalNote, user])
 
   const handleEdit = () => {
     // Don't navigate for local-only notes - they don't exist in the database

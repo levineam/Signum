@@ -1224,8 +1224,6 @@ export function SimpleRichEditor({
             )}
           </div>
         )}
-          </div>
-        )}
 
         {/* Voice Transcription Button */}
         <div className="flex items-center border-l pl-2 ml-2" data-voice-button>
