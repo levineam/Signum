@@ -32,8 +32,8 @@ export async function getNotes(userId: string): Promise<Note[]> {
 /**
  * Create a new note for authenticated user (calls Supabase)
  */
-export async function createNote(request: CreateNoteRequest, userId: string): Promise<Note> {
-  return await supabaseNotes.createNote(request, userId)
+export async function createNote(request: CreateNoteRequest, userId: string, signal?: AbortSignal): Promise<Note> {
+  return await supabaseNotes.createNote(request, userId, signal)
 }
 
 /**

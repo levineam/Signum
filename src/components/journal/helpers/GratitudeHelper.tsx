@@ -23,6 +23,8 @@ import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
 import { HelperContainer } from './HelperContainer'
 import { escapeHtml } from '@/utils/htmlEscape'
+import { HelperAddOn } from './HelperAddOn'
+import { SavoringContent } from './SavoringHelper'
 
 interface GratitudeHelperProps {
   entryId: string
@@ -410,6 +412,19 @@ export function GratitudeContent({ entryId, userId, onInsert }: GratitudeHelperP
             </div>
           ))}
         </div>
+
+        <HelperAddOn
+          title="Add a savoring boost"
+          description="Deepen one of your good things by walking through a savoring strategy."
+          badge="Savoring"
+        >
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+            Pick a Bryant &amp; Veroff strategy, describe the moment with sensory detail, and insert it right into your entry without leaving the gratitude flow.
+          </p>
+          <div className="rounded-md border border-pink-200/70 dark:border-pink-900/40 bg-white/60 dark:bg-gray-900/30 p-3">
+            <SavoringContent entryId={entryId} userId={userId} onInsert={onInsert} />
+          </div>
+        </HelperAddOn>
 
         {/* Action buttons */}
         <div className="flex gap-2 pt-4 border-t border-green-200 dark:border-green-800 mt-4">
