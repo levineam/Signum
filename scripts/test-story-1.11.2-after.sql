@@ -50,9 +50,9 @@ LIMIT 100;
 \echo 'Expected AFTER: Index Scan using idx_links_target_note_id'
 \echo ''
 
-\echo '=== Query 2: tasks JOIN entities (person_id) ==='
+\echo '=== Query 2: _deprecated_tasks JOIN entities (person_id) ==='
 EXPLAIN ANALYZE
-SELECT t.*, e.entity_name FROM tasks t
+SELECT t.*, e.entity_name FROM _deprecated_tasks t
 JOIN entities e ON t.person_id = e.id
 WHERE t.user_id = :test_user_id::uuid
 LIMIT 100;
@@ -61,9 +61,9 @@ LIMIT 100;
 \echo 'Expected AFTER: Index Scan using idx_tasks_person_id'
 \echo ''
 
-\echo '=== Query 3: tasks JOIN entities (project_id) ==='
+\echo '=== Query 3: _deprecated_tasks JOIN entities (project_id) ==='
 EXPLAIN ANALYZE
-SELECT t.*, e.entity_name FROM tasks t
+SELECT t.*, e.entity_name FROM _deprecated_tasks t
 JOIN entities e ON t.project_id = e.id
 WHERE t.user_id = :test_user_id::uuid
 LIMIT 100;
@@ -72,9 +72,9 @@ LIMIT 100;
 \echo 'Expected AFTER: Index Scan using idx_tasks_project_id'
 \echo ''
 
-\echo '=== Query 4: tasks JOIN journal_entries (source_entry_id) ==='
+\echo '=== Query 4: _deprecated_tasks JOIN journal_entries (source_entry_id) ==='
 EXPLAIN ANALYZE
-SELECT t.*, j.content FROM tasks t
+SELECT t.*, j.content FROM _deprecated_tasks t
 JOIN journal_entries j ON t.source_entry_id = j.id
 WHERE t.user_id = :test_user_id::uuid
 LIMIT 100;
@@ -83,9 +83,9 @@ LIMIT 100;
 \echo 'Expected AFTER: Index Scan using idx_tasks_source_entry_id'
 \echo ''
 
-\echo '=== Query 5: tasks JOIN entities (value_id) ==='
+\echo '=== Query 5: _deprecated_tasks JOIN entities (value_id) ==='
 EXPLAIN ANALYZE
-SELECT t.*, e.entity_name FROM tasks t
+SELECT t.*, e.entity_name FROM _deprecated_tasks t
 JOIN entities e ON t.value_id = e.id
 WHERE t.user_id = :test_user_id::uuid
 LIMIT 100;

@@ -81,9 +81,9 @@ LIMIT 100;
 \echo 'Expected: Same plan as before (should NOT have changed to Seq Scan)'
 \echo ''
 
-\echo '=== Query 2: tasks by user and due date ==='
+\echo '=== Query 2: _deprecated_tasks by user and due date ==='
 EXPLAIN ANALYZE
-SELECT * FROM tasks
+SELECT * FROM _deprecated_tasks
 WHERE user_id = :test_user_id::uuid
 AND due_at < NOW()
 LIMIT 100;
