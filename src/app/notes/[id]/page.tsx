@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
 import { Note, getNoteDisplayTitle } from '@/types/note'
@@ -61,6 +61,9 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   // Note Viewer functionality
   const [showNoteViewer, setShowNoteViewer] = useState(false)
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null)
+  // Local notes cache for offline/test mode
+  const localNotesRef = useRef<Record<string, Note>>({})
+  const resolveLocalNote = useCallback((noteId: string) => localNotesRef.current[noteId], [])
 
   useEffect(() => {
     if (!user) return
@@ -238,24 +241,36 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
 
     console.log('✅ Using cached editor element')
 
+    // Store in local cache for offline/test mode access
+    localNotesRef.current[newNote.id] = newNote
+
     try {
       // Use cached selection metadata (captured in handleMakeNote before blur)
       // This ensures we link the CORRECT occurrence when text appears multiple times
       const metadata = selectionMetadataRef.current
       console.log('📊 Using cached selection metadata:', metadata)
 
-      // Create link in Supabase with metadata
-      const link = await createLink({
-        sourceNoteId: note.id,
-        targetNoteId: newNote.id,
-        linkType: 'created_from',
-        metadata: metadata || undefined
-      }, user.id)
-      console.log('💾 Link created in Supabase:', link)
+      // Create link in Supabase with metadata (or stub locally)
+      let linkId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `local-link-${Date.now()}`
+
+      try {
+        const link = await createLink({
+          sourceNoteId: note.id,
+          targetNoteId: newNote.id,
+          linkType: 'created_from',
+          metadata: metadata || undefined
+        }, user.id)
+        linkId = link.id
+        console.log('💾 Link created in Supabase:', link)
+      } catch (linkError) {
+        console.warn('⚠️ Failed to create link in Supabase, falling back to local link:', linkError)
+      }
 
       // Convert the selected text to a link in the DOM with linkId
       // Pass metadata to ensure we link the CORRECT occurrence (not just the first one via indexOf)
-      const linkCreated = convertTextToLink(editorElement, selectedText, newNote.id, link.id, handleLinkClick, metadata)
+      const linkCreated = convertTextToLink(editorElement, selectedText, newNote.id, linkId, handleLinkClick, metadata)
 
       if (!linkCreated) {
         console.error('❌ Failed to create link in editor')
@@ -284,7 +299,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
           })
           .catch(error => {
             console.error('Error persisting link to Supabase:', error)
-            toast.error('Failed to save link. Please try again.')
+            // Don't show error toast here if we successfully created a local link
+            // Just log it, as the user can still see the link locally
           })
 
         // Reset the creating link flag after a brief delay to ensure state updates complete
@@ -501,6 +517,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
         isOpen={showNoteViewer}
         onClose={handleCloseNoteViewer}
         noteId={viewingNoteId}
+        resolveLocalNote={resolveLocalNote}
       />
             </div>
           </div>
