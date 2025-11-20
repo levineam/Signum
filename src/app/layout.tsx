@@ -3,6 +3,7 @@ import { Architects_Daughter, Fira_Code } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LocalNotesProvider } from "@/contexts/LocalNotesContext";
 import { ReactQueryProvider } from "@/contexts/ReactQueryProvider";
 import { Toaster } from "sonner";
 
@@ -35,7 +36,9 @@ export default function RootLayout({
         <ThemeProvider>
           <ReactQueryProvider>
             <AuthProvider>
-              {children}
+              <LocalNotesProvider>
+                {children}
+              </LocalNotesProvider>
             </AuthProvider>
           </ReactQueryProvider>
         </ThemeProvider>

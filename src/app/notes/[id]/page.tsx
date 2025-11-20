@@ -18,10 +18,12 @@ import { toast } from 'sonner'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { useLocalNotes } from '@/contexts/LocalNotesContext'
 
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { user } = useAuth()
+  const { addLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
   const [content, setContent] = useState('')
@@ -61,9 +63,6 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
   // Note Viewer functionality
   const [showNoteViewer, setShowNoteViewer] = useState(false)
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null)
-  // Local notes cache for offline/test mode
-  const localNotesRef = useRef<Record<string, Note>>({})
-  const resolveLocalNote = useCallback((noteId: string) => localNotesRef.current[noteId], [])
 
   useEffect(() => {
     if (!user) return
@@ -242,7 +241,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     console.log('✅ Using cached editor element')
 
     // Store in local cache for offline/test mode access
-    localNotesRef.current[newNote.id] = newNote
+    addLocalNote(newNote)
 
     try {
       // Use cached selection metadata (captured in handleMakeNote before blur)
@@ -517,7 +516,6 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
         isOpen={showNoteViewer}
         onClose={handleCloseNoteViewer}
         noteId={viewingNoteId}
-        resolveLocalNote={resolveLocalNote}
       />
             </div>
           </div>

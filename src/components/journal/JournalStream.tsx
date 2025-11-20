@@ -13,6 +13,7 @@ import { createLink, getOutgoingLinks } from '@/lib/supabase/notes'
 import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata } from '@/utils/textToLink'
 import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
+import { useLocalNotes } from '@/contexts/LocalNotesContext'
 import { toast } from 'sonner'
 import { HelperTileGrid } from '@/components/journal/helpers/HelperTileGrid'
 import { HelperInfoDialog } from '@/components/journal/helpers/HelperInfoDialog'
@@ -79,6 +80,7 @@ interface JournalStreamProps {
 export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const router = useRouter()
   const { user } = useAuth()
+  const { addLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -92,8 +94,6 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const [noteLinkClicked, setNoteLinkClicked] = useState(false)
   const [creatingLink, setCreatingLink] = useState(false)
   const [hasBootstrappedEntry, setHasBootstrappedEntry] = useState(false)
-  const localNotesRef = useRef<Record<string, Note>>({})
-  const resolveLocalNote = useCallback((noteId: string) => localNotesRef.current[noteId], [])
 
   // Guest mode state
   const { draft: guestDraft, saveDraft: saveGuestDraft, clearDraft: clearGuestDraft } = useGuestDraft()
@@ -471,7 +471,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       return
     }
 
-    localNotesRef.current[note.id] = note
+    addLocalNote(note)
 
     console.log('📝 Creating note link', { selectedText, noteId: note.id, entryId: currentEditingEntry })
 
@@ -988,7 +988,6 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         isOpen={showNoteViewer}
         onClose={handleCloseNoteViewer}
         noteId={viewingNoteId}
-        resolveLocalNote={resolveLocalNote}
       />
 
 

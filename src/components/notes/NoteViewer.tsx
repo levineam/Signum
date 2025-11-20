@@ -13,6 +13,7 @@ import { Calendar, Edit, Save, X, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
 import { toast } from 'sonner'
+import { useLocalNotes } from '@/contexts/LocalNotesContext'
 
 interface NoteViewerProps {
   isOpen: boolean
@@ -33,6 +34,7 @@ export function NoteViewer({
 }: NoteViewerProps) {
   const router = useRouter()
   const { user } = useAuth()
+  const { getLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -46,8 +48,8 @@ export function NoteViewer({
       return
     }
 
-    // 1. Try to resolve locally first
-    const localNote = resolveLocalNote?.(noteId)
+    // 1. Try to resolve locally first (via prop or context)
+    const localNote = resolveLocalNote?.(noteId) || getLocalNote(noteId)
     if (localNote) {
       setNote(localNote)
       setEditTitle(localNote.title)
