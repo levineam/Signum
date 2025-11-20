@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, type RefObject } from 'react'
 
 interface Note {
   id: string
@@ -46,7 +46,7 @@ export function useNoteLinkInsertion() {
    * Returns true if successful, false otherwise
    */
   const insertNoteLinkAtCursor = useCallback(
-    (note: Note, editorRef: React.RefObject<HTMLDivElement | null>) => {
+    (note: Note, editorRef: RefObject<HTMLDivElement | null>) => {
       const editor = editorRef.current
       if (!editor) return false
 
