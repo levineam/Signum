@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Source-specific validation
+    let taskTitle: string | undefined
     if (sourceType === 'task') {
       // Task source: Verify task belongs to user (RLS enforced)
       if (!taskId) {
@@ -101,6 +102,8 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
+
+      taskTitle = task.title
     } else if (sourceType === 'journal') {
       // Journal source: Optional entry ID validation
       // Note: We don't strictly require entryId since user might be asking about selected text without a specific entry
@@ -200,7 +203,7 @@ export async function POST(request: NextRequest) {
         generatedAt: new Date().toISOString(),
         ...(sourceType === 'task' && taskId && {
           taskId,
-          taskText: query, // For task sources, query is often the task text
+          taskText: taskTitle || query,
         }),
         ...(sourceType === 'journal' && {
           ...(entryId && { journalEntryId: entryId }),
