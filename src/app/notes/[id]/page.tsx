@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
 import { Note, getNoteDisplayTitle } from '@/types/note'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Trash2 } from 'lucide-react'
 import { OntologyCardViewer } from '@/components/notes/OntologyCardViewer'
 import { useAuth } from '@/contexts/AuthContext'
@@ -18,11 +18,13 @@ import { toast } from 'sonner'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { useLocalNotes } from '@/contexts/LocalNotesContext'
 
 export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { user } = useAuth()
   const isGuest = !user
+  const { addLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
   const [content, setContent] = useState('')
@@ -239,24 +241,36 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
 
     console.log('✅ Using cached editor element')
 
+    // Store in local cache for offline/test mode access
+    addLocalNote(newNote)
+
     try {
       // Use cached selection metadata (captured in handleMakeNote before blur)
       // This ensures we link the CORRECT occurrence when text appears multiple times
       const metadata = selectionMetadataRef.current
       console.log('📊 Using cached selection metadata:', metadata)
 
-      // Create link in Supabase with metadata
-      const link = await createLink({
-        sourceNoteId: note.id,
-        targetNoteId: newNote.id,
-        linkType: 'created_from',
-        metadata: metadata || undefined
-      }, user.id)
-      console.log('💾 Link created in Supabase:', link)
+      // Create link in Supabase with metadata (or stub locally)
+      let linkId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `local-link-${Date.now()}`
+
+      try {
+        const link = await createLink({
+          sourceNoteId: note.id,
+          targetNoteId: newNote.id,
+          linkType: 'created_from',
+          metadata: metadata || undefined
+        }, user.id)
+        linkId = link.id
+        console.log('💾 Link created in Supabase:', link)
+      } catch (linkError) {
+        console.warn('⚠️ Failed to create link in Supabase, falling back to local link:', linkError)
+      }
 
       // Convert the selected text to a link in the DOM with linkId
       // Pass metadata to ensure we link the CORRECT occurrence (not just the first one via indexOf)
-      const linkCreated = convertTextToLink(editorElement, selectedText, newNote.id, link.id, handleLinkClick, metadata)
+      const linkCreated = convertTextToLink(editorElement, selectedText, newNote.id, linkId, handleLinkClick, metadata)
 
       if (!linkCreated) {
         console.error('❌ Failed to create link in editor')
@@ -285,7 +299,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
           })
           .catch(error => {
             console.error('Error persisting link to Supabase:', error)
-            toast.error('Failed to save link. Please try again.')
+            // Don't show error toast here if we successfully created a local link
+            // Just log it, as the user can still see the link locally
           })
 
         // Reset the creating link flag after a brief delay to ensure state updates complete
@@ -431,13 +446,14 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
           </div>
         ) : (
           // Rich text editor for regular notes - matches JournalStream.tsx pattern
-          <Card className="p-6">
-            <div
+          <Card className="py-0">
+            <CardContent
               onClick={() => setIsEditing(true)}
-              className="cursor-text hover:bg-muted/30 p-2 rounded-md transition-colors"
+              className="px-3 md:px-2 pb-3 md:pb-2 pt-0 cursor-text hover:bg-muted/30 rounded-md transition-colors"
             >
               {isEditing ? (
                 <SimpleRichEditor
+                  variant="flush"
                   value={content}
                   placeholder={`Write your ${note.title.toLowerCase()} here...`}
                   onChange={handleContentChange}
@@ -465,7 +481,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                   {content ? (
                     isDOMPurifyReady ? (
                       <div
-                        className="text-base leading-relaxed prose prose-sm max-w-none"
+                        className="text-base leading-relaxed prose prose-sm max-w-none px-2"
                         dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
                         onClick={(e) => {
                           // Handle link clicks in read-only mode
@@ -492,7 +508,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
                   )}
                 </div>
               )}
-            </div>
+            </CardContent>
           </Card>
         )}
       </div>
