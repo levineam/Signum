@@ -186,6 +186,12 @@ RETURNS TABLE (
   updated_at TIMESTAMP
 ) AS $$
 BEGIN
+  -- Enforce service role only
+  IF current_setting('request.jwt.claim.role', true) IS NULL
+     OR current_setting('request.jwt.claim.role', true) <> 'service_role' THEN
+    RAISE EXCEPTION 'get_unprocessed_notes is restricted to service_role';
+  END IF;
+
   RETURN QUERY
   SELECT
     n.id,
@@ -204,6 +210,9 @@ BEGIN
   LIMIT p_batch_size;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION get_unprocessed_notes(UUID, INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_unprocessed_notes(UUID, INT) TO service_role;
 
 /**
  * Mark notes as processed in queue

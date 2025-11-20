@@ -97,8 +97,16 @@ export async function POST(request: NextRequest) {
     const unprocessedNotes = await getUnprocessedNotes(queueId, batchSize)
 
     if (unprocessedNotes.length === 0) {
-      // Queue already completed or race condition
-      await updateQueueStatus(queueId, 'completed')
+      // Queue already completed or race condition; advance cursor & telemetry
+      await completeQueueJob(queueId, userId, new Date(importSnapshotTimestamp))
+      await insertTelemetry({
+        userId,
+        eventType: 'queue_complete',
+        importId,
+        queueId,
+        noteCount: remainingNotes,
+        runtimeMs: Date.now() - startTime
+      })
       return NextResponse.json({
         success: true,
         message: 'Queue job already completed',

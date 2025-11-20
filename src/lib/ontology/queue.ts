@@ -397,9 +397,18 @@ export async function getAnalyticsMetrics(daysBack: number = 7) {
     .gte('created_at', cutoffDate.toISOString())
 
   const tokensPerThousand = costEvents
-    ? (costEvents.reduce((sum, row) => sum + (row.token_estimate || 0), 0) /
-        costEvents.reduce((sum, row) => sum + (row.note_count || 0), 0)) *
-      1000
+    ? (() => {
+        const totalTokens = costEvents.reduce(
+          (sum, row) => sum + (row.token_estimate || 0),
+          0
+        )
+        const totalNotes = costEvents.reduce(
+          (sum, row) => sum + (row.note_count || 0),
+          0
+        )
+        if (totalNotes === 0) return 0
+        return (totalTokens / totalNotes) * 1000
+      })()
     : 0
 
   return {
