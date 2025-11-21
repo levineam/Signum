@@ -348,24 +348,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Supabase CLI
-        run: |
-          curl -fsSL https://github.com/supabase/cli/releases/download/v2.0.4/supabase_2.0.4_linux_amd64.tar.gz | tar -xz
-          sudo mv supabase /usr/local/bin/
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Apply migrations (requires supabase schema outside repo)
         run: echo "Connect to your database and run migrations before enabling this job."
 
       - name: Validate verification scripts against schema
         env:
-          SUPABASE_PROJECT_REF: otyvmmgakowcdsxehwox
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           if [ -z "${SUPABASE_DB_PASSWORD}" ]; then
             echo "SUPABASE_DB_PASSWORD secret not set; skipping schema validation."
             exit 0
           fi
-          supabase db execute --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --file scripts/validate-test-scripts.sql
+          # Use project-qualified username format: postgres.PROJECT_REF
+          # This is required for Supabase pooler to route connection to correct tenant
+          psql "postgresql://postgres.otyvmmgakowcdsxehwox:${SUPABASE_DB_PASSWORD}@aws-0-us-east-2.pooler.supabase.com:6543/postgres" -f scripts/validate-test-scripts.sql
 
 # Optional: Schedule weekly burn-in runs
 # Uncomment to enable scheduled flaky test detection
