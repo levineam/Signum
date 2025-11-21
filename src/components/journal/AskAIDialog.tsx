@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 import type { KeyboardEvent } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Sparkles, Loader2, AlertCircle } from 'lucide-react'
@@ -32,9 +32,9 @@ export function AskAIDialog({
   const { session } = useAuth()
   const [query, setQuery] = useState('')
   const [state, setState] = useState<ButtonState>('idle')
-  const [isTruncated, setIsTruncated] = useState(false)
   const [generatedAnswer, setGeneratedAnswer] = useState<string | null>(null)
   const suppressAutoOpenRef = useRef(false)
+  const promptLabelId = useId()
 
   // P2 FIX: Capture selection context when dialog opens to prevent linking to wrong text
   // if user changes selection while AI request is in-flight
@@ -51,10 +51,8 @@ export function AskAIDialog({
       // Truncate to 500 chars if needed
       if (selectedText.length > 500) {
         setQuery(selectedText.substring(0, 500))
-        setIsTruncated(true)
       } else {
         setQuery(selectedText)
-        setIsTruncated(false)
       }
     }
   }, [isOpen, selectedText, entryId])
@@ -64,7 +62,6 @@ export function AskAIDialog({
     if (!isOpen) {
       setState('idle')
       setQuery('')
-      setIsTruncated(false)
       setGeneratedAnswer(null)
     }
   }, [isOpen])
@@ -218,11 +215,6 @@ export function AskAIDialog({
   const isNearLimit = charCount > 480
   const isDisabled = state === 'loading' || !query.trim() || isOverLimit
 
-  // Preview text for selected text display (max 200 chars)
-  const previewText = selectedText.length > 200
-    ? selectedText.substring(0, 197) + '...'
-    : selectedText
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
@@ -233,11 +225,8 @@ export function AskAIDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-purple-500" />
-            Ask AI About Your Journaling
+            Ask AI
           </DialogTitle>
-          <DialogDescription>
-            Refine your question below, then generate an AI-powered answer that will be saved as a note.
-          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 py-4">
@@ -263,31 +252,11 @@ export function AskAIDialog({
           {/* Only show input fields if no answer is being displayed */}
           {!generatedAnswer && (
             <>
-              {/* Selected Text Display */}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  Selected Text
-                </label>
-                <div className="p-3 bg-muted rounded-md text-sm border border-border">
-                  {previewText}
-                </div>
-              </div>
-
-              {/* Truncation Warning */}
-              {isTruncated && (
-                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
-                  <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-amber-900 dark:text-amber-100">
-                    <strong>Selection truncated to 500 characters.</strong> Edit as needed.
-                  </div>
-                </div>
-              )}
-
               {/* Query Input */}
               <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Your Question
-                </label>
+                <h2 id={promptLabelId} className="text-xl font-semibold mb-2">
+                  Your prompt
+                </h2>
                 <Textarea
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -295,6 +264,7 @@ export function AskAIDialog({
                   className="min-h-[120px] resize-none"
                   disabled={state === 'loading'}
                   autoFocus
+                  aria-labelledby={promptLabelId}
                 />
                 <div className="flex items-center justify-between mt-2">
                   <div className={`text-sm ${
