@@ -8,7 +8,7 @@ on:
   workflow_dispatch: # Manual trigger
 
 env:
-  SCHEMA_VALIDATION: 'true' # set to 'true' and provide SCHEMA_DATABASE_URL secret to enable schema check
+  SCHEMA_VALIDATION: 'local' # 'local' (default) runs against service container; 'remote' uses SCHEMA_DATABASE_URL; 'false' disables
 
 # Cancel in-progress runs for same PR
 concurrency:
@@ -325,22 +325,21 @@ jobs:
           exit 1
 
   # ============================================================================
-  # SCHEMA VALIDATION (optional, disabled by default)
+  # SCHEMA VALIDATION (local by default)
   # ============================================================================
   schema-validate:
     name: Schema Validation (verification scripts)
     runs-on: ubuntu-latest
-    # Note: env context not available at job level, so this job always runs when workflow is triggered
-    # The job will skip validation if SCHEMA_DATABASE_URL secret is not set
+    if: ${{ env.SCHEMA_VALIDATION != 'false' }}
     services:
-      postgres:
-        image: postgres:15
+      supabase-postgres:
+        image: supabase/postgres:15.1.1
         env:
           POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd pg_isready -U postgres
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -351,22 +350,32 @@ jobs:
       - name: Install psql client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-      - name: Apply migrations (requires supabase schema outside repo)
-        run: echo "Connect to your database and run migrations before enabling this job."
-
-      - name: Validate verification scripts against schema
-        env:
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      - name: Apply migrations to local Supabase Postgres
+        if: ${{ env.SCHEMA_VALIDATION == 'local' }}
         run: |
-          if [ -z "${SUPABASE_DB_PASSWORD}" ]; then
-            echo "SUPABASE_DB_PASSWORD secret not set; skipping schema validation."
+          DB_URL="postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+          for f in supabase/migrations/*.sql; do
+            echo "Applying migration: $f"
+            psql "$DB_URL" -f "$f"
+          done
+
+      - name: Validate verification scripts against local schema
+        if: ${{ env.SCHEMA_VALIDATION == 'local' }}
+        run: |
+          DB_URL="postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+          psql "$DB_URL" -f scripts/test-fixtures.sql
+          psql "$DB_URL" -f scripts/validate-test-scripts.sql
+
+      - name: Validate verification scripts against remote schema
+        if: ${{ env.SCHEMA_VALIDATION == 'remote' }}
+        env:
+          SCHEMA_DATABASE_URL: ${{ secrets.SCHEMA_DATABASE_URL }}
+        run: |
+          if [ -z "${SCHEMA_DATABASE_URL}" ]; then
+            echo "SCHEMA_DATABASE_URL secret not set; skipping remote schema validation."
             exit 0
           fi
-          # Use transaction mode pooler (port 6543) with plain postgres username
-          # Session mode (port 5432) requires postgres.PROJECT_REF format
-          # URL-encode the password to handle special characters safely
-          ENCODED_PASSWORD=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${SUPABASE_DB_PASSWORD}''', safe=''))")
-          psql "postgresql://postgres:${ENCODED_PASSWORD}@aws-0-us-east-2.pooler.supabase.com:6543/postgres" -f scripts/validate-test-scripts.sql
+          psql "$SCHEMA_DATABASE_URL" -f scripts/validate-test-scripts.sql
 
 # Optional: Schedule weekly burn-in runs
 # Uncomment to enable scheduled flaky test detection
