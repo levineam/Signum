@@ -1225,7 +1225,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                     {!isContentEmpty(entry.content) ? (
                       isDOMPurifyReady ? (
                         <div
-                          className="text-base leading-relaxed prose prose-sm max-w-none text-foreground [--tw-prose-body:var(--foreground)] [--tw-prose-headings:var(--foreground)] [--tw-prose-bold:var(--foreground)] [--tw-prose-links:var(--primary)] mx-[-12px] md:mx-[-8px]"
+                          className="text-base leading-relaxed text-foreground rich-editor-body"
                           dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.content) }}
                           onClick={(e) => {
                             // Handle link clicks in read-only mode
