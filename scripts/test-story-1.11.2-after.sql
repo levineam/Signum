@@ -158,11 +158,11 @@ WHERE indexname IN (
 ORDER BY indexname;
 
 \echo ''
-\if :{?data_found} \if :data_found = 1
+\if :data_found
   \echo 'Expected: All executed indexes should show idx_scan > 0 (queries ran with sample data)'
 \else
   \echo 'Note: No sample FK values were found; idx_scan may remain 0. Seed fixture rows if you need to validate usage.'
-\endif \endif
+\endif
 \echo ''
 
 \echo '========================================================================='
