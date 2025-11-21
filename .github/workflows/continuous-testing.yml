@@ -362,11 +362,11 @@ jobs:
             echo "SUPABASE_DB_PASSWORD secret not set; skipping schema validation."
             exit 0
           fi
-          # Use project-qualified username format: postgres.PROJECT_REF
-          # This is required for Supabase pooler to route connection to correct tenant
+          # Use transaction mode pooler (port 6543) with plain postgres username
+          # Session mode (port 5432) requires postgres.PROJECT_REF format
           # URL-encode the password to handle special characters safely
           ENCODED_PASSWORD=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${SUPABASE_DB_PASSWORD}''', safe=''))")
-          psql "postgresql://postgres.otyvmmgakowcdsxehwox:${ENCODED_PASSWORD}@aws-0-us-east-2.pooler.supabase.com:6543/postgres" -f scripts/validate-test-scripts.sql
+          psql "postgresql://postgres:${ENCODED_PASSWORD}@aws-0-us-east-2.pooler.supabase.com:6543/postgres" -f scripts/validate-test-scripts.sql
 
 # Optional: Schedule weekly burn-in runs
 # Uncomment to enable scheduled flaky test detection
