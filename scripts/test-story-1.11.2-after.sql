@@ -18,6 +18,7 @@ SELECT person_id FROM _deprecated_tasks WHERE person_id IS NOT NULL LIMIT 1 \gse
 SELECT project_id FROM _deprecated_tasks WHERE project_id IS NOT NULL LIMIT 1 \gset
 SELECT source_entry_id FROM _deprecated_tasks WHERE source_entry_id IS NOT NULL LIMIT 1 \gset
 SELECT value_id FROM _deprecated_tasks WHERE value_id IS NOT NULL LIMIT 1 \gset
+\set data_found 0
 
 SELECT id AS test_user_id FROM auth.users LIMIT 1 \gset
 
@@ -49,6 +50,7 @@ SELECT id AS test_user_id FROM auth.users LIMIT 1 \gset
 \echo '=== Query 1: links JOIN notes (target_note_id) ==='
 \if :{?target_note_id}
   \echo 'Using target_note_id=:target_note_id'
+  \set data_found 1
   EXPLAIN ANALYZE
   SELECT l.*, n.title FROM links l
   JOIN notes n ON l.target_note_id = n.id
@@ -66,6 +68,7 @@ SELECT id AS test_user_id FROM auth.users LIMIT 1 \gset
 \echo '=== Query 2: _deprecated_tasks JOIN entities (person_id) ==='
 \if :{?person_id}
   \echo 'Using person_id=:person_id'
+  \set data_found 1
   EXPLAIN ANALYZE
   SELECT t.*, e.entity_name FROM _deprecated_tasks t
   JOIN entities e ON t.person_id = e.id
@@ -83,6 +86,7 @@ SELECT id AS test_user_id FROM auth.users LIMIT 1 \gset
 \echo '=== Query 3: _deprecated_tasks JOIN entities (project_id) ==='
 \if :{?project_id}
   \echo 'Using project_id=:project_id'
+  \set data_found 1
   EXPLAIN ANALYZE
   SELECT t.*, e.entity_name FROM _deprecated_tasks t
   JOIN entities e ON t.project_id = e.id
@@ -100,6 +104,7 @@ SELECT id AS test_user_id FROM auth.users LIMIT 1 \gset
 \echo '=== Query 4: _deprecated_tasks JOIN journal_entries (source_entry_id) ==='
 \if :{?source_entry_id}
   \echo 'Using source_entry_id=:source_entry_id'
+  \set data_found 1
   EXPLAIN ANALYZE
   SELECT t.*, j.content FROM _deprecated_tasks t
   JOIN journal_entries j ON t.source_entry_id = j.id
@@ -117,6 +122,7 @@ SELECT id AS test_user_id FROM auth.users LIMIT 1 \gset
 \echo '=== Query 5: _deprecated_tasks JOIN entities (value_id) ==='
 \if :{?value_id}
   \echo 'Using value_id=:value_id'
+  \set data_found 1
   EXPLAIN ANALYZE
   SELECT t.*, e.entity_name FROM _deprecated_tasks t
   JOIN entities e ON t.value_id = e.id
@@ -152,7 +158,11 @@ WHERE indexname IN (
 ORDER BY indexname;
 
 \echo ''
-\echo 'Expected: All 5 indexes should show idx_scan > 0 when queries above run (if data exists)'
+\if :{?data_found} \if :data_found = 1
+  \echo 'Expected: All executed indexes should show idx_scan > 0 (queries ran with sample data)'
+\else
+  \echo 'Note: No sample FK values were found; idx_scan may remain 0. Seed fixture rows if you need to validate usage.'
+\endif \endif
 \echo ''
 
 \echo '========================================================================='
@@ -160,12 +170,12 @@ ORDER BY indexname;
 \echo ''
 \echo 'Acceptance Criteria Checklist:'
 \echo '[ ] All 5 indexes exist (verified with \di)'
-\echo '[ ] Query 1 uses Index Scan on idx_links_target_note_id'
-\echo '[ ] Query 2 uses Index Scan on idx_tasks_person_id'
-\echo '[ ] Query 3 uses Index Scan on idx_tasks_project_id'
-\echo '[ ] Query 4 uses Index Scan on idx_tasks_source_entry_id'
-\echo '[ ] Query 5 uses Index Scan on idx_tasks_value_id'
-\echo '[ ] All 5 indexes show idx_scan > 0 in pg_stat_user_indexes'
+\echo '[ ] Query 1 uses Index Scan on idx_links_target_note_id (if sample value exists)'
+\echo '[ ] Query 2 uses Index Scan on idx_tasks_person_id (if sample value exists)'
+\echo '[ ] Query 3 uses Index Scan on idx_tasks_project_id (if sample value exists)'
+\echo '[ ] Query 4 uses Index Scan on idx_tasks_source_entry_id (if sample value exists)'
+\echo '[ ] Query 5 uses Index Scan on idx_tasks_value_id (if sample value exists)'
+\echo '[ ] All executed indexes show idx_scan > 0 in pg_stat_user_indexes (seed data if empty)'
 \echo '[ ] No query regressed by >10% (compare with before.sql times)'
 \echo ''
 \echo 'ACTION ITEMS:'
