@@ -348,21 +348,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install psql client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install Supabase CLI
+        run: |
+          curl -fsSL https://github.com/supabase/cli/releases/download/v2.0.4/supabase_2.0.4_linux_amd64.tar.gz | tar -xz
+          sudo mv supabase /usr/local/bin/
 
       - name: Apply migrations (requires supabase schema outside repo)
         run: echo "Connect to your database and run migrations before enabling this job."
 
       - name: Validate verification scripts against schema
         env:
-          SCHEMA_DATABASE_URL: ${{ secrets.SCHEMA_DATABASE_URL }}
+          SUPABASE_PROJECT_REF: otyvmmgakowcdsxehwox
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          if [ -z "${SCHEMA_DATABASE_URL}" ]; then
-            echo "SCHEMA_DATABASE_URL secret not set; skipping schema validation."
+          if [ -z "${SUPABASE_DB_PASSWORD}" ]; then
+            echo "SUPABASE_DB_PASSWORD secret not set; skipping schema validation."
             exit 0
           fi
-          psql "$SCHEMA_DATABASE_URL" -f scripts/validate-test-scripts.sql
+          supabase db execute --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --file scripts/validate-test-scripts.sql
 
 # Optional: Schedule weekly burn-in runs
 # Uncomment to enable scheduled flaky test detection
