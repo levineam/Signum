@@ -178,10 +178,10 @@ SELECT frequency FROM term_frequencies WHERE user_id = 'test-user-id'::uuid AND 
 
 **Acceptance Criteria**:
 - ✅ Given migration runs, when `\di idx_links_target_note_id` executes, then index exists on `links(target_note_id)`
-- ✅ Given migration runs, when `\di idx_deprecated_tasks_person_id` executes, then index exists on `_deprecated_tasks(person_id)`
-- ✅ Given migration runs, when `\di idx_deprecated_tasks_project_id` executes, then index exists on `_deprecated_tasks(project_id)`
-- ✅ Given migration runs, when `\di idx_deprecated_tasks_source_entry_id` executes, then index exists on `_deprecated_tasks(source_entry_id)`
-- ✅ Given migration runs, when `\di idx_deprecated_tasks_value_id` executes, then index exists on `_deprecated_tasks(value_id)`
+- ✅ Given migration runs, when `\di idx_tasks_person_id` executes, then index exists on `_deprecated_tasks(person_id)`
+- ✅ Given migration runs, when `\di idx_tasks_project_id` executes, then index exists on `_deprecated_tasks(project_id)`
+- ✅ Given migration runs, when `\di idx_tasks_source_entry_id` executes, then index exists on `_deprecated_tasks(source_entry_id)`
+- ✅ Given migration runs, when `\di idx_tasks_value_id` executes, then index exists on `_deprecated_tasks(value_id)`
 - ✅ Given indexes added, when Supabase Linter runs, then reports 0 warnings for lint `0001_unindexed_foreign_keys`
 - ✅ Given test queries execute, when EXPLAIN ANALYZE runs, then all 5 queries use Index Scan (not Seq Scan)
 - ✅ Given test load applied, when `pg_stat_user_indexes` queried, then all 5 new indexes show `idx_scan > 0`
@@ -250,10 +250,10 @@ SELECT
 FROM pg_stat_user_indexes
 WHERE indexname IN (
   'idx_links_target_note_id',
-  'idx_deprecated_tasks_person_id',
-  'idx_deprecated_tasks_project_id',
-  'idx_deprecated_tasks_source_entry_id',
-  'idx_deprecated_tasks_value_id'
+  'idx_tasks_person_id',
+  'idx_tasks_project_id',
+  'idx_tasks_source_entry_id',
+  'idx_tasks_value_id'
 )
 ORDER BY indexname;
 -- Expected: idx_scan > 0 for all indexes after running test queries
