@@ -41,9 +41,9 @@ LIMIT 100;
 
 \echo ''
 \echo ''
-\echo '=== Query 4: reminders by user ==='
+\echo '=== Query 4: _deprecated_reminders by user ==='
 EXPLAIN ANALYZE
-SELECT * FROM reminders
+SELECT * FROM _deprecated_reminders
 WHERE user_id = :test_user_id::uuid
 LIMIT 100;
 

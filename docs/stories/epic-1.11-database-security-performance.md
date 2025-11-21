@@ -34,7 +34,7 @@ Address 2 critical security vulnerabilities and 21 performance issues identified
 
 **Integration Points:**
 1. **Database Functions**: `increment_entity_centrality`, `increment_term_frequency`
-2. **Tables**: `links`, `tasks`, `entities`, `reminders`, `meters_daily`, `term_frequencies`, `paragraph_embeddings`, `journal_entries`, `journal_templates`, `ontology_updates`
+2. **Tables**: `links`, `_deprecated_tasks`, `entities`, `_deprecated_reminders`, `meters_daily`, `term_frequencies`, `paragraph_embeddings`, `journal_entries`, `journal_templates`, `ontology_updates`
 3. **Query Performance**: JOIN operations, foreign key lookups
 4. **Write Performance**: INSERT/UPDATE/DELETE operations affected by unused indexes
 
@@ -155,16 +155,16 @@ SELECT frequency FROM term_frequencies WHERE user_id = 'test-user-id'::uuid AND 
 
 **Scope**:
 - Add index on `links.target_note_id`
-- Add index on `tasks.person_id`
-- Add index on `tasks.project_id`
-- Add index on `tasks.source_entry_id`
-- Add index on `tasks.value_id`
+- Add index on `_deprecated_tasks.person_id`
+- Add index on `_deprecated_tasks.project_id`
+- Add index on `_deprecated_tasks.source_entry_id`
+- Add index on `_deprecated_tasks.value_id`
 - Test query performance before/after
 - Monitor index usage
 
 **Deliverables**:
 - Migration: `supabase/migrations/[timestamp]_add_foreign_key_indexes.sql`
-- 5 indexes created (1 for links, 4 for tasks)
+- 5 indexes created (1 for links, 4 for _deprecated_tasks)
 - Query performance report: `docs/analysis/perf-story-1.11.2-[date].md`
   - Must include: EXPLAIN ANALYZE before/after for all 5 test queries
   - Must include: Execution time deltas (ms), Seq Scan → Index Scan confirmations
@@ -178,10 +178,10 @@ SELECT frequency FROM term_frequencies WHERE user_id = 'test-user-id'::uuid AND 
 
 **Acceptance Criteria**:
 - ✅ Given migration runs, when `\di idx_links_target_note_id` executes, then index exists on `links(target_note_id)`
-- ✅ Given migration runs, when `\di idx_tasks_person_id` executes, then index exists on `tasks(person_id)`
-- ✅ Given migration runs, when `\di idx_tasks_project_id` executes, then index exists on `tasks(project_id)`
-- ✅ Given migration runs, when `\di idx_tasks_source_entry_id` executes, then index exists on `tasks(source_entry_id)`
-- ✅ Given migration runs, when `\di idx_tasks_value_id` executes, then index exists on `tasks(value_id)`
+- ✅ Given migration runs, when `\di idx_deprecated_tasks_person_id` executes, then index exists on `_deprecated_tasks(person_id)`
+- ✅ Given migration runs, when `\di idx_deprecated_tasks_project_id` executes, then index exists on `_deprecated_tasks(project_id)`
+- ✅ Given migration runs, when `\di idx_deprecated_tasks_source_entry_id` executes, then index exists on `_deprecated_tasks(source_entry_id)`
+- ✅ Given migration runs, when `\di idx_deprecated_tasks_value_id` executes, then index exists on `_deprecated_tasks(value_id)`
 - ✅ Given indexes added, when Supabase Linter runs, then reports 0 warnings for lint `0001_unindexed_foreign_keys`
 - ✅ Given test queries execute, when EXPLAIN ANALYZE runs, then all 5 queries use Index Scan (not Seq Scan)
 - ✅ Given test load applied, when `pg_stat_user_indexes` queried, then all 5 new indexes show `idx_scan > 0`
@@ -204,30 +204,30 @@ JOIN notes n ON l.target_note_id = n.id
 WHERE l.user_id = 'test-user-id'::uuid
 LIMIT 100;
 
--- Query 2: tasks JOIN entities (person)
+-- Query 2: _deprecated_tasks JOIN entities (person)
 EXPLAIN ANALYZE
-SELECT t.*, e.entity_name FROM tasks t
+SELECT t.*, e.entity_name FROM _deprecated_tasks t
 JOIN entities e ON t.person_id = e.id
 WHERE t.user_id = 'test-user-id'::uuid
 LIMIT 100;
 
--- Query 3: tasks JOIN entities (project)
+-- Query 3: _deprecated_tasks JOIN entities (project)
 EXPLAIN ANALYZE
-SELECT t.*, e.entity_name FROM tasks t
+SELECT t.*, e.entity_name FROM _deprecated_tasks t
 JOIN entities e ON t.project_id = e.id
 WHERE t.user_id = 'test-user-id'::uuid
 LIMIT 100;
 
--- Query 4: tasks JOIN journal_entries (source)
+-- Query 4: _deprecated_tasks JOIN journal_entries (source)
 EXPLAIN ANALYZE
-SELECT t.*, j.content FROM tasks t
+SELECT t.*, j.content FROM _deprecated_tasks t
 JOIN journal_entries j ON t.source_entry_id = j.id
 WHERE t.user_id = 'test-user-id'::uuid
 LIMIT 100;
 
--- Query 5: tasks JOIN entities (value)
+-- Query 5: _deprecated_tasks JOIN entities (value)
 EXPLAIN ANALYZE
-SELECT t.*, e.entity_name FROM tasks t
+SELECT t.*, e.entity_name FROM _deprecated_tasks t
 JOIN entities e ON t.value_id = e.id
 WHERE t.user_id = 'test-user-id'::uuid
 LIMIT 100;
@@ -250,10 +250,10 @@ SELECT
 FROM pg_stat_user_indexes
 WHERE indexname IN (
   'idx_links_target_note_id',
-  'idx_tasks_person_id',
-  'idx_tasks_project_id',
-  'idx_tasks_source_entry_id',
-  'idx_tasks_value_id'
+  'idx_deprecated_tasks_person_id',
+  'idx_deprecated_tasks_project_id',
+  'idx_deprecated_tasks_source_entry_id',
+  'idx_deprecated_tasks_value_id'
 )
 ORDER BY indexname;
 -- Expected: idx_scan > 0 for all indexes after running test queries
@@ -283,11 +283,11 @@ ORDER BY indexname;
 | # | Table | Index Name | Column(s) | Reason |
 |---|-------|------------|-----------|--------|
 | 1 | helper_usage | idx_helper_usage_helper_type | helper_type | idx_scan = 0 |
-| 2 | tasks | idx_tasks_user_due | (user_id, due_at) | idx_scan = 0 |
-| 3 | tasks | idx_tasks_is_query | is_query | idx_scan = 0 |
+| 2 | _deprecated_tasks | idx_tasks_user_due | (user_id, due_at) | idx_scan = 0 |
+| 3 | _deprecated_tasks | idx_tasks_is_query | is_query | idx_scan = 0 |
 | 4 | entities | idx_entities_user_type | (user_id, entity_type) | idx_scan = 0 |
 | 5 | entities | idx_entities_centrality | centrality | idx_scan = 0 |
-| 6 | reminders | idx_reminders_user | user_id | idx_scan = 0 |
+| 6 | _deprecated_reminders | idx_reminders_user | user_id | idx_scan = 0 |
 | 7 | meters_daily | idx_meters_daily_user_date | (user_id, date) | idx_scan = 0 |
 | 8 | term_frequencies | idx_term_freq_user_term | (user_id, term) | idx_scan = 0 |
 | 9 | term_frequencies | idx_term_freq_user_alltime | (user_id, period='all_time') | idx_scan = 0 |
@@ -372,14 +372,14 @@ ORDER BY tablename, indexname;
 -- Query 1: helper_usage by type
 EXPLAIN ANALYZE SELECT * FROM helper_usage WHERE helper_type = 'gratitude' LIMIT 100;
 
--- Query 2: tasks by user and due date
-EXPLAIN ANALYZE SELECT * FROM tasks WHERE user_id = 'test-user-id'::uuid AND due_at < NOW() LIMIT 100;
+-- Query 2: _deprecated_tasks by user and due date
+EXPLAIN ANALYZE SELECT * FROM _deprecated_tasks WHERE user_id = 'test-user-id'::uuid AND due_at < NOW() LIMIT 100;
 
 -- Query 3: entities by user and type
 EXPLAIN ANALYZE SELECT * FROM entities WHERE user_id = 'test-user-id'::uuid AND entity_type = 'person' LIMIT 100;
 
--- Query 4: reminders by user
-EXPLAIN ANALYZE SELECT * FROM reminders WHERE user_id = 'test-user-id'::uuid LIMIT 100;
+-- Query 4: _deprecated_reminders by user
+EXPLAIN ANALYZE SELECT * FROM _deprecated_reminders WHERE user_id = 'test-user-id'::uuid LIMIT 100;
 
 -- Query 5: meters_daily by user and date
 EXPLAIN ANALYZE SELECT * FROM meters_daily WHERE user_id = 'test-user-id'::uuid AND date = CURRENT_DATE;

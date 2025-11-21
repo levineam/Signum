@@ -28,7 +28,7 @@ AND indexname IN (
   'idx_tasks_is_query',
   'idx_entities_user_type',
   'idx_entities_centrality',
-  'idx_reminders_user',
+  'idx_deprecated_reminders_user',
   'idx_meters_daily_user_date',
   'idx_term_freq_user_term',
   'idx_term_freq_user_alltime',
@@ -54,7 +54,7 @@ AND indexname IN (
   'idx_tasks_is_query',
   'idx_entities_user_type',
   'idx_entities_centrality',
-  'idx_reminders_user',
+  'idx_deprecated_reminders_user',
   'idx_meters_daily_user_date',
   'idx_term_freq_user_term',
   'idx_term_freq_user_alltime',
@@ -103,9 +103,9 @@ LIMIT 100;
 \echo 'Expected: Same plan as before'
 \echo ''
 
-\echo '=== Query 4: reminders by user ==='
+\echo '=== Query 4: _deprecated_reminders by user ==='
 EXPLAIN ANALYZE
-SELECT * FROM reminders
+SELECT * FROM _deprecated_reminders
 WHERE user_id = :test_user_id::uuid
 LIMIT 100;
 
