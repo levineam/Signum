@@ -26,6 +26,11 @@ This directory contains verification reports and performance analysis for Epic 1
 - `index-rollback-log.md` - Record of any indexes restored due to performance regression
 - `function-rollback-log.md` - Record of any function rollbacks
 
+## Verification Utilities
+
+- `scripts/test-fixtures.sql` — seeds minimal data (idempotent) for Epic 1.11 verification scripts; run before `test-story-1.11.*` to avoid empty-dataset skips.
+- `scripts/validate-test-scripts.sql` — checks required tables/indexes/functions exist with expected arity; run with `psql $DATABASE_URL -f scripts/validate-test-scripts.sql`.
+- CI optional job `schema-validate` (see `.github/workflows/continuous-testing.yml`) can be enabled by setting `SCHEMA_VALIDATION=true` and providing `SCHEMA_DATABASE_URL` in repo secrets.
 ## Report Requirements
 
 See epic document for required content in each report type:
