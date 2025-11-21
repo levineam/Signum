@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 import type { KeyboardEvent } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Sparkles, Loader2, AlertCircle } from 'lucide-react'
@@ -34,6 +34,7 @@ export function AskAIDialog({
   const [state, setState] = useState<ButtonState>('idle')
   const [generatedAnswer, setGeneratedAnswer] = useState<string | null>(null)
   const suppressAutoOpenRef = useRef(false)
+  const promptLabelId = useId()
 
   // P2 FIX: Capture selection context when dialog opens to prevent linking to wrong text
   // if user changes selection while AI request is in-flight
@@ -224,11 +225,8 @@ export function AskAIDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-purple-500" />
-            Ask AI About Your Journaling
+            Ask AI
           </DialogTitle>
-          <DialogDescription>
-            Refine your question below, then generate an AI-powered answer that will be saved as a note.
-          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 py-4">
@@ -256,9 +254,9 @@ export function AskAIDialog({
             <>
               {/* Query Input */}
               <div>
-                <label className="text-sm font-medium mb-2 block">
+                <h2 id={promptLabelId} className="text-xl font-semibold mb-2">
                   Your prompt
-                </label>
+                </h2>
                 <Textarea
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -266,6 +264,7 @@ export function AskAIDialog({
                   className="min-h-[120px] resize-none"
                   disabled={state === 'loading'}
                   autoFocus
+                  aria-labelledby={promptLabelId}
                 />
                 <div className="flex items-center justify-between mt-2">
                   <div className={`text-sm ${
