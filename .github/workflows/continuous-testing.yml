@@ -364,7 +364,9 @@ jobs:
           fi
           # Use project-qualified username format: postgres.PROJECT_REF
           # This is required for Supabase pooler to route connection to correct tenant
-          psql "postgresql://postgres.otyvmmgakowcdsxehwox:${SUPABASE_DB_PASSWORD}@aws-0-us-east-2.pooler.supabase.com:6543/postgres" -f scripts/validate-test-scripts.sql
+          # URL-encode the password to handle special characters safely
+          ENCODED_PASSWORD=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${SUPABASE_DB_PASSWORD}''', safe=''))")
+          psql "postgresql://postgres.otyvmmgakowcdsxehwox:${ENCODED_PASSWORD}@aws-0-us-east-2.pooler.supabase.com:6543/postgres" -f scripts/validate-test-scripts.sql
 
 # Optional: Schedule weekly burn-in runs
 # Uncomment to enable scheduled flaky test detection
