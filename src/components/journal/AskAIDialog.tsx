@@ -32,7 +32,6 @@ export function AskAIDialog({
   const { session } = useAuth()
   const [query, setQuery] = useState('')
   const [state, setState] = useState<ButtonState>('idle')
-  const [isTruncated, setIsTruncated] = useState(false)
   const [generatedAnswer, setGeneratedAnswer] = useState<string | null>(null)
   const suppressAutoOpenRef = useRef(false)
 
@@ -51,10 +50,8 @@ export function AskAIDialog({
       // Truncate to 500 chars if needed
       if (selectedText.length > 500) {
         setQuery(selectedText.substring(0, 500))
-        setIsTruncated(true)
       } else {
         setQuery(selectedText)
-        setIsTruncated(false)
       }
     }
   }, [isOpen, selectedText, entryId])
@@ -64,7 +61,6 @@ export function AskAIDialog({
     if (!isOpen) {
       setState('idle')
       setQuery('')
-      setIsTruncated(false)
       setGeneratedAnswer(null)
     }
   }, [isOpen])
@@ -218,11 +214,6 @@ export function AskAIDialog({
   const isNearLimit = charCount > 480
   const isDisabled = state === 'loading' || !query.trim() || isOverLimit
 
-  // Preview text for selected text display (max 200 chars)
-  const previewText = selectedText.length > 200
-    ? selectedText.substring(0, 197) + '...'
-    : selectedText
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
@@ -263,30 +254,10 @@ export function AskAIDialog({
           {/* Only show input fields if no answer is being displayed */}
           {!generatedAnswer && (
             <>
-              {/* Selected Text Display */}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  Selected Text
-                </label>
-                <div className="p-3 bg-muted rounded-md text-sm border border-border">
-                  {previewText}
-                </div>
-              </div>
-
-              {/* Truncation Warning */}
-              {isTruncated && (
-                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
-                  <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-amber-900 dark:text-amber-100">
-                    <strong>Selection truncated to 500 characters.</strong> Edit as needed.
-                  </div>
-                </div>
-              )}
-
               {/* Query Input */}
               <div>
                 <label className="text-sm font-medium mb-2 block">
-                  Your Question
+                  Your prompt
                 </label>
                 <Textarea
                   value={query}
