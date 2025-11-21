@@ -8,7 +8,7 @@ on:
   workflow_dispatch: # Manual trigger
 
 env:
-  SCHEMA_VALIDATION: 'false' # set to 'true' and provide SCHEMA_DATABASE_URL secret to enable schema check
+  SCHEMA_VALIDATION: 'true' # set to 'true' and provide SCHEMA_DATABASE_URL secret to enable schema check
 
 # Cancel in-progress runs for same PR
 concurrency:
