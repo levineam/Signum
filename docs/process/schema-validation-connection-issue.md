@@ -15,22 +15,60 @@ psql: error: connection to server at "aws-0-us-east-2.pooler.supabase.com" faile
 
 ## What We Tried
 
-### ✅ Attempts Made
+### ✅ Attempts Made (All Failed)
 
-1. **Password Reset**: Reset database password multiple times in Supabase dashboard
-2. **URL Encoding**: Encoded special characters in password (`$` → `%24`, `?` → `%3F`)
-3. **Connection String Formats Tested**:
-   - `postgresql://postgres:PASSWORD@aws-0-us-east-2.pooler.supabase.com:5432/postgres`
-   - `postgresql://postgres:PASSWORD@aws-0-us-east-2.pooler.supabase.com:6543/postgres`
-   - `postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-us-east-2.pooler.supabase.com:6543/postgres`
-4. **GitHub Secret**: Updated `SCHEMA_DATABASE_URL` secret multiple times
+#### 1. **Password Reset & Verification**
+- Reset database password 3+ times in Supabase dashboard
+- Verified password manually (worked in local Supabase SQL Editor)
+- Tested both original and URL-encoded formats
 
-### ❌ Results
+#### 2. **Connection String Formats**
+All combinations tested with both plain and URL-encoded passwords:
 
-All connection attempts failed with "Tenant or user not found" error, suggesting:
-- Authentication method incompatibility between GitHub Actions and Supabase pooler
-- Possible Supabase pooler restrictions on CI/CD environments
-- Network/firewall rules blocking GitHub Actions IPs
+**Pooler Connections:**
+- `postgresql://postgres:PASSWORD@aws-0-us-east-2.pooler.supabase.com:5432/postgres` (Session mode)
+- `postgresql://postgres.otyvmmgakowcdsxehwox:PASSWORD@aws-0-us-east-2.pooler.supabase.com:5432/postgres` (Session mode with project-qualified username)
+- `postgresql://postgres:PASSWORD@aws-0-us-east-2.pooler.supabase.com:6543/postgres` (Transaction mode)
+- `postgresql://postgres.otyvmmgakowcdsxehwox:PASSWORD@aws-0-us-east-2.pooler.supabase.com:6543/postgres` (Transaction mode with project-qualified username - incorrect per Supabase docs)
+
+**Direct Connection:**
+- `postgresql://postgres:PASSWORD@db.otyvmmgakowcdsxehwox.supabase.co:5432/postgres` (Direct connection)
+
+#### 3. **Authentication Methods**
+- `psql` with connection string
+- Supabase CLI v2.0.4 with `--project-ref` and `--password` flags
+- Both approaches failed with identical errors
+
+#### 4. **Username Formats**
+- Plain `postgres` username
+- Project-qualified `postgres.PROJECT_REF` username
+- Tested per Supabase documentation: session mode (port 5432) requires `postgres.PROJECT_REF`, transaction mode (port 6543) uses plain `postgres`
+
+#### 5. **Password Encoding**
+- Plain password: `x$2SfP?miIyTKHr$`
+- URL-encoded: `x%242SfP%3FmiIyTKHr%24`
+- Python3 urllib.parse.quote() in CI workflow for automatic encoding
+
+#### 6. **Research & Documentation Review**
+- Reviewed Supabase GitHub discussions about "Tenant or user not found" errors
+- Read official Supabase connection documentation
+- Verified we followed all recommended formats and practices
+
+### ❌ Consistent Error
+
+**All attempts failed with:**
+```
+psql: error: connection to server at "aws-0-us-east-2.pooler.supabase.com" failed:
+FATAL: Tenant or user not found
+```
+
+### 🔍 Root Cause Analysis
+
+The consistent failure across all methods suggests:
+1. **GitHub Actions IP Blocking**: Supabase may restrict connections from GitHub Actions IP ranges
+2. **CI/CD Environment Restrictions**: Supabase pooler may have special auth requirements for automated environments
+3. **Project-Level Settings**: Database may require explicit allowlisting of external IPs
+4. **Supabase Support Required**: May need to contact Supabase to enable CI/CD access
 
 ## Current Workaround
 
@@ -52,26 +90,48 @@ fi
 
 ## Next Steps to Re-Enable
 
-### Option 1: Supabase Direct Connection (Recommended)
+### Option 1: Contact Supabase Support (Recommended)
 
-Try using Supabase's direct connection URL instead of pooler:
-1. Get direct connection string from: https://supabase.com/dashboard/project/otyvmmgakowcdsxehwox/settings/database
-2. Format: `postgresql://postgres:[PASSWORD]@db.otyvmmgakowcdsxehwox.supabase.co:5432/postgres`
-3. Add as GitHub secret: `gh secret set SCHEMA_DATABASE_URL --repo levineam/Signum`
+Since all standard connection methods failed, this may require Supabase assistance:
+1. Open support ticket at https://supabase.com/dashboard/support
+2. Ask about: "Enabling database connections from GitHub Actions CI/CD"
+3. Provide error: "FATAL: Tenant or user not found" from IP ranges used by GitHub Actions
+4. Request: Whitelist GitHub Actions IP ranges or provide alternative auth method
 
-### Option 2: Service Role Key with Supabase CLI
+### Option 2: Use Local PostgreSQL in CI
 
-Use Supabase CLI with service role key instead of psql:
-1. Get service role key from: https://supabase.com/dashboard/project/otyvmmgakowcdsxehwox/settings/api
-2. Store as `SUPABASE_SERVICE_ROLE_KEY` secret
-3. Update workflow to use `supabase db execute` instead of `psql`
+Run schema validation against a local PostgreSQL instance in CI:
+1. Use the existing `postgres:15` service container already in workflow
+2. Apply migrations to local database in CI
+3. Run validator against `localhost:5432`
+4. **Downside**: Doesn't validate against production schema, only migration scripts
 
-### Option 3: Test Locally First
+**Implementation:**
+```yaml
+- name: Apply migrations to local postgres
+  run: |
+    for f in supabase/migrations/*.sql; do
+      psql "postgresql://postgres:postgres@localhost:5432/postgres" -f "$f"
+    done
 
-Before adding to CI:
-1. Install psql locally: `brew install libpq`
-2. Test connection string: `psql "CONNECTION_STRING" -c "SELECT 1"`
-3. Only add to GitHub secrets once local connection works
+- name: Validate against local schema
+  run: psql "postgresql://postgres:postgres@localhost:5432/postgres" -f scripts/validate-test-scripts.sql
+```
+
+### Option 3: Use GitHub Actions Self-Hosted Runner
+
+Self-hosted runners may have different network policies:
+1. Set up self-hosted runner with static IP
+2. Whitelist that IP in Supabase dashboard (if option available)
+3. Run schema validation job only on self-hosted runner
+
+### Option 4: Switch to Supabase Branching (Future)
+
+Supabase offers preview databases for PRs:
+1. Enable Supabase GitHub integration
+2. Each PR gets its own preview database
+3. Run validation against preview database
+4. Requires Supabase Pro plan ($25/month)
 
 ## Impact
 
