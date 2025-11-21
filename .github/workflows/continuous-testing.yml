@@ -330,7 +330,8 @@ jobs:
   schema-validate:
     name: Schema Validation (verification scripts)
     runs-on: ubuntu-latest
-    if: ${{ env.SCHEMA_VALIDATION == 'true' }}
+    # Note: env context not available at job level, so this job always runs when workflow is triggered
+    # The job will skip validation if SCHEMA_DATABASE_URL secret is not set
     services:
       postgres:
         image: postgres:15
