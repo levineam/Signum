@@ -24,11 +24,17 @@
 
 \echo '=== Testing entity centrality increment ==='
 
+SELECT id AS test_user_id FROM auth.users LIMIT 1 \gset
+
+-- Simulate authenticated user context for auth.uid()
+SELECT set_config('request.jwt.claim.sub', :test_user_id::text, true);
+SELECT set_config('request.jwt.claim.raw', '{"sub": "' || :test_user_id || '"}', true);
+
 -- Create test entity (if not exists)
 INSERT INTO entities (id, user_id, entity_name, entity_type, centrality)
 VALUES (
   '00000000-0000-0000-0000-000000000001'::uuid,
-  (SELECT id FROM auth.users LIMIT 1),
+  :test_user_id::uuid,
   'Test Entity',
   'concept',
   0
@@ -41,7 +47,7 @@ FROM entities
 WHERE id = '00000000-0000-0000-0000-000000000001'::uuid;
 
 -- Increment centrality
-SELECT increment_entity_centrality('00000000-0000-0000-0000-000000000001'::uuid, 1);
+SELECT increment_entity_centrality('00000000-0000-0000-0000-000000000001'::uuid);
 
 -- Verify increment worked
 SELECT id, entity_name, centrality
@@ -57,7 +63,7 @@ WHERE id = '00000000-0000-0000-0000-000000000001'::uuid;
 
 \echo '=== Testing term frequency increment ==='
 
-SELECT id AS test_user_id FROM auth.users LIMIT 1 \gset
+-- Auth context already set above for test_user_id
 
 -- Check current frequency for test term
 SELECT user_id, term, period, frequency
@@ -67,12 +73,7 @@ AND term = 'test'
 AND period = 'all_time';
 
 -- Increment term frequency
-SELECT increment_term_frequency(
-  :test_user_id::uuid,
-  'test',
-  CURRENT_DATE,
-  'all_time'
-);
+SELECT increment_term_frequency('test', 1);
 
 -- Verify increment worked
 SELECT user_id, term, period, frequency
