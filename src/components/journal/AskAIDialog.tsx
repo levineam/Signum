@@ -33,6 +33,7 @@ export function AskAIDialog({
   const [query, setQuery] = useState('')
   const [state, setState] = useState<ButtonState>('idle')
   const [generatedAnswer, setGeneratedAnswer] = useState<string | null>(null)
+  const [isSelectionTruncated, setIsSelectionTruncated] = useState(false)
   const suppressAutoOpenRef = useRef(false)
   const promptLabelId = useId()
 
@@ -49,11 +50,13 @@ export function AskAIDialog({
       capturedEntryIdRef.current = entryId
 
       // Truncate to 500 chars if needed
-      if (selectedText.length > 500) {
-        setQuery(selectedText.substring(0, 500))
-      } else {
-        setQuery(selectedText)
-      }
+      const wasTruncated = selectedText.length > 500
+      const nextQuery = wasTruncated
+        ? selectedText.substring(0, 500)
+        : selectedText
+
+      setQuery(nextQuery)
+      setIsSelectionTruncated(wasTruncated)
     }
   }, [isOpen, selectedText, entryId])
 
@@ -63,6 +66,7 @@ export function AskAIDialog({
       setState('idle')
       setQuery('')
       setGeneratedAnswer(null)
+      setIsSelectionTruncated(false)
     }
   }, [isOpen])
 
@@ -257,6 +261,12 @@ export function AskAIDialog({
                 <h2 id={promptLabelId} className="text-xl font-semibold mb-2">
                   Your prompt
                 </h2>
+                {isSelectionTruncated && (
+                  <div className="flex items-start gap-2 p-3 mb-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md text-sm text-amber-900 dark:text-amber-100">
+                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                    Selection truncated to 500 characters. Refine the prompt if you need more context.
+                  </div>
+                )}
                 <Textarea
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
