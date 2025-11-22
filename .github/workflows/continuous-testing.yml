@@ -7,6 +7,9 @@ on:
     branches: [dev, main]
   workflow_dispatch: # Manual trigger
 
+env:
+  SCHEMA_VALIDATION: 'local' # 'local' (default) runs against service container; 'remote' uses SCHEMA_DATABASE_URL; 'false' disables
+
 # Cancel in-progress runs for same PR
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -320,6 +323,59 @@ jobs:
           echo "Tests failed during burn-in loop."
           echo "Review test-results artifacts to identify flaky tests."
           exit 1
+
+  # ============================================================================
+  # SCHEMA VALIDATION (local by default)
+  # ============================================================================
+  schema-validate:
+    name: Schema Validation (verification scripts)
+    runs-on: ubuntu-latest
+    if: ${{ env.SCHEMA_VALIDATION != 'false' }}
+    services:
+      supabase-postgres:
+        image: supabase/postgres:15.1.1
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready -U postgres
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Apply migrations to local Supabase Postgres
+        if: ${{ env.SCHEMA_VALIDATION == 'local' }}
+        run: |
+          DB_URL="postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+          for f in supabase/migrations/*.sql; do
+            echo "Applying migration: $f"
+            psql "$DB_URL" -f "$f"
+          done
+
+      - name: Validate verification scripts against local schema
+        if: ${{ env.SCHEMA_VALIDATION == 'local' }}
+        run: |
+          DB_URL="postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+          psql "$DB_URL" -f scripts/test-fixtures.sql
+          psql "$DB_URL" -f scripts/validate-test-scripts.sql
+
+      - name: Validate verification scripts against remote schema
+        if: ${{ env.SCHEMA_VALIDATION == 'remote' }}
+        env:
+          SCHEMA_DATABASE_URL: ${{ secrets.SCHEMA_DATABASE_URL }}
+        run: |
+          if [ -z "${SCHEMA_DATABASE_URL}" ]; then
+            echo "SCHEMA_DATABASE_URL secret not set; skipping remote schema validation."
+            exit 0
+          fi
+          psql "$SCHEMA_DATABASE_URL" -f scripts/validate-test-scripts.sql
 
 # Optional: Schedule weekly burn-in runs
 # Uncomment to enable scheduled flaky test detection

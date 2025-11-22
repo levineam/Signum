@@ -265,6 +265,7 @@ See `docs/stories/completed/` for:
 | Epic 1 (PRD) | N/A | Greenfield Foundation | 1.1-1.9 (PRD) |
 | Epic 1 (Brownfield) | #50, #119 | Content Intelligence & AI Task Assistance | 1.1-1.6, 1.9 (docs) |
 | **Epic 1.10** | **TBD** | **Unified Tasks & Reminders (Clean Rebuild)** | **1.10.1-1.10.38** |
+| **Epic 1.11** | **#177** | **Database Security & Performance Optimization** | **1.11.1-1.11.3** |
 | Epic 2 | N/A | AI Personal Ontology | 2.1-2.4.x |
 | Epic 2.5 | N/A | Helper System | 2.5.x |
 | **Epic 2.10** | **#29** | **Sidebar Responsive Redesign** | **2.10.1-2.10.3** |
@@ -286,8 +287,9 @@ See `docs/stories/completed/` for:
 ## Quick Reference: Active Stories
 
 **Ready for Implementation:**
-1. **Epic 1.10**: Unified Tasks & Reminders (📋 Awaiting approval) - 27 stories, 4-5 weeks
-2. **Epic 2.10**: Sidebar Responsive Redesign (✅ Ready) - 3 stories, 5-7 days
+1. **Epic 1.11**: Database Security & Performance (✅ Ready) - 3 stories, 10-16 hours - **START IMMEDIATELY**
+2. **Epic 1.10**: Unified Tasks & Reminders (📋 Awaiting approval) - 27 stories, 4-5 weeks
+3. **Epic 2.10**: Sidebar Responsive Redesign (✅ Ready) - 3 stories, 5-7 days
 
 **High Priority:**
 1. Story 1.9: AI-Powered Task Assistance (Planned) - 21 story points, 3-4 weeks
@@ -311,6 +313,7 @@ See `docs/stories/completed/` for:
 
 - **PRD:** `/docs/prd.md`
 - **Epic 1.10:** `docs/stories/epic-1.10-tasks-reminders-system.md`
+- **Epic 1.11:** `docs/stories/epic-1.11-database-security-performance.md`
 - **Epic 2.10:** `docs/stories/epic-2.10-sidebar-responsive-redesign.md`
 - **Epic 1 (Content Intelligence):** Issue #50
 - **Completed Stories:** `/docs/stories/completed/`
@@ -329,5 +332,6 @@ See `docs/stories/completed/` for:
 ---
 
 **Change Log:**
+- **2025-11-12**: Added Epic 1.11 (Database Security & Performance Optimization) - 3 stories addressing 2 security vulnerabilities + 21 performance issues from Supabase Database Linter.
 - **2025-11-06**: Renumbered Epic 3 → Epic 1.10 (Tasks & Reminders), Epic 2.5 (Sidebar) → Epic 2.10. Deprecated Stories 1.1-1.2.2, 1.4 (replaced by Epic 1.10).
 - **2025-11-03**: Added Story 2.4.6 completion details
