@@ -28,9 +28,6 @@ BEGIN
   END IF;
 
   -- Tables referenced by verification scripts
-  -- Phase 2 schema (Epic 1.10) creates items/schedules/occurrences
-  -- Phase 2 migration conditionally renames old tasks/reminders to _deprecated_* if they existed
-  FOREACH issues IN ARRAY ARRAY[]::text[] LOOP END LOOP; -- placeholder to keep array type consistent
 
   -- Core Phase 2 tables (required)
   IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'items') THEN
