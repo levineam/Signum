@@ -16,7 +16,7 @@
 
 -- paragraph_embeddings (3 indexes, 1.6 MB total)
 DROP INDEX IF EXISTS idx_paragraph_embeddings_vector;        -- 1608 kB, 0 scans
-DROP INDEX IF EXISTS unique_user_content_hash;               -- 8 kB, 0 scans
+ALTER TABLE IF EXISTS paragraph_embeddings DROP CONSTRAINT IF EXISTS unique_user_content_hash; -- drops backing index
 DROP INDEX IF EXISTS idx_paragraph_embeddings_hash;          -- 8 kB, 0 scans
 
 -- tasks (2 indexes, 32 kB total)
@@ -24,7 +24,7 @@ DROP INDEX IF EXISTS idx_tasks_user_due;                     -- 16 kB, 0 scans
 DROP INDEX IF EXISTS idx_tasks_is_query;                     -- 16 kB, 0 scans
 
 -- links (2 indexes, 32 kB total)
-DROP INDEX IF EXISTS links_source_note_id_target_note_id_link_type_key;  -- 16 kB, 0 scans (UNIQUE constraint index)
+ALTER TABLE IF EXISTS links DROP CONSTRAINT IF EXISTS links_source_note_id_target_note_id_link_type_key;  -- drops backing index
 DROP INDEX IF EXISTS idx_links_user_source;                  -- 16 kB, 0 scans
 
 -- reminders (1 index, 16 kB)
@@ -42,13 +42,13 @@ DROP INDEX IF EXISTS idx_journal_templates_user_id;          -- 8 kB, 0 scans
 -- entities (3 indexes, 24 kB total)
 DROP INDEX IF EXISTS idx_entities_user_type;                 -- 8 kB, 0 scans
 DROP INDEX IF EXISTS idx_entities_centrality;                -- 8 kB, 0 scans
-DROP INDEX IF EXISTS unique_user_type_name;                  -- 8 kB, 0 scans (UNIQUE constraint index)
+ALTER TABLE IF EXISTS entities DROP CONSTRAINT IF EXISTS unique_user_type_name; -- drops backing index
 
 -- meters_daily (1 index, 8 kB)
 DROP INDEX IF EXISTS idx_meters_daily_user_date;             -- 8 kB, 0 scans
 
 -- term_frequencies (3 indexes, 24 kB total)
-DROP INDEX IF EXISTS unique_user_term;                       -- 8 kB, 0 scans (UNIQUE constraint index)
+ALTER TABLE IF EXISTS term_frequencies DROP CONSTRAINT IF EXISTS unique_user_term; -- drops backing index
 DROP INDEX IF EXISTS idx_term_freq_user_term;                -- 8 kB, 0 scans
 DROP INDEX IF EXISTS idx_term_freq_user_alltime;             -- 8 kB, 0 scans
 
