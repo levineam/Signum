@@ -84,6 +84,17 @@ export interface NoteMetadata {
 
   // Legacy type mapping (for migration)
   legacyType?: 'values' | 'beliefs' | 'aims' | 'regular'
+
+  // AI Answer metadata (for AI-generated answers via Ask AI feature)
+  sourceType?: 'task' | 'journal'  // Source type of AI query
+  taskId?: string                  // Source task ID (if sourceType === 'task')
+  taskText?: string                // Text of the task (if sourceType === 'task')
+  journalEntryId?: string          // Source journal entry ID (if sourceType === 'journal')
+  selectedText?: string            // Original selected text from journal
+  query?: string                   // User's refined query/question
+  tokensUsed?: number              // Number of tokens used
+  model?: string                   // AI model used for generation
+  generatedAt?: string             // Timestamp when answer was generated
 }
 
 // ============================================================================

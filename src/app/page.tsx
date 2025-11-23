@@ -8,6 +8,7 @@ import { JournalStream } from '@/components/journal/JournalStream'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { RemindersWidget } from '@/components/widgets/RemindersWidget'
 import { TasksWidget } from '@/components/widgets/TasksWidget'
+import { FEATURES } from '@/config/features'
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth()
@@ -39,13 +40,15 @@ export default function Home() {
       case 'journal':
         return (
           <div>
-            {/* Tasks & Reminders Widgets (Prototype) */}
-            <div className="mx-auto max-w-4xl px-6 pt-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <RemindersWidget />
-                <TasksWidget />
+            {/* Tasks & Reminders Widgets (Prototype - Feature Flag) */}
+            {FEATURES.TEMPORAL_SYSTEM_ENABLED && (
+              <div className="mx-auto max-w-4xl px-6 pt-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <RemindersWidget />
+                  <TasksWidget />
+                </div>
               </div>
-            </div>
+            )}
             {/* Journal Stream */}
             <JournalStream isGuest={isGuest} />
           </div>

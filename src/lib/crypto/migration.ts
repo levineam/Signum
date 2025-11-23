@@ -7,9 +7,15 @@ import { supabase } from '@/lib/supabase'
 import { encryptNote } from './encryption'
 import { getUserEncryptionKey } from './keyManagement'
 
-interface MigrationProgress {
-  current: number
-  total: number
+// interface MigrationProgress {
+//   current: number
+//   total: number
+// }
+
+interface PlainNoteRow {
+  id: string
+  title: string | null
+  content: string | null
 }
 
 /**
@@ -35,7 +41,7 @@ export async function migrateAllUserNotes(
   if (!notes || notes.length === 0) return
 
   // Store original values for rollback
-  const originalNotes = notes.map((n) => ({
+  const originalNotes = notes.map((n: PlainNoteRow) => ({
     id: n.id,
     title: n.title,
     content: n.content,

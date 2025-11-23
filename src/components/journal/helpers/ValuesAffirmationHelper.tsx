@@ -30,6 +30,8 @@ import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
 import { HelperContainer } from './HelperContainer'
 import { escapeHtml } from '@/utils/htmlEscape'
+import { HelperAddOn } from './HelperAddOn'
+import { SelfCompassionContent } from './SelfCompassionHelper'
 
 // Evidence-based values list from ACT framework and Cohen research
 export const VALUES_OPTIONS = [
@@ -346,6 +348,19 @@ export function ValuesAffirmationContent({ entryId, userId, onInsert }: ValuesAf
             />
           </div>
         </div>
+
+        <HelperAddOn
+          title="Add a self-compassion reset"
+          description="Use Kristin Neff's three-step break when reflecting on tough value conflicts."
+          badge="Self-Compassion"
+        >
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+            Acknowledge the stressor, remember common humanity, and offer yourself kindness before finishing your values reflection.
+          </p>
+          <div className="rounded-md border border-amber-200/70 dark:border-amber-900/40 bg-white/60 dark:bg-gray-900/30 p-3">
+            <SelfCompassionContent entryId={entryId} userId={userId} onInsert={onInsert} />
+          </div>
+        </HelperAddOn>
 
       {/* Action buttons */}
       <div className="flex gap-2 pt-4 border-t border-purple-200 dark:border-purple-800 mt-4">

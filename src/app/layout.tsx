@@ -3,6 +3,8 @@ import { Architects_Daughter, Fira_Code } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LocalNotesProvider } from "@/contexts/LocalNotesContext";
+import { ReactQueryProvider } from "@/contexts/ReactQueryProvider";
 import { Toaster } from "sonner";
 
 const architectsDaughter = Architects_Daughter({
@@ -32,9 +34,13 @@ export default function RootLayout({
         className={`${architectsDaughter.variable} ${firaCode.variable} antialiased`}
       >
         <ThemeProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+          <ReactQueryProvider>
+            <AuthProvider>
+              <LocalNotesProvider>
+                {children}
+              </LocalNotesProvider>
+            </AuthProvider>
+          </ReactQueryProvider>
         </ThemeProvider>
         <Toaster />
       </body>
