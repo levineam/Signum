@@ -34,9 +34,14 @@ SimpleRichEditor provides rich text editing with contentEditable. When adding ne
 Add formatting button and logic:
 
 ```tsx
-// Example: Adding highlight formatting
-const toggleHighlight = () => {
-  document.execCommand('hiliteColor', false, '#ffeb3b');
+// Example: Adding highlight formatting (wrap selection in <mark>)
+const toggleHighlight = (color: string) => {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  const range = selection.getRangeAt(0);
+  const mark = document.createElement('mark');
+  mark.style.backgroundColor = color;
+  range.surroundContents(mark);
 };
 
 // In toolbar
