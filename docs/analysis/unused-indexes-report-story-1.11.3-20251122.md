@@ -8,9 +8,11 @@
 
 ## Executive Summary
 
-Identified **19 unused indexes** (idx_scan = 0) consuming **~1.7 MB** of storage. All indexes have zero scans in production, indicating they provide no query performance benefit while adding overhead to write operations (INSERT/UPDATE/DELETE).
+Identified **19 indexes** with idx_scan = 0, consuming **~1.7 MB** of storage. After analysis, **3 unique constraints must be preserved** as they enable write operations (upserts, ON CONFLICT), leaving **16 indexes safe to drop**.
 
-**Recommendation**: ✅ **Safe to drop all 19 indexes**
+**Recommendation**: ✅ **Drop 16 unused indexes, preserve 3 unique constraints**
+
+**⚠️ Important Learning**: `idx_scan = 0` doesn't mean a constraint is unused - it only tracks READ operations. Unique constraints are critical for WRITE operations (INSERT ON CONFLICT, upserts) even when never used for reads.
 
 ---
 
@@ -51,27 +53,37 @@ Identified **19 unused indexes** (idx_scan = 0) consuming **~1.7 MB** of storage
 
 ## Migration Safety Analysis
 
-### ✅ Safe to Drop (19 indexes)
+### ✅ Safe to Drop (16 indexes)
 
-All 19 indexes have **zero scans** (idx_scan = 0) over the lifetime of the database. This indicates:
-1. **No Query Uses Them**: PostgreSQL query planner has never selected these indexes
-2. **No Performance Impact**: Dropping them will not affect read performance
+16 indexes have **zero scans** (idx_scan = 0) and serve no purpose for read OR write operations:
+1. **No Query Uses Them**: PostgreSQL query planner has never selected these indexes for reads
+2. **No Write Operations Need Them**: Not used in ON CONFLICT clauses or constraint enforcement
 3. **Write Performance Gain**: Removes overhead from INSERT/UPDATE/DELETE operations
-4. **Storage Reclaimed**: Frees ~1.7 MB of database storage
+4. **Storage Reclaimed**: Frees ~1.6 MB of database storage
 
-### 🔒 Unique Constraint Indexes
+### 🔒 Unique Constraint Indexes - **MUST PRESERVE**
 
-**Important Note**: 3 of the 19 indexes are UNIQUE constraint indexes:
-- `links_source_note_id_target_note_id_link_type_key`
-- `unique_user_type_name`
-- `unique_user_content_hash`
+**Critical Finding**: 3 unique constraints show `idx_scan = 0` but are **essential for write operations**:
 
-**Impact**: Dropping these indexes **also removes the UNIQUE constraint**. Analysis shows:
-- **links**: Uniqueness enforced by application logic (deduplication on insert)
-- **entities**: Uniqueness not critical (duplicate names allowed per type)
-- **paragraph_embeddings**: Deduplication handled by content_hash check in code
+1. **`unique_user_term`** (term_frequencies table)
+   - **Used by**: `increment_term_frequency` function's `ON CONFLICT (user_id, term)` clause
+   - **Impact if dropped**: Function will fail with "no unique or exclusion constraint matching the ON CONFLICT specification"
+   - **Status**: ✅ **PRESERVED**
 
-**Risk**: Low - Application-level deduplication already in place.
+2. **`unique_user_type_name`** (entities table)
+   - **Used by**: Prevents duplicate entities during concurrent upserts (Story 1.1)
+   - **Impact if dropped**: Race conditions, duplicate entities, data integrity violations
+   - **Status**: ✅ **PRESERVED**
+
+3. **`unique_user_content_hash`** (paragraph_embeddings table)
+   - **Used by**: Embeddings cache upsert with `onConflict: 'user_id,content_hash'` (src/utils/nlp/embeddings.ts:60)
+   - **Impact if dropped**: All embedding writes will fail with constraint error
+   - **Status**: ✅ **PRESERVED**
+
+**Why `idx_scan = 0`?** These constraints are used exclusively for WRITE operations (INSERT/UPDATE with ON CONFLICT). The `idx_scan` metric only tracks READ operations, so it incorrectly suggests they're unused.
+
+**Remaining unique constraint to drop**:
+- **`links_source_note_id_target_note_id_link_type_key`**: Uniqueness enforced by application logic, not used in any ON CONFLICT clauses
 
 ---
 
@@ -129,19 +141,82 @@ CREATE INDEX CONCURRENTLY idx_paragraph_embeddings_vector
 **Location**: `supabase/migrations/20251122101148_epic_1_11_3_drop_unused_indexes.sql`
 
 **Contents**:
-- Drops all 19 unused indexes
+- Drops 16 truly unused indexes
+- Preserves 3 unique constraints required for write operations
 - Includes verification query to confirm removal
-- Documented with scan counts and storage sizes
+- Documented with scan counts, storage sizes, and preservation rationale
 
 ---
 
 ## Acceptance Criteria Status
 
-- ✅ `pg_stat_user_indexes` queried - all 19 indexes show idx_scan = 0
-- ✅ Migration created - drops all 19 unused indexes
+- ✅ `pg_stat_user_indexes` queried - identified 19 indexes with idx_scan = 0
+- ✅ Analyzed write operation dependencies - identified 3 constraints required for ON CONFLICT
+- ✅ Migration created - drops 16 unused indexes, preserves 3 unique constraints
 - ✅ Verification included - query confirms indexes dropped
+- ✅ Documentation updated - explains idx_scan limitation for write-only constraints
 - ⏳ Performance testing - pending migration application
 - ⏳ Supabase Linter - pending verification (expected 0 unused index warnings)
+
+---
+
+## Best Practices: Identifying Truly Unused Indexes
+
+### The Problem with `idx_scan = 0`
+
+The `idx_scan` metric in `pg_stat_user_indexes` **only tracks READ operations**. It does not capture:
+- Indexes used in `INSERT ... ON CONFLICT` clauses
+- Unique constraints enforcing data integrity
+- Indexes used for foreign key constraint enforcement
+
+### Improved Query (Excludes Unique Constraints)
+
+Based on PostgreSQL community best practices, here's the recommended query for finding unused indexes:
+
+```sql
+-- Find truly unused indexes (excludes unique constraints and primary keys)
+SELECT
+  schemaname,
+  tablename,
+  indexname,
+  pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
+  idx_scan AS index_scans,
+  idx_tup_read AS tuples_read,
+  idx_tup_fetch AS tuples_fetched
+FROM pg_stat_user_indexes pui
+JOIN pg_index pi ON pui.indexrelid = pi.indexrelid
+WHERE
+  idx_scan = 0                 -- Zero scans
+  AND pi.indisunique = FALSE   -- Exclude unique indexes/constraints
+  AND pi.indisprimary = FALSE  -- Exclude primary keys
+  AND schemaname = 'public'
+ORDER BY pg_relation_size(indexrelid) DESC;
+```
+
+### Why Exclude Unique Constraints?
+
+Unique constraints (indexes) serve two purposes:
+1. **Data Integrity**: Prevent duplicate values (enforced on every INSERT/UPDATE)
+2. **ON CONFLICT Clauses**: Enable upsert operations in PostgreSQL
+
+Even with `idx_scan = 0`, unique constraints are actively used for:
+- `INSERT ... ON CONFLICT (column) DO UPDATE`
+- Supabase `.upsert({ ... }, { onConflict: 'column' })`
+- Database functions using ON CONFLICT patterns
+
+### Manual Review Still Required
+
+Even with the improved query, **always manually verify** before dropping indexes:
+1. Search codebase for `ON CONFLICT` references to the columns
+2. Check for database functions using the constraint
+3. Verify no application-level upsert logic depends on it
+4. Consider future features that might need the constraint
+
+### References
+
+- [PostgreSQL Documentation: Index Uniqueness Checks](https://www.postgresql.org/docs/current/index-unique-checks.html)
+- [CYBERTEC: Get Rid of Your Unused Indexes](https://www.cybertec-postgresql.com/en/get-rid-of-your-unused-indexes/)
+- [Stack Overflow: Find Unused Indexes](https://dba.stackexchange.com/questions/137255/find-unused-indexes)
 
 ---
 

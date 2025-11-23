@@ -4,10 +4,12 @@
 -- Story: https://github.com/levineam/Signum/issues/181
 --
 -- Analysis Date: 2025-11-22
--- Total Unused Indexes: 17 (idx_scan = 0)
--- Total Storage Reclaimed: ~1.7 MB
--- Note: Preserved unique_user_term (required by increment_term_frequency function)
---       Preserved unique_user_type_name (prevents duplicate entities, Story 1.1)
+-- Total Unused Indexes: 16 (idx_scan = 0, excluding unique constraints)
+-- Total Storage Reclaimed: ~1.6 MB
+-- Note: Preserved 3 unique constraints (all required for write operations):
+--       - unique_user_term (enables increment_term_frequency ON CONFLICT)
+--       - unique_user_type_name (prevents duplicate entities, Story 1.1)
+--       - unique_user_content_hash (enables embeddings upsert ON CONFLICT)
 --
 -- IMPORTANT: These indexes have ZERO scans in production. Safe to drop.
 -- If performance regresses, indexes can be recreated using CREATE INDEX CONCURRENTLY.
@@ -16,9 +18,10 @@
 -- Drop Unused Indexes (idx_scan = 0)
 -- ============================================================================
 
--- paragraph_embeddings (3 indexes, 1.6 MB total)
+-- paragraph_embeddings (2 indexes, 1.6 MB total)
+-- NOTE: unique_user_content_hash MUST be kept - required for embeddings upsert (see src/utils/nlp/embeddings.ts:60)
+-- DROP CONSTRAINT unique_user_content_hash;  -- ❌ CANNOT DROP - enables onConflict: 'user_id,content_hash' upsert
 DROP INDEX IF EXISTS idx_paragraph_embeddings_vector;        -- 1608 kB, 0 scans
-ALTER TABLE IF EXISTS paragraph_embeddings DROP CONSTRAINT IF EXISTS unique_user_content_hash; -- drops backing index
 DROP INDEX IF EXISTS idx_paragraph_embeddings_hash;          -- 8 kB, 0 scans
 
 -- tasks (2 indexes, 32 kB total)
@@ -63,7 +66,7 @@ DROP INDEX IF EXISTS idx_journal_entries_created_at;         -- 8 kB, 0 scans
 -- Verification
 -- ============================================================================
 
--- Verify all 17 indexes were dropped (unique_user_term and unique_user_type_name kept)
+-- Verify all 16 indexes were dropped (3 unique constraints preserved)
 SELECT
   COUNT(*) as remaining_unused_indexes,
   string_agg(indexname, ', ') as index_names
@@ -86,10 +89,10 @@ AND indexname IN (
   -- 'unique_user_term',  -- Kept for increment_term_frequency function
   'idx_term_freq_user_term',
   'idx_term_freq_user_alltime',
-  'unique_user_content_hash',
+  -- 'unique_user_content_hash',  -- Kept for embeddings upsert
   'idx_paragraph_embeddings_hash',
   'idx_journal_entries_created_at'
 );
 -- Expected: remaining_unused_indexes = 0, index_names = NULL
 
-\echo '✅ Epic 1.11 Story 1.11.3: Dropped 17 unused indexes (~1.7 MB reclaimed, preserved 2 constraints)'
+\echo '✅ Epic 1.11 Story 1.11.3: Dropped 16 unused indexes (~1.6 MB reclaimed, preserved 3 unique constraints)'
