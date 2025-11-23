@@ -55,7 +55,10 @@
 
 ## Schema Validation (DB)
 - CI runs schema validation against a local Supabase-compatible Postgres service by default (see `.github/workflows/continuous-testing.yml`).
-- Local check: `psql postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable -f scripts/test-fixtures.sql` then `psql ... -f scripts/validate-test-scripts.sql`.
+- Local check:
+  1) Apply migrations: `for f in supabase/migrations/*.sql; do psql postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable -f $f; done`
+  2) Seed fixtures: `psql ... -f scripts/test-fixtures.sql`
+  3) Validate: `psql ... -f scripts/validate-test-scripts.sql`
 - Remote (optional): set `SCHEMA_VALIDATION=remote` and `SCHEMA_DATABASE_URL` to point at a migrated database.
 - Migration checklist: `docs/process/migration-checklist.md` (update functions/indexes + fixtures when schema changes).
 
@@ -5404,7 +5407,6 @@ Choose a number (0-8) or 9 to proceed:
 ```
 
 <!-- END: BMAD-AGENTS -->
-
 
 
 
