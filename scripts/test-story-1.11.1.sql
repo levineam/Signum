@@ -66,23 +66,21 @@ WHERE id = '00000000-0000-0000-0000-000000000001'::uuid;
 -- Auth context already set above for test_user_id
 
 -- Check current frequency for test term
-SELECT user_id, term, period, frequency
+SELECT user_id, term, count_alltime, count_this_week, count_last_week, last_updated
 FROM term_frequencies
 WHERE user_id = :test_user_id::uuid
-AND term = 'test'
-AND period = 'all_time';
+AND term = 'test';
 
 -- Increment term frequency
 SELECT increment_term_frequency('test', 1);
 
 -- Verify increment worked
-SELECT user_id, term, period, frequency
+SELECT user_id, term, count_alltime, count_this_week, count_last_week, last_updated
 FROM term_frequencies
 WHERE user_id = :test_user_id::uuid
-AND term = 'test'
-AND period = 'all_time';
+AND term = 'test';
 
-\echo 'Expected: Frequency should have incremented by 1'
+\echo 'Expected: count_alltime and count_this_week should have incremented by 1'
 \echo ''
 
 -- ============================================================================
