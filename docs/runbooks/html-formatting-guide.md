@@ -224,6 +224,13 @@ Adding new formatting feature?
 ```tsx
 const toggleStrikethrough = () => {
   document.execCommand('strikeThrough', false);
+  // Normalize <strike> to <s> so sanitizer keeps it
+  document.queryCommandValue('strikeThrough'); // triggers execCommand
+  document.querySelectorAll('strike').forEach(node => {
+    const s = document.createElement('s');
+    s.innerHTML = node.innerHTML;
+    node.replaceWith(s);
+  });
 };
 ```
 
@@ -243,10 +250,15 @@ const ALLOWED_TAGS = [..., 's'];
 
 ### Example 2: Highlight with Color (Inline Styles)
 
-**Step 1:** Add button with color picker
+**Step 1:** Add button that wraps selection in `<mark>` (avoid inline `<span>` styles that sanitizer strips)
 ```tsx
 const highlightText = (color: string) => {
-  document.execCommand('hiliteColor', false, color);
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  const range = selection.getRangeAt(0);
+  const mark = document.createElement('mark');
+  mark.style.backgroundColor = color;
+  range.surroundContents(mark);
 };
 ```
 
