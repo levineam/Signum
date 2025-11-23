@@ -4,9 +4,10 @@
 -- Story: https://github.com/levineam/Signum/issues/181
 --
 -- Analysis Date: 2025-11-22
--- Total Unused Indexes: 18 (idx_scan = 0)
+-- Total Unused Indexes: 17 (idx_scan = 0)
 -- Total Storage Reclaimed: ~1.7 MB
--- Note: unique_user_term kept (required by increment_term_frequency function)
+-- Note: Preserved unique_user_term (required by increment_term_frequency function)
+--       Preserved unique_user_type_name (prevents duplicate entities, Story 1.1)
 --
 -- IMPORTANT: These indexes have ZERO scans in production. Safe to drop.
 -- If performance regresses, indexes can be recreated using CREATE INDEX CONCURRENTLY.
@@ -40,10 +41,11 @@ DROP INDEX IF EXISTS idx_helper_usage_helper_type;           -- 16 kB, 0 scans
 -- journal_templates (1 index, 8 kB)
 DROP INDEX IF EXISTS idx_journal_templates_user_id;          -- 8 kB, 0 scans
 
--- entities (3 indexes, 24 kB total)
+-- entities (2 indexes, 16 kB total)
+-- NOTE: unique_user_type_name MUST be kept - prevents duplicate entities during concurrent upserts (Story 1.1)
+-- DROP CONSTRAINT unique_user_type_name;  -- ❌ CANNOT DROP - enforces uniqueness for (user_id, type, name)
 DROP INDEX IF EXISTS idx_entities_user_type;                 -- 8 kB, 0 scans
 DROP INDEX IF EXISTS idx_entities_centrality;                -- 8 kB, 0 scans
-ALTER TABLE IF EXISTS entities DROP CONSTRAINT IF EXISTS unique_user_type_name; -- drops backing index
 
 -- meters_daily (1 index, 8 kB)
 DROP INDEX IF EXISTS idx_meters_daily_user_date;             -- 8 kB, 0 scans
@@ -61,7 +63,7 @@ DROP INDEX IF EXISTS idx_journal_entries_created_at;         -- 8 kB, 0 scans
 -- Verification
 -- ============================================================================
 
--- Verify all 18 indexes were dropped (unique_user_term kept for function)
+-- Verify all 17 indexes were dropped (unique_user_term and unique_user_type_name kept)
 SELECT
   COUNT(*) as remaining_unused_indexes,
   string_agg(indexname, ', ') as index_names
@@ -79,7 +81,7 @@ AND indexname IN (
   'idx_journal_templates_user_id',
   'idx_entities_user_type',
   'idx_entities_centrality',
-  'unique_user_type_name',
+  -- 'unique_user_type_name',  -- Kept to prevent duplicate entities (Story 1.1)
   'idx_meters_daily_user_date',
   -- 'unique_user_term',  -- Kept for increment_term_frequency function
   'idx_term_freq_user_term',
@@ -90,4 +92,4 @@ AND indexname IN (
 );
 -- Expected: remaining_unused_indexes = 0, index_names = NULL
 
-\echo '✅ Epic 1.11 Story 1.11.3: Dropped 18 unused indexes (~1.7 MB reclaimed, kept unique_user_term for function)'
+\echo '✅ Epic 1.11 Story 1.11.3: Dropped 17 unused indexes (~1.7 MB reclaimed, preserved 2 constraints)'
