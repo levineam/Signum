@@ -141,7 +141,7 @@ When adding rich text formatting to SimpleRichEditor, you MUST update **both edi
 
 ### Database Indexes: NEVER Drop Based on idx_scan = 0 Alone
 
-The `idx_scan` metric counts index scans from SELECT/UPDATE/DELETE but **NOT constraint enforcement**. Unique constraints used in `INSERT ... ON CONFLICT` clauses or enforcing data integrity will show `idx_scan = 0` even when actively used.
+The `idx_scan` metric **ONLY tracks READ operations**. Unique constraints used in `INSERT ... ON CONFLICT` clauses (upserts) or business rule enforcement will show `idx_scan = 0` even though they're critical for data integrity.
 
 **Required before dropping any index/constraint:**
 1. Run query that excludes unique constraints (`pi.indisunique = FALSE`)
