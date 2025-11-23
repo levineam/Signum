@@ -192,7 +192,7 @@ Even without ON CONFLICT clauses, constraints prevent silent data corruption fro
 
 **Result:** Dropped 15 regular indexes, preserved 4 constraints, saved ~1.6 MB storage without compromising data integrity.
 
-See `docs/analysis/unused-indexes-report-story-1.11.3-20251122.md` for full analysis.
+See `../analysis/unused-indexes-report-story-1.11.3-20251122.md` for full analysis.
 
 ## Decision Tree
 

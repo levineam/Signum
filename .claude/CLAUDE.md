@@ -122,7 +122,7 @@ Next.js 15.5.3 (Turbopack) • Supabase (Auth, DB, RLS) • shadcn/ui • TypeSc
 - DB change? → Vercel preview
 - Unsure? → Start with `npm run dev:test`
 
-See `docs/runbooks/local-testing-guide.md` for complete guide.
+See `../docs/runbooks/local-testing-guide.md` for complete guide.
 
 ---
 
@@ -137,7 +137,7 @@ When adding rich text formatting to SimpleRichEditor, you MUST update **both edi
 2. Add tag to whitelist in `/src/utils/sanitizeHtml.ts` → `ALLOWED_TAGS`
 3. Add CSS to `.rich-editor-body` AND `.prose` in `globals.css`
 
-**See:** `docs/runbooks/html-formatting-guide.md` for step-by-step procedures, troubleshooting, and examples.
+**See:** `../docs/runbooks/html-formatting-guide.md` for step-by-step procedures, troubleshooting, and examples.
 
 ### Database Indexes: NEVER Drop Based on idx_scan = 0 Alone
 
@@ -148,6 +148,6 @@ The `idx_scan` metric counts index scans from SELECT/UPDATE/DELETE but **NOT con
 2. Complete 7-step manual verification checklist
 3. Search codebase for ON CONFLICT usage, upsert logic, and plain INSERT relying on constraint
 
-**See:** `docs/runbooks/database-index-management.md` for required query, full checklist, real-world example (Epic 1.11), and decision tree.
+**See:** `../docs/runbooks/database-index-management.md` for required query, full checklist, real-world example (Epic 1.11), and decision tree.
 
-**Browse all runbooks:** `docs/runbooks/README.md`
+**Browse all runbooks:** `../docs/runbooks/README.md`
