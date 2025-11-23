@@ -8,11 +8,13 @@
 
 ## Executive Summary
 
-Identified **19 indexes** with idx_scan = 0, consuming **~1.7 MB** of storage. After analysis, **3 unique constraints must be preserved** as they enable write operations (upserts, ON CONFLICT), leaving **16 indexes safe to drop**.
+Identified **19 indexes** with idx_scan = 0, consuming **~1.7 MB** of storage. After analysis, **4 unique constraints must be preserved** for data integrity (upserts, ON CONFLICT, preventing duplicates), leaving **15 indexes safe to drop**.
 
-**Recommendation**: ✅ **Drop 16 unused indexes, preserve 3 unique constraints**
+**Recommendation**: ✅ **Drop 15 unused indexes, preserve 4 unique constraints**
 
-**⚠️ Important Learning**: `idx_scan = 0` doesn't mean a constraint is unused - it only tracks READ operations. Unique constraints are critical for WRITE operations (INSERT ON CONFLICT, upserts) even when never used for reads.
+**⚠️ Critical Learning**: `idx_scan = 0` doesn't mean a constraint is unused - it only tracks READ operations. Unique constraints are critical for:
+1. **WRITE operations** (INSERT ON CONFLICT, upserts)
+2. **Data integrity** (preventing duplicate rows even without ON CONFLICT)
 
 ---
 
@@ -53,9 +55,9 @@ Identified **19 indexes** with idx_scan = 0, consuming **~1.7 MB** of storage. A
 
 ## Migration Safety Analysis
 
-### ✅ Safe to Drop (16 indexes)
+### ✅ Safe to Drop (15 indexes)
 
-16 indexes have **zero scans** (idx_scan = 0) and serve no purpose for read OR write operations:
+15 indexes have **zero scans** (idx_scan = 0) and serve no purpose for read OR write operations:
 1. **No Query Uses Them**: PostgreSQL query planner has never selected these indexes for reads
 2. **No Write Operations Need Them**: Not used in ON CONFLICT clauses or constraint enforcement
 3. **Write Performance Gain**: Removes overhead from INSERT/UPDATE/DELETE operations
@@ -63,27 +65,36 @@ Identified **19 indexes** with idx_scan = 0, consuming **~1.7 MB** of storage. A
 
 ### 🔒 Unique Constraint Indexes - **MUST PRESERVE**
 
-**Critical Finding**: 3 unique constraints show `idx_scan = 0` but are **essential for write operations**:
+**Critical Finding**: 4 unique constraints show `idx_scan = 0` but are **essential for data integrity**:
 
 1. **`unique_user_term`** (term_frequencies table)
    - **Used by**: `increment_term_frequency` function's `ON CONFLICT (user_id, term)` clause
    - **Impact if dropped**: Function will fail with "no unique or exclusion constraint matching the ON CONFLICT specification"
+   - **Category**: Write operation dependency (ON CONFLICT)
    - **Status**: ✅ **PRESERVED**
 
 2. **`unique_user_type_name`** (entities table)
    - **Used by**: Prevents duplicate entities during concurrent upserts (Story 1.1)
    - **Impact if dropped**: Race conditions, duplicate entities, data integrity violations
+   - **Category**: Write operation dependency (data integrity)
    - **Status**: ✅ **PRESERVED**
 
 3. **`unique_user_content_hash`** (paragraph_embeddings table)
    - **Used by**: Embeddings cache upsert with `onConflict: 'user_id,content_hash'` (src/utils/nlp/embeddings.ts:60)
    - **Impact if dropped**: All embedding writes will fail with constraint error
+   - **Category**: Write operation dependency (ON CONFLICT)
    - **Status**: ✅ **PRESERVED**
 
-**Why `idx_scan = 0`?** These constraints are used exclusively for WRITE operations (INSERT/UPDATE with ON CONFLICT). The `idx_scan` metric only tracks READ operations, so it incorrectly suggests they're unused.
+4. **`links_source_note_id_target_note_id_link_type_key`** (links table)
+   - **Used by**: Prevents duplicate graph edges between notes (business rule enforcement)
+   - **Code**: `supabase.from('links').insert(linksToCreate)` relies on constraint to reject duplicates (src/lib/import/link-resolver.ts:253)
+   - **Impact if dropped**: Silent creation of duplicate links, corrupted graph structure, inflated query results
+   - **Category**: Data integrity (constraint-based deduplication)
+   - **Status**: ✅ **PRESERVED**
 
-**Remaining unique constraint to drop**:
-- **`links_source_note_id_target_note_id_link_type_key`**: Uniqueness enforced by application logic, not used in any ON CONFLICT clauses
+**Why `idx_scan = 0`?** These constraints are used for WRITE operations (INSERT/UPDATE with ON CONFLICT, data integrity enforcement). The `idx_scan` metric only tracks READ operations, making it misleading for write-critical constraints.
+
+**Key Learning**: Even unique constraints WITHOUT ON CONFLICT clauses may be critical for data integrity. Don't assume "application logic handles it" means the database constraint is safe to remove.
 
 ---
 
@@ -141,8 +152,8 @@ CREATE INDEX CONCURRENTLY idx_paragraph_embeddings_vector
 **Location**: `supabase/migrations/20251122101148_epic_1_11_3_drop_unused_indexes.sql`
 
 **Contents**:
-- Drops 16 truly unused indexes
-- Preserves 3 unique constraints required for write operations
+- Drops 15 truly unused indexes
+- Preserves 4 unique constraints required for data integrity
 - Includes verification query to confirm removal
 - Documented with scan counts, storage sizes, and preservation rationale
 
@@ -151,10 +162,13 @@ CREATE INDEX CONCURRENTLY idx_paragraph_embeddings_vector
 ## Acceptance Criteria Status
 
 - ✅ `pg_stat_user_indexes` queried - identified 19 indexes with idx_scan = 0
-- ✅ Analyzed write operation dependencies - identified 3 constraints required for ON CONFLICT
-- ✅ Migration created - drops 16 unused indexes, preserves 3 unique constraints
+- ✅ Analyzed write operation dependencies - identified 4 constraints required for data integrity:
+  - 3 used in ON CONFLICT clauses (upserts)
+  - 1 used for business rule enforcement (duplicate prevention)
+- ✅ Migration created - drops 15 unused indexes, preserves 4 unique constraints
 - ✅ Verification included - query confirms indexes dropped
 - ✅ Documentation updated - explains idx_scan limitation for write-only constraints
+- ✅ Enhanced manual verification checklist - includes non-ON CONFLICT constraint verification
 - ⏳ Performance testing - pending migration application
 - ⏳ Supabase Linter - pending verification (expected 0 unused index warnings)
 
@@ -195,22 +209,34 @@ ORDER BY pg_relation_size(indexrelid) DESC;
 
 ### Why Exclude Unique Constraints?
 
-Unique constraints (indexes) serve two purposes:
+Unique constraints (indexes) serve three critical purposes:
 1. **Data Integrity**: Prevent duplicate values (enforced on every INSERT/UPDATE)
 2. **ON CONFLICT Clauses**: Enable upsert operations in PostgreSQL
+3. **Business Rule Enforcement**: Encode domain rules in the database (e.g., "no duplicate graph edges")
 
 Even with `idx_scan = 0`, unique constraints are actively used for:
-- `INSERT ... ON CONFLICT (column) DO UPDATE`
-- Supabase `.upsert({ ... }, { onConflict: 'column' })`
+- `INSERT ... ON CONFLICT (column) DO UPDATE` - explicit upserts
+- Supabase `.upsert({ ... }, { onConflict: 'column' })` - ORM upserts
 - Database functions using ON CONFLICT patterns
+- **Plain INSERTs that rely on constraint violations to prevent duplicates**
 
 ### Manual Review Still Required
 
 Even with the improved query, **always manually verify** before dropping indexes:
-1. Search codebase for `ON CONFLICT` references to the columns
-2. Check for database functions using the constraint
-3. Verify no application-level upsert logic depends on it
-4. Consider future features that might need the constraint
+
+**For all unique constraints:**
+1. ✅ **Search for ON CONFLICT usage**: `grep -r "ON CONFLICT.*<column_names>"`
+2. ✅ **Check database functions**: Look for constraints used in function definitions
+3. ✅ **Verify upsert logic**: Search for `.upsert()` calls with matching columns
+
+**Additional verification (even without ON CONFLICT):**
+4. ✅ **Check for plain INSERT relying on constraint**: Code may use `.insert()` expecting the constraint to reject duplicates
+   - Example: `links_source_note_id_target_note_id_link_type_key` prevents duplicate graph edges via constraint error
+5. ✅ **Assess business rule impact**: Is uniqueness a domain requirement? (e.g., "one link between two notes")
+6. ✅ **Consider data corruption risk**: Would duplicates corrupt application state or query results?
+7. ✅ **Don't assume "application handles it"**: Database constraints are the last line of defense against bugs
+
+**⚠️ Critical Insight**: "Application logic could deduplicate" ≠ "Safe to remove database constraint". Even without ON CONFLICT, constraints prevent silent data corruption from race conditions, bugs, or concurrent operations.
 
 ### References
 

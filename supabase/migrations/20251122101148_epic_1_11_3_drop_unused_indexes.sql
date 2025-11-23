@@ -4,12 +4,13 @@
 -- Story: https://github.com/levineam/Signum/issues/181
 --
 -- Analysis Date: 2025-11-22
--- Total Unused Indexes: 16 (idx_scan = 0, excluding unique constraints)
+-- Total Unused Indexes: 15 (idx_scan = 0, excluding unique constraints)
 -- Total Storage Reclaimed: ~1.6 MB
--- Note: Preserved 3 unique constraints (all required for write operations):
+-- Note: Preserved 4 unique constraints (all enforce critical data integrity):
 --       - unique_user_term (enables increment_term_frequency ON CONFLICT)
 --       - unique_user_type_name (prevents duplicate entities, Story 1.1)
 --       - unique_user_content_hash (enables embeddings upsert ON CONFLICT)
+--       - links_source_note_id_target_note_id_link_type_key (prevents duplicate graph edges)
 --
 -- IMPORTANT: These indexes have ZERO scans in production. Safe to drop.
 -- If performance regresses, indexes can be recreated using CREATE INDEX CONCURRENTLY.
@@ -28,8 +29,9 @@ DROP INDEX IF EXISTS idx_paragraph_embeddings_hash;          -- 8 kB, 0 scans
 DROP INDEX IF EXISTS idx_tasks_user_due;                     -- 16 kB, 0 scans
 DROP INDEX IF EXISTS idx_tasks_is_query;                     -- 16 kB, 0 scans
 
--- links (2 indexes, 32 kB total)
-ALTER TABLE IF EXISTS links DROP CONSTRAINT IF EXISTS links_source_note_id_target_note_id_link_type_key;  -- drops backing index
+-- links (1 index, 16 kB total)
+-- NOTE: links_source_note_id_target_note_id_link_type_key MUST be kept - prevents duplicate graph edges
+-- DROP CONSTRAINT links_source_note_id_target_note_id_link_type_key;  -- ❌ CANNOT DROP - enforces unique (source, target, type) edges
 DROP INDEX IF EXISTS idx_links_user_source;                  -- 16 kB, 0 scans
 
 -- reminders (1 index, 16 kB)
@@ -66,7 +68,7 @@ DROP INDEX IF EXISTS idx_journal_entries_created_at;         -- 8 kB, 0 scans
 -- Verification
 -- ============================================================================
 
--- Verify all 16 indexes were dropped (3 unique constraints preserved)
+-- Verify all 15 indexes were dropped (4 unique constraints preserved)
 SELECT
   COUNT(*) as remaining_unused_indexes,
   string_agg(indexname, ', ') as index_names
@@ -79,7 +81,7 @@ AND indexname IN (
   'idx_reminders_user',
   'idx_ontology_updates_created',
   'idx_helper_usage_helper_type',
-  'links_source_note_id_target_note_id_link_type_key',
+  -- 'links_source_note_id_target_note_id_link_type_key',  -- Kept to prevent duplicate graph edges
   'idx_links_user_source',
   'idx_journal_templates_user_id',
   'idx_entities_user_type',
@@ -95,4 +97,4 @@ AND indexname IN (
 );
 -- Expected: remaining_unused_indexes = 0, index_names = NULL
 
-\echo '✅ Epic 1.11 Story 1.11.3: Dropped 16 unused indexes (~1.6 MB reclaimed, preserved 3 unique constraints)'
+\echo '✅ Epic 1.11 Story 1.11.3: Dropped 15 unused indexes (~1.6 MB reclaimed, preserved 4 unique constraints)'
