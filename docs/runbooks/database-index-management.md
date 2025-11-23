@@ -6,7 +6,7 @@
 
 ## Overview
 
-PostgreSQL index analysis requires careful verification before dropping indexes. The `idx_scan = 0` metric is **misleading** - it only tracks READ operations and completely ignores WRITE operations where unique constraints are critical.
+PostgreSQL index analysis requires careful verification before dropping indexes. The `idx_scan = 0` metric is **misleading** - while it counts index scans from SELECT, UPDATE, and DELETE queries, it does NOT count constraint enforcement operations where unique indexes are critical.
 
 ## Quick Reference
 
@@ -22,11 +22,12 @@ PostgreSQL index analysis requires careful verification before dropping indexes.
 
 ⚠️ **NEVER use `idx_scan = 0` alone to identify unused indexes!**
 
-The `idx_scan` metric in `pg_stat_user_indexes` **ONLY tracks READ operations** (SELECT queries). It does NOT capture:
-- Indexes used in `INSERT ... ON CONFLICT` clauses (upserts)
-- Unique constraints enforcing data integrity on writes
-- Business rules preventing duplicate rows
-- Indexes used for foreign key constraint enforcement
+The `idx_scan` metric in `pg_stat_user_indexes` counts index scans from SELECT, UPDATE, and DELETE queries. However, it does **NOT** count:
+- Constraint enforcement operations (primary key, unique, foreign key checks)
+- Indexes used in `INSERT ... ON CONFLICT` clauses (upserts) - the ON CONFLICT lookup is not counted
+- Background processes that validate data integrity
+
+This means unique indexes can show `idx_scan = 0` even when actively enforcing constraints on every INSERT/UPDATE.
 
 ## Step-by-Step Guide
 
