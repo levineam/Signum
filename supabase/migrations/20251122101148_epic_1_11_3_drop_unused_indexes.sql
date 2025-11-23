@@ -4,8 +4,9 @@
 -- Story: https://github.com/levineam/Signum/issues/181
 --
 -- Analysis Date: 2025-11-22
--- Total Unused Indexes: 19 (idx_scan = 0)
+-- Total Unused Indexes: 18 (idx_scan = 0)
 -- Total Storage Reclaimed: ~1.7 MB
+-- Note: unique_user_term kept (required by increment_term_frequency function)
 --
 -- IMPORTANT: These indexes have ZERO scans in production. Safe to drop.
 -- If performance regresses, indexes can be recreated using CREATE INDEX CONCURRENTLY.
@@ -47,9 +48,10 @@ ALTER TABLE IF EXISTS entities DROP CONSTRAINT IF EXISTS unique_user_type_name; 
 -- meters_daily (1 index, 8 kB)
 DROP INDEX IF EXISTS idx_meters_daily_user_date;             -- 8 kB, 0 scans
 
--- term_frequencies (3 indexes, 24 kB total)
-ALTER TABLE IF EXISTS term_frequencies DROP CONSTRAINT IF EXISTS unique_user_term; -- drops backing index
-DROP INDEX IF EXISTS idx_term_freq_user_term;                -- 8 kB, 0 scans
+-- term_frequencies (2 indexes, 16 kB total)
+-- NOTE: unique_user_term MUST be kept - required by increment_term_frequency function's ON CONFLICT clause
+-- DROP INDEX IF EXISTS unique_user_term;  -- ❌ CANNOT DROP - breaks increment_term_frequency function
+DROP INDEX IF EXISTS idx_term_freq_user_term;                -- 8 kB, 0 scans (redundant with unique_user_term)
 DROP INDEX IF EXISTS idx_term_freq_user_alltime;             -- 8 kB, 0 scans
 
 -- journal_entries (1 index, 8 kB)
@@ -59,7 +61,7 @@ DROP INDEX IF EXISTS idx_journal_entries_created_at;         -- 8 kB, 0 scans
 -- Verification
 -- ============================================================================
 
--- Verify all 19 indexes were dropped
+-- Verify all 18 indexes were dropped (unique_user_term kept for function)
 SELECT
   COUNT(*) as remaining_unused_indexes,
   string_agg(indexname, ', ') as index_names
@@ -79,7 +81,7 @@ AND indexname IN (
   'idx_entities_centrality',
   'unique_user_type_name',
   'idx_meters_daily_user_date',
-  'unique_user_term',
+  -- 'unique_user_term',  -- Kept for increment_term_frequency function
   'idx_term_freq_user_term',
   'idx_term_freq_user_alltime',
   'unique_user_content_hash',
@@ -88,4 +90,4 @@ AND indexname IN (
 );
 -- Expected: remaining_unused_indexes = 0, index_names = NULL
 
-\echo '✅ Epic 1.11 Story 1.11.3: Dropped 19 unused indexes (~1.7 MB reclaimed)'
+\echo '✅ Epic 1.11 Story 1.11.3: Dropped 18 unused indexes (~1.7 MB reclaimed, kept unique_user_term for function)'
