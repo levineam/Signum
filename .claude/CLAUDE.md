@@ -145,3 +145,86 @@ When adding new HTML formatting features to SimpleRichEditor, you MUST ensure th
 ❌ Adding formatting without updating `sanitizeHtml.ts` → content stripped in read-only mode
 ❌ Only styling `.rich-editor-body` → no styling in read-only mode
 ❌ Using inline styles without whitelisting in `styleFilterHook` → styles stripped by DOMPurify
+
+---
+
+## CRITICAL: Database Migration & Index Management
+
+### Analyzing Unused Indexes
+
+**⚠️ NEVER use `idx_scan = 0` alone to identify unused indexes!**
+
+The `idx_scan` metric in `pg_stat_user_indexes` **ONLY tracks READ operations** (SELECT queries). It does NOT capture:
+- Indexes used in `INSERT ... ON CONFLICT` clauses (upserts)
+- Unique constraints enforcing data integrity on writes
+- Business rules preventing duplicate rows
+- Indexes used for foreign key constraint enforcement
+
+### Required Query for Unused Index Analysis
+
+**ALWAYS use this query** (excludes unique constraints and primary keys):
+
+```sql
+-- Find truly unused indexes (excludes unique constraints and primary keys)
+SELECT
+  schemaname,
+  tablename,
+  indexname,
+  pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
+  idx_scan AS index_scans
+FROM pg_stat_user_indexes pui
+JOIN pg_index pi ON pui.indexrelid = pi.indexrelid
+WHERE
+  idx_scan = 0                 -- Zero scans
+  AND pi.indisunique = FALSE   -- ✅ Exclude unique indexes/constraints
+  AND pi.indisprimary = FALSE  -- ✅ Exclude primary keys
+  AND schemaname = 'public'
+ORDER BY pg_relation_size(indexrelid) DESC;
+```
+
+### Mandatory Manual Verification Checklist
+
+Before dropping ANY index or constraint, verify ALL of the following:
+
+**For Unique Constraints:**
+1. ✅ **Search for ON CONFLICT usage**: `grep -r "ON CONFLICT.*<column_names>" src/`
+2. ✅ **Check database functions**: Search migrations for functions using the constraint
+3. ✅ **Verify upsert logic**: `grep -r "\.upsert.*onConflict" src/`
+4. ✅ **Check plain INSERT relying on constraint**: Code may use `.insert()` expecting constraint to reject duplicates
+   - Example: `links_source_note_id_target_note_id_link_type_key` prevents duplicate graph edges
+5. ✅ **Assess business rule impact**: Is uniqueness a domain requirement? (e.g., "no duplicate entities")
+6. ✅ **Consider data corruption risk**: Would duplicates corrupt application state or query results?
+7. ✅ **Don't assume "application handles it"**: Database constraints are the last line of defense against race conditions and bugs
+
+**For Regular Indexes:**
+1. ✅ **Check foreign key relationships**: May be needed for JOIN performance
+2. ✅ **Verify not used in WHERE clauses**: Search codebase for column usage
+3. ✅ **Consider query plan changes**: Even unused now, might be needed for future queries
+
+### Unique Constraints Serve THREE Purposes
+
+1. **ON CONFLICT clauses** - Enable upserts: `INSERT ... ON CONFLICT (col) DO UPDATE`
+2. **Business rule enforcement** - Prevent duplicates via constraint errors (no ON CONFLICT needed)
+3. **Data integrity** - General duplicate prevention across concurrent operations
+
+**All three show `idx_scan = 0` because they're used for WRITE operations, not reads!**
+
+### Critical Insight
+
+> **"Application logic could deduplicate" ≠ "Safe to remove database constraint"**
+
+Even without ON CONFLICT clauses, constraints prevent silent data corruption from:
+- Race conditions during concurrent inserts
+- Bugs in application deduplication logic
+- Import/migration scripts that bypass application layer
+- Direct database writes (admin tools, data fixes)
+
+### Example: Epic 1.11 Story 1.11.3
+
+See `docs/analysis/unused-indexes-report-story-1.11.3-20251122.md` for comprehensive analysis of this pattern.
+
+**Result**: 19 indexes with `idx_scan = 0`, but **4 unique constraints were critical**:
+- 3 used in ON CONFLICT clauses
+- 1 used for business rule enforcement (preventing duplicate graph edges)
+
+Only **15 indexes were safe to drop**.
