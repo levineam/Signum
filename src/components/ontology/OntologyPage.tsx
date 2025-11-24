@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Flag, ListChecks, Loader2, Pencil, Plus, Target, Users, Zap } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getPinnedNotes, initializePinnedNotes, updateNote } from '@/lib/notes'
-import { Note } from '@/types/note'
+import { ConfidenceLevel, Note } from '@/types/note'
 import { OntologyAnalysisButton } from '../notes/OntologyAnalysisButton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -62,7 +62,14 @@ function mergeItems(note: Note, names: string[]) {
   const existingItems = Array.isArray(note.metadata?.items) ? note.metadata.items : []
   return names.map((name) => {
     const existing = existingItems.find((item) => item.name === name)
-    return existing ?? { name, confidence: 'high', excerpts: [] }
+    if (existing) {
+      return {
+        name: existing.name,
+        confidence: (existing.confidence ?? 'high') as ConfidenceLevel,
+        excerpts: Array.isArray(existing.excerpts) ? existing.excerpts : []
+      }
+    }
+    return { name, confidence: 'high' as ConfidenceLevel, excerpts: [] }
   })
 }
 
