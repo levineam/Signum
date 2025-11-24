@@ -1,6 +1,20 @@
 -- Epic 1.11 Story 1.11.4: Add SET search_path to Remaining Functions
 -- Adds "SET search_path = public" to 6 functions to prevent search_path injection attacks
 -- All function logic, parameters, and attributes (SECURITY DEFINER, STABLE) are preserved
+-- Also drops legacy function signatures that are no longer used
+
+-- ============================================================================
+-- Drop Legacy Function Signatures (Without search_path)
+-- ============================================================================
+
+-- These are orphaned legacy functions with old signatures that are no longer called
+-- by the application code. The new versions (with auth.uid() internally) have search_path set.
+
+-- Drop old increment_entity_centrality(UUID, UUID) - replaced by increment_entity_centrality(UUID)
+DROP FUNCTION IF EXISTS increment_entity_centrality(UUID, UUID);
+
+-- Drop old increment_term_frequency(UUID, TEXT, INT) - replaced by increment_term_frequency(TEXT, INT)
+DROP FUNCTION IF EXISTS increment_term_frequency(UUID, TEXT, INT);
 
 -- ============================================================================
 -- SECURITY DEFINER Functions (CRITICAL - prevents privilege escalation)
