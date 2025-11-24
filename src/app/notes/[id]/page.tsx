@@ -564,7 +564,7 @@ const linkSelectionToNote = async (targetNoteId: string, createdNote?: Note) => 
                   {content ? (
                     isDOMPurifyReady ? (
                       <div
-                        className="text-base leading-relaxed prose prose-sm max-w-none px-2"
+                        className="text-base leading-relaxed text-foreground rich-editor-body"
                         dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
                         onClick={(e) => {
                           // Handle link clicks in read-only mode

@@ -298,11 +298,11 @@ export function NoteViewer({
               autoFocus={false}
             />
           ) : (
-            <div className="prose prose-sm max-w-none px-2">
+            <>
               {note.content ? (
                 isDOMPurifyReady ? (
                   <div
-                    className="text-base leading-relaxed"
+                    className="text-base leading-relaxed text-foreground rich-editor-body"
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
                   />
                 ) : (
@@ -311,7 +311,7 @@ export function NoteViewer({
               ) : (
                 <p className="text-muted-foreground italic">This note has no content.</p>
               )}
-            </div>
+            </>
           )}
         </div>
       </DialogContent>
