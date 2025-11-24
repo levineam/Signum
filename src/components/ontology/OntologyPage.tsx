@@ -35,6 +35,8 @@ const SECTION_ORDER: SectionKey[] = [
   'tasks'
 ]
 
+const DEFAULT_MEANING_INDEX = '68'
+
 function resolveSectionKey(note: Note): SectionKey | null {
   if (note.metadata?.ontologyCategory && SECTION_ORDER.includes(note.metadata.ontologyCategory as SectionKey)) {
     return note.metadata.ontologyCategory as SectionKey
@@ -83,7 +85,7 @@ export function OntologyPage() {
   const [listDrafts, setListDrafts] = useState<Partial<Record<SectionKey, string[]>>>({})
   const [newListItem, setNewListItem] = useState<Partial<Record<SectionKey, string>>>({})
   const [meaningEditing, setMeaningEditing] = useState(false)
-  const [meaningDraft, setMeaningDraft] = useState('68')
+  const [meaningDraft, setMeaningDraft] = useState(DEFAULT_MEANING_INDEX)
 
   const loadNotes = useCallback(async () => {
     if (!user) return
@@ -91,6 +93,11 @@ export function OntologyPage() {
     setPinnedNotes(notes)
     setIsLoading(false)
   }, [user])
+
+  useEffect(() => {
+    // Reset meaning draft when switching users to avoid leaking prior user state
+    setMeaningDraft(DEFAULT_MEANING_INDEX)
+  }, [user?.id])
 
   useEffect(() => {
     if (!user) {
@@ -109,8 +116,10 @@ export function OntologyPage() {
     const missionNote = pinnedNotes.find((note) => resolveSectionKey(note) === 'mission')
     if (missionNote?.metadata?.meaningIndex !== undefined) {
       setMeaningDraft(String(missionNote.metadata.meaningIndex))
+    } else if (!meaningEditing) {
+      setMeaningDraft(DEFAULT_MEANING_INDEX)
     }
-  }, [pinnedNotes])
+  }, [pinnedNotes, meaningEditing])
 
   const meaningIndex = useMemo(() => {
     const missionNote = pinnedNotes.find((note) => resolveSectionKey(note) === 'mission')
