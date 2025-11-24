@@ -12,6 +12,25 @@ import {
 } from '@/types/note'
 import * as supabaseNotes from '@/lib/supabase/notes'
 
+const ONTOLOGY_CATEGORY_ORDER: Record<string, number> = {
+  'higher-power': 0,
+  beliefs: 1,
+  values: 2,
+  people: 3,
+  mission: 4,
+  goals: 5,
+  projects: 6,
+  tasks: 7
+}
+
+function getOntologyCategoryKey(note: Note): string {
+  if (note.metadata?.ontologyCategory) return note.metadata.ontologyCategory
+  if (note.noteType === 'ontology-value') return 'values'
+  if (note.noteType === 'ontology-belief') return 'beliefs'
+  if (note.noteType === 'ontology-aim') return 'goals'
+  return note.title.toLowerCase()
+}
+
 /**
  * Get all notes for authenticated user (calls Supabase)
  */
@@ -81,35 +100,42 @@ export async function getNoteById(id: string, userId: string): Promise<Note | nu
 }
 
 /**
- * Initialize pinned ontology notes (Values, Beliefs, Aims) for authenticated user
- * Creates any missing ontology notes individually to recover from partial data
+ * Initialize pinned ontology notes (Values, Beliefs, Aims) and new custom ontology sections
+ * Creates any missing notes individually to recover from partial data
  */
 export async function initializePinnedNotes(userId: string): Promise<void> {
   try {
     // Check which ontology notes exist
-    const existingOntology = await supabaseNotes.getOntologyNotes(userId)
-    const existingTypes = new Set(existingOntology.map(note => note.noteType))
+    const existingOntology = await supabaseNotes.getOntologyDashboardNotes(userId)
+    const existingKeys = new Set(existingOntology.map(getOntologyCategoryKey))
 
     // Define required ontology notes
     const requiredNotes: Array<{
-      type: 'ontology-value' | 'ontology-belief' | 'ontology-aim'
+      key: string
+      type: Note['noteType']
       title: string
       content: string
+      metadata?: Note['metadata']
     }> = [
-      { type: 'ontology-value', title: 'Values', content: '' },
-      { type: 'ontology-belief', title: 'Beliefs', content: '' },
-      { type: 'ontology-aim', title: 'Goals', content: JSON.stringify({ todos: '', goals: '' }) }
+      { key: 'higher-power', type: 'custom', title: 'Higher Order / Power', content: '', metadata: { ontologyCategory: 'higher-power' } },
+      { key: 'beliefs', type: 'ontology-belief', title: 'Beliefs', content: '', metadata: { ontologyCategory: 'beliefs' } },
+      { key: 'values', type: 'ontology-value', title: 'Values', content: '', metadata: { ontologyCategory: 'values' } },
+      { key: 'people', type: 'custom', title: 'People', content: '', metadata: { ontologyCategory: 'people', items: [] } },
+      { key: 'mission', type: 'custom', title: 'Mission', content: '', metadata: { ontologyCategory: 'mission' } },
+      { key: 'goals', type: 'ontology-aim', title: 'Goals', content: JSON.stringify({ todos: '', goals: '' }), metadata: { ontologyCategory: 'goals' } },
+      { key: 'projects', type: 'custom', title: 'Projects', content: '', metadata: { ontologyCategory: 'projects', items: [] } },
+      { key: 'tasks', type: 'custom', title: 'Tasks', content: '', metadata: { ontologyCategory: 'tasks', items: [] } }
     ]
 
     // Create missing notes individually
     for (const noteConfig of requiredNotes) {
-      if (!existingTypes.has(noteConfig.type)) {
+      if (!existingKeys.has(noteConfig.key)) {
         await createNote({
           title: noteConfig.title,
           content: noteConfig.content,
           noteType: noteConfig.type,
           isPinned: true,
-          metadata: {}
+          metadata: noteConfig.metadata || {}
         }, userId)
       }
     }
@@ -119,11 +145,16 @@ export async function initializePinnedNotes(userId: string): Promise<void> {
 }
 
 /**
- * Get pinned ontology notes (Values, Beliefs, Aims) for authenticated user
+ * Get pinned ontology notes (Values, Beliefs, Aims) plus custom ontology sections for authenticated user
  */
 export async function getPinnedNotes(userId: string): Promise<Note[]> {
   try {
-    return await supabaseNotes.getOntologyNotes(userId)
+    const notes = await supabaseNotes.getOntologyDashboardNotes(userId)
+    return notes.sort((a, b) => {
+      const aOrder = ONTOLOGY_CATEGORY_ORDER[getOntologyCategoryKey(a)] ?? 999
+      const bOrder = ONTOLOGY_CATEGORY_ORDER[getOntologyCategoryKey(b)] ?? 999
+      return aOrder - bOrder
+    })
   } catch (error) {
     console.error('Error fetching pinned notes:', error)
     return []

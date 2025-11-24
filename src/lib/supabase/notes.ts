@@ -82,6 +82,30 @@ export async function getOntologyNotes(userId: string): Promise<Note[]> {
 }
 
 /**
+ * Get pinned ontology-related notes for the ontology page, including custom categories.
+ */
+export async function getOntologyDashboardNotes(userId: string): Promise<Note[]> {
+  const { data, error } = await supabase
+    .from('notes')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('is_pinned', true)
+    .in('note_type', ['ontology-value', 'ontology-belief', 'ontology-aim', 'custom'])
+
+  if (error) {
+    console.error('Error fetching ontology dashboard notes:', error)
+    throw error
+  }
+
+  const notes = await mapDatabaseNotesToNotes(data || [], userId)
+
+  return notes.filter((note) =>
+    ['ontology-value', 'ontology-belief', 'ontology-aim'].includes(note.noteType) ||
+    Boolean(note.metadata?.ontologyCategory)
+  )
+}
+
+/**
  * Get a single note by ID.
  */
 export async function getNoteById(

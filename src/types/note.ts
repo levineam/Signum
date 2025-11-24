@@ -22,6 +22,20 @@ export type NoteType =
   | 'custom'           // User-created standalone note (replaces old 'regular')
 
 /**
+ * Ontology categories used to render the ontology page.
+ * Some categories map to dedicated note types, others use custom notes.
+ */
+export type OntologyCategory =
+  | 'higher-power'
+  | 'beliefs'
+  | 'values'
+  | 'people'
+  | 'mission'
+  | 'goals'
+  | 'projects'
+  | 'tasks'
+
+/**
  * Link type for bidirectional relationships between notes.
  */
 export type LinkType =
@@ -95,6 +109,10 @@ export interface NoteMetadata {
   tokensUsed?: number              // Number of tokens used
   model?: string                   // AI model used for generation
   generatedAt?: string             // Timestamp when answer was generated
+
+  // Ontology display metadata
+  ontologyCategory?: OntologyCategory
+  meaningIndex?: number
 }
 
 // ============================================================================
