@@ -92,11 +92,13 @@ export function deduplicateOntologyItems(
 /**
  * Convert ontology items to Note objects for storage
  */
+const fallbackId = () => `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`
+
 export function ontologyItemsToNotes(
   items: OntologyItem[],
   noteType: 'ontology-value' | 'ontology-belief' | 'ontology-aim'
 ): Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[] {
-  return items.map((item) => ({
+  return items.map((item, index) => ({
     userId: '', // Will be set by caller
     title: item.text,
     content: '', // Keep empty - data is in metadata
@@ -105,8 +107,11 @@ export function ontologyItemsToNotes(
     metadata: {
       confidence: item.confidence,
       items: [{
+        id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : fallbackId(),
         name: item.text,
         confidence: item.confidence,
+        parentId: undefined,
+        order: index,
         excerpts: item.sourceExcerpts
       }]
     }
