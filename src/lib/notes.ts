@@ -9,7 +9,8 @@ import {
   Note,
   CreateNoteRequest,
   UpdateNoteRequest,
-  HierarchicalOntologyItem
+  HierarchicalOntologyItem,
+  OntologyCategory
 } from '@/types/note'
 import * as supabaseNotes from '@/lib/supabase/notes'
 import { normalizeOntologyItems } from '@/lib/ontology/hierarchy'
@@ -192,7 +193,7 @@ async function migrateLegacyOntologyNotes(userId: string, notes: Note[]): Promis
     await updateNote(firstNote.id, {
       metadata: {
         ...firstNote.metadata,
-        ontologyCategory: getOntologyCategoryKey({ ...firstNote, noteType } as Note),
+        ontologyCategory: getOntologyCategoryKey({ ...firstNote, noteType } as Note) as OntologyCategory,
         items: allItems
       }
     }, userId)
