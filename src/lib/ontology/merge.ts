@@ -170,6 +170,8 @@ export async function mergeOntologyItems(
         if (index !== -1) {
           updatedItems[index] = {
             ...existing,
+            id: existing.id ?? generateId(),
+            order: typeof existing.order === 'number' ? existing.order : index,
             confidence: newConfidence,
             excerpts: mergedExcerpts
           }
