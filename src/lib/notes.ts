@@ -14,6 +14,7 @@ import {
 } from '@/types/note'
 import * as supabaseNotes from '@/lib/supabase/notes'
 import { normalizeOntologyItems } from '@/lib/ontology/hierarchy'
+import { supabase } from '@/lib/supabase'
 
 const ONTOLOGY_CATEGORY_ORDER: Record<string, number> = {
   'higher-power': 0,
@@ -112,6 +113,9 @@ export async function initializePinnedNotes(userId: string): Promise<void> {
     // Get all ontology notes (including old multi-note pattern)
     const existingOntology = await supabaseNotes.getOntologyDashboardNotes(userId)
 
+    // Migrate custom notes missing ontologyCategory metadata (pre-1.11 data)
+    await backfillOntologyCategoryMetadata(userId)
+
     // Migrate legacy multi-note pattern to single-note-with-items
     await migrateLegacyOntologyNotes(userId, existingOntology)
 
@@ -151,6 +155,55 @@ export async function initializePinnedNotes(userId: string): Promise<void> {
     }
   } catch (error) {
     console.error('Error initializing pinned notes:', error)
+  }
+}
+
+/**
+ * Backfill ontologyCategory metadata for custom pinned notes created before Story 1.11
+ * Ensures existing Mission/People/Higher Power/Projects/Tasks notes are visible
+ */
+async function backfillOntologyCategoryMetadata(userId: string): Promise<void> {
+  try {
+    // Map note titles to ontologyCategory keys for known custom sections
+    const titleToCategory: Record<string, OntologyCategory> = {
+      'Higher Order / Power': 'higher-power',
+      'Higher Order/Power': 'higher-power',
+      'People': 'people',
+      'Mission': 'mission',
+      'Projects': 'projects',
+      'Tasks': 'tasks'
+    }
+
+    // Query custom pinned notes directly
+    const customNotes = await supabase
+      .from('notes')
+      .select('id, title, metadata')
+      .eq('user_id', userId)
+      .eq('note_type', 'custom')
+      .eq('is_pinned', true)
+
+    if (customNotes.error) {
+      console.error('Error fetching custom notes for backfill:', customNotes.error)
+      return
+    }
+
+    // Update notes missing ontologyCategory
+    for (const note of customNotes.data || []) {
+      const metadata = (note.metadata as Record<string, unknown>) || {}
+      if (!metadata.ontologyCategory) {
+        const category = titleToCategory[note.title as string]
+        if (category) {
+          await supabase
+            .from('notes')
+            .update({ metadata: { ...metadata, ontologyCategory: category } })
+            .eq('id', note.id)
+            .eq('user_id', userId)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error backfilling ontologyCategory metadata:', error)
+    // Non-fatal - continue with rest of initialization
   }
 }
 
