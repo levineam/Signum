@@ -48,6 +48,22 @@ export type LinkType =
  */
 export type ConfidenceLevel = 'high' | 'medium' | 'low'
 
+/**
+ * Hierarchical ontology item for Execution Stack (Goals → Projects → Tasks).
+ */
+export interface HierarchicalOntologyItem {
+  id: string
+  name: string
+  confidence: ConfidenceLevel
+  parentId?: string
+  order: number
+  excerpts: Array<{
+    noteId: string
+    noteTitle: string
+    excerpt: string
+  }>
+}
+
 // ============================================================================
 // Metadata Interfaces
 // ============================================================================
@@ -69,15 +85,7 @@ export interface NoteMetadata {
   confidence?: ConfidenceLevel  // AI confidence in extraction
   extractedFrom?: string[]      // Array of source note UUIDs
   aiReasoning?: string          // AI explanation for extraction
-  items?: Array<{               // Structured ontology items with excerpts
-    name: string
-    confidence: ConfidenceLevel
-    excerpts: Array<{
-      noteId: string
-      noteTitle: string
-      excerpt: string
-    }>
-  }>
+  items?: HierarchicalOntologyItem[] // Structured ontology items with hierarchy + excerpts
 
   // General metadata
   tags?: string[]               // User-defined tags
