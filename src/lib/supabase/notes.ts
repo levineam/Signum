@@ -40,6 +40,7 @@ export async function getJournalEntries(userId: string): Promise<Note[]> {
 
 /**
  * Get regular notes (custom and reflection) for a user.
+ * Excludes custom notes used as ontology scaffolding (those with ontologyCategory metadata).
  */
 export async function getRegularNotes(userId: string): Promise<Note[]> {
   const { data, error } = await supabase
@@ -54,7 +55,9 @@ export async function getRegularNotes(userId: string): Promise<Note[]> {
     throw error
   }
 
-  return await mapDatabaseNotesToNotes(data || [], userId)
+  const notes = await mapDatabaseNotesToNotes(data || [], userId)
+  // Filter out custom notes that are ontology scaffolding (have ontologyCategory in metadata)
+  return notes.filter(note => !note.metadata?.ontologyCategory)
 }
 
 /**
