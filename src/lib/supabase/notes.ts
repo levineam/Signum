@@ -47,6 +47,7 @@ export async function getRegularNotes(userId: string): Promise<Note[]> {
     .select('*')
     .eq('user_id', userId)
     .in('note_type', ['custom', 'reflection'])
+    .is('metadata->>ontologyCategory', null)
     .order('created_at', { ascending: false })
 
   if (error) {
