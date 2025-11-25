@@ -8,9 +8,11 @@
 import {
   Note,
   CreateNoteRequest,
-  UpdateNoteRequest
+  UpdateNoteRequest,
+  HierarchicalOntologyItem
 } from '@/types/note'
 import * as supabaseNotes from '@/lib/supabase/notes'
+import { normalizeOntologyItems } from '@/lib/ontology/hierarchy'
 
 const ONTOLOGY_CATEGORY_ORDER: Record<string, number> = {
   'higher-power': 0,
@@ -169,18 +171,20 @@ async function migrateLegacyOntologyNotes(userId: string, notes: Note[]): Promis
 
     // Collect all items from all notes
     const allItems = notesOfType.flatMap((note, noteIndex) => {
-      // Extract item from note title/metadata
-      const itemName = note.title
-      const confidence = note.metadata?.confidence || 'high'
-      const excerpts = note.metadata?.items?.[0]?.excerpts || note.metadata?.excerpts || []
+      const normalized = normalizeOntologyItems(
+        note.metadata?.items as HierarchicalOntologyItem[] | undefined
+      ).normalized
+      const firstItem = normalized[0]
+      const fallbackId = crypto?.randomUUID?.() || `${Date.now()}-${noteIndex}`
+      const fallbackConfidence = note.metadata?.confidence || 'high'
 
       return {
-        id: note.metadata?.items?.[0]?.id || crypto?.randomUUID?.() || `${Date.now()}-${noteIndex}`,
-        name: itemName,
-        confidence,
-        order: noteIndex,
-        parentId: undefined,
-        excerpts
+        id: firstItem?.id ?? fallbackId,
+        name: firstItem?.name ?? note.title,
+        confidence: firstItem?.confidence ?? fallbackConfidence,
+        order: typeof firstItem?.order === 'number' ? firstItem.order : noteIndex,
+        parentId: firstItem?.parentId,
+        excerpts: firstItem?.excerpts ?? []
       }
     })
 
