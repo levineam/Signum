@@ -102,12 +102,19 @@ export async function getNoteById(id: string, userId: string): Promise<Note | nu
 /**
  * Initialize pinned ontology notes (Values, Beliefs, Aims) and new custom ontology sections
  * Creates any missing notes individually to recover from partial data
+ * Migrates legacy multi-note pattern to single-note-with-items pattern
  */
 export async function initializePinnedNotes(userId: string): Promise<void> {
   try {
-    // Check which ontology notes exist
+    // Get all ontology notes (including old multi-note pattern)
     const existingOntology = await supabaseNotes.getOntologyDashboardNotes(userId)
-    const existingKeys = new Set(existingOntology.map(getOntologyCategoryKey))
+
+    // Migrate legacy multi-note pattern to single-note-with-items
+    await migrateLegacyOntologyNotes(userId, existingOntology)
+
+    // Reload after migration
+    const currentOntology = await supabaseNotes.getOntologyDashboardNotes(userId)
+    const existingKeys = new Set(currentOntology.map(getOntologyCategoryKey))
 
     // Define required ontology notes
     const requiredNotes: Array<{
@@ -118,11 +125,11 @@ export async function initializePinnedNotes(userId: string): Promise<void> {
       metadata?: Note['metadata']
     }> = [
       { key: 'higher-power', type: 'custom', title: 'Higher Order / Power', content: '', metadata: { ontologyCategory: 'higher-power' } },
-      { key: 'beliefs', type: 'ontology-belief', title: 'Beliefs', content: '', metadata: { ontologyCategory: 'beliefs' } },
-      { key: 'values', type: 'ontology-value', title: 'Values', content: '', metadata: { ontologyCategory: 'values' } },
+      { key: 'beliefs', type: 'ontology-belief', title: 'Beliefs', content: '', metadata: { ontologyCategory: 'beliefs', items: [] } },
+      { key: 'values', type: 'ontology-value', title: 'Values', content: '', metadata: { ontologyCategory: 'values', items: [] } },
       { key: 'people', type: 'custom', title: 'People', content: '', metadata: { ontologyCategory: 'people', items: [] } },
       { key: 'mission', type: 'custom', title: 'Mission', content: '', metadata: { ontologyCategory: 'mission' } },
-      { key: 'goals', type: 'ontology-aim', title: 'Goals', content: JSON.stringify({ todos: '', goals: '' }), metadata: { ontologyCategory: 'goals' } },
+      { key: 'goals', type: 'ontology-aim', title: 'Goals', content: JSON.stringify({ todos: '', goals: '' }), metadata: { ontologyCategory: 'goals', items: [] } },
       { key: 'projects', type: 'custom', title: 'Projects', content: '', metadata: { ontologyCategory: 'projects', items: [] } },
       { key: 'tasks', type: 'custom', title: 'Tasks', content: '', metadata: { ontologyCategory: 'tasks', items: [] } }
     ]
@@ -141,6 +148,55 @@ export async function initializePinnedNotes(userId: string): Promise<void> {
     }
   } catch (error) {
     console.error('Error initializing pinned notes:', error)
+  }
+}
+
+/**
+ * Migrate legacy ontology notes (one note per item) to new format (one note with items array)
+ * Story 2.11: Consolidate multi-note pattern from AI extraction
+ */
+async function migrateLegacyOntologyNotes(userId: string, notes: Note[]): Promise<void> {
+  const noteTypes = ['ontology-value', 'ontology-belief', 'ontology-aim'] as const
+
+  for (const noteType of noteTypes) {
+    const notesOfType = notes.filter(n => n.noteType === noteType)
+
+    // If there's 0 or 1 note, no migration needed
+    if (notesOfType.length <= 1) continue
+
+    // Multiple notes found - consolidate into first note
+    const [firstNote, ...restNotes] = notesOfType
+
+    // Collect all items from all notes
+    const allItems = notesOfType.flatMap((note, noteIndex) => {
+      // Extract item from note title/metadata
+      const itemName = note.title
+      const confidence = note.metadata?.confidence || 'high'
+      const excerpts = note.metadata?.items?.[0]?.excerpts || note.metadata?.excerpts || []
+
+      return {
+        id: note.metadata?.items?.[0]?.id || crypto?.randomUUID?.() || `${Date.now()}-${noteIndex}`,
+        name: itemName,
+        confidence,
+        order: noteIndex,
+        parentId: undefined,
+        excerpts
+      }
+    })
+
+    // Update first note with consolidated items
+    await updateNote(firstNote.id, {
+      metadata: {
+        ...firstNote.metadata,
+        ontologyCategory: getOntologyCategoryKey({ ...firstNote, noteType } as Note),
+        items: allItems
+      }
+    }, userId)
+
+    // Delete redundant notes
+    for (const note of restNotes) {
+      await deleteNote(note.id, userId)
+    }
   }
 }
 
