@@ -145,6 +145,7 @@ export function OntologyPage() {
   const [newListItem, setNewListItem] = useState<Partial<Record<SectionKey, string>>>({})
   const [meaningEditing, setMeaningEditing] = useState(false)
   const [meaningDraft, setMeaningDraft] = useState(DEFAULT_MEANING_INDEX)
+  const [expandedGoals, setExpandedGoals] = useState<Record<string, boolean>>({})
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({})
   const [unassignedCollapsed, setUnassignedCollapsed] = useState({ projects: true, tasks: true })
   const [itemDrafts, setItemDrafts] = useState<{ goal: string; project: string; task: string }>({
