@@ -481,10 +481,11 @@ export function OntologyPage() {
     setItemDrafts((prev) => ({ ...prev, goal: '' }))
   }
 
-  const handleAddProject = async () => {
+  const handleAddProject = async (overrideParentId?: string) => {
     const name = itemDrafts.project.trim()
     if (!name) return
-    const parentId = parentDrafts.projectParent === 'none' ? undefined : parentDrafts.projectParent
+    const parentIdRaw = overrideParentId ?? parentDrafts.projectParent
+    const parentId = parentIdRaw === 'none' ? undefined : parentIdRaw
     const siblingCount = executionStack.projectItems.filter(
       (item) => (item.parentId ?? '') === (parentId ?? '')
     ).length
@@ -501,10 +502,11 @@ export function OntologyPage() {
     setParentDrafts((prev) => ({ ...prev, projectParent: 'none' }))
   }
 
-  const handleAddTask = async () => {
+  const handleAddTask = async (overrideParentId?: string) => {
     const name = itemDrafts.task.trim()
     if (!name) return
-    const parentId = parentDrafts.taskParent === 'none' ? undefined : parentDrafts.taskParent
+    const parentIdRaw = overrideParentId ?? parentDrafts.taskParent
+    const parentId = parentIdRaw === 'none' ? undefined : parentIdRaw
     const siblingCount = executionStack.taskItems.filter(
       (item) => (item.parentId ?? '') === (parentId ?? '')
     ).length
@@ -1058,18 +1060,14 @@ export function OntologyPage() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault()
-                            setParentDrafts((prev) => ({ ...prev, projectParent: goal.id }))
-                            handleAddProject()
+                            handleAddProject(goal.id)
                           }
                         }}
                       />
                       <div className="flex gap-2">
                         <Button
                           size="sm"
-                          onClick={() => {
-                            setParentDrafts((prev) => ({ ...prev, projectParent: goal.id }))
-                            handleAddProject()
-                          }}
+                          onClick={() => handleAddProject(goal.id)}
                           disabled={savingExecution}
                         >
                           <Plus className="h-4 w-4 mr-1" />
@@ -1203,17 +1201,13 @@ export function OntologyPage() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault()
-                                        setParentDrafts((prev) => ({ ...prev, taskParent: project.id }))
-                                        handleAddTask()
+                                        handleAddTask(project.id)
                                       }
                                     }}
                                   />
                                   <Button
                                     size="sm"
-                                    onClick={() => {
-                                      setParentDrafts((prev) => ({ ...prev, taskParent: project.id }))
-                                      handleAddTask()
-                                    }}
+                                    onClick={() => handleAddTask(project.id)}
                                     disabled={savingExecution}
                                   >
                                     <Plus className="h-4 w-4 mr-1" />
@@ -1340,6 +1334,126 @@ export function OntologyPage() {
               </section>
             )
           })}
+
+          {/* Unassigned Projects Section */}
+          {executionStack.hierarchy.unassignedProjects.length > 0 && (
+            <section
+              role="region"
+              aria-label="Unassigned projects"
+              className="min-w-[280px] max-w-[320px]"
+            >
+              <Card className="h-full border border-gray-200">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-700">Unassigned Projects</div>
+                      <p className="text-xs text-muted-foreground">
+                        {executionStack.hierarchy.unassignedProjects.length} projects
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setUnassignedCollapsed((prev) => ({ ...prev, projects: !prev.projects }))}
+                      aria-label={unassignedCollapsed.projects ? 'Expand unassigned projects' : 'Collapse unassigned projects'}
+                    >
+                      {unassignedCollapsed.projects ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </div>
+
+                  {!unassignedCollapsed.projects && (
+                    <div className="space-y-2">
+                      {executionStack.hierarchy.unassignedProjects.map((project) => (
+                        <div key={project.id} className="p-2 bg-gray-50 rounded text-sm">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-medium">{project.name}</span>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startEditItem('projects', project)}
+                                aria-label={`Edit ${project.name}`}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeleteTarget({ category: 'projects', item: project })}
+                                aria-label={`Delete ${project.name}`}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </section>
+          )}
+
+          {/* Unassigned Tasks Section */}
+          {executionStack.hierarchy.unassignedTasks.length > 0 && (
+            <section
+              role="region"
+              aria-label="Unassigned tasks"
+              className="min-w-[280px] max-w-[320px]"
+            >
+              <Card className="h-full border border-gray-200">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-700">Unassigned Tasks</div>
+                      <p className="text-xs text-muted-foreground">
+                        {executionStack.hierarchy.unassignedTasks.length} tasks
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setUnassignedCollapsed((prev) => ({ ...prev, tasks: !prev.tasks }))}
+                      aria-label={unassignedCollapsed.tasks ? 'Expand unassigned tasks' : 'Collapse unassigned tasks'}
+                    >
+                      {unassignedCollapsed.tasks ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </div>
+
+                  {!unassignedCollapsed.tasks && (
+                    <div className="space-y-2">
+                      {executionStack.hierarchy.unassignedTasks.map((task) => (
+                        <div key={task.id} className="p-2 bg-gray-50 rounded text-sm">
+                          <div className="flex items-start justify-between gap-2">
+                            <span>{task.name}</span>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startEditItem('tasks', task)}
+                                aria-label={`Edit ${task.name}`}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeleteTarget({ category: 'tasks', item: task })}
+                                aria-label={`Delete ${task.name}`}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </section>
+          )}
         </div>
       </div>
 
