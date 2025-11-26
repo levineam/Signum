@@ -5,10 +5,8 @@ import { toast } from 'sonner'
 import {
   ArrowDown,
   ArrowUp,
-  Box,
   ChevronDown,
   ChevronRight,
-  Flag,
   Loader2,
   Pencil,
   Plus,
@@ -145,9 +143,7 @@ export function OntologyPage() {
   const [newListItem, setNewListItem] = useState<Partial<Record<SectionKey, string>>>({})
   const [meaningEditing, setMeaningEditing] = useState(false)
   const [meaningDraft, setMeaningDraft] = useState(DEFAULT_MEANING_INDEX)
-  const [expandedGoals, setExpandedGoals] = useState<Record<string, boolean>>({})
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({})
-  const [unassignedCollapsed, setUnassignedCollapsed] = useState({ projects: true, tasks: true })
   const [itemDrafts, setItemDrafts] = useState<{ goal: string; project: string; task: string }>({
     goal: '',
     project: '',
@@ -160,7 +156,7 @@ export function OntologyPage() {
   const [editTarget, setEditTarget] = useState<{ category: 'goals' | 'projects' | 'tasks'; id: string } | null>(null)
   const [editDraft, setEditDraft] = useState<{ name: string; parentId?: string }>({ name: '', parentId: undefined })
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
-  const [deleteChoice, setDeleteChoice] = useState<'unassign' | 'delete' | 'reassign' | 'cancel'>('unassign')
+  const [deleteChoice, setDeleteChoice] = useState<'delete' | 'reassign' | 'cancel'>('delete')
   const [reassignParent, setReassignParent] = useState<string | undefined>(undefined)
   const [normalizing, setNormalizing] = useState(false)
 
@@ -234,18 +230,6 @@ export function OntologyPage() {
     ],
     [executionStack.hierarchy]
   )
-
-  useEffect(() => {
-    setExpandedGoals((prev) => {
-      const next = { ...prev }
-      executionStack.hierarchy.goals.forEach((goal) => {
-        if (next[goal.id] === undefined) {
-          next[goal.id] = true
-        }
-      })
-      return next
-    })
-  }, [executionStack.hierarchy.goals])
 
   useEffect(() => {
     setExpandedProjects((prev) => {
@@ -605,7 +589,7 @@ export function OntologyPage() {
   }
 
   const openDeleteDialog = (category: 'goals' | 'projects' | 'tasks', id: string) => {
-    setDeleteChoice('unassign')
+    setDeleteChoice('delete')
     setReassignParent(undefined)
     if (category === 'goals') {
       const target = executionStack.hierarchy.goals.find((goal) => goal.id === id)
@@ -647,7 +631,7 @@ export function OntologyPage() {
 
   const closeDeleteDialog = () => {
     setDeleteTarget(null)
-    setDeleteChoice('unassign')
+    setDeleteChoice('delete')
     setReassignParent(undefined)
   }
 
@@ -675,11 +659,7 @@ export function OntologyPage() {
       let updatedProjects = executionStack.projectItems.filter((project) => project.parentId !== goalId)
       const updatedGoalItems = remainingGoals
 
-      if (deleteChoice === 'unassign') {
-        updatedProjects = executionStack.projectItems.map((project) =>
-          project.parentId === goalId ? { ...project, parentId: undefined } : project
-        )
-      } else if (deleteChoice === 'reassign' && reassignParent) {
+      if (deleteChoice === 'reassign' && reassignParent) {
         updatedProjects = executionStack.projectItems.map((project) =>
           project.parentId === goalId ? { ...project, parentId: reassignParent } : project
         )
@@ -706,11 +686,7 @@ export function OntologyPage() {
       const affectedTasks = executionStack.taskItems.filter((task) => task.parentId === projectId)
       let updatedTasks = executionStack.taskItems
 
-      if (deleteChoice === 'unassign') {
-        updatedTasks = executionStack.taskItems.map((task) =>
-          task.parentId === projectId ? { ...task, parentId: undefined } : task
-        )
-      } else if (deleteChoice === 'reassign' && reassignParent) {
+      if (deleteChoice === 'reassign' && reassignParent) {
         const siblings = executionStack.taskItems.filter(
           (task) => (task.parentId ?? '') === reassignParent
         )
@@ -1016,223 +992,6 @@ export function OntologyPage() {
         </div>
 
         <div className="flex gap-4 overflow-x-auto pb-4">
-          <section
-            role="region"
-            aria-label={`Unassigned column: ${executionStack.hierarchy.unassignedProjects.length} projects, ${executionStack.hierarchy.unassignedTasks.length} tasks`}
-            className="min-w-[280px] max-w-[320px]"
-          >
-            <Card className="h-full border-dashed border-orange-200 bg-orange-50/50">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-semibold text-slate-800">
-                    <Box className="h-4 w-4 text-orange-500" />
-                    📦 Unassigned
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {executionStack.hierarchy.unassignedProjects.length} projects • {executionStack.hierarchy.unassignedTasks.length} tasks
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <button
-                    className="flex w-full items-center justify-between rounded-md border border-dashed border-orange-200 bg-white px-3 py-2 text-left"
-                    onClick={() =>
-                      setUnassignedCollapsed((prev) => ({ ...prev, projects: !prev.projects }))
-                    }
-                    aria-expanded={!unassignedCollapsed.projects}
-                  >
-                    <span className="font-medium">
-                      Unassigned Projects ({executionStack.hierarchy.unassignedProjects.length})
-                    </span>
-                    {unassignedCollapsed.projects ? (
-                      <ChevronRight className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </button>
-                  {!unassignedCollapsed.projects && (
-                    <ul className="space-y-2">
-                      {executionStack.hierarchy.unassignedProjects.length === 0 && (
-                        <li className="text-sm text-muted-foreground">No unassigned projects.</li>
-                      )}
-                      {executionStack.hierarchy.unassignedProjects.map((project) => (
-                        <li key={project.id} className="rounded-md border border-orange-100 bg-white p-2">
-                          {editTarget?.id === project.id && editTarget.category === 'projects' ? (
-                            <div className="space-y-2">
-                              <Input
-                                value={editDraft.name}
-                                onChange={(e) =>
-                                  setEditDraft((prev) => ({ ...prev, name: e.target.value }))
-                                }
-                              />
-                              <Select
-                                value={editDraft.parentId ?? 'none'}
-                                onValueChange={(value) =>
-                                  setEditDraft((prev) => ({
-                                    ...prev,
-                                    parentId: value === 'none' ? undefined : value
-                                  }))
-                                }
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Parent goal" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">None (Unassigned)</SelectItem>
-                                  {executionStack.hierarchy.goals.map((goal) => (
-                                    <SelectItem key={goal.id} value={goal.id}>
-                                      {goal.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={handleSaveEditItem} disabled={savingExecution}>
-                                  Save
-                                </Button>
-                                <Button size="sm" variant="ghost" onClick={cancelItemEdit}>
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <p className="font-medium text-slate-900">{project.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {project.tasks.length} tasks • Unassigned
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => startEditItem('projects', project)}
-                                  aria-label={`Edit ${project.name}`}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => openDeleteDialog('projects', project.id)}
-                                  aria-label={`Delete ${project.name}`}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <button
-                    className="flex w-full items-center justify-between rounded-md border border-dashed border-orange-200 bg-white px-3 py-2 text-left"
-                    onClick={() =>
-                      setUnassignedCollapsed((prev) => ({ ...prev, tasks: !prev.tasks }))
-                    }
-                    aria-expanded={!unassignedCollapsed.tasks}
-                  >
-                    <span className="font-medium">
-                      Unassigned Tasks ({executionStack.hierarchy.unassignedTasks.length})
-                    </span>
-                    {unassignedCollapsed.tasks ? (
-                      <ChevronRight className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </button>
-                  {!unassignedCollapsed.tasks && (
-                    <ul className="space-y-2">
-                      {executionStack.hierarchy.unassignedTasks.length === 0 && (
-                        <li className="text-sm text-muted-foreground">No unassigned tasks.</li>
-                      )}
-                      {executionStack.hierarchy.unassignedTasks.map((task) => (
-                        <li key={task.id} className="rounded-md border border-orange-100 bg-white p-2">
-                          {editTarget?.id === task.id && editTarget.category === 'tasks' ? (
-                            <div className="space-y-2">
-                              <Input
-                                value={editDraft.name}
-                                onChange={(e) =>
-                                  setEditDraft((prev) => ({ ...prev, name: e.target.value }))
-                                }
-                              />
-                              <Select
-                                value={editDraft.parentId ?? 'none'}
-                                onValueChange={(value) =>
-                                  setEditDraft((prev) => ({
-                                    ...prev,
-                                    parentId: value === 'none' ? undefined : value
-                                  }))
-                                }
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Parent project" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">None (Unassigned)</SelectItem>
-                                  {executionStack.hierarchy.goals.map((goal) =>
-                                    goal.projects.map((project) => (
-                                      <SelectItem key={project.id} value={project.id}>
-                                        {goal.name} • {project.name}
-                                      </SelectItem>
-                                    ))
-                                  )}
-                                  {executionStack.hierarchy.unassignedProjects.map((project) => (
-                                    <SelectItem key={project.id} value={project.id}>
-                                      Unassigned • {project.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={handleSaveEditItem} disabled={savingExecution}>
-                                  Save
-                                </Button>
-                                <Button size="sm" variant="ghost" onClick={cancelItemEdit}>
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <p className="font-medium text-slate-900">{task.name}</p>
-                                <p className="text-xs text-muted-foreground">Unassigned</p>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => startEditItem('tasks', task)}
-                                  aria-label={`Edit ${task.name}`}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => openDeleteDialog('tasks', task.id)}
-                                  aria-label={`Delete ${task.name}`}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-
           {executionStack.hierarchy.goals.map((goal, goalIndex) => {
             const counts = countDescendants(goal)
             return (
@@ -1246,33 +1005,14 @@ export function OntologyPage() {
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
-                          <Flag className="h-4 w-4" />
-                          🎯 {goal.name}
+                        <div className="text-sm font-semibold text-emerald-700">
+                          {goal.name}
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {goal.projects.length} projects • {counts.tasks} tasks
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleReorderItem('goals', goal.id, 'up')}
-                          aria-label={`Move ${goal.name} left`}
-                          disabled={savingExecution}
-                        >
-                          <ArrowUp className="h-4 w-4 rotate-90" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleReorderItem('goals', goal.id, 'down')}
-                          aria-label={`Move ${goal.name} right`}
-                          disabled={savingExecution}
-                        >
-                          <ArrowDown className="h-4 w-4 rotate-90" />
-                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1370,7 +1110,7 @@ export function OntologyPage() {
                                   )}
                                 </Button>
                                 <div>
-                                  <p className="font-medium text-slate-900">📦 {project.name}</p>
+                                  <p className="font-medium text-slate-900">{project.name}</p>
                                   <p className="text-xs text-muted-foreground">{project.tasks.length} tasks</p>
                                 </div>
                               </div>
@@ -1635,28 +1375,12 @@ export function OntologyPage() {
                   <input
                     type="radio"
                     name="delete-mode"
-                    value="unassign"
-                    checked={deleteChoice === 'unassign'}
-                    onChange={() => setDeleteChoice('unassign')}
-                  />
-                  <div>
-                    <div className="font-medium">Make Unassigned (default)</div>
-                    <p className="text-xs text-muted-foreground">
-                      Move children to the Unassigned section to preserve data.
-                    </p>
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="delete-mode"
                     value="delete"
                     checked={deleteChoice === 'delete'}
                     onChange={() => setDeleteChoice('delete')}
                   />
                   <div>
-                    <div className="font-medium text-destructive">Delete All</div>
+                    <div className="font-medium text-destructive">Delete All (default)</div>
                     <p className="text-xs text-muted-foreground">
                       Permanently remove this item and all of its descendants.
                     </p>
@@ -1677,7 +1401,7 @@ export function OntologyPage() {
                     }
                   />
                   <div>
-                    <div className="font-medium">Reassign</div>
+                    <div className="font-medium">Reassign to Another {deleteTarget.category === 'goals' ? 'Goal' : 'Project'}</div>
                     <p className="text-xs text-muted-foreground">
                       Move all descendants to a new parent before deleting this item.
                     </p>
