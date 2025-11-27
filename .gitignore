@@ -44,6 +44,7 @@ docs/dev-test-credentials.md
 next-env.d.ts
 # BMAD (local only)
 supabase/.temp/
-# BMAD (local only)
-.bmad-core/
-.bmad-*/
+# BMAD - now tracked in git for consistent workspace setup
+# Uncomment below to exclude BMAD from version control:
+# .bmad-core/
+# .bmad-*/
