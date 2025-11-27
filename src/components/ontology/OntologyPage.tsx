@@ -19,12 +19,12 @@ import { useAuth } from '@/contexts/AuthContext'
 import { getPinnedNotes, initializePinnedNotes, updateNote } from '@/lib/notes'
 import { ConfidenceLevel, HierarchicalOntologyItem, Note } from '@/types/note'
 import { OntologyAnalysisButton } from '../notes/OntologyAnalysisButton'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -262,6 +262,12 @@ export function OntologyPage() {
       return next
     })
   }, [allProjects])
+
+  const seededSample =
+    (projectsNote?.metadata?.executionSeedStatus?.seeded &&
+      projectsNote?.metadata?.executionSeedStatus?.reason === 'empty-seeded') ||
+    (tasksNote?.metadata?.executionSeedStatus?.seeded &&
+      tasksNote?.metadata?.executionSeedStatus?.reason === 'empty-seeded')
 
   useEffect(() => {
     if (!user) return
@@ -1148,12 +1154,17 @@ export function OntologyPage() {
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-1">
-                        <div className="text-sm font-semibold text-emerald-700">
-                          {goal.name}
+                        <div className="text-sm font-semibold text-emerald-700">{goal.name}</div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-muted-foreground">
+                            {goal.projects.length} projects • {counts.tasks} tasks
+                          </p>
+                          {seededSample && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                              Sample
+                            </Badge>
+                          )}
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          {goal.projects.length} projects • {counts.tasks} tasks
-                        </p>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
@@ -1207,6 +1218,7 @@ export function OntologyPage() {
                       />
                       <div className="flex gap-2">
                         <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => handleAddProject(goal.id)}
                           disabled={savingExecution}
@@ -1226,7 +1238,10 @@ export function OntologyPage() {
                         const isEditing =
                           editTarget?.id === project.id && editTarget.category === 'projects'
                         return (
-                          <div key={project.id} className="rounded-md border border-slate-200 bg-white">
+                          <div
+                            key={project.id}
+                            className="group rounded-md border border-slate-200/80 bg-white shadow-sm"
+                          >
                             <div className="flex items-start justify-between px-3 py-2">
                               <div className="flex items-start gap-2">
                                 <Button
@@ -1248,12 +1263,21 @@ export function OntologyPage() {
                                     <ChevronRight className="h-4 w-4" />
                                   )}
                                 </Button>
-                                <div>
-                                  <p className="font-medium text-slate-900">{project.name}</p>
-                                  <p className="text-xs text-muted-foreground">{project.tasks.length} tasks</p>
+                                <div className="space-y-1">
+                                  <p className="font-medium text-slate-900 leading-tight line-clamp-2">
+                                    {project.name}
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs text-muted-foreground">{project.tasks.length} tasks</p>
+                                    {seededSample && (
+                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                        Sample
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1346,32 +1370,33 @@ export function OntologyPage() {
                                       }
                                     }}
                                   />
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleAddTask(project.id)}
-                                    disabled={savingExecution}
-                                  >
-                                    <Plus className="h-4 w-4 mr-1" />
-                                    Add Task
-                                  </Button>
-                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleAddTask(project.id)}
+                                  disabled={savingExecution}
+                                >
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Add Task
+                                </Button>
+                              </div>
 
-                                <ul className="space-y-2" role="list" aria-label={`Tasks for ${project.name}`}>
-                                  {project.tasks.length === 0 && (
-                                    <li className="text-sm text-muted-foreground">No tasks yet.</li>
-                                  )}
-                                  {project.tasks.map((task) => {
-                                    const isEditingTask =
-                                      editTarget?.id === task.id && editTarget.category === 'tasks'
-                                    return (
-                                      <li
-                                        key={task.id}
-                                        className="rounded-md border border-slate-200 bg-white p-2"
-                                      >
-                                        {isEditingTask ? (
-                                          <div className="space-y-2">
-                                            <Input
-                                              value={editDraft.name}
+                              <ul className="space-y-2" role="list" aria-label={`Tasks for ${project.name}`}>
+                                {project.tasks.length === 0 && (
+                                  <li className="text-sm text-muted-foreground">No tasks yet.</li>
+                                )}
+                                {project.tasks.map((task) => {
+                                  const isEditingTask =
+                                    editTarget?.id === task.id && editTarget.category === 'tasks'
+                                  return (
+                                    <li
+                                      key={task.id}
+                                      className="group rounded-md border border-slate-200/80 bg-white p-2"
+                                    >
+                                      {isEditingTask ? (
+                                        <div className="space-y-2">
+                                          <Input
+                                            value={editDraft.name}
                                               onChange={(e) =>
                                                 setEditDraft((prev) => ({
                                                   ...prev,
@@ -1418,11 +1443,17 @@ export function OntologyPage() {
                                           </div>
                                         ) : (
                                           <div className="flex items-start justify-between gap-2">
-                                            <div>
-                                              <p className="font-medium text-slate-900">☑ {task.name}</p>
-                                              <p className="text-xs text-muted-foreground">Parent: {project.name}</p>
+                                            <div className="space-y-1">
+                                              <p className="text-sm font-medium text-slate-900 leading-snug line-clamp-2">
+                                                {task.name}
+                                              </p>
+                                              {seededSample && (
+                                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                                  Sample
+                                                </Badge>
+                                              )}
                                             </div>
-                                            <div className="flex items-center gap-1">
+                                            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                                               <Button
                                                 variant="ghost"
                                                 size="icon"
