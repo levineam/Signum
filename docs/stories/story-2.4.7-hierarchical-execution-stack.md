@@ -1,151 +1,57 @@
 # Story 2.4.7: Hierarchical Execution Stack (Goals → Projects → Tasks)
 
 **Epic:** 2 - AI-Powered Personal Ontology
-**Status:** Draft
+**Status:** In Progress
 **Created:** 2025-11-25
 **Related Issue:** TBD
 
 ## Story
 
 **As a** reflective journaler using the Ontology feature,
-**I want** to organize my Execution Stack as a 3-tier hierarchy (Goals → Projects → Tasks),
-**so that** I can see which projects serve each goal and which tasks belong to each project, providing clearer alignment between my daily actions and long-term aspirations.
+**I want** to organize my Execution Stack as a 3-tier hierarchy (Goals → Projects → Tasks) in goal-centric columns,
+**so that** I can see which projects serve each goal and which tasks belong to each project, keeping alignment visible inside each goal column.
 
 ## Context
 
-Currently, the Execution Stack displays three separate flat lists:
-- **Goals** - High-level aspirations
-- **Projects** - Active initiatives
-- **Tasks** - Specific action items
+Previously, the Execution Stack showed three separate flat lists. There was no visual relationship showing how tasks relate to projects or how projects serve goals; users had to mentally map these connections.
 
-**Problem:** There's no visual relationship showing how Tasks relate to Projects, or how Projects serve Goals. Users must mentally map these connections.
-
-**Solution:** Implement a 3-tier hierarchical structure where:
-1. Each column shows top-level items (Goals, Projects, Tasks)
-2. Goals can contain multiple Projects
-3. Projects can contain multiple Tasks
-4. Visual nesting shows the parent-child relationships
+**Solution (shipped):** Present one column per Goal. Each column shows its Projects, and each Project nests its Tasks. Unassigned items are still supported via “None (Unassigned)” when creating/editing.
 
 ## Acceptance Criteria
 
-1. ✅ **Three-Column Layout Preserved**: Execution Stack maintains the current 3-column responsive layout (Goals | Projects | Tasks)
-
-2. ✅ **Hierarchical Data Structure**:
-   - Goals display as top-level items in the Goals column
-   - Projects display beneath their parent Goal (with visual indentation/nesting)
-   - Tasks display beneath their parent Project (with visual indentation/nesting)
-
-3. ✅ **Parent Selection UX**:
-   - When adding a new Project, user can select which Goal it serves (dropdown or select UI)
-   - When adding a new Task, user can select which Project it belongs to (dropdown or select UI)
-   - Option to create "unassigned" items (Projects without a Goal, Tasks without a Project)
-   - **Unassigned Items Display**:
-     - Show in collapsible "📦 Unassigned" section at top of Projects and Tasks columns
-     - Visual separator (dashed border, muted background color)
-     - Collapsed by default after migration (expandable on click)
-     - Example: "📦 Unassigned Projects (3)" with count badge
-
-4. ✅ **Visual Hierarchy Indicators**:
-   - Clear visual distinction between parent and child items (indentation, connecting lines, or nested cards)
-   - Expandable/collapsible sections for Goals (show/hide their Projects) and Projects (show/hide their Tasks)
-   - Icon or indicator showing item type (Goal icon, Project icon, Task icon)
-
-5. ✅ **Edit Mode Enhancements**:
-   - Existing items can be reassigned to different parents via edit UI
-   - Items can be reordered within their parent (drag-and-drop or up/down buttons)
-   - **Parent Deletion Behavior**:
-     - Show warning with child count (e.g., "This Goal has 3 Projects and 12 Tasks")
-     - Deletion options (radio buttons):
-       1. **"Make Unassigned"** (default) - Move children to top-level "Unassigned" section, preserves all data
-       2. **"Delete All"** - Full cascade delete (Goal + all descendant Projects + all descendant Tasks)
-       3. **"Reassign"** - Prompt to select new parent (applies recursively to all descendants)
-       4. **"Cancel"** - Abort deletion
-   - Order is per-parent: each Goal has independent Project ordering, each Project has independent Task ordering
-
-6. ✅ **Data Migration**:
-   - Existing Goals, Projects, and Tasks are preserved
-   - Default behavior: existing items remain top-level (unassigned) until user explicitly assigns relationships
-   - No data loss during migration
-
-7. ✅ **Accessibility**:
-   - Keyboard navigation through hierarchy (Tab, Enter/Space for expand/collapse, Arrow keys for list navigation)
-   - Screen readers announce hierarchy level and relationships (e.g., "Goal: Build Signum, 3 projects, 12 tasks")
-   - Semantic HTML with ARIA enhancements: `role="list"` for columns, `role="listitem"` for items, `aria-level` for nesting depth
-   - Cross-column relationships via `aria-describedby` linking child items to parent items in adjacent columns
-
-8. ✅ **Performance**:
-   - Rendering optimized for hierarchies with up to 50 Goals, 200 Projects, 500 Tasks
-   - Smooth expand/collapse animations (60fps target)
+1) ✅ **Goal-centric columns**: Each Goal renders as its own column with accurate project/task counts for that goal.
+2) ✅ **Hierarchical data**: Projects carry `parentId` of a Goal; Tasks carry `parentId` of a Project; order is per parent and normalized on load/save.
+3) ✅ **Parent selection**: Add/edit flows allow choosing a parent (Goal for Projects, Project for Tasks) or “None (Unassigned)”; reassignment works without data loss.
+4) ✅ **Edit/delete/reorder**: Items can be renamed, reordered within parent, and deleted with options (unassign, cascade, reassign, cancel). Per-parent order is preserved.
+5) ✅ **Accessibility**: Semantic list roles, aria labels on columns/items, and keyboard-focusable controls; screen reader announces column counts.
+6) 🔄 **UI polish / declutter**: Action controls are hover/focus-only, spacing is consistent, button styles are unified, and redundant parent labels are removed or minimized.
+7) 🔄 **Sample clarity**: Seeded example items (Story 2.4.8) are visually indicated as examples while remaining fully editable.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Update Metadata Schema** (AC: 2, 6)
-  - [ ] Extend `metadata.items` structure to include:
-    - `id: string` (UUID) for cross-note referencing
-    - `parentId?: string` for Projects (→ Goal.id) and Tasks (→ Project.id)
-    - `order: number` for per-parent ordering (default: array index)
-  - [ ] Update TypeScript interfaces for hierarchical ontology items
-  - [ ] Write data migration utility:
-    - Generate UUIDs for existing items
-    - Assign `order = array index`
-    - Set `parentId = undefined` (all items start unassigned)
-    - Preserve all existing data (name, confidence, excerpts)
+- [ ] **Task 1: Data + normalization** (AC: 2)
+  - Ensure `id/parentId/order` normalization on load/save for all execution items; keep per-parent ordering intact.
+  - Preserve unassigned handling via “None” in parent selectors.
 
-- [ ] **Task 2: Implement Hierarchical Data Structure** (AC: 2, 6)
-  - [ ] Update `OntologyPage.tsx` state management to track parent-child relationships
-  - [ ] Create utility functions to build hierarchy tree from flat metadata items
-  - [ ] Implement filtering logic to separate Goals, Projects (with parent Goals), Tasks (with parent Projects)
-  - [ ] Add handling for "unassigned" items (no parentId)
+- [ ] **Task 2: Goal-column UI** (AC: 1, 3, 4)
+  - Maintain goal-per-column layout with accurate counts.
+  - Reorder/edit/delete/reassign flows per item; deletion dialog supports unassign/cascade/reassign/cancel.
 
-- [ ] **Task 3: Create Hierarchical UI Components** (AC: 1, 4)
-  - [ ] Design `HierarchicalOntologyColumn` component with expandable sections
-  - [ ] Add visual nesting indicators (indentation, connecting lines, or nested cards)
-  - [ ] Implement expand/collapse state management per item
-  - [ ] Add icons for item types (Flag for Goals, Target for Projects, ListChecks for Tasks)
-  - [ ] Create "📦 Unassigned" section at top of Projects and Tasks columns
-    - [ ] Collapsible with count badge (e.g., "Unassigned Projects (3)")
-    - [ ] Visual separator (dashed border, muted background)
-    - [ ] Collapsed by default after migration
-  - [ ] Ensure responsive layout preserves 3-column grid on desktop, stacks on mobile
+- [ ] **Task 3: UI polish & declutter** (AC: 6, 7)
+  - Hover/focus-only action bar for edit/delete/reorder; align icons; consistent spacing.
+  - Unify add buttons and card padding; reduce redundant parent labels; truncate long titles with tooltip.
+  - Visual indicator for seeded sample items (Story 2.4.8) while keeping them fully editable.
 
-- [ ] **Task 4: Build Parent Selection UI** (AC: 3, 5)
-  - [ ] Add "Parent Goal" dropdown when adding/editing Projects
-  - [ ] Add "Parent Project" dropdown when adding/editing Tasks
-  - [ ] Include "None (Top-level)" option for unassigned items
-  - [ ] Implement reassignment UI for existing items
-  - [ ] Add reordering controls (drag-and-drop or up/down buttons)
+- [ ] **Task 4: Accessibility** (AC: 5)
+  - Semantic list roles and aria labels on columns/items; focus states; screen reader announcements for counts and hierarchy context.
 
-- [ ] **Task 5: Handle Parent Deletion Logic** (AC: 5)
-  - [ ] Detect descendant count when parent is deleted (e.g., "3 Projects, 12 Tasks")
-  - [ ] Show confirmation dialog with radio button options:
-    1. "Make Unassigned" (default) - Move to "Unassigned" section
-    2. "Delete All" - Full cascade delete
-    3. "Reassign" - Prompt for new parent (recursive for all descendants)
-    4. "Cancel" - Abort deletion
-  - [ ] Implement each deletion strategy (unassign, cascade, reassign)
-  - [ ] Update all affected notes (Goals, Projects, Tasks) atomically
-
-- [ ] **Task 6: Accessibility Implementation** (AC: 7)
-  - [ ] Add semantic list structure (`role="list"`, `role="listitem"`, `aria-level` for nesting depth)
-  - [ ] Implement cross-column relationships via `aria-describedby` (link Tasks → Projects → Goals)
-  - [ ] Add screen reader announcements for hierarchy level and child counts (e.g., "Goal: Build Signum, 3 projects, 12 tasks")
-  - [ ] Implement keyboard navigation (Tab for next item, Enter/Space for expand/collapse, Arrow keys for list navigation)
-  - [ ] Test with VoiceOver (macOS) and NVDA (Windows)
-
-- [ ] **Task 7: Performance Optimization** (AC: 8)
-  - [ ] Virtualize long lists if needed (react-window or similar)
-  - [ ] Optimize re-renders with React.memo for hierarchy items
-  - [ ] Add GPU-accelerated CSS animations for expand/collapse
-  - [ ] Profile with Chrome DevTools to ensure 60fps target
-
-- [ ] **Task 8: Testing** (AC: All)
-  - [ ] Write Playwright E2E test for creating hierarchical structure
-  - [ ] Test parent selection and reassignment flows
-  - [ ] Test parent deletion with orphan handling
-  - [ ] Test keyboard navigation and screen reader announcements
-  - [ ] Test data migration with existing ontology data
+- [ ] **Task 5: Testing**
+  - Unit/integration tests for normalization and parent handling.
+  - UI test for add/edit/reassign/delete within goal columns and for the hover action bar visibility.
 
 ## Dev Notes
+
+*Sample seeding is covered in Story 2.4.8; UI should visually indicate seeded examples while keeping them editable.*
 
 ### Previous Story Insights
 
