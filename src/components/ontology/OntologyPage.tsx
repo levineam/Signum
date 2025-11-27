@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { GoalNode, ProjectNode, buildExecutionHierarchy, countDescendants, normalizeOntologyItems, resequenceByParent } from '@/lib/ontology/hierarchy'
+import { buildSampleExecutionSeed, shouldSeedExecutionStack } from '@/lib/ontology/seeding'
 
 type SectionKey =
   | 'higher-power'
@@ -159,6 +160,7 @@ export function OntologyPage() {
   const [deleteChoice, setDeleteChoice] = useState<'delete' | 'reassign' | 'cancel'>('delete')
   const [reassignParent, setReassignParent] = useState<string | undefined>(undefined)
   const [normalizing, setNormalizing] = useState(false)
+  const [seedChecked, setSeedChecked] = useState(false)
 
   const loadNotes = useCallback(async () => {
     if (!user) return
@@ -290,6 +292,124 @@ export function OntologyPage() {
     normalizeAndPersist()
   }, [findNote, loadNotes, pinnedNotes, user])
 
+  useEffect(() => {
+    if (!user || seedChecked) return
+    if (!goalsNote || !projectsNote || !tasksNote) return
+
+    const seedStatus = goalsNote.metadata?.executionSeedStatus
+    const hasExecutionData =
+      executionStack.projectItems.length > 0 || executionStack.taskItems.length > 0
+
+    const markSeeded = async (reason: 'existing-data' | 'empty-seeded') => {
+      const seededAt = new Date().toISOString()
+      await updateNote(
+        goalsNote.id,
+        {
+          metadata: {
+            ...goalsNote.metadata,
+            executionSeedStatus: {
+              seeded: true,
+              seededAt,
+              reason
+            }
+          }
+        },
+        user.id
+      )
+    }
+
+    const seedSamples = async () => {
+      const seededAt = new Date().toISOString()
+      const { projects, tasks } = buildSampleExecutionSeed(executionStack.goalItems)
+
+      if (projects.length === 0 && tasks.length === 0) {
+        setSeedChecked(true)
+        return
+      }
+
+      await Promise.all([
+        updateNote(
+          projectsNote.id,
+          {
+            metadata: {
+              ...projectsNote.metadata,
+              ontologyCategory: projectsNote.metadata?.ontologyCategory ?? 'projects',
+              items: resequenceByParent(projects),
+              executionSeedStatus: {
+                seeded: true,
+                seededAt,
+                reason: 'empty-seeded'
+              }
+            }
+          },
+          user.id
+        ),
+        updateNote(
+          tasksNote.id,
+          {
+            metadata: {
+              ...tasksNote.metadata,
+              ontologyCategory: tasksNote.metadata?.ontologyCategory ?? 'tasks',
+              items: resequenceByParent(tasks),
+              executionSeedStatus: {
+                seeded: true,
+                seededAt,
+                reason: 'empty-seeded'
+              }
+            }
+          },
+          user.id
+        ),
+        updateNote(
+          goalsNote.id,
+          {
+            metadata: {
+              ...goalsNote.metadata,
+              executionSeedStatus: {
+                seeded: true,
+                seededAt,
+                reason: 'empty-seeded'
+              }
+            }
+          },
+          user.id
+        )
+      ])
+      toast.success('Added sample projects and tasks')
+      await loadNotes()
+    }
+
+    ;(async () => {
+      // If user already has execution data, mark seeded to avoid future reseed after deletes
+      if (hasExecutionData) {
+        if (!seedStatus?.seeded) {
+          await markSeeded('existing-data')
+          await loadNotes()
+        }
+        setSeedChecked(true)
+        return
+      }
+
+      if (!shouldSeedExecutionStack(executionStack.projectItems, executionStack.taskItems, seedStatus)) {
+        setSeedChecked(true)
+        return
+      }
+
+      await seedSamples()
+      setSeedChecked(true)
+    })()
+  }, [
+    executionStack.goalItems,
+    executionStack.projectItems,
+    executionStack.taskItems,
+    goalsNote,
+    projectsNote,
+    tasksNote,
+    loadNotes,
+    seedChecked,
+    user
+  ])
+
   const startTextEdit = (key: SectionKey) => {
     const note = findNote(key)
     setTextDrafts((prev) => ({ ...prev, [key]: toPlainText(note?.content) }))
@@ -415,12 +535,22 @@ export function OntologyPage() {
 
     setSaving((prev) => ({ ...prev, [key]: true }))
     try {
+      const seedStatus =
+        note.metadata?.executionSeedStatus?.seeded
+          ? note.metadata.executionSeedStatus
+          : {
+              seeded: true,
+              seededAt: new Date().toISOString(),
+              reason: 'user-edit'
+            }
+
       await updateNote(
         note.id,
         {
           metadata: {
             ...note.metadata,
             ontologyCategory: note.metadata?.ontologyCategory ?? key,
+            executionSeedStatus: seedStatus,
             items: resequenceByParent(items)
           }
         },

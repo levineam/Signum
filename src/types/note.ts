@@ -121,6 +121,13 @@ export interface NoteMetadata {
   // Ontology display metadata
   ontologyCategory?: OntologyCategory
   meaningIndex?: number
+
+  // Execution Stack sample seeding metadata
+  executionSeedStatus?: {
+    seeded: boolean
+    seededAt?: string
+    reason?: 'empty-seeded' | 'existing-data' | 'user-edit'
+  }
 }
 
 // ============================================================================
