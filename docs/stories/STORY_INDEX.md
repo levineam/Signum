@@ -148,6 +148,7 @@ See `docs/stories/completed/` for:
 | 2.4.5 | Ontology Expandable Rows | Completed (PR #49) | - |
 | 2.4.6 | Production Security Hardening & Logging | **✅ COMPLETE** | **Launch Blocker Resolved** |
 | 2.5 | Voice Transcription | Completed (PRs #69, #72, #74) | - |
+| 2.4.8 | Execution Stack Sample Seeding (Empty State) | Draft | - |
 
 **Story 2.4.6 Details:**
 - **GitHub Issue:** [#118](https://github.com/levineam/Signum/issues/118) (Closed)
