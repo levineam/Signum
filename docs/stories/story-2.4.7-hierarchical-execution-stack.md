@@ -22,7 +22,7 @@ Previously, the Execution Stack showed three separate flat lists. There was no v
 1) ✅ **Goal-centric columns**: Each Goal renders as its own column with accurate project/task counts for that goal.
 2) ✅ **Hierarchical data**: Projects carry `parentId` of a Goal; Tasks carry `parentId` of a Project; order is per parent and normalized on load/save.
 3) ✅ **Parent selection**: Add/edit flows allow choosing a parent (Goal for Projects, Project for Tasks) or “None (Unassigned)”; reassignment works without data loss.
-4) ✅ **Edit/delete/reorder**: Items can be renamed, reordered within parent, and deleted with options (unassign, cascade, reassign, cancel). Per-parent order is preserved.
+4) ✅ **Edit/delete**: Items can be renamed and deleted with options (unassign, cascade, reassign, cancel). Per-parent order is preserved but reordering is not a UI requirement for this story.
 5) ✅ **Accessibility**: Semantic list roles, aria labels on columns/items, and keyboard-focusable controls; screen reader announces column counts.
 6) 🔄 **UI polish / declutter**: Action controls are hover/focus-only, spacing is consistent, button styles are unified, and redundant parent labels are removed or minimized.
 7) 🔄 **Sample clarity**: Seeded example items (Story 2.4.8) are visually indicated as examples while remaining fully editable.
@@ -35,12 +35,12 @@ Previously, the Execution Stack showed three separate flat lists. There was no v
 
 - [ ] **Task 2: Goal-column UI** (AC: 1, 3, 4)
   - Maintain goal-per-column layout with accurate counts.
-  - Reorder/edit/delete/reassign flows per item; deletion dialog supports unassign/cascade/reassign/cancel.
+  - Edit/delete/reassign flows per item; deletion dialog supports unassign/cascade/reassign/cancel. Reorder controls not required in UI.
 
 - [ ] **Task 3: UI polish & declutter** (AC: 6, 7)
-  - Hover/focus-only action bar for edit/delete/reorder; align icons; consistent spacing.
-  - Unify add buttons and card padding; reduce redundant parent labels; truncate long titles with tooltip.
-  - Visual indicator for seeded sample items (Story 2.4.8) while keeping them fully editable.
+  - Hover/focus-only action bar for edit/delete; align icons; consistent spacing without overflow.
+  - Unify add buttons and card padding; reduce redundant labels; allow two-line titles for readability.
+  - Visual indicator for seeded sample items at the column level (Story 2.4.8) while keeping them fully editable; remove per-item badges.
 
 - [ ] **Task 4: Accessibility** (AC: 5)
   - Semantic list roles and aria labels on columns/items; focus states; screen reader announcements for counts and hierarchy context.

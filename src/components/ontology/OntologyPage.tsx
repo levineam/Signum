@@ -2,19 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import {
-  ArrowDown,
-  ArrowUp,
-  ChevronDown,
-  ChevronRight,
-  Loader2,
-  Pencil,
-  Plus,
-  Target,
-  Trash2,
-  Users,
-  Zap
-} from 'lucide-react'
+import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Target, Trash2, Users, Zap } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getPinnedNotes, initializePinnedNotes, updateNote } from '@/lib/notes'
 import { ConfidenceLevel, HierarchicalOntologyItem, Note } from '@/types/note'
@@ -586,33 +574,6 @@ export function OntologyPage() {
     }
   }
 
-  const reorderWithinParent = (
-    items: HierarchicalOntologyItem[],
-    itemId: string,
-    direction: 'up' | 'down'
-  ) => {
-    const target = items.find((item) => item.id === itemId)
-    if (!target) return null
-    const parentKey = target.parentId ?? '__root__'
-    const siblings = items
-      .filter((item) => (item.parentId ?? '__root__') === parentKey)
-      .sort((a, b) => a.order - b.order)
-    const currentIndex = siblings.findIndex((item) => item.id === itemId)
-    const swapIndex = currentIndex + (direction === 'up' ? -1 : 1)
-    if (swapIndex < 0 || swapIndex >= siblings.length) return null
-
-    const reordered = [...siblings]
-    const [moved] = reordered.splice(currentIndex, 1)
-    reordered.splice(swapIndex, 0, moved)
-
-    const orderMap = new Map<string, number>()
-    reordered.forEach((item, index) => orderMap.set(item.id, index))
-
-    return items.map((item) =>
-      orderMap.has(item.id) ? { ...item, order: orderMap.get(item.id) ?? item.order } : item
-    )
-  }
-
   const handleAddGoal = async () => {
     const name = itemDrafts.goal.trim()
     if (!name) return
@@ -719,22 +680,6 @@ export function OntologyPage() {
 
     await persistExecutionItems(editTarget.category, updatedItems)
     cancelItemEdit()
-  }
-
-  const handleReorderItem = async (
-    category: 'goals' | 'projects' | 'tasks',
-    itemId: string,
-    direction: 'up' | 'down'
-  ) => {
-    const sourceItems =
-      category === 'goals'
-        ? executionStack.goalItems
-        : category === 'projects'
-          ? executionStack.projectItems
-          : executionStack.taskItems
-    const reordered = reorderWithinParent(sourceItems, itemId, direction)
-    if (!reordered) return
-    await persistExecutionItems(category, reordered)
   }
 
   const openDeleteDialog = (category: 'goals' | 'projects' | 'tasks', id: string) => {
@@ -1151,7 +1096,7 @@ export function OntologyPage() {
                 className="min-w-[280px] max-w-[320px]"
               >
                 <Card className="h-full border border-emerald-100">
-                  <CardContent className="p-4 space-y-3">
+                  <CardContent className="group/goal p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-1">
                         <div className="text-sm font-semibold text-emerald-700">{goal.name}</div>
@@ -1165,8 +1110,13 @@ export function OntologyPage() {
                             </Badge>
                           )}
                         </div>
+                        {seededSample && (
+                          <p className="text-xs text-muted-foreground">
+                            Editable examples — delete or overwrite to make your own.
+                          </p>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/goal:opacity-100 group-focus-within/goal:opacity-100">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1218,7 +1168,7 @@ export function OntologyPage() {
                       />
                       <div className="flex gap-2">
                         <Button
-                          variant="outline"
+                          variant="default"
                           size="sm"
                           onClick={() => handleAddProject(goal.id)}
                           disabled={savingExecution}
@@ -1229,7 +1179,7 @@ export function OntologyPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {goal.projects.length === 0 && (
                         <p className="text-sm text-muted-foreground">No projects yet.</p>
                       )}
@@ -1240,7 +1190,7 @@ export function OntologyPage() {
                         return (
                           <div
                             key={project.id}
-                            className="group rounded-md border border-slate-200/80 bg-white shadow-sm"
+                            className="group relative rounded-md border border-slate-200/80 bg-white shadow-sm"
                           >
                             <div className="flex items-start justify-between px-3 py-2">
                               <div className="flex items-start gap-2">
@@ -1267,35 +1217,10 @@ export function OntologyPage() {
                                   <p className="font-medium text-slate-900 leading-tight line-clamp-2">
                                     {project.name}
                                   </p>
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-xs text-muted-foreground">{project.tasks.length} tasks</p>
-                                    {seededSample && (
-                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                        Sample
-                                      </Badge>
-                                    )}
-                                  </div>
+                                  <p className="text-xs text-muted-foreground">{project.tasks.length} tasks</p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleReorderItem('projects', project.id, 'up')}
-                                  aria-label={`Move ${project.name} up`}
-                                  disabled={savingExecution}
-                                >
-                                  <ArrowUp className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleReorderItem('projects', project.id, 'down')}
-                                  aria-label={`Move ${project.name} down`}
-                                  disabled={savingExecution}
-                                >
-                                  <ArrowDown className="h-4 w-4" />
-                                </Button>
+                              <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1366,20 +1291,20 @@ export function OntologyPage() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault()
-                                        handleAddTask(project.id)
-                                      }
-                                    }}
-                                  />
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleAddTask(project.id)}
-                                  disabled={savingExecution}
-                                >
-                                  <Plus className="h-4 w-4 mr-1" />
-                                  Add Task
-                                </Button>
-                              </div>
+                                      handleAddTask(project.id)
+                                    }
+                                  }}
+                                />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleAddTask(project.id)}
+                                    disabled={savingExecution}
+                                  >
+                                    <Plus className="h-4 w-4 mr-1" />
+                                    Add Task
+                                  </Button>
+                                </div>
 
                               <ul className="space-y-2" role="list" aria-label={`Tasks for ${project.name}`}>
                                 {project.tasks.length === 0 && (
@@ -1447,31 +1372,8 @@ export function OntologyPage() {
                                               <p className="text-sm font-medium text-slate-900 leading-snug line-clamp-2">
                                                 {task.name}
                                               </p>
-                                              {seededSample && (
-                                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                                  Sample
-                                                </Badge>
-                                              )}
                                             </div>
                                             <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleReorderItem('tasks', task.id, 'up')}
-                                                aria-label={`Move ${task.name} up`}
-                                                disabled={savingExecution}
-                                              >
-                                                <ArrowUp className="h-4 w-4" />
-                                              </Button>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleReorderItem('tasks', task.id, 'down')}
-                                                aria-label={`Move ${task.name} down`}
-                                                disabled={savingExecution}
-                                              >
-                                                <ArrowDown className="h-4 w-4" />
-                                              </Button>
                                               <Button
                                                 variant="ghost"
                                                 size="icon"
