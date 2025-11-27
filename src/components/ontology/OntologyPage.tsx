@@ -133,6 +133,24 @@ function mergeItems(note: Note, names: string[]) {
   })
 }
 
+type SeedStatus = NonNullable<Note['metadata']['executionSeedStatus']>
+type SeedReason = SeedStatus['reason']
+
+function normalizeSeedStatus(status?: Note['metadata']['executionSeedStatus']): SeedStatus {
+  const isValidReason = (reason?: string): reason is SeedReason =>
+    reason === 'empty-seeded' || reason === 'existing-data' || reason === 'user-edit'
+
+  if (status && status.seeded && (!status.reason || isValidReason(status.reason))) {
+    return status as SeedStatus
+  }
+
+  return {
+    seeded: true,
+    seededAt: new Date().toISOString(),
+    reason: 'user-edit'
+  }
+}
+
 export function OntologyPage() {
   const { user } = useAuth()
   const [pinnedNotes, setPinnedNotes] = useState<Note[]>([])
@@ -535,14 +553,7 @@ export function OntologyPage() {
 
     setSaving((prev) => ({ ...prev, [key]: true }))
     try {
-      const seedStatus =
-        note.metadata?.executionSeedStatus?.seeded
-          ? note.metadata.executionSeedStatus
-          : {
-              seeded: true,
-              seededAt: new Date().toISOString(),
-              reason: 'user-edit'
-            }
+      const seedStatus = normalizeSeedStatus(note.metadata?.executionSeedStatus)
 
       await updateNote(
         note.id,
