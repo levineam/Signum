@@ -7,6 +7,7 @@
 
 ## Build, Test, and Development Commands
 - `npm run dev` — start the Next.js dev server with Turbopack at `http://localhost:3000`.
+- `npm run dev:test` — start dev server in test mode (auto-enables forced test user, no Supabase required). **Use this for fast local iteration on UI/component changes**.
 - `npm run build` — produce an optimized production bundle; run before deployment.
 - `npm run start` — serve the production build locally for smoke checks.
 - `npm run lint` — run ESLint using the Next.js Core Web Vitals ruleset.
@@ -21,6 +22,8 @@
 - Keep Playwright scenarios focused; name files with the flow under test (e.g. `hyperlink-verification.test.ts`).
 - Record new artifacts with `npx playwright codegen` when debugging UI flows, but clean them before committing.
 - Save expected screenshots alongside the suite in `test-results/`, and include updates when UI-regressed assertions fail.
+- For fast local testing without Supabase: use `npm run dev:test` (enables forced test user mode automatically). See `docs/runbooks/local-testing-guide.md` for details.
+- Use Vercel preview deployments for database-dependent features and final validation before merge.
 
 ## Commit & Pull Request Guidelines
 - Base commit messages on the existing `git log`: a short, present-tense summary (e.g. "Add tabbed editor layout"). Append an issue key when available.
@@ -30,7 +33,34 @@
 
 ## Environment & Configuration
 - Copy `.env.example` to `.env.local` and populate Supabase credentials before running the dev server; never commit secrets.
+- For local development without Supabase: use `npm run dev:test` (no credentials needed, auto-enables test mode).
 - Vercel deploys read configuration from `vercel.json`; coordinate with maintainers before altering routing or edge settings.
+
+## Local Development Modes
+
+**Test Mode (Recommended for UI/Component Work):**
+- Command: `npm run dev:test`
+- No Supabase required, instant feedback (30-second iterations)
+- Visual indicator in sidebar shows "Test Mode Active"
+- Best for: UI changes, component interactions, E2E test development
+- Limitation: Data doesn't persist (resets on refresh)
+
+**Production Mode (For Database Testing):**
+- Command: `npm run dev` (with `.env.local` configured)
+- Requires Supabase credentials
+- Full database integration
+- Best for: Schema changes, RLS policies, Supabase features
+
+**When in doubt:** Start with `npm run dev:test` for fast iteration, validate on Vercel preview before merging.
+
+## Schema Validation (DB)
+- CI runs schema validation against a local Supabase-compatible Postgres service by default (see `.github/workflows/continuous-testing.yml`).
+- Local check:
+  1) Apply migrations: `for f in supabase/migrations/*.sql; do psql postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable -f $f; done`
+  2) Seed fixtures: `psql ... -f scripts/test-fixtures.sql`
+  3) Validate: `psql ... -f scripts/validate-test-scripts.sql`
+- Remote (optional): set `SCHEMA_VALIDATION=remote` and `SCHEMA_DATABASE_URL` to point at a migrated database.
+- Migration checklist: `docs/process/migration-checklist.md` (update functions/indexes + fixtures when schema changes).
 
 <!-- BEGIN: BMAD-AGENTS -->
 # BMAD-METHOD Agents and Tasks
@@ -5377,6 +5407,9 @@ Choose a number (0-8) or 9 to proceed:
 ```
 
 <!-- END: BMAD-AGENTS -->
+
+
+
 
 
 

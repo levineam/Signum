@@ -27,13 +27,13 @@ export const HELPER_TILES: Record<HelperType, HelperTileData> = {
   },
   gratitude: {
     shortTitle: 'Gratitude',
-    description: 'Reflect on what went well today',
+    description: 'Reflect on what went well (plus optional savoring boost)',
     fullTitle: 'Gratitude Practice',
     icon: '✨',
   },
   'values-affirmation': {
     shortTitle: 'Values Affirmation',
-    description: 'Clarify what matters most to you',
+    description: 'Clarify what matters most with self-compassion tips',
     fullTitle: 'Values Affirmation',
     icon: '🎯',
   },
@@ -51,7 +51,7 @@ export const HELPER_TILES: Record<HelperType, HelperTileData> = {
   },
   'best-possible-self': {
     shortTitle: 'Best Self',
-    description: 'Envision your ideal future',
+    description: 'Envision your ideal future with a compassion warmup',
     fullTitle: 'Best Possible Self Exercise',
     icon: '🌟',
   },
@@ -66,5 +66,17 @@ export const HELPER_TILES: Record<HelperType, HelperTileData> = {
     description: 'Cultivate compassion for yourself and others',
     fullTitle: 'Loving-Kindness Meditation',
     icon: '💝',
+  },
+  morning: {
+    shortTitle: 'Morning Practice',
+    description: 'Start your day with intention and reflection',
+    fullTitle: 'Morning Daily Practice',
+    icon: '☀️',
+  },
+  'day-planning': {
+    shortTitle: 'Plan Your Day',
+    description: 'Clarify priorities and commit to action',
+    fullTitle: 'Day Planning Helper',
+    icon: '📅',
   },
 }

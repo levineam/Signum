@@ -46,12 +46,6 @@ export interface NoteMetadata {
   // For journal entries (note_type: 'journal-entry')
   journalDate?: string          // YYYY-MM-DD format
   prompt?: string               // ACT-inspired prompt shown to user
-  tasks?: Array<{               // Story 1.2.1: Parsed tasks with paragraph mapping
-    id: string                  // Task ID from tasks table
-    paragraphHash: string       // Hash of paragraph text (entryId-text)
-    status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
-  }>
-  rejectedTaskHashes?: string[] // Story 1.2.2: Hashes of rejected tasks to prevent re-detection
 
   // For reflections (note_type: 'reflection')
   sourceNoteId?: string         // UUID of source journal entry
@@ -90,6 +84,17 @@ export interface NoteMetadata {
 
   // Legacy type mapping (for migration)
   legacyType?: 'values' | 'beliefs' | 'aims' | 'regular'
+
+  // AI Answer metadata (for AI-generated answers via Ask AI feature)
+  sourceType?: 'task' | 'journal'  // Source type of AI query
+  taskId?: string                  // Source task ID (if sourceType === 'task')
+  taskText?: string                // Text of the task (if sourceType === 'task')
+  journalEntryId?: string          // Source journal entry ID (if sourceType === 'journal')
+  selectedText?: string            // Original selected text from journal
+  query?: string                   // User's refined query/question
+  tokensUsed?: number              // Number of tokens used
+  model?: string                   // AI model used for generation
+  generatedAt?: string             // Timestamp when answer was generated
 }
 
 // ============================================================================

@@ -1,24 +1,7 @@
-<svg width="400" height="600" viewBox="0 0 400 600" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Minimalist S Logo - Black variant - Angular zigzag S shape -->
-  <path d="M 120 70
-           Q 120 50, 140 50
-           L 360 50
-           L 360 170
-           L 200 170
-           L 200 340
-           Q 200 360, 220 360
-           L 360 360
-           Q 380 360, 380 380
-           L 380 530
-           Q 380 550, 360 550
-           L 140 550
-           L 140 430
-           L 300 430
-           L 300 260
-           Q 300 240, 280 240
-           L 140 240
-           Q 120 240, 120 220
-           L 120 70
-           Z"
-           fill="#1a1a1a"/>
+<svg width="500" height="500" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Geometric Signum Logo - Black variant for light mode -->
+  <rect x="115" y="58" width="269" height="91" rx="12" fill="black"/>
+  <rect x="134" y="351" width="250" height="91" rx="12" fill="black"/>
+  <rect x="293" y="442" width="318" height="91" rx="12" transform="rotate(-90 293 442)" fill="black"/>
+  <rect x="115" y="442" width="250" height="91" rx="12" transform="rotate(-90 115 442)" fill="black"/>
 </svg>

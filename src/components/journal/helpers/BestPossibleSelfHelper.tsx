@@ -27,6 +27,8 @@ import { createHelperUsage } from '@/lib/supabase/helpers'
 import { HelperEvent } from '@/types/helper'
 import { HelperContainer } from './HelperContainer'
 import { escapeHtml } from '@/utils/htmlEscape'
+import { HelperAddOn } from './HelperAddOn'
+import { LovingKindnessContent } from './LovingKindnessHelper'
 
 interface BestPossibleSelfHelperProps {
   entryId: string
@@ -237,6 +239,19 @@ export function BestPossibleSelfContent({ entryId, userId, onInsert }: BestPossi
           )}
         </div>
       </div>
+
+      <HelperAddOn
+        title="Open with a compassion warmup"
+        description="Use a short loving-kindness meditation to get into an expansive mindset before writing."
+        badge="Loving-Kindness"
+      >
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+          Direct a few metta phrases toward yourself or someone you care about, then continue writing about your future self.
+        </p>
+        <div className="rounded-md border border-rose-200/70 dark:border-rose-900/40 bg-white/60 dark:bg-gray-900/30 p-3">
+          <LovingKindnessContent entryId={entryId} userId={userId} onInsert={onInsert} />
+        </div>
+      </HelperAddOn>
 
       {/* Action buttons */}
       <div className="flex gap-2 pt-4 border-t border-green-200 dark:border-green-800 mt-4">

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { SimpleRichEditor } from '@/components/editor/SimpleRichEditor'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Calendar, BookOpen } from 'lucide-react'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
@@ -13,6 +13,7 @@ import { createLink, getOutgoingLinks } from '@/lib/supabase/notes'
 import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata } from '@/utils/textToLink'
 import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
+import { useLocalNotes } from '@/contexts/LocalNotesContext'
 import { toast } from 'sonner'
 import { HelperTileGrid } from '@/components/journal/helpers/HelperTileGrid'
 import { HelperInfoDialog } from '@/components/journal/helpers/HelperInfoDialog'
@@ -21,14 +22,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { HelperType } from '@/types/helper'
 import { HELPER_TILES } from '@/constants/helperTitles'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
-import { TaskCard } from '@/components/tasks/TaskCard'
-import { TaskEditDialog } from '@/components/tasks/TaskEditDialog'
 import { useGuestDraft } from '@/hooks/useGuestDraft'
 import { useIdleTimer } from '@/hooks/useIdleTimer'
 import { GuestAuthModal } from '@/components/auth/GuestAuthModal'
 import { IDLE_TIMER_MS } from '@/types/guest'
+import { isForcedTestUserEnabled } from '@/lib/e2eTestUtils'
 
-// Debug logging flag (disable in production for performance)
 const DEBUG_TASK_DETECTION = process.env.NODE_ENV === 'development'
 
 interface JournalEntry {
@@ -38,12 +37,6 @@ interface JournalEntry {
   lastModified: string
   isSample?: boolean
   metadata?: {
-    tasks?: Array<{
-      id: string
-      paragraphHash: string
-      status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
-    }>
-    rejectedTaskHashes?: string[]
     journalDate?: string
     prompt?: string
     [key: string]: unknown  // Allow other metadata fields
@@ -68,6 +61,21 @@ function getLocalDateString(): string {
   return `${year}-${month}-${day}`
 }
 
+function createLocalEntry(date: string): JournalEntry {
+  const uniqueSuffix =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `local-${Date.now()}-${Math.random().toString(36).slice(2)}`
+
+  return {
+    id: `local-entry-${uniqueSuffix}`,
+    date,
+    content: '',
+    lastModified: new Date().toISOString(),
+    isSample: true
+  }
+}
+
 // Helper function to check if content is truly empty (handles HTML markup)
 function isContentEmpty(html: string): boolean {
   if (!html || html.trim() === '') return true
@@ -83,6 +91,7 @@ interface JournalStreamProps {
 export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const router = useRouter()
   const { user, session } = useAuth()
+  const { addLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -96,24 +105,40 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null)
   const [noteLinkClicked, setNoteLinkClicked] = useState(false)
   const [creatingLink, setCreatingLink] = useState(false)
-  const [entryTasks, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
-  const [editingTask, setEditingTask] = useState<{ id: string; title: string; dueAt: string | null } | null>(null)
-
-  // Story 1.2.2: Store rejected task hashes per entry (entryId -> Set<paragraphHash>)
-  const [rejectedTaskHashes, setRejectedTaskHashes] = useState<Map<string, Set<string>>>(new Map())
+  const [, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
+  const rejectedTaskHashes = useRef<Map<string, Set<string>>>(new Map())
+  const [hasBootstrappedEntry, setHasBootstrappedEntry] = useState(false)
 
   // Guest mode state
   const { draft: guestDraft, saveDraft: saveGuestDraft, clearDraft: clearGuestDraft } = useGuestDraft()
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isForcedTestUser, setIsForcedTestUser] = useState(false)
+
+  useEffect(() => {
+    setIsForcedTestUser(isForcedTestUserEnabled())
+  }, [])
 
   // Idle timer callback: show auth modal after 2s idle (only for guests)
   const handleIdle = () => {
-    if (isGuest) {
+    if (isGuest && !isForcedTestUser) {
       setShowAuthModal(true)
     }
   }
 
   const { reset: resetIdleTimer, setDismissed: setAuthModalDismissed } = useIdleTimer(handleIdle, IDLE_TIMER_MS)
+  useEffect(() => {
+    if (isGuest || !user || hasBootstrappedEntry) {
+      return
+    }
+
+    const today = getLocalDateString()
+    const placeholderEntry = createLocalEntry(today)
+    console.log('[JournalStream] Bootstrapping local placeholder entry for authenticated user')
+    setEntries([placeholderEntry])
+    setEditingEntryId(placeholderEntry.id)
+    setIsLoading(false)
+    setHasBootstrappedEntry(true)
+  }, [isGuest, user, hasBootstrappedEntry])
 
   // Story 2.8: Helper tile UI state
   const [activeHelper, setActiveHelper] = useState<HelperType | null>(null)
@@ -124,6 +149,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
   // Cache editor element reference before opening modal (Phase 1 bug fix)
   const cachedEditorRef = useRef<HTMLElement | null>(null)
+  const selectionMetadataRef = useRef<ReturnType<typeof captureSelectionMetadata> | null>(null)
 
   useEffect(() => {
     // Load journal entries from Supabase or create guest entry
@@ -160,7 +186,17 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
         // Get all notes from Supabase
         console.log('[JournalStream] Fetching notes from Supabase...')
-        const allNotes = await getNotes(user.id)
+        const notesTimeoutMs = 4000
+        const notesTimeoutPromise = new Promise<Note[]>((resolve) => {
+          setTimeout(() => {
+            console.warn('[JournalStream] Notes fetch timed out, using empty fallback list')
+            resolve([])
+          }, notesTimeoutMs)
+        })
+        const allNotes = await Promise.race([
+          getNotes(user.id),
+          notesTimeoutPromise
+        ])
         console.log('[JournalStream] Fetched notes:', allNotes.length)
 
         // Clean up empty journal entries older than 24 hours (Issue #10, #67)
@@ -186,36 +222,12 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
           !emptyJournalEntries.some(empty => empty.id === note.id)
         )
 
-        // Convert Note format to JournalEntry format and restore tasks
-        const tasksMap = new Map<string, ParsedTask[]>()
-        // Story 1.2.2: Load rejected task hashes from metadata
-        const rejectedHashesMap = new Map<string, Set<string>>()
-
+        // Convert Note format to JournalEntry format
         const journalEntriesWithDuplicates: JournalEntry[] = journalNotes.map(note => {
           // Safely handle metadata (can be null for legacy notes)
           const meta = note.metadata || {}
           const journalDate = (meta as { journalDate?: string }).journalDate
           const isSample = (meta as { isSample?: boolean }).isSample
-          const tasks = (meta as { tasks?: Array<{ id: string; paragraphHash: string; status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled' }> }).tasks
-          // Story 1.2.2: Load rejected hashes for this entry
-          const rejectedHashes = (meta as { rejectedTaskHashes?: string[] }).rejectedTaskHashes
-
-          // Restore tasks for this entry
-          if (tasks && tasks.length > 0) {
-            tasksMap.set(note.id, tasks.map(t => ({
-              id: t.id,
-              title: '', // Will be fetched from tasks table via bulk API
-              paragraphHash: t.paragraphHash,
-              dueAt: null, // Will be fetched from tasks table if needed
-              rrule: null,
-              status: t.status
-            })))
-          }
-
-          // Story 1.2.2: Store rejected hashes in state
-          if (rejectedHashes && Array.isArray(rejectedHashes) && rejectedHashes.length > 0) {
-            rejectedHashesMap.set(note.id, new Set(rejectedHashes))
-          }
 
           return {
             id: note.id,
@@ -240,61 +252,6 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
           b.date.localeCompare(a.date)
         )
 
-        // Restore tasks from metadata and fetch full details
-        if (tasksMap.size > 0 && session?.access_token) {
-          // Collect all task IDs
-          const allTaskIds = Array.from(tasksMap.values()).flat().map(t => t.id)
-
-          if (allTaskIds.length > 0) {
-            try {
-              // Fetch full task details (dueAt, rrule)
-              const response = await fetch('/api/tasks/bulk', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${session.access_token}`
-                },
-                body: JSON.stringify({ taskIds: allTaskIds })
-              })
-
-              if (response.ok) {
-                const { tasks } = await response.json()
-                const taskDetailsMap = new Map(
-                  tasks.map((t: { id: string; title: string; dueAt: string | null; rrule: string | null; status: string }) => [t.id, t])
-                )
-
-                // Merge task details with metadata, filtering out orphaned tasks
-                // IMPORTANT: This filter prevents "ghost" UI elements when:
-                // 1. Tasks are deleted from DB but metadata still references them
-                // 2. Database cleanup removes tasks but note.metadata.tasks[] isn't updated
-                // Without this filter, UI would display "Pending" TaskCards for non-existent tasks
-                for (const [entryId, entryTaskList] of tasksMap.entries()) {
-                  tasksMap.set(entryId, entryTaskList
-                    .map(t => {
-                      const details = taskDetailsMap.get(t.id) as { id: string; title: string; dueAt: string | null; rrule: string | null; status: string } | undefined
-                      return {
-                        ...t,
-                        title: details?.title ?? '',
-                        dueAt: details?.dueAt ?? null,
-                        rrule: details?.rrule ?? null,
-                        status: (details?.status as 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled') ?? t.status,
-                        exists: !!details // Mark whether task exists in DB
-                      }
-                    })
-                    .filter(t => t.exists) // Remove orphaned tasks that don't exist in DB
-                  )
-                }
-              }
-            } catch (error) {
-              console.error('Failed to fetch task details:', error)
-            }
-          }
-        }
-
-        setEntryTasks(tasksMap)
-        // Story 1.2.2: Set rejected hashes in state
-        setRejectedTaskHashes(rejectedHashesMap)
-
         // Check if today's entry exists
         const todayEntry = journalEntries.find(e => e.date === today)
         console.log('[JournalStream] Today entry exists?', !!todayEntry)
@@ -303,21 +260,56 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         if (!todayEntry) {
           // Create today's entry if it doesn't exist
           console.log('[JournalStream] Creating today\'s entry...')
-          const newNote = await createNote({
-            title: `Journal Entry - ${today}`,
-            content: '',
-            noteType: 'journal-entry',
-            metadata: { journalDate: today }
-          }, user.id)
-          console.log('[JournalStream] Created new note:', newNote.id)
+          let timeoutId: NodeJS.Timeout | null = null
+          try {
+            const controller = new AbortController()
+            const createTimeoutMs = 3000
+            const createTimeoutPromise = new Promise<Note>((_, reject) => {
+              timeoutId = setTimeout(() => {
+                controller.abort()
+                reject(new Error('createNote timeout exceeded'))
+              }, createTimeoutMs)
+            })
 
-          const newTodayEntry: JournalEntry = {
-            id: newNote.id,
-            date: today,
-            content: '',
-            lastModified: newNote.createdAt
+            const newNote = await Promise.race([
+              createNote({
+                title: `Journal Entry - ${today}`,
+                content: '',
+                noteType: 'journal-entry',
+                metadata: { journalDate: today }
+              }, user.id, controller.signal),
+              createTimeoutPromise
+            ])
+
+            // Clear timeout if createNote won the race
+            if (timeoutId) {
+              clearTimeout(timeoutId)
+              timeoutId = null
+            }
+
+            console.log('[JournalStream] Created new note:', newNote.id)
+
+            const newTodayEntry: JournalEntry = {
+              id: newNote.id,
+              date: today,
+              content: '',
+              lastModified: newNote.createdAt
+            }
+            initialEntries = [newTodayEntry, ...journalEntries]
+          } catch (creationError) {
+            // Clear timeout if error occurred
+            if (timeoutId) {
+              clearTimeout(timeoutId)
+              timeoutId = null
+            }
+            console.error('[JournalStream] Failed to create today\'s entry, using local fallback:', creationError)
+            initialEntries = [createLocalEntry(today), ...journalEntries]
           }
-          initialEntries = [newTodayEntry, ...journalEntries]
+        }
+
+        if (initialEntries.length === 0) {
+          console.warn('[JournalStream] No journal entries found, creating local fallback entry')
+          initialEntries = [createLocalEntry(today)]
         }
 
         console.log('[JournalStream] Setting entries:', initialEntries.length)
@@ -382,18 +374,22 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
       } catch (error) {
         console.error('[JournalStream] Error loading journal entries:', error)
-        // Set safe fallback state - show empty array on error
-        setEntries([])
+        // Set safe fallback state with a local entry so UX (and tests) remain functional
+        const today = getLocalDateString()
+        const fallbackEntry = createLocalEntry(today)
+        setEntries([fallbackEntry])
+        setEditingEntryId(fallbackEntry.id)
         setIsLoading(false)
-        // Optionally show user-facing error message
-        // toast.error('Failed to load journal entries. Please refresh the page.')
       }
     }
 
     // Safely invoke async function
     loadEntries().catch(error => {
       console.error('Unhandled error in loadEntries:', error)
-      setEntries([])
+      const today = getLocalDateString()
+      const fallbackEntry = createLocalEntry(today)
+      setEntries([fallbackEntry])
+      setEditingEntryId(fallbackEntry.id)
       setIsLoading(false)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -418,80 +414,6 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     }
   }, [entries])
 
-  // Track previous entryTasks state to detect which entries actually changed
-  const prevEntryTasksRef = useRef<Map<string, ParsedTask[]>>(new Map())
-
-  // Save task metadata to note when tasks change (Story 1.2.1)
-  useEffect(() => {
-    if (!user) return
-
-    const saveTaskMetadata = async () => {
-      const entriesToUpdate: string[] = []
-
-      // Find entries where tasks actually changed
-      for (const [entryId, tasks] of entryTasks.entries()) {
-        const prevTasks = prevEntryTasksRef.current.get(entryId)
-
-        // Check if tasks changed for this entry
-        const tasksChanged = !prevTasks ||
-          prevTasks.length !== tasks.length ||
-          !prevTasks.every((prevTask, idx) => {
-            const currentTask = tasks[idx]
-            return prevTask.id === currentTask.id &&
-                   prevTask.status === currentTask.status &&
-                   prevTask.paragraphHash === currentTask.paragraphHash
-          })
-
-        if (tasksChanged) {
-          entriesToUpdate.push(entryId)
-        }
-      }
-
-      // Only update entries that actually changed
-      for (const entryId of entriesToUpdate) {
-        const tasks = entryTasks.get(entryId)!
-        const entry = entries.find(e => e.id === entryId)
-        // Story 1.2.2: Merge current rejected hashes from state
-        const currentRejectedHashes = rejectedTaskHashes.get(entryId)
-        const rejectedHashesArray = currentRejectedHashes ? Array.from(currentRejectedHashes) : undefined
-
-        const updatedMetadata = {
-          ...(entry?.metadata || {}),
-          tasks: tasks.map(t => ({
-            id: t.id,
-            paragraphHash: t.paragraphHash,
-            status: t.status
-          })),
-          // Include rejected hashes if any exist in state
-          ...(rejectedHashesArray && rejectedHashesArray.length > 0
-            ? { rejectedTaskHashes: rejectedHashesArray }
-            : {})
-        }
-
-        try {
-          await updateNoteInDb(
-            entryId,
-            { metadata: updatedMetadata },
-            user.id
-          )
-
-          // Update entries state to keep it in sync with DB after successful save
-          setEntries(prev => prev.map(e =>
-            e.id === entryId ? { ...e, metadata: updatedMetadata } : e
-          ))
-        } catch (error) {
-          console.error(`Failed to save task metadata for entry ${entryId}:`, error)
-        }
-      }
-
-      // Update the ref to current state
-      prevEntryTasksRef.current = new Map(entryTasks)
-    }
-
-    // Debounce to avoid excessive saves
-    const timeout = setTimeout(saveTaskMetadata, 500)
-    return () => clearTimeout(timeout)
-  }, [entryTasks, user])
 
   const handleContentChange = (entryId: string, newContent: string) => {
     // Don't override content changes while we're creating a link
@@ -505,17 +427,10 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       return // No change, don't trigger saves
     }
 
-    // Clear existing timeouts
+    // Clear existing timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
     }
-    if (taskDetectionTimeoutRef.current) {
-      clearTimeout(taskDetectionTimeoutRef.current)
-    }
-
-    // NOTE: We intentionally DON'T clear the processedParagraphs cache here
-    // The cache prevents duplicate task creation even if user edits content
-    // The deduplication_key in the database provides additional protection
 
     // Update content immediately for responsive UI
     setEntries(prev => prev.map(entry =>
@@ -528,11 +443,13 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     if (isGuest) {
       saveGuestDraft(newContent)
       resetIdleTimer() // Reset idle timer on every content change
-      return // Skip Supabase saves and task detection for guests
+      return // Skip Supabase saves for guests
     }
 
     // Debounce task detection to avoid duplicate tasks while typing (Story 1.2)
-    // Wait 3 seconds after user stops typing before detecting tasks
+    if (taskDetectionTimeoutRef.current) {
+      clearTimeout(taskDetectionTimeoutRef.current)
+    }
     taskDetectionTimeoutRef.current = setTimeout(() => {
       detectTasksInContent(newContent, entryId)
     }, 3000)
@@ -573,7 +490,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     if (!user || !session?.access_token) return
 
     // Story 1.2.2: Get rejected task hashes from state
-    const rejectedHashes = rejectedTaskHashes.get(entryId) || new Set<string>()
+    const rejectedHashes = rejectedTaskHashes.current.get(entryId) || new Set<string>()
 
     if (DEBUG_TASK_DETECTION && rejectedHashes.size > 0) {
       console.log(`[Task Detection] Loaded ${rejectedHashes.size} rejected task hashes for entry ${entryId}`)
@@ -736,126 +653,231 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     }
   }
 
-  const handleMakeNote = (selectedText: string) => {
-    setSelectedText(selectedText)
+  const clearSelectionContext = useCallback(() => {
+    selectionMetadataRef.current = null
+    setSelectedText('')
+  }, [])
+
+  const captureSelectionContext = useCallback((selection: string) => {
+    if (!selection) return
+    setSelectedText(selection)
     setCurrentEditingEntry(editingEntryId)
 
-    // Phase 1 bug fix: Cache editor element BEFORE opening modal
-    // Modal opening causes entry to exit edit mode, losing contenteditable
     if (editingEntryId) {
-      const editorElement = document.querySelector(`[data-entry-id="${editingEntryId}"] [contenteditable]`) as HTMLElement
+      const editorElement = document.querySelector(`[data-entry-id="${editingEntryId}"] [contenteditable]`) as HTMLElement | null
       cachedEditorRef.current = editorElement
       console.log('💾 Cached editor element:', !!editorElement)
-    }
 
+      if (editorElement) {
+        const metadata = captureSelectionMetadata(editorElement, selection)
+        selectionMetadataRef.current = metadata
+        console.log('📍 Cached selection metadata for entry', editingEntryId, metadata)
+      } else {
+        selectionMetadataRef.current = null
+      }
+    } else {
+      selectionMetadataRef.current = null
+    }
+  }, [editingEntryId])
+
+  const handleMakeNote = (selection: string) => {
+    captureSelectionContext(selection)
     setShowNoteModal(true)
   }
+  const handleLinkClick = useCallback((noteId: string) => {
+    setNoteLinkClicked(true)
+    setViewingNoteId(noteId)
+    setShowNoteViewer(true)
+    setTimeout(() => setNoteLinkClicked(false), 100)
+  }, [])
 
-  const handleNoteCreated = async (note: Note) => {
-    if (!currentEditingEntry || !selectedText || !user) {
-      console.log('❌ Missing currentEditingEntry, selectedText, or user', { currentEditingEntry, selectedText, user: !!user })
-      return
+  const linkSelectionToNote = useCallback(async (noteId: string, createdNote?: Note) => {
+    const entryId = currentEditingEntry
+    const selectionText = selectedText
+
+    if (!entryId || !selectionText) {
+      console.log('❌ Missing context for linking', { entryId, selectionTextLength: selectionText?.length })
+      return false
     }
 
-    console.log('📝 Creating note link', { selectedText, noteId: note.id, entryId: currentEditingEntry })
+    if (createdNote) {
+      addLocalNote(createdNote)
+    }
 
-    // Set flag to prevent content change interference
+    console.log('📝 Creating note link', { selectedText: selectionText, noteId, entryId })
     setCreatingLink(true)
 
-    // Phase 1 bug fix: Use cached editor ref and re-enter edit mode if needed
     let editorElement = cachedEditorRef.current
 
-    // If cached ref is stale, try to find editor and re-enter edit mode
     if (!editorElement || !document.contains(editorElement)) {
       console.log('⚠️ Cached editor stale, re-entering edit mode')
-
-      // Re-enter edit mode
-      setEditingEntryId(currentEditingEntry)
-
-      // Wait for edit mode to be active
+      setEditingEntryId(entryId)
       await new Promise(resolve => setTimeout(resolve, 100))
-
-      // Try to find editor again
-      editorElement = document.querySelector(`[data-entry-id="${currentEditingEntry}"] [contenteditable]`) as HTMLElement
+      editorElement = document.querySelector(`[data-entry-id="${entryId}"] [contenteditable]`) as HTMLElement | null
     }
 
-    // Hard fail with toast if editor still missing
     if (!editorElement) {
       console.error('❌ Could not find editor element after re-entry attempt')
       toast.error('Failed to create link: editor not found. Please try again.')
       setCreatingLink(false)
       cachedEditorRef.current = null
-      return
+      return false
     }
 
     try {
-      // Phase 1: Capture metadata BEFORE DOM manipulation
-      const metadata = captureSelectionMetadata(editorElement, selectedText)
-      console.log('📊 Captured selection metadata:', metadata)
+      const metadata = selectionMetadataRef.current || captureSelectionMetadata(editorElement, selectionText)
+      console.log('📊 Using selection metadata:', metadata)
 
-      // Phase 1: Create link in Supabase with metadata
-      const link = await createLink({
-        sourceNoteId: currentEditingEntry,
-        targetNoteId: note.id,
-        linkType: 'created_from',
-        metadata: metadata || undefined
-      }, user.id)
-      console.log('💾 Link created in Supabase:', link)
+      let linkId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `local-link-${Date.now()}`
 
-      // Convert the selected text to a link in the DOM with linkId
-      const linkCreated = convertTextToLink(editorElement, selectedText, note.id, link.id, handleLinkClick)
+      if (user) {
+        try {
+          const link = await createLink({
+            sourceNoteId: entryId,
+            targetNoteId: noteId,
+            linkType: 'created_from',
+            metadata: metadata || undefined
+          }, user.id)
+          linkId = link.id
+          console.log('💾 Link created in Supabase:', link)
+        } catch (linkError) {
+          console.warn('⚠️ Failed to create link in Supabase, falling back to local link:', linkError)
+        }
+      } else {
+        console.warn('⚠️ No authenticated user, creating local-only link')
+      }
+
+      const linkCreated = convertTextToLink(editorElement, selectionText, noteId, linkId, handleLinkClick, metadata || undefined)
 
       if (!linkCreated) {
         console.error('❌ Failed to create link in editor')
         setCreatingLink(false)
-        return
+        return false
       }
 
       console.log('🔗 Created link in editor DOM')
 
-      // Now read the updated HTML from the editor after the link was created
-      // Wait for DOM to settle, then read the actual content
       setTimeout(() => {
-        const updatedContent = editorElement.innerHTML
+        const updatedContent = editorElement?.innerHTML ?? ''
         console.log('📄 Read updated content from editor after link creation')
 
-        // Update state with the content that includes the link at the correct position
         setEntries(prev => prev.map(entry => {
-          if (entry.id === currentEditingEntry) {
+          if (entry.id === entryId) {
             return { ...entry, content: updatedContent, lastModified: new Date().toISOString() }
           }
           return entry
         }))
 
-        // Persist the linked content to Supabase
-        updateNoteInDb(currentEditingEntry, { content: updatedContent }, user.id)
-          .then(() => console.log('💾 Persisted link to Supabase'))
-          .catch(error => console.error('Error persisting link to Supabase:', error))
+        if (user) {
+          updateNoteInDb(entryId, { content: updatedContent }, user.id)
+            .then(() => console.log('💾 Persisted link to Supabase'))
+            .catch(error => console.error('Error persisting link to Supabase:', error))
+        }
 
         setCreatingLink(false)
-
-        // Clear cached ref after successful link creation
         cachedEditorRef.current = null
+        clearSelectionContext()
       }, 50)
+
+      return true
     } catch (error) {
       console.error('❌ Error creating link:', error)
       toast.error('Failed to create link. Please try again.')
       setCreatingLink(false)
       cachedEditorRef.current = null
+      clearSelectionContext()
+      return false
     }
-  }
+  }, [currentEditingEntry, selectedText, user, handleLinkClick, setEntries, clearSelectionContext, addLocalNote])
 
-  const handleLinkClick = (noteId: string) => {
-    setNoteLinkClicked(true)
+  const handleNoteCreated = useCallback(async (note: Note) => {
+    await linkSelectionToNote(note.id, note)
+  }, [linkSelectionToNote])
+
+  const handleAskAIAnswerCreated = useCallback(async (noteId: string, capturedSelection: string, capturedEntryId?: string) => {
+    if (!noteId) {
+      console.warn('[Ask AI] Missing noteId from dialog callback')
+      return
+    }
+
+    // P2 FIX: Use captured selection context from dialog instead of current state
+    // This prevents linking to wrong text if user changed selection during AI generation
+    if (capturedEntryId && capturedSelection && user) {
+      const editorElement = cachedEditorRef.current
+
+      if (!editorElement) {
+        console.log('❌ No editor element cached for linking')
+        setViewingNoteId(noteId)
+        setShowNoteViewer(true)
+        return
+      }
+
+      setCreatingLink(true)
+      console.log('🔗 Linking AI answer with captured selection:', { noteId, entryId: capturedEntryId, selectionLength: capturedSelection.length })
+
+      try {
+        const metadata = selectionMetadataRef.current || captureSelectionMetadata(editorElement, capturedSelection)
+
+        // The link anchor lives inside the journal entry, so the entry needs to be the
+        // source for outgoing link rehydration (review feedback P2).
+        const link = await createLink({
+          sourceNoteId: capturedEntryId,
+          targetNoteId: noteId,
+          linkType: 'created_from',
+          metadata: metadata || undefined
+        }, user.id)
+        console.log('💾 Link created in Supabase:', link)
+
+        const linkCreated = convertTextToLink(editorElement, capturedSelection, noteId, link.id, handleLinkClick, metadata || undefined)
+
+        if (!linkCreated) {
+          console.error('❌ Failed to create link in editor')
+          setCreatingLink(false)
+          setViewingNoteId(noteId)
+          setShowNoteViewer(true)
+          return
+        }
+
+        console.log('🔗 Created link in editor DOM')
+
+        setTimeout(() => {
+          const updatedContent = editorElement?.innerHTML ?? ''
+          console.log('📄 Read updated content from editor after link creation')
+
+          setEntries(prev => prev.map(entry => {
+            if (entry.id === capturedEntryId) {
+              return { ...entry, content: updatedContent }
+            }
+            return entry
+          }))
+
+          if (updatedContent && user) {
+            const currentEntry = entries.find(e => e.id === capturedEntryId)
+            if (currentEntry) {
+              void updateNoteInDb(capturedEntryId, { content: updatedContent }, user.id)
+            }
+          }
+
+          toast.success('Answer linked to journal entry')
+          clearSelectionContext()
+          setCreatingLink(false)
+        }, 50)
+      } catch (error) {
+        console.error('Failed to link AI answer:', error)
+        setCreatingLink(false)
+        clearSelectionContext()
+      }
+    }
+
     setViewingNoteId(noteId)
     setShowNoteViewer(true)
-    // Reset the flag after a short delay
-    setTimeout(() => setNoteLinkClicked(false), 100)
-  }
+  }, [user, entries, cachedEditorRef, handleLinkClick, clearSelectionContext])
 
   const handleCloseNoteModal = () => {
     setShowNoteModal(false)
-    setSelectedText('')
+    clearSelectionContext()
   }
 
   const handleCloseNoteViewer = () => {
@@ -1048,55 +1070,6 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     }
   }
 
-  const handleTaskSave = async (
-    taskId: string,
-    updates: { title: string; due_at: string | null }
-  ) => {
-    if (!session?.access_token) {
-      toast.error('You must be logged in to edit tasks');
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(updates),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update task');
-      }
-
-      // Update local state to reflect the changes
-      setEntryTasks(prev => {
-        const updated = new Map(prev);
-        for (const [entryId, tasks] of updated.entries()) {
-          const taskIndex = tasks.findIndex(t => t.id === taskId);
-          if (taskIndex !== -1) {
-            const updatedTasks = [...tasks];
-            updatedTasks[taskIndex] = {
-              ...updatedTasks[taskIndex],
-              title: updates.title,
-              dueAt: updates.due_at,
-            };
-            updated.set(entryId, updatedTasks);
-            break;
-          }
-        }
-        return updated;
-      });
-
-      toast.success('Task updated successfully');
-    } catch (error) {
-      console.error('Failed to update task:', error);
-      toast.error('Failed to update task');
-      throw error;
-    }
-  };
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00') // Ensure consistent date parsing
@@ -1156,13 +1129,14 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             <Card
               key={entry.id}
               data-entry-id={entry.id}
-              className={`p-6 bg-card transition-all ${
+              className={`py-0 bg-card transition-all ${
                 isTodayEntry ? 'border-2 border-primary/20' : ''
               } ${
                 isEditingThis ? 'ring-2 ring-primary/30' : ''
               }`}
             >
-              <div className="flex items-center justify-between mb-4">
+              {/* Header Section */}
+              <div className="flex items-center justify-between px-3 md:px-2 py-3 md:py-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-3 w-3" />
                   <span className="font-medium">{formatDate(entry.date)}</span>
@@ -1182,47 +1156,38 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               </div>
 
               {/* Helpers (only on today's entry) - Story 2.8: Tile-based UI */}
-              {isTodayEntry && (user || isGuest) && (
-                <HelperTileGrid
-                  helperTypes={[
-                    'cbt-distortions',
-                    'gratitude',
-                    'values-affirmation',
-                    'self-compassion',
-                    'woop',
-                    'best-possible-self',
-                    'savoring',
-                    'loving-kindness',
-                  ]}
-                  onTileClick={(helperType) => {
-                    setActiveHelper(helperType)
-                    setActiveEntryId(entry.id)
-                    setActiveHelperMode('use')
-                  }}
-                  onInfoClick={handleInfoClick}
-                />
+              {isTodayEntry && (user || isGuest) && !isForcedTestUser && (
+                <div className="px-3 md:px-2">
+                  <HelperTileGrid
+                    helperTypes={[
+                      'day-planning',
+                      'cbt-distortions',
+                      'gratitude',
+                      'values-affirmation',
+                      'woop',
+                      'best-possible-self',
+                    ]}
+                    onTileClick={(helperType) => {
+                      setActiveHelper(helperType)
+                      setActiveEntryId(entry.id)
+                      setActiveHelperMode('use')
+                    }}
+                    onInfoClick={handleInfoClick}
+                  />
+                </div>
               )}
 
-              <div
-                onClick={(event) => {
-                  // Guard against text node targets
-                  const target = event.target;
-                  if (!(target instanceof HTMLElement)) {
-                    return;
-                  }
-
-                  // Don't toggle edit mode if clicking on a TaskCard or its children
-                  if (target.closest('[data-task-card]')) {
-                    return;
-                  }
-
+              {/* Content Section */}
+              <CardContent
+                onClick={() => {
                   // Toggle edit mode
-                  setEditingEntryId(entry.id);
+                  setEditingEntryId(entry.id)
                 }}
-                className="cursor-text hover:bg-muted/30 p-2 rounded-md transition-colors"
+                className="px-3 md:px-2 pb-3 md:pb-2 pt-0 cursor-text hover:bg-muted/30 rounded-md transition-colors"
               >
                 {isEditingThis ? (
                   <SimpleRichEditor
+                    variant="flush"
                     value={entry.content}
                     placeholder={isTodayEntry ? "What's on your mind today? Start writing..." : "Continue your thoughts..."}
                     onChange={(content) => handleContentChange(entry.id, content)}
@@ -1239,10 +1204,6 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                       if (relatedTarget && relatedTarget.closest('[data-voice-button]')) {
                         return
                       }
-                      // Don't exit edit mode if the user clicked on a TaskCard
-                      if (relatedTarget && relatedTarget.closest('[data-task-card]')) {
-                        return
-                      }
                       // Don't exit edit mode if the user clicked on the helper expand/collapse toggle
                       if (relatedTarget && relatedTarget.closest('[data-helper-toggle]')) {
                         return
@@ -1250,6 +1211,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                       setEditingEntryId(null)
                     }}
                     onMakeNote={handleMakeNote}
+                    entryId={entry.id}
+                    onNoteCreated={handleAskAIAnswerCreated}
+                    onAskAISelection={captureSelectionContext}
                     onFocus={() => {
                       // Phase 2: Link rehydration from Supabase will be implemented here
                       // For now, links already in HTML remain functional
@@ -1261,7 +1225,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                     {!isContentEmpty(entry.content) ? (
                       isDOMPurifyReady ? (
                         <div
-                          className="text-base leading-relaxed prose prose-sm max-w-none"
+                          className="text-base leading-relaxed text-foreground rich-editor-body"
                           dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.content) }}
                           onClick={(e) => {
                             // Handle link clicks in read-only mode
@@ -1289,189 +1253,17 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                         }}
                       />
                       ) : (
-                        <div className="text-muted-foreground">Loading content...</div>
+                        <div className="text-muted-foreground px-2">Loading content...</div>
                       )
                     ) : (
-                      <p className="text-muted-foreground italic">
+                      <p className="text-muted-foreground italic px-2">
                         {isTodayEntry ? "What's on your mind today? Start writing..." : "What's on your mind today? Start writing..."}
                       </p>
                     )}
                   </div>
                 )}
-              </div>
+              </CardContent>
 
-              {/* Task Cards - Display parsed tasks inline */}
-              {entryTasks.get(entry.id)?.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    title={task.title}
-                    dueAt={task.dueAt}
-                    rrule={task.rrule}
-                    status={task.status}
-                  onAccept={async () => {
-                    // Accept task - update status in database
-                    try {
-                      const response = await fetch(`/api/tasks/${task.id}`, {
-                        method: 'PATCH',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${session?.access_token}`
-                        },
-                        body: JSON.stringify({ status: 'accepted' })
-                      })
-
-                      if (response.ok) {
-                        setEntryTasks(prev => {
-                          const updated = new Map(prev)
-                          const tasks = updated.get(entry.id) || []
-                          updated.set(entry.id, tasks.map(t =>
-                            t.id === task.id ? { ...t, status: 'accepted' as const } : t
-                          ))
-                          return updated
-                        })
-                        toast.success('Task accepted')
-                      } else {
-                        toast.error('Failed to accept task')
-                      }
-                    } catch (error) {
-                      console.error('Failed to accept task:', error)
-                      toast.error('Failed to accept task')
-                    }
-                  }}
-                  onReject={async () => {
-                    // Story 1.2.2: Reject task - remove from list, delete from database, and persist rejection
-                    try {
-                      const response = await fetch(`/api/tasks/${task.id}`, {
-                        method: 'DELETE',
-                        headers: {
-                          'Authorization': `Bearer ${session?.access_token}`
-                        }
-                      })
-
-                      if (response.ok) {
-                        // Remove from UI
-                        setEntryTasks(prev => {
-                          const updated = new Map(prev)
-                          const tasks = updated.get(entry.id) || []
-                          updated.set(entry.id, tasks.filter(t => t.id !== task.id))
-                          return updated
-                        })
-
-                        // Story 1.2.2: Update rejected hashes in state AND persist to DB
-                        if (user) {
-                          try {
-                            // Update state immediately for instant filtering
-                            setRejectedTaskHashes(prev => {
-                              const updated = new Map(prev)
-                              const existing = updated.get(entry.id) || new Set<string>()
-                              existing.add(task.paragraphHash)
-                              updated.set(entry.id, existing)
-                              return updated
-                            })
-
-                            // Get current entry to access existing metadata
-                            const currentEntry = entries.find(e => e.id === entry.id)
-                            if (currentEntry) {
-                              // Get existing rejected hashes from state (already updated above)
-                              const updatedRejectedSet = rejectedTaskHashes.get(entry.id) || new Set<string>()
-                              updatedRejectedSet.add(task.paragraphHash)
-                              const updatedRejected = Array.from(updatedRejectedSet)
-
-                              // Persist to database using in-memory metadata to avoid race conditions
-                              await updateNoteInDb(entry.id, {
-                                metadata: {
-                                  ...(currentEntry.metadata || {}),
-                                  rejectedTaskHashes: updatedRejected
-                                }
-                              }, user.id)
-
-                              if (DEBUG_TASK_DETECTION) {
-                                console.log('[Task Rejection] Persisted rejection:', task.paragraphHash)
-                              }
-                            }
-                          } catch (metadataError) {
-                            console.error('[Task Rejection] Failed to persist rejection:', metadataError)
-                            // State is already updated, so filtering will still work for this session
-                          }
-                        }
-
-                        toast.success('Task rejected and deleted')
-                      } else {
-                        toast.error('Failed to delete task')
-                      }
-                    } catch (error) {
-                      console.error('Failed to delete task:', error)
-                      toast.error('Failed to delete task')
-                    }
-                  }}
-                  onDelete={async () => {
-                    // Delete task from database
-                    try {
-                      const response = await fetch(`/api/tasks/${task.id}`, {
-                        method: 'DELETE',
-                        headers: {
-                          'Authorization': `Bearer ${session?.access_token}`
-                        }
-                      })
-
-                      if (response.ok) {
-                        setEntryTasks(prev => {
-                          const updated = new Map(prev)
-                          const tasks = updated.get(entry.id) || []
-                          updated.set(entry.id, tasks.filter(t => t.id !== task.id))
-                          return updated
-                        })
-                        toast.success('Task deleted')
-                      } else {
-                        toast.error('Failed to delete task')
-                      }
-                    } catch (error) {
-                      console.error('Failed to delete task:', error)
-                      toast.error('Failed to delete task')
-                    }
-                  }}
-                  onEdit={() => {
-                    setEditingTask({
-                      id: task.id,
-                      title: task.title,
-                      dueAt: task.dueAt,
-                    });
-                  }}
-                  onComplete={async () => {
-                    // Toggle task completion status
-                    const newStatus = task.status === 'completed' ? 'accepted' : 'completed';
-
-                    try {
-                      // Update task status in database
-                      const response = await fetch(`/api/tasks/${task.id}`, {
-                        method: 'PATCH',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${session?.access_token}`
-                        },
-                        body: JSON.stringify({ status: newStatus })
-                      })
-
-                      if (response.ok) {
-                        setEntryTasks(prev => {
-                          const updated = new Map(prev)
-                          const tasks = updated.get(entry.id) || []
-                          updated.set(entry.id, tasks.map(t =>
-                            t.id === task.id ? { ...t, status: newStatus } : t
-                          ))
-                          return updated
-                        })
-                        toast.success(newStatus === 'completed' ? 'Task completed!' : 'Task reopened')
-                      } else {
-                        toast.error('Failed to update task')
-                      }
-                    } catch (error) {
-                      console.error('Failed to update task:', error)
-                      toast.error('Failed to update task')
-                    }
-                  }}
-                />
-              ))}
             </Card>
           )
         })}
@@ -1492,22 +1284,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         noteId={viewingNoteId}
       />
 
-      {/* Task Edit Dialog */}
-      {editingTask && (
-        <TaskEditDialog
-          open={!!editingTask}
-          onOpenChange={(open) => {
-            if (!open) setEditingTask(null);
-          }}
-          taskId={editingTask.id}
-          initialTitle={editingTask.title}
-          initialDueAt={editingTask.dueAt}
-          onSave={handleTaskSave}
-        />
-      )}
 
       {/* Story 2.9: Helper Dialog (rendered once, outside entry loop) */}
-      {activeHelper && (user || isGuest) && (activeHelperMode === 'info' || activeEntryId) && (
+      {!isForcedTestUser && activeHelper && (user || isGuest) && (activeHelperMode === 'info' || activeEntryId) && (
         <Dialog open={true} onOpenChange={(open) => !open && handleHelperClose()}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             {activeHelperMode === 'info' ? (

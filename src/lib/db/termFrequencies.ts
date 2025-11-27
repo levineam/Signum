@@ -64,12 +64,18 @@ export async function getWeeklyDelta(
     console.error('Error fetching weekly delta:', error);
     throw error;
   }
+  type TermWithDelta = TermFrequency & { delta?: number };
+
   return (data || [])
-    .map(term => ({
+    .map((term: TermFrequency): TermWithDelta => ({
       ...term,
       delta: term.count_this_week - term.count_last_week
     }))
-    .sort((a, b) => b.delta - a.delta)
+    .sort(
+      (a: TermWithDelta, b: TermWithDelta) =>
+        (b.delta ?? b.count_this_week - b.count_last_week) -
+        (a.delta ?? a.count_this_week - a.count_last_week)
+    )
     .slice(0, limit);
 }
 
@@ -83,7 +89,7 @@ export async function weeklyRollover(userId: string): Promise<void> {
     throw fetchError;
   }
   if (terms && terms.length > 0) {
-    const updates = terms.map(term => ({
+    const updates = terms.map((term: { id: string; count_this_week: number }) => ({
       id: term.id,
       count_last_week: term.count_this_week,
       count_this_week: 0
