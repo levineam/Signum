@@ -56,6 +56,18 @@ Journaling-first social platform. Next.js 15.5.3, Supabase, shadcn/ui. See @docs
 
 **Commands**: `npm run dev` | `npm run build` | `npm run lint`
 
+## BMAD Method Integration
+
+This project uses **BMAD Method v4.44.1** for AI-assisted development workflows. BMAD files are **tracked in git** (as of PR #213) for consistent workspace setup.
+
+**Key Points**:
+- `.bmad-core/` directory contains agents, tasks, workflows, and templates
+- Files are committed to git - no per-workspace download needed
+- Use `/bmad-refresh` slash command to update BMAD when needed
+- `npm install` postinstall hook verifies installation but skips download if files exist
+
+**Benefits**: Faster workspace setup (git clone vs download), version locked across environments, offline-friendly.
+
 ## Stack
 
 Next.js 15.5.3 (Turbopack) • Supabase (Auth, DB, RLS) • shadcn/ui • TypeScript • Playwright
