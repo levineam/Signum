@@ -1073,11 +1073,16 @@ export function OntologyPage() {
               placeholder="Add a goal"
               value={itemDrafts.goal}
               onChange={(e) => setItemDrafts((prev) => ({ ...prev, goal: e.target.value }))}
-              className="w-48"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleAddGoal()
+                }
+              }}
+              className="flex-1"
             />
-            <Button size="sm" onClick={handleAddGoal} disabled={savingExecution}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add Goal
+            <Button size="icon" onClick={handleAddGoal} disabled={savingExecution} aria-label="Add goal">
+              <Plus className="h-4 w-4" />
             </Button>
             {normalizing && (
               <span className="text-xs text-muted-foreground">Upgrading data…</span>
@@ -1098,8 +1103,22 @@ export function OntologyPage() {
                 <Card className="h-full border border-emerald-100">
                   <CardContent className="group/goal p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1">
-                        <div className="text-sm font-semibold text-emerald-700">{goal.name}</div>
+                      <div className="space-y-1 flex-1">
+                        <div
+                          className="text-sm font-semibold text-emerald-700 cursor-pointer hover:text-emerald-800 transition-colors"
+                          onClick={() => startEditItem('goals', goal)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              startEditItem('goals', goal)
+                            }
+                          }}
+                          aria-label={`Click to edit ${goal.name}`}
+                        >
+                          {goal.name}
+                        </div>
                         <div className="flex items-center gap-2">
                           <p className="text-xs text-muted-foreground">
                             {goal.projects.length} projects • {counts.tasks} tasks
@@ -1117,14 +1136,6 @@ export function OntologyPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/goal:opacity-100 group-focus-within/goal:opacity-100">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => startEditItem('goals', goal)}
-                          aria-label={`Edit ${goal.name}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1153,7 +1164,7 @@ export function OntologyPage() {
                       </div>
                     )}
 
-                    <div className="space-y-2">
+                    <div className="flex items-center gap-2">
                       <Input
                         aria-label={`Add project to ${goal.name}`}
                         placeholder="Add project"
@@ -1165,18 +1176,17 @@ export function OntologyPage() {
                             handleAddProject(goal.id)
                           }
                         }}
+                        className="flex-1"
                       />
-                      <div className="flex gap-2">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => handleAddProject(goal.id)}
-                          disabled={savingExecution}
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Add Project
-                        </Button>
-                      </div>
+                      <Button
+                        variant="default"
+                        size="icon"
+                        onClick={() => handleAddProject(goal.id)}
+                        disabled={savingExecution}
+                        aria-label="Add project"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
 
                     <div className="space-y-3">
@@ -1190,14 +1200,14 @@ export function OntologyPage() {
                         return (
                           <div
                             key={project.id}
-                            className="group relative rounded-md border border-slate-200/80 bg-white shadow-sm"
+                            className="group/project relative rounded-md border border-slate-200/80 bg-white shadow-sm"
                           >
                             <div className="flex items-start justify-between px-3 py-2">
-                              <div className="flex items-start gap-2">
+                              <div className="flex items-start gap-2 flex-1">
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="h-7 w-7 flex-shrink-0"
                                   onClick={() =>
                                     setExpandedProjects((prev) => ({
                                       ...prev,
@@ -1213,22 +1223,26 @@ export function OntologyPage() {
                                     <ChevronRight className="h-4 w-4" />
                                   )}
                                 </Button>
-                                <div className="space-y-1">
-                                  <p className="font-medium text-slate-900 leading-tight line-clamp-2">
+                                <div className="space-y-1 flex-1">
+                                  <p
+                                    className="font-medium text-slate-900 leading-tight line-clamp-2 cursor-pointer hover:text-slate-700 transition-colors"
+                                    onClick={() => startEditItem('projects', project)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault()
+                                        startEditItem('projects', project)
+                                      }
+                                    }}
+                                    aria-label={`Click to edit ${project.name}`}
+                                  >
                                     {project.name}
                                   </p>
                                   <p className="text-xs text-muted-foreground">{project.tasks.length} tasks</p>
                                 </div>
                               </div>
-                              <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => startEditItem('projects', project)}
-                                  aria-label={`Edit ${project.name}`}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
+                              <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity group-hover/project:opacity-100 group-focus-within/project:opacity-100">
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1291,18 +1305,19 @@ export function OntologyPage() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault()
-                                      handleAddTask(project.id)
-                                    }
-                                  }}
-                                />
+                                        handleAddTask(project.id)
+                                      }
+                                    }}
+                                    className="flex-1"
+                                  />
                                   <Button
                                     variant="outline"
-                                    size="sm"
+                                    size="icon"
                                     onClick={() => handleAddTask(project.id)}
                                     disabled={savingExecution}
+                                    aria-label="Add task"
                                   >
-                                    <Plus className="h-4 w-4 mr-1" />
-                                    Add Task
+                                    <Plus className="h-4 w-4" />
                                   </Button>
                                 </div>
 
@@ -1316,83 +1331,87 @@ export function OntologyPage() {
                                   return (
                                     <li
                                       key={task.id}
-                                      className="group rounded-md border border-slate-200/80 bg-white p-2"
+                                      className="group/task rounded-md border border-slate-200/80 bg-white p-2"
                                     >
                                       {isEditingTask ? (
                                         <div className="space-y-2">
                                           <Input
                                             value={editDraft.name}
-                                              onChange={(e) =>
-                                                setEditDraft((prev) => ({
-                                                  ...prev,
-                                                  name: e.target.value
-                                                }))
-                                              }
-                                            />
-                                            <Select
-                                              value={editDraft.parentId ?? project.id}
-                                              onValueChange={(value) =>
-                                                setEditDraft((prev) => ({
-                                                  ...prev,
-                                                  parentId: value === 'none' ? undefined : value
-                                                }))
-                                              }
-                                            >
-                                              <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Parent project" />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="none">None (Unassigned)</SelectItem>
-                                                {executionStack.hierarchy.goals.map((goalOption) =>
-                                                  goalOption.projects.map((projectOption) => (
-                                                    <SelectItem key={projectOption.id} value={projectOption.id}>
-                                                      {goalOption.name} • {projectOption.name}
-                                                    </SelectItem>
-                                                  ))
-                                                )}
-                                                {executionStack.hierarchy.unassignedProjects.map((projectOption) => (
+                                            onChange={(e) =>
+                                              setEditDraft((prev) => ({
+                                                ...prev,
+                                                name: e.target.value
+                                              }))
+                                            }
+                                          />
+                                          <Select
+                                            value={editDraft.parentId ?? project.id}
+                                            onValueChange={(value) =>
+                                              setEditDraft((prev) => ({
+                                                ...prev,
+                                                parentId: value === 'none' ? undefined : value
+                                              }))
+                                            }
+                                          >
+                                            <SelectTrigger className="w-full">
+                                              <SelectValue placeholder="Parent project" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="none">None (Unassigned)</SelectItem>
+                                              {executionStack.hierarchy.goals.map((goalOption) =>
+                                                goalOption.projects.map((projectOption) => (
                                                   <SelectItem key={projectOption.id} value={projectOption.id}>
-                                                    Unassigned • {projectOption.name}
+                                                    {goalOption.name} • {projectOption.name}
                                                   </SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
-                                            <div className="flex gap-2">
-                                              <Button size="sm" onClick={handleSaveEditItem} disabled={savingExecution}>
-                                                Save
-                                              </Button>
-                                              <Button size="sm" variant="ghost" onClick={cancelItemEdit}>
-                                                Cancel
-                                              </Button>
-                                            </div>
+                                                ))
+                                              )}
+                                              {executionStack.hierarchy.unassignedProjects.map((projectOption) => (
+                                                <SelectItem key={projectOption.id} value={projectOption.id}>
+                                                  Unassigned • {projectOption.name}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                          <div className="flex gap-2">
+                                            <Button size="sm" onClick={handleSaveEditItem} disabled={savingExecution}>
+                                              Save
+                                            </Button>
+                                            <Button size="sm" variant="ghost" onClick={cancelItemEdit}>
+                                              Cancel
+                                            </Button>
                                           </div>
-                                        ) : (
-                                          <div className="flex items-start justify-between gap-2">
-                                            <div className="space-y-1">
-                                              <p className="text-sm font-medium text-slate-900 leading-snug line-clamp-2">
-                                                {task.name}
-                                              </p>
-                                            </div>
-                                            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => startEditItem('tasks', task)}
-                                                aria-label={`Edit ${task.name}`}
-                                              >
-                                                <Pencil className="h-4 w-4" />
-                                              </Button>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => openDeleteDialog('tasks', task.id)}
-                                                aria-label={`Delete ${task.name}`}
-                                              >
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                              </Button>
-                                            </div>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-start justify-between gap-2">
+                                          <div className="space-y-1 flex-1">
+                                            <p
+                                              className="text-sm font-medium text-slate-900 leading-snug line-clamp-2 cursor-pointer hover:text-slate-700 transition-colors"
+                                              onClick={() => startEditItem('tasks', task)}
+                                              role="button"
+                                              tabIndex={0}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                  e.preventDefault()
+                                                  startEditItem('tasks', task)
+                                                }
+                                              }}
+                                              aria-label={`Click to edit ${task.name}`}
+                                            >
+                                              {task.name}
+                                            </p>
                                           </div>
-                                        )}
+                                          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/task:opacity-100 group-focus-within/task:opacity-100">
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => openDeleteDialog('tasks', task.id)}
+                                              aria-label={`Delete ${task.name}`}
+                                            >
+                                              <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      )}
                                       </li>
                                     )
                                   })}
