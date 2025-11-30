@@ -87,15 +87,68 @@ git push
 
 ### Playwright E2E Development
 
+#### Quick Start (Two Approaches)
+
+**Approach 1: Auto-start (CI/Vercel style)**
 ```bash
-# Run tests in test mode (already configured)
+# Runs production build + all browsers (slow, ~2 min startup)
 npm run test:e2e
+```
+
+**Approach 2: Manual server (Local development)**
+```bash
+# Terminal 1: Start test mode server
+npm run dev:test
+
+# Terminal 2: Run tests against existing server (fast, <5s startup)
+npx playwright test --config=playwright.config.noserver.ts
 
 # Or run specific test
-npx playwright test tests/hyperlink.test.ts
+npx playwright test tests/ontology-inline-editing.spec.ts --config=playwright.config.noserver.ts
 
 # Debug mode
-npx playwright test --headed --debug
+npx playwright test --headed --debug --config=playwright.config.noserver.ts
+```
+
+#### When to Use Which Config
+
+| Config | Server | Browsers | Use For |
+|--------|--------|----------|---------|
+| `playwright.config.noserver.ts` | Assumes running on :3000 | Chromium only | **Local dev** (fast iteration) |
+| `playwright.config.ts` (default) | Auto-starts production build | Chrome, Firefox, Safari | **CI/Vercel** (full validation) |
+
+#### Common Commands
+
+```bash
+# Run single test file (fast)
+npx playwright test tests/hyperlink.test.ts --config=playwright.config.noserver.ts
+
+# Run tests matching pattern
+npx playwright test --grep="click-to-edit" --config=playwright.config.noserver.ts
+
+# Run smoke tests only
+npx playwright test --grep=@smoke --config=playwright.config.noserver.ts
+
+# Debug with browser visible
+npx playwright test --headed --debug --config=playwright.config.noserver.ts
+```
+
+#### Troubleshooting
+
+**Issue: "Timed out waiting 120000ms from config.webServer"**
+- Using default config which tries to build production bundle
+- **Fix**: Use `--config=playwright.config.noserver.ts` and ensure `npm run dev:test` is running
+
+**Issue: "net::ERR_ABORTED at http://localhost:3000"**
+- Dev server not running or wrong port
+- **Fix**: Check `npm run dev:test` is active in another terminal
+
+**Issue: Port 3000 already in use**
+```bash
+# Kill existing process
+kill $(lsof -ti:3000)
+# Restart
+npm run dev:test
 ```
 
 ## Troubleshooting

@@ -31,6 +31,7 @@ How to test locally without Supabase using test mode.
 - Quick Start (3 commands)
 - What Works / Doesn't Work
 - Typical workflows
+- Playwright E2E with two-config approach (`.noserver.ts` for local dev)
 
 ### [Testing Decision Matrix](./TESTING_DECISION_MATRIX.md)
 
