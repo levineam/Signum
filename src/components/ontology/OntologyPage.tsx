@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { GoalNode, ProjectNode, buildExecutionHierarchy, countDescendants, normalizeOntologyItems, resequenceByParent } from '@/lib/ontology/hierarchy'
-import { buildSampleExecutionSeed, shouldSeedExecutionStack } from '@/lib/ontology/seeding'
+import { buildDefaultGoals, buildSampleExecutionSeed, shouldSeedExecutionStack } from '@/lib/ontology/seeding'
 
 type SectionKey =
   | 'higher-power'
@@ -332,7 +332,9 @@ export function OntologyPage() {
 
     const seedSamples = async () => {
       const seededAt = new Date().toISOString()
-      const { projects, tasks } = buildSampleExecutionSeed(executionStack.goalItems)
+      const hasGoals = executionStack.goalItems.length > 0
+      const goalItems = hasGoals ? executionStack.goalItems : buildDefaultGoals()
+      const { projects, tasks } = buildSampleExecutionSeed(goalItems)
 
       if (projects.length === 0 && tasks.length === 0) {
         setSeedChecked(true)
@@ -340,6 +342,23 @@ export function OntologyPage() {
       }
 
       await Promise.all([
+        // Seed or mark goals
+        updateNote(
+          goalsNote.id,
+          {
+            metadata: {
+              ...goalsNote.metadata,
+              ontologyCategory: goalsNote.metadata?.ontologyCategory ?? 'goals',
+              items: hasGoals ? goalsNote.metadata?.items ?? goalItems : resequenceByParent(goalItems),
+              executionSeedStatus: {
+                seeded: true,
+                seededAt,
+                reason: 'empty-seeded'
+              }
+            }
+          },
+          user.id
+        ),
         updateNote(
           projectsNote.id,
           {
@@ -371,23 +390,9 @@ export function OntologyPage() {
             }
           },
           user.id
-        ),
-        updateNote(
-          goalsNote.id,
-          {
-            metadata: {
-              ...goalsNote.metadata,
-              executionSeedStatus: {
-                seeded: true,
-                seededAt,
-                reason: 'empty-seeded'
-              }
-            }
-          },
-          user.id
         )
       ])
-      toast.success('Added sample projects and tasks')
+      toast.success('Added sample goals, projects, and tasks')
       await loadNotes()
     }
 
