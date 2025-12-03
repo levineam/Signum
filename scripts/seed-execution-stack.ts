@@ -155,6 +155,7 @@ export async function seedExecutionStack(userId: string) {
         user_id: userId,
         title: 'My Projects',
         content: '',
+        note_type: 'custom',
         is_pinned: true,
         metadata: { ontologyCategory: 'projects', items: [] }
       })
@@ -172,6 +173,7 @@ export async function seedExecutionStack(userId: string) {
         user_id: userId,
         title: 'My Tasks',
         content: '',
+        note_type: 'custom',
         is_pinned: true,
         metadata: { ontologyCategory: 'tasks', items: [] }
       })
