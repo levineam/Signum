@@ -66,6 +66,22 @@ export function buildSeedStatus(reason: ExecutionSeedReason, seededAt?: string):
   }
 }
 
+export function buildDefaultGoals(idFactory: IdFactory = defaultIdFactory): HierarchicalOntologyItem[] {
+  const DEFAULT_GOAL_TITLES = [
+    'Build mental-health work',
+    'Ship first visible win',
+    'Create a support system'
+  ]
+
+  return DEFAULT_GOAL_TITLES.map((name, index) => ({
+    id: idFactory(),
+    name,
+    confidence: 'high',
+    order: index,
+    excerpts: []
+  }))
+}
+
 export function buildSampleExecutionSeed(
   goals: HierarchicalOntologyItem[],
   idFactory: IdFactory = defaultIdFactory
