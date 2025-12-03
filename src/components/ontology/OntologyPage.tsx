@@ -178,6 +178,8 @@ export function OntologyPage() {
   useEffect(() => {
     // Reset meaning draft when switching users to avoid leaking prior user state
     setMeaningDraft(DEFAULT_MEANING_INDEX)
+    // Allow seeding to run for a new user session
+    setSeedChecked(false)
   }, [user?.id])
 
   useEffect(() => {

@@ -99,7 +99,7 @@ export function buildSampleExecutionSeed(
       const projectId = idFactory()
       projects.push({
         id: projectId,
-        name: `${template.title} — ${goal.name}`,
+        name: template.title,
         confidence: 'high',
         parentId: goal.id,
         order: projectIndex,
