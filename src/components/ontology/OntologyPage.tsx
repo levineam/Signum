@@ -1101,8 +1101,8 @@ export function OntologyPage() {
                 className="min-w-[280px] max-w-[320px]"
               >
                 <Card className="h-full border border-emerald-100">
-                  <CardContent className="group/goal p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="group/goal-header flex items-start justify-between gap-2">
                       <div className="space-y-1 flex-1">
                         <div
                           className="text-sm font-semibold text-emerald-700 cursor-pointer hover:text-emerald-800 transition-colors"
@@ -1135,7 +1135,7 @@ export function OntologyPage() {
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/goal:opacity-100 group-focus-within/goal:opacity-100">
+                      <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/goal-header:opacity-100 group-focus-within/goal-header:opacity-100">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1200,9 +1200,9 @@ export function OntologyPage() {
                         return (
                           <div
                             key={project.id}
-                            className="group/project relative rounded-md border border-slate-200/80 bg-white shadow-sm"
+                            className="relative rounded-md border border-slate-200/80 bg-white shadow-sm"
                           >
-                            <div className="flex items-start justify-between px-3 py-2">
+                            <div className="group/project-header flex items-start justify-between px-3 py-2">
                               <div className="flex items-start gap-2 flex-1">
                                 <Button
                                   variant="ghost"
@@ -1242,7 +1242,7 @@ export function OntologyPage() {
                                   <p className="text-xs text-muted-foreground">{project.tasks.length} tasks</p>
                                 </div>
                               </div>
-                              <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity group-hover/project:opacity-100 group-focus-within/project:opacity-100">
+                              <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity group-hover/project-header:opacity-100 group-focus-within/project-header:opacity-100">
                                 <Button
                                   variant="ghost"
                                   size="icon"
