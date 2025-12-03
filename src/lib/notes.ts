@@ -234,18 +234,29 @@ async function migrateLegacyOntologyNotes(userId: string, notes: Note[]): Promis
       const normalized = normalizeOntologyItems(
         note.metadata?.items as HierarchicalOntologyItem[] | undefined
       ).normalized
-      const firstItem = normalized[0]
       const fallbackId = crypto?.randomUUID?.() || `${Date.now()}-${noteIndex}`
       const fallbackConfidence = note.metadata?.confidence || 'high'
 
-      return {
-        id: firstItem?.id ?? fallbackId,
-        name: firstItem?.name ?? note.title,
-        confidence: firstItem?.confidence ?? fallbackConfidence,
-        order: typeof firstItem?.order === 'number' ? firstItem.order : noteIndex,
-        parentId: firstItem?.parentId,
-        excerpts: firstItem?.excerpts ?? []
+      // Preserve all items in the note; if none exist, synthesize one from the title
+      if (normalized.length === 0) {
+        return [{
+          id: fallbackId,
+          name: note.title,
+          confidence: fallbackConfidence,
+          order: noteIndex,
+          parentId: undefined,
+          excerpts: []
+        }]
       }
+
+      return normalized.map((item, itemIndex) => ({
+        id: item.id ?? `${fallbackId}-${itemIndex}`,
+        name: item.name ?? note.title,
+        confidence: item.confidence ?? fallbackConfidence,
+        order: typeof item.order === 'number' ? item.order : itemIndex,
+        parentId: item.parentId,
+        excerpts: item.excerpts ?? []
+      }))
     })
 
     // Update first note with consolidated items
