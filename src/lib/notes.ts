@@ -40,12 +40,18 @@ function getOntologyCategoryKey(note: Note): string {
  */
 export async function getNotes(userId: string): Promise<Note[]> {
   try {
-    const [journal, regular, ontology] = await Promise.all([
+    const [journal, regular, ontologyDashboard] = await Promise.all([
       supabaseNotes.getJournalEntries(userId),
       supabaseNotes.getRegularNotes(userId),
-      supabaseNotes.getOntologyNotes(userId)
+      supabaseNotes.getOntologyDashboardNotes(userId)
     ])
-    return [...journal, ...regular, ...ontology]
+    const all = [...journal, ...regular, ...ontologyDashboard]
+    // Deduplicate by id in case ontology dashboard notes overlap with regular
+    const byId = new Map<string, Note>()
+    all.forEach((note) => {
+      byId.set(note.id, note)
+    })
+    return Array.from(byId.values())
   } catch (error) {
     console.error('Error loading notes from Supabase:', error)
     return []
