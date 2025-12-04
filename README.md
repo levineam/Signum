@@ -1,5 +1,7 @@
 # Signum
 
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+
 A journaling-first social platform designed to help users lead more meaningful lives through personal insight and community connection.
 
 ## 🚀 Live Application
@@ -57,6 +59,12 @@ Requires `.env.local` with Supabase credentials. Use this for:
 - RLS policy validation
 - Supabase-dependent features
 
+Admin-only scripts such as `scripts/seed-sample-journal-entries.ts` expect `SUPABASE_SERVICE_ROLE_KEY`. Do not expose this key to the client or commit it; most contributors can skip it entirely by using `npm run dev:test`.
+
+**Sentry (optional):**
+- Sentry is disabled by default. To enable it locally or in production, set `SENTRY_ENABLED=true` and provide `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN`.
+- Leave Sentry variables unset for open-source runs to avoid uploading source maps or requiring private tokens.
+
 ### Development Modes Comparison
 
 | Mode | Command | Setup | Speed | Best For |
@@ -104,11 +112,13 @@ vercel deploy --prod
 - **Product Requirements:** [`docs/prd.md`](./docs/prd.md)
 - **Project Brief:** [`docs/project-brief.md`](./docs/project-brief.md)
 - **MCP Usage Guide:** [`.claude/CLAUDE.md`](./.claude/CLAUDE.md)
+- **Contributing:** [`CONTRIBUTING.md`](./CONTRIBUTING.md)
+- **Security Policy:** [`SECURITY.md`](./SECURITY.md)
 
 ## 🔗 Links
 
 - **Production App:** [https://ontology-mu.vercel.app](https://ontology-mu.vercel.app)
 - **GitHub Repository:** [https://github.com/levineam/Signum](https://github.com/levineam/Signum)
-- **Vercel Dashboard:** [https://vercel.com/levineams-projects/signum](https://vercel.com/levineams-projects/signum)
+
 
 Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

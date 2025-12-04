@@ -22,6 +22,10 @@ export function hasAdminKey(): boolean {
  * This prevents build-time errors when SUPABASE_SERVICE_ROLE_KEY is not set
  */
 export function getSupabaseAdmin(): SupabaseClient {
+  if (typeof window !== 'undefined') {
+    throw new Error('getSupabaseAdmin must not be called on the client');
+  }
+
   if (_supabaseAdmin) {
     return _supabaseAdmin
   }

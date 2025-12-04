@@ -25,12 +25,14 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+const enableSentry = process.env.SENTRY_ENABLED === 'true';
+
+const sentryWrappedConfig = withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://github.com/getsentry/sentry-webpack-plugin#options
 
-  org: "jotes",
-  project: "jotes",
+  org: process.env.SENTRY_ORG ?? '',
+  project: process.env.SENTRY_PROJECT ?? '',
 
   // An auth token is required for uploading source maps.
   authToken: process.env.SENTRY_AUTH_TOKEN,
@@ -39,6 +41,8 @@ export default withSentryConfig(nextConfig, {
 
   // Use sourcemaps for error tracking (set to false in production to prevent source code exposure)
   sourcemaps: {
-    disable: process.env.NODE_ENV === "production",
+    disable: process.env.NODE_ENV === 'production',
   },
 });
+
+export default enableSentry ? sentryWrappedConfig : nextConfig;
