@@ -1,0 +1,11 @@
+Signum
+Copyright (c) 2025 Signum contributors
+
+This product includes software developed by the Signum project and its contributors.
+
+Third-party notices and attributions:
+- Next.js, React, shadcn/ui, Radix UI, lucide-react, Tailwind CSS — MIT and other permissive licenses.
+- Geist font by Vercel — see https://vercel.com/font for terms; attribution required when distributing the font files.
+- BMAD tooling files (`.bmad-core/`, `bmad/`, `bmad-docs/`) carry their own licenses; verify redistribution rights before repackaging these assets separately.
+
+If you distribute this project in source or binary form, preserve this NOTICE file alongside the LICENSE.

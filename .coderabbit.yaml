@@ -1,0 +1,13 @@
+reviews:
+  auto_review:
+    enabled: true
+    drafts: true           # review drafts too so early feedback lands
+    branches:
+      - '*'                # review PRs to any target branch
+  summary:
+    max_lines: 80
+  inline:
+    suggestion_limit: 15
+notifications:
+  pull_request:
+    enabled: true
