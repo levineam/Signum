@@ -1,9 +1,9 @@
 reviews:
   auto_review:
     enabled: true
-    drafts: false          # skip drafts unless explicitly requested
+    drafts: true           # review drafts too so early feedback lands
     branches:
-      - main               # review PRs targeting main
+      - '*'                # review PRs to any target branch
   summary:
     max_lines: 80
   inline:

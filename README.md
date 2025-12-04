@@ -115,7 +115,7 @@ vercel deploy --prod
 - **MCP Usage Guide:** [`.claude/CLAUDE.md`](./.claude/CLAUDE.md)
 - **Contributing:** [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - **Security Policy:** [`SECURITY.md`](./SECURITY.md)
-- **AI Code Review:** CodeRabbit auto-reviews PRs targeting `main` (see `.coderabbit.yaml`).
+- **AI Code Review:** CodeRabbit auto-reviews all PRs (including drafts) per `.coderabbit.yaml`.
 
 ## 🔗 Links
 
