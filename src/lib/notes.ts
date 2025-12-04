@@ -125,6 +125,9 @@ export async function initializePinnedNotes(userId: string): Promise<void> {
     // Migrate legacy multi-note pattern to single-note-with-items
     await migrateLegacyOntologyNotes(userId, existingOntology)
 
+    // Clean up redundant goal names in project titles (pre-PR-211 data)
+    await cleanupRedundantProjectNames(userId)
+
     // Reload after migration
     const currentOntology = await supabaseNotes.getOntologyDashboardNotes(userId)
     const existingKeys = new Set(currentOntology.map(getOntologyCategoryKey))
@@ -209,6 +212,71 @@ async function backfillOntologyCategoryMetadata(userId: string): Promise<void> {
     }
   } catch (error) {
     console.error('Error backfilling ontologyCategory metadata:', error)
+    // Non-fatal - continue with rest of initialization
+  }
+}
+
+/**
+ * Clean up redundant goal names from project titles
+ * Pre-PR-211 seed data included goal name in project title: "Clarify direction — Build mental-health work"
+ * This migration removes the redundant suffix, leaving just: "Clarify direction"
+ */
+async function cleanupRedundantProjectNames(userId: string): Promise<void> {
+  try {
+    const allNotes = await supabaseNotes.getOntologyDashboardNotes(userId)
+    const projectsNote = allNotes.find(note =>
+      note.metadata?.ontologyCategory === 'projects' || note.noteType === 'ontology-project'
+    )
+    const goalsNote = allNotes.find(note =>
+      note.metadata?.ontologyCategory === 'goals' || note.noteType === 'ontology-aim'
+    )
+
+    if (!projectsNote || !goalsNote) return
+
+    const projects = normalizeOntologyItems(
+      projectsNote.metadata?.items as HierarchicalOntologyItem[] | undefined
+    ).normalized
+    const goals = normalizeOntologyItems(
+      goalsNote.metadata?.items as HierarchicalOntologyItem[] | undefined
+    ).normalized
+
+    // Build map of goal IDs to names for lookup
+    const goalNames = new Map(goals.map(g => [g.id, g.name]))
+
+    let hasChanges = false
+    const cleanedProjects = projects.map(project => {
+      // Check if project name ends with " — [goal name]" pattern
+      const goalName = project.parentId ? goalNames.get(project.parentId) : null
+      if (goalName && project.name.endsWith(` — ${goalName}`)) {
+        hasChanges = true
+        return {
+          ...project,
+          name: project.name.replace(` — ${goalName}`, '')
+        }
+      }
+      // Also check for single dash variant " - [goal name]"
+      if (goalName && project.name.endsWith(` - ${goalName}`)) {
+        hasChanges = true
+        return {
+          ...project,
+          name: project.name.replace(` - ${goalName}`, '')
+        }
+      }
+      return project
+    })
+
+    if (hasChanges) {
+      await updateNote(projectsNote.id, {
+        metadata: {
+          ...projectsNote.metadata,
+          ontologyCategory: 'projects',
+          items: cleanedProjects
+        }
+      }, userId)
+      console.log('Cleaned up redundant goal names from project titles')
+    }
+  } catch (error) {
+    console.error('Error cleaning up redundant project names:', error)
     // Non-fatal - continue with rest of initialization
   }
 }
