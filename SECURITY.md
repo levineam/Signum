@@ -18,3 +18,7 @@
 - No secret keys should ever be committed.
 - Default development (`npm run dev:test`) works without Supabase or OpenAI credentials.
 - For full Supabase runs, use a local `.env.local` that is **never** committed.
+
+## Secret scanning
+- Recommended before release: `docker run --rm -v $(pwd):/repo zricethezav/gitleaks:latest detect --no-banner --redact --source /repo`
+- Run locally and in CI for PRs; redact any findings and rotate affected keys.
