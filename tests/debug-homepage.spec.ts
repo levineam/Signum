@@ -4,12 +4,11 @@
 
 import { test } from '@playwright/test';
 
-const TEST_URL = process.env.TEST_URL || 'https://signum-git-story-121-inline-task-cards-levineams-projects.vercel.app';
+const TEST_URL = process.env.TEST_URL || 'http://localhost:3000';
+const TEST_USER_EMAIL = process.env.TEST_USER_EMAIL;
+const TEST_USER_PASSWORD = process.env.TEST_USER_PASSWORD;
 
-const TEST_USER = {
-  email: 'dev-test-1@signum.dev',
-  password: 'DevTest2025!User1'
-};
+test.skip(!TEST_USER_EMAIL || !TEST_USER_PASSWORD, 'Set TEST_USER_EMAIL and TEST_USER_PASSWORD to run this debug spec');
 
 test('debug: screenshot homepage after auth', async ({ page }) => {
   await page.goto(`${TEST_URL}/auth`);
@@ -19,8 +18,8 @@ test('debug: screenshot homepage after auth', async ({ page }) => {
   const emailInput = page.locator('input[type="email"]').first();
   const passwordInput = page.locator('input[type="password"]').first();
 
-  await emailInput.fill(TEST_USER.email);
-  await passwordInput.fill(TEST_USER.password);
+  await emailInput.fill(TEST_USER_EMAIL!);
+  await passwordInput.fill(TEST_USER_PASSWORD!);
 
   // Submit form and wait for redirect
   await page.locator('button[type="submit"]').first().click();
