@@ -225,7 +225,7 @@ async function cleanupRedundantProjectNames(userId: string): Promise<void> {
   try {
     const allNotes = await supabaseNotes.getOntologyDashboardNotes(userId)
     const projectsNote = allNotes.find(note =>
-      note.metadata?.ontologyCategory === 'projects' || note.noteType === 'ontology-project'
+      note.metadata?.ontologyCategory === 'projects'
     )
     const goalsNote = allNotes.find(note =>
       note.metadata?.ontologyCategory === 'goals' || note.noteType === 'ontology-aim'
