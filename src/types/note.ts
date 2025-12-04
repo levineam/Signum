@@ -22,6 +22,20 @@ export type NoteType =
   | 'custom'           // User-created standalone note (replaces old 'regular')
 
 /**
+ * Ontology categories used to render the ontology page.
+ * Some categories map to dedicated note types, others use custom notes.
+ */
+export type OntologyCategory =
+  | 'higher-power'
+  | 'beliefs'
+  | 'values'
+  | 'people'
+  | 'mission'
+  | 'goals'
+  | 'projects'
+  | 'tasks'
+
+/**
  * Link type for bidirectional relationships between notes.
  */
 export type LinkType =
@@ -33,6 +47,22 @@ export type LinkType =
  * Confidence level for AI-extracted ontology items.
  */
 export type ConfidenceLevel = 'high' | 'medium' | 'low'
+
+/**
+ * Hierarchical ontology item for Execution Stack (Goals → Projects → Tasks).
+ */
+export interface HierarchicalOntologyItem {
+  id: string
+  name: string
+  confidence: ConfidenceLevel
+  parentId?: string
+  order: number
+  excerpts: Array<{
+    noteId: string
+    noteTitle: string
+    excerpt: string
+  }>
+}
 
 // ============================================================================
 // Metadata Interfaces
@@ -55,15 +85,7 @@ export interface NoteMetadata {
   confidence?: ConfidenceLevel  // AI confidence in extraction
   extractedFrom?: string[]      // Array of source note UUIDs
   aiReasoning?: string          // AI explanation for extraction
-  items?: Array<{               // Structured ontology items with excerpts
-    name: string
-    confidence: ConfidenceLevel
-    excerpts: Array<{
-      noteId: string
-      noteTitle: string
-      excerpt: string
-    }>
-  }>
+  items?: HierarchicalOntologyItem[] // Structured ontology items with hierarchy + excerpts
 
   // General metadata
   tags?: string[]               // User-defined tags
@@ -95,6 +117,17 @@ export interface NoteMetadata {
   tokensUsed?: number              // Number of tokens used
   model?: string                   // AI model used for generation
   generatedAt?: string             // Timestamp when answer was generated
+
+  // Ontology display metadata
+  ontologyCategory?: OntologyCategory
+  meaningIndex?: number
+
+  // Execution Stack sample seeding metadata
+  executionSeedStatus?: {
+    seeded: boolean
+    seededAt?: string
+    reason?: 'empty-seeded' | 'existing-data' | 'user-edit'
+  }
 }
 
 // ============================================================================

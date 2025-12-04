@@ -26,6 +26,32 @@ function normalizeText(text: string): string {
   return text.toLowerCase().trim().replace(/\s+/g, ' ')
 }
 
+const FALLBACK_ID = () => `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`
+
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  return FALLBACK_ID()
+}
+
+function normalizeMergeItem(
+  item: {
+    name: string
+    confidence: 'high' | 'medium' | 'low'
+    excerpts: OntologyItem['sourceExcerpts']
+    id?: string
+    order?: number
+  },
+  index: number
+) {
+  return {
+    ...item,
+    id: item.id ?? generateId(),
+    order: typeof item.order === 'number' ? item.order : index
+  }
+}
+
 
 /**
  * Reconcile confidence levels - returns higher confidence
@@ -101,16 +127,21 @@ export async function mergeOntologyItems(
       name: string
       confidence: 'high' | 'medium' | 'low'
       excerpts: OntologyItem['sourceExcerpts']
+      id?: string
+      order?: number
     }>
+    const normalizedExistingItems = existingItems.map((item, index) =>
+      normalizeMergeItem(item, index)
+    )
 
     // Build map of existing items by normalized name
     const existingMap = new Map<string, typeof existingItems[0]>()
-    existingItems.forEach((item) => {
+    normalizedExistingItems.forEach((item) => {
       existingMap.set(normalizeText(item.name), item)
     })
 
     // Process new items
-    const updatedItems = [...existingItems]
+    const updatedItems = [...normalizedExistingItems]
 
     for (const newItem of newItems) {
       const normalizedName = normalizeText(newItem.text)
@@ -139,6 +170,8 @@ export async function mergeOntologyItems(
         if (index !== -1) {
           updatedItems[index] = {
             ...existing,
+            id: existing.id ?? generateId(),
+            order: typeof existing.order === 'number' ? existing.order : index,
             confidence: newConfidence,
             excerpts: mergedExcerpts
           }
@@ -149,7 +182,9 @@ export async function mergeOntologyItems(
         updatedItems.push({
           name: newItem.text,
           confidence: newItem.confidence,
-          excerpts: newItem.sourceExcerpts
+          excerpts: newItem.sourceExcerpts,
+          id: generateId(),
+          order: updatedItems.length
         })
       }
     }

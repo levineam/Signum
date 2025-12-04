@@ -40,6 +40,7 @@ export async function getJournalEntries(userId: string): Promise<Note[]> {
 
 /**
  * Get regular notes (custom and reflection) for a user.
+ * Excludes custom notes used as ontology scaffolding (those with ontologyCategory metadata).
  */
 export async function getRegularNotes(userId: string): Promise<Note[]> {
   const { data, error } = await supabase
@@ -54,7 +55,9 @@ export async function getRegularNotes(userId: string): Promise<Note[]> {
     throw error
   }
 
-  return await mapDatabaseNotesToNotes(data || [], userId)
+  const notes = await mapDatabaseNotesToNotes(data || [], userId)
+  // Filter out custom notes that are ontology scaffolding (have ontologyCategory in metadata)
+  return notes.filter(note => !note.metadata?.ontologyCategory)
 }
 
 /**
@@ -79,6 +82,30 @@ export async function getOntologyNotes(userId: string): Promise<Note[]> {
     const order = ['ontology-value', 'ontology-belief', 'ontology-aim']
     return order.indexOf(a.noteType) - order.indexOf(b.noteType)
   })
+}
+
+/**
+ * Get pinned ontology-related notes for the ontology page, including custom categories.
+ */
+export async function getOntologyDashboardNotes(userId: string): Promise<Note[]> {
+  const { data, error } = await supabase
+    .from('notes')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('is_pinned', true)
+    .in('note_type', ['ontology-value', 'ontology-belief', 'ontology-aim', 'custom'])
+
+  if (error) {
+    console.error('Error fetching ontology dashboard notes:', error)
+    throw error
+  }
+
+  const notes = await mapDatabaseNotesToNotes(data || [], userId)
+
+  return notes.filter((note) =>
+    ['ontology-value', 'ontology-belief', 'ontology-aim'].includes(note.noteType) ||
+    Boolean(note.metadata?.ontologyCategory)
+  )
 }
 
 /**

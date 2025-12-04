@@ -108,7 +108,7 @@ Next.js 15.5.3 (Turbopack) • Supabase (Auth, DB, RLS) • shadcn/ui • TypeSc
 **Use for:**
 - UI changes (components, styling, layouts)
 - Component interactions and state management
-- E2E test development
+- E2E test development (run `npx playwright test --config=playwright.config.noserver.ts` in parallel terminal)
 - Quick iteration on non-DB logic
 
 ### Production Mode (For Database Testing)
@@ -132,6 +132,7 @@ Next.js 15.5.3 (Turbopack) • Supabase (Auth, DB, RLS) • shadcn/ui • TypeSc
 **Decision Rule:**
 - UI change? → `npm run dev:test`
 - DB change? → Vercel preview
+- E2E test development? → `npm run dev:test` + `playwright test --config=playwright.config.noserver.ts`
 - Unsure? → Start with `npm run dev:test`
 
 See `../docs/runbooks/local-testing-guide.md` for complete guide.
