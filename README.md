@@ -64,6 +64,7 @@ Admin-only scripts such as `scripts/seed-sample-journal-entries.ts` expect `SUPA
 **Sentry (optional):**
 - Sentry is disabled by default. To enable it locally or in production, set `SENTRY_ENABLED=true` and provide `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN`.
 - Leave Sentry variables unset for open-source runs to avoid uploading source maps or requiring private tokens.
+- Secret scanning runs in CI via gitleaks; run locally with `./SECURITY.md` instructions before pushing.
 
 ### Development Modes Comparison
 

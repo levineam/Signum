@@ -15,6 +15,7 @@ If you need full Supabase integration, copy `.env.example` to `.env.local` and f
 - Prefer `npm run dev:test` for UI/component work; use `npm run dev` only when you must exercise database/RLS behavior.
 - Keep Playwright specs focused and tag smoke tests with `@smoke` where applicable.
 - Follow the existing formatting (2-space indentation, single quotes in TSX unless attributes require otherwise).
+- Avoid committing screenshots or recordings that include real user data; regenerate sanitized captures when needed.
 
 ## Commit hygiene
 - Write short, present-tense commit messages (e.g., `Add tabbed editor layout`).
