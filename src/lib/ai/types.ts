@@ -94,3 +94,53 @@ export interface AIAnswerErrorResponse {
   /** Additional error details (dev/preview only) */
   details?: string
 }
+
+/**
+ * Metadata stored in note.metadata JSONB field for video summary notes
+ */
+export interface VideoSummaryNoteMetadata {
+  /** Source type identifier */
+  sourceType: 'video'
+  /** YouTube video ID */
+  videoId: string
+  /** Original YouTube URL */
+  videoUrl: string
+  /** Video title (if available) */
+  videoTitle?: string
+  /** ID of source journal entry (if summarized from a journal) */
+  journalEntryId?: string
+  /** Number of tokens used */
+  tokensUsed: number
+  /** Model used for generation */
+  model: string
+  /** Timestamp when summary was generated */
+  generatedAt: string
+}
+
+/**
+ * Request body for /api/youtube/summarize endpoint
+ */
+export interface VideoSummarizeRequest {
+  /** YouTube video ID */
+  videoId: string
+  /** Original YouTube URL (for reference) */
+  videoUrl?: string
+  /** ID of journal entry to link the summary to */
+  entryId?: string
+}
+
+/**
+ * Response from /api/youtube/summarize endpoint
+ */
+export interface VideoSummarizeResponse {
+  /** ID of the created summary note */
+  noteId: string
+  /** The AI-generated summary (HTML format) */
+  summary: string
+  /** Number of tokens used */
+  tokensUsed: number
+  /** Model used for generation */
+  model: string
+  /** Video title (if available) */
+  videoTitle?: string
+}

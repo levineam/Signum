@@ -6,6 +6,7 @@ import { Bold, Italic, Underline, Highlighter, List, ListOrdered, Heading1, Head
 import { VoiceRecordButton } from '@/components/editor/VoiceRecordButton'
 import { AskAIDialog } from '@/components/journal/AskAIDialog'
 import { cn } from '@/lib/utils'
+import { detectYouTubeUrls, createEmbedHtml } from '@/utils/youtube'
 
 interface SimpleRichEditorProps {
   value?: string
@@ -777,8 +778,32 @@ export function SimpleRichEditor({
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault()
     const text = e.clipboardData.getData('text/plain')
-    document.execCommand('insertText', false, text)
-  }, [])
+
+    // Check for YouTube URLs in pasted content
+    const youtubeUrls = detectYouTubeUrls(text)
+
+    if (youtubeUrls.length > 0) {
+      // Insert the text first
+      document.execCommand('insertText', false, text)
+
+      // Then insert embed(s) after each YouTube URL
+      // For simplicity, we'll add the first embed after the pasted text
+      const firstVideo = youtubeUrls[0]
+      const embedHtml = createEmbedHtml(firstVideo.videoId)
+
+      // Insert a line break and the embed after the URL
+      document.execCommand('insertHTML', false, '<br>' + embedHtml + '<br>')
+
+      // Trigger onChange to save the content
+      if (onChange && editorRef.current) {
+        const content = editorRef.current.innerHTML || ''
+        onChange(content)
+      }
+    } else {
+      // Normal paste behavior - just insert plain text
+      document.execCommand('insertText', false, text)
+    }
+  }, [onChange])
 
   useEffect(() => {
     suppressBlurRef.current = showAskAI
