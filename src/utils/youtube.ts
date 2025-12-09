@@ -122,7 +122,9 @@ export function detectYouTubeUrls(content: string): DetectedYouTubeUrl[] {
 
   let match
   while ((match = urlPattern.exec(content)) !== null) {
-    const url = match[0]
+    let url = match[0]
+    // Trim common trailing punctuation that may have been captured
+    url = url.replace(/[.,;:!?)]+$/, '')
     const videoId = extractYouTubeVideoId(url)
 
     if (videoId) {

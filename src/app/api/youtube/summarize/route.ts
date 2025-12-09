@@ -115,17 +115,38 @@ export async function POST(request: NextRequest) {
       console.log('[Video Summarize] Transcript fetched, length:', transcript.length)
     } catch (error) {
       if (error instanceof TranscriptError) {
-        const statusCode = error.code === TranscriptErrorCode.TRANSCRIPT_NOT_FOUND ||
-                          error.code === TranscriptErrorCode.VIDEO_UNAVAILABLE
-          ? 404
-          : 500
+        // Map transcript error codes to appropriate HTTP status and error codes
+        let statusCode = 500
+        let errorCode = VideoSummarizeErrorCode.INTERNAL_ERROR
+
+        switch (error.code) {
+          case TranscriptErrorCode.TRANSCRIPT_NOT_FOUND:
+            statusCode = 404
+            errorCode = VideoSummarizeErrorCode.TRANSCRIPT_NOT_FOUND
+            break
+          case TranscriptErrorCode.VIDEO_UNAVAILABLE:
+            statusCode = 404
+            errorCode = VideoSummarizeErrorCode.VIDEO_UNAVAILABLE
+            break
+          case TranscriptErrorCode.INVALID_VIDEO_ID:
+            statusCode = 400
+            errorCode = VideoSummarizeErrorCode.INVALID_VIDEO_ID
+            break
+          case TranscriptErrorCode.NETWORK_ERROR:
+            statusCode = 503
+            errorCode = VideoSummarizeErrorCode.INTERNAL_ERROR
+            break
+          case TranscriptErrorCode.UNKNOWN_ERROR:
+          default:
+            statusCode = 500
+            errorCode = VideoSummarizeErrorCode.INTERNAL_ERROR
+            break
+        }
 
         return NextResponse.json<ErrorResponse>(
           {
             error: error.message,
-            code: error.code === TranscriptErrorCode.VIDEO_UNAVAILABLE
-              ? VideoSummarizeErrorCode.VIDEO_UNAVAILABLE
-              : VideoSummarizeErrorCode.TRANSCRIPT_NOT_FOUND,
+            code: errorCode,
           },
           { status: statusCode }
         )

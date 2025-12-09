@@ -19,16 +19,24 @@ import {
 // Use Edge runtime for longer timeout
 export const runtime = 'edge'
 
-// Supabase configuration
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
 interface TranscriptRequest {
   videoId: string
 }
 
 export async function POST(request: Request) {
   try {
+    // Validate Supabase configuration
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('[YouTube Transcript API] Missing Supabase environment variables')
+      return NextResponse.json(
+        { error: 'Server configuration error', code: 'SERVER_CONFIG_ERROR' },
+        { status: 500 }
+      )
+    }
+
     // Authenticate user
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
