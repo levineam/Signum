@@ -156,8 +156,7 @@ export function createEmbedHtml(videoId: string): string {
   <iframe
     src="${embedUrl}"
     title="YouTube video player"
-    frameborder="0"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allow="encrypted-media; gyroscope; picture-in-picture; web-share"
     allowfullscreen
     loading="lazy"
   ></iframe>

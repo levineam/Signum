@@ -24,6 +24,7 @@ import {
   TranscriptError,
   TranscriptErrorCode,
 } from '@/lib/youtube/transcript'
+import { validateVideoId } from '@/utils/youtube'
 
 // Edge runtime for longer timeout (25s+)
 export const runtime = 'edge'
@@ -97,8 +98,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate video ID format
-    if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+    // Validate video ID format using shared utility
+    if (!validateVideoId(videoId)) {
       return NextResponse.json<ErrorResponse>(
         { error: 'Invalid video ID format', code: VideoSummarizeErrorCode.INVALID_VIDEO_ID },
         { status: 400 }
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
 
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-      timeout: 20000, // 20 seconds
+      timeout: 23000, // 23 seconds (leaves 2s buffer within 25s Edge runtime limit)
       maxRetries: 0,
     })
 

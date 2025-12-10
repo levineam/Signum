@@ -6,6 +6,7 @@
  */
 
 import { YoutubeTranscript } from 'youtube-transcript'
+import { validateVideoId } from '@/utils/youtube'
 
 /**
  * A single transcript segment with text and timing
@@ -48,17 +49,9 @@ export class TranscriptError extends Error {
   ) {
     super(message)
     this.name = 'TranscriptError'
+    // Ensure proper prototype chain for instanceof checks across compilation targets
+    Object.setPrototypeOf(this, TranscriptError.prototype)
   }
-}
-
-/**
- * Validates a YouTube video ID format
- *
- * @param videoId - The video ID to validate
- * @returns true if valid (11 alphanumeric chars with - and _)
- */
-export function validateVideoId(videoId: string): boolean {
-  return /^[a-zA-Z0-9_-]{11}$/.test(videoId)
 }
 
 /**
