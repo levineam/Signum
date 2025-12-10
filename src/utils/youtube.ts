@@ -120,11 +120,12 @@ export function detectYouTubeUrls(content: string): DetectedYouTubeUrl[] {
   // This is more permissive for finding URLs, then we validate with extractYouTubeVideoId
   const urlPattern = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?[^\s]*v=|embed\/)|youtu\.be\/)[a-zA-Z0-9_-]+[^\s]*/g
 
-  let match
+  let match: RegExpExecArray | null
   while ((match = urlPattern.exec(content)) !== null) {
     let url = match[0]
     // Trim common trailing punctuation that may have been captured
-    url = url.replace(/[.,;:!?)]+$/, '')
+    // Includes: . , ; : ! ? ) ] } " '
+    url = url.replace(/[.,;:!?)}\]"']+$/, '')
     const videoId = extractYouTubeVideoId(url)
 
     if (videoId) {
@@ -148,15 +149,21 @@ export function detectYouTubeUrls(content: string): DetectedYouTubeUrl[] {
  *
  * @param videoId - The YouTube video ID
  * @returns HTML string for the embed container
+ * @throws Error if videoId is invalid
  */
 export function createEmbedHtml(videoId: string): string {
+  // Validate video ID for defense-in-depth
+  if (!validateVideoId(videoId)) {
+    throw new Error(`Invalid YouTube video ID: ${videoId}`)
+  }
+
   const embedUrl = getEmbedUrl(videoId)
 
   return `<div class="youtube-embed-container" data-video-id="${videoId}">
   <iframe
     src="${embedUrl}"
     title="YouTube video player"
-    allow="encrypted-media; gyroscope; picture-in-picture; web-share"
+    allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; web-share"
     allowfullscreen
     loading="lazy"
   ></iframe>

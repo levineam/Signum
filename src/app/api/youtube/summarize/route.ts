@@ -36,6 +36,7 @@ enum VideoSummarizeErrorCode {
   INVALID_VIDEO_ID = 'INVALID_VIDEO_ID',
   TRANSCRIPT_NOT_FOUND = 'TRANSCRIPT_NOT_FOUND',
   VIDEO_UNAVAILABLE = 'VIDEO_UNAVAILABLE',
+  NETWORK_ERROR = 'NETWORK_ERROR',
   AI_SERVICE_ERROR = 'AI_SERVICE_ERROR',
   OPENAI_RATE_LIMIT = 'OPENAI_RATE_LIMIT',
   TIMEOUT = 'TIMEOUT',
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
             break
           case TranscriptErrorCode.NETWORK_ERROR:
             statusCode = 503
-            errorCode = VideoSummarizeErrorCode.INTERNAL_ERROR
+            errorCode = VideoSummarizeErrorCode.NETWORK_ERROR
             break
           case TranscriptErrorCode.UNKNOWN_ERROR:
           default:

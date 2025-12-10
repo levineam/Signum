@@ -93,7 +93,7 @@ export function YouTubeEmbed({
       <iframe
         src={embedUrl}
         title="YouTube video player"
-        allow="encrypted-media; gyroscope; picture-in-picture; web-share"
+        allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
         loading="lazy"
       />
