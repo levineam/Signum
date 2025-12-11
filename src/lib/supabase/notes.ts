@@ -13,7 +13,7 @@ import {
   NoteType
 } from '@/types/note'
 import { decryptNote, encryptNote } from '@/lib/crypto/encryption'
-import { getUserEncryptionKey, hasEncryptionKey } from '@/lib/crypto/keyManagement'
+import { getUserEncryptionKey } from '@/lib/crypto/keyManagement'
 
 // ============================================================================
 // Note CRUD Operations

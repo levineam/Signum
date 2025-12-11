@@ -211,8 +211,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         // Clean up empty journal entries older than 24 hours (Issue #10, #67)
         const now = new Date()
         const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        let emptyJournalEntries: Note[] = []
 
-        const emptyJournalEntries = allNotes.filter(note =>
+        emptyJournalEntries = allNotes.filter(note =>
           note.noteType === 'journal-entry' &&
           isContentEmpty(note.content) &&
           new Date(note.createdAt) < oneDayAgo
