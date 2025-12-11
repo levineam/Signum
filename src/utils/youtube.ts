@@ -19,6 +19,19 @@ const YOUTUBE_PATTERNS = [
 const VIDEO_ID_PATTERN = /^[a-zA-Z0-9_-]{11}$/
 
 /**
+ * Escapes a string for safe inclusion in HTML attributes.
+ * Prevents XSS attacks by escaping special characters.
+ */
+function escapeHtmlAttribute(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+/**
  * Validates that a string is a valid YouTube video ID
  *
  * @param videoId - The string to validate
@@ -162,16 +175,21 @@ export function createEmbedHtml(videoId: string, videoUrl?: string): string {
   const embedUrl = getEmbedUrl(videoId)
   const originalUrl = videoUrl || `https://www.youtube.com/watch?v=${videoId}`
 
-  return `<div class="youtube-embed-container" data-video-id="${videoId}" data-video-url="${originalUrl}">
+  // Escape all values for safe HTML attribute insertion (XSS prevention)
+  const safeVideoId = escapeHtmlAttribute(videoId)
+  const safeEmbedUrl = escapeHtmlAttribute(embedUrl)
+  const safeOriginalUrl = escapeHtmlAttribute(originalUrl)
+
+  return `<div class="youtube-embed-container" data-video-id="${safeVideoId}" data-video-url="${safeOriginalUrl}">
   <iframe
-    src="${embedUrl}"
+    src="${safeEmbedUrl}"
     title="YouTube video player"
     allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; web-share"
     allowfullscreen
     loading="lazy"
   ></iframe>
   <div class="youtube-embed-actions">
-    <button type="button" class="youtube-summarize-btn" data-video-id="${videoId}" data-video-url="${originalUrl}">
+    <button type="button" class="youtube-summarize-btn" data-video-id="${safeVideoId}" data-video-url="${safeOriginalUrl}">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
       <span>Summarize Video</span>
     </button>

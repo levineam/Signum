@@ -31,6 +31,8 @@ export function YouTubeSummarizeDialog({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const hasStartedRef = useRef(false)
+  const isMountedRef = useRef(true)
+  const successTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Define generateSummary first so it can be used in useEffect
   const generateSummary = useCallback(async () => {
@@ -61,18 +63,31 @@ export function YouTubeSummarizeDialog({
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({
-          error: 'Unknown error'
-        }))
-        throw new Error(errorData.error || 'Failed to generate summary')
+        // Safely parse error response, including HTTP status for non-JSON responses
+        let errorMessage = `Failed to generate summary (${response.status})`
+        try {
+          const errorData = await response.json()
+          if (errorData.error) {
+            errorMessage = errorData.error
+          }
+        } catch {
+          // Response was not JSON, use default message with status code
+        }
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
 
+      // Only update state if component is still mounted
+      if (!isMountedRef.current) return
+
       setState('success')
 
       // Brief delay to show success state, then close and insert link
-      setTimeout(() => {
+      // Store timeout ref so we can clear it on unmount
+      successTimeoutRef.current = setTimeout(() => {
+        if (!isMountedRef.current) return
+
         // The API returns noteId and creates a note with title "Video Summary: {videoId}"
         const noteTitle = `Video Summary: ${videoId}`
         onSummaryCreated(data.noteId, noteTitle, videoId, entryId)
@@ -107,6 +122,19 @@ export function YouTubeSummarizeDialog({
     }
   }, [isOpen, state, generateSummary])
 
+  // Track mount status for cleanup
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      // Clear any pending success timeout
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current)
+        successTimeoutRef.current = null
+      }
+    }
+  }, [])
+
   // Reset state when dialog closes
   useEffect(() => {
     if (!isOpen) {
@@ -114,6 +142,11 @@ export function YouTubeSummarizeDialog({
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
         abortControllerRef.current = null
+      }
+      // Clear any pending success timeout
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current)
+        successTimeoutRef.current = null
       }
       setState('idle')
       setErrorMessage(null)

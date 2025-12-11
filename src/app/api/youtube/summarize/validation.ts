@@ -11,10 +11,19 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 /**
  * Determines if entry validation should be skipped.
  * Returns true for local/test entries, guest entries, or when no entryId is provided.
+ *
+ * Local IDs that skip validation:
+ * - local-entry-* : Local journal entries in test mode
+ * - local-note-*  : Local notes in test mode
+ * - guest-entry   : Guest mode entries
  */
 export function shouldSkipEntryValidation(entryId?: string | null): boolean {
   if (!entryId) return true
-  return entryId.startsWith('local-entry-') || entryId === 'guest-entry'
+  return (
+    entryId.startsWith('local-entry-') ||
+    entryId.startsWith('local-note-') ||
+    entryId === 'guest-entry'
+  )
 }
 
 /**

@@ -1033,11 +1033,16 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         )
 
         if (!existingLink) {
-          // Create the summary link element
+          // Create the summary link element using DOM APIs (XSS-safe)
           const summaryLinkDiv = document.createElement('p')
           summaryLinkDiv.className = 'youtube-summary-link'
           summaryLinkDiv.setAttribute('data-video-id', videoId)
-          summaryLinkDiv.innerHTML = `<a href="#" data-note-id="${noteId}">${noteTitle}</a>`
+
+          const link = document.createElement('a')
+          link.href = '#'
+          link.setAttribute('data-note-id', noteId)
+          link.textContent = noteTitle // Safe: textContent escapes HTML
+          summaryLinkDiv.appendChild(link)
 
           // Insert after the embed container
           embedContainer.after(summaryLinkDiv)
