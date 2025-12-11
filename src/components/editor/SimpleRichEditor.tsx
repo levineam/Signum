@@ -84,9 +84,11 @@ export function SimpleRichEditor({
       return
     }
 
-    // Add loading state to button
+    // Add loading state to button, swapping text for accessibility/localization
+    const originalLabel = summarizeBtn.innerText
     summarizeBtn.classList.add('loading')
     summarizeBtn.disabled = true
+    summarizeBtn.innerText = 'Generating summary...'
 
     try {
       const response = await fetch('/api/youtube/summarize', {
@@ -103,8 +105,15 @@ export function SimpleRichEditor({
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to generate summary')
+        let message = 'Failed to generate summary'
+        try {
+          const errorData = await response.json()
+          message = errorData.error || message
+        } catch {
+          const text = await response.text().catch(() => '')
+          if (text) message = text
+        }
+        throw new Error(message)
       }
 
       const data = await response.json()
@@ -122,9 +131,10 @@ export function SimpleRichEditor({
       const message = error instanceof Error ? error.message : 'Failed to generate summary'
       toast.error(message)
     } finally {
-      // Remove loading state
+      // Remove loading state and restore label
       summarizeBtn.classList.remove('loading')
       summarizeBtn.disabled = false
+      summarizeBtn.innerText = originalLabel
     }
   }, [session?.access_token, entryId, onYouTubeSummarize])
   const [activeFormats, setActiveFormats] = useState({

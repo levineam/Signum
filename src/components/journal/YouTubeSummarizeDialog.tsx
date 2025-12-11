@@ -122,13 +122,7 @@ export function YouTubeSummarizeDialog({
   }, [isOpen])
 
   const handleRetry = () => {
-    setState('idle')
-    hasStartedRef.current = false
-    // Will trigger useEffect to start again
-    setTimeout(() => {
-      hasStartedRef.current = true
-      generateSummary()
-    }, 0)
+    generateSummary()
   }
 
   return (

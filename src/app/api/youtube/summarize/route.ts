@@ -10,6 +10,7 @@
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { hasPublicSupabase } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { convertMarkdownToHtml } from '@/lib/ai/markdown-to-html'
@@ -89,16 +90,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!hasPublicSupabase()) {
       console.error('[Video Summarize] Missing Supabase environment variables')
       return NextResponse.json<ErrorResponse>(
         { error: 'Server configuration error', code: VideoSummarizeErrorCode.SERVER_CONFIG_ERROR },
         { status: 500 }
       )
     }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: `Bearer ${token}` } },

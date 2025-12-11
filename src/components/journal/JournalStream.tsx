@@ -979,6 +979,24 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     setShowYouTubeSummarizeDialog(true)
   }, [])
 
+  const handleYouTubeSummarizeBtnClick = useCallback(
+    (e: React.MouseEvent, entryId: string) => {
+      const target = e.target as HTMLElement
+      const summarizeBtn = target.closest('.youtube-summarize-btn') as HTMLButtonElement
+      if (!summarizeBtn) return false
+
+      e.preventDefault()
+      e.stopPropagation()
+      const videoId = summarizeBtn.dataset.videoId
+      const videoUrl = summarizeBtn.dataset.videoUrl
+      if (videoId) {
+        handleYouTubeSummarize(videoId, videoUrl, entryId)
+      }
+      return true
+    },
+    [handleYouTubeSummarize]
+  )
+
   // Callback when YouTube summary is created - insert link to note below the embed
   const handleYouTubeSummaryCreated = useCallback(async (
     noteId: string,
@@ -1277,20 +1295,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               {/* Content Section */}
               <CardContent
                 onClick={(e) => {
-                  // Check for YouTube summarize button click first
-                  const target = e.target as HTMLElement
-                  const summarizeBtn = target.closest('.youtube-summarize-btn') as HTMLButtonElement
-                  if (summarizeBtn) {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    const videoId = summarizeBtn.dataset.videoId
-                    const videoUrl = summarizeBtn.dataset.videoUrl
-                    if (videoId) {
-                      handleYouTubeSummarize(videoId, videoUrl, entry.id)
-                    }
-                    return
-                  }
-                  // Toggle edit mode for other clicks
+                  if (handleYouTubeSummarizeBtnClick(e, entry.id)) return
                   setEditingEntryId(entry.id)
                 }}
                 className="px-3 md:px-2 pb-3 md:pb-2 pt-0 cursor-text hover:bg-muted/30 rounded-md transition-colors"
@@ -1342,22 +1347,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                           dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.content) }}
                           onClick={(e) => {
                             // Handle link and button clicks in read-only mode
+                            if (handleYouTubeSummarizeBtnClick(e, entry.id)) return
+
                             const target = e.target as HTMLElement
-
-                            // Check for YouTube summarize button click first
-                            const summarizeBtn = target.closest('.youtube-summarize-btn') as HTMLButtonElement
-                            if (summarizeBtn) {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              const videoId = summarizeBtn.dataset.videoId
-                              const videoUrl = summarizeBtn.dataset.videoUrl
-                              if (videoId) {
-                                handleYouTubeSummarize(videoId, videoUrl, entry.id)
-                              }
-                              return
-                            }
-
-                            // Find the closest link element (in case click is on nested content)
                             const linkElement = target.closest('a[data-note-id]') as HTMLElement
 
                           console.log('🖱️ Read-only click:', {
