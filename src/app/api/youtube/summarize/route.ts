@@ -108,7 +108,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate entryId ownership if provided
-    if (entryId) {
+    // Skip validation for local entries (test mode) which have IDs starting with 'local-entry-'
+    if (entryId && !entryId.startsWith('local-entry-')) {
       const { data: entry, error: entryError } = await supabase
         .from('journal_entries')
         .select('id')
