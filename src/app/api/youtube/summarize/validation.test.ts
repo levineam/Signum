@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { shouldSkipEntryValidation, validateJournalEntryOwnership } from './route'
+import { shouldSkipEntryValidation, validateJournalEntryOwnership } from './validation'
 
 type BuilderResult = {
   data: { id: string; note_type: string } | null
@@ -11,10 +11,6 @@ type MockSelectBuilder = {
   select: (columns: string) => MockSelectBuilder
   eq: (column: string, value: string) => MockSelectBuilder
   single: () => Promise<BuilderResult>
-}
-
-type MockSupabase = {
-  from: (table: string) => MockSelectBuilder
 }
 
 const buildSupabaseMock = (singleResult: BuilderResult): { client: SupabaseClient; builder: MockSelectBuilder } => {

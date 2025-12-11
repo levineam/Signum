@@ -9,7 +9,7 @@
  * Returns: { noteId: string, summary: string, tokensUsed: number, model: string }
  */
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 import { hasPublicSupabase } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
@@ -26,6 +26,10 @@ import {
   TranscriptErrorCode,
 } from '@/lib/youtube/transcript'
 import { validateVideoId } from '@/utils/youtube'
+import {
+  shouldSkipEntryValidation,
+  validateJournalEntryOwnership,
+} from './validation'
 
 // Edge runtime for longer timeout (25s+)
 export const runtime = 'edge'
@@ -50,31 +54,6 @@ interface ErrorResponse {
   error: string
   code: VideoSummarizeErrorCode
   details?: string
-}
-
-// Helper used for testing and route logic
-export function shouldSkipEntryValidation(entryId?: string | null) {
-  if (!entryId) return true
-  return entryId.startsWith('local-entry-') || entryId === 'guest-entry'
-}
-
-export async function validateJournalEntryOwnership(
-  supabaseClient: SupabaseClient,
-  entryId: string,
-  userId: string
-): Promise<boolean> {
-  const { data: entry, error: entryError } = await supabaseClient
-    .from('notes')
-    .select('id, note_type')
-    .eq('id', entryId)
-    .eq('user_id', userId)
-    .eq('note_type', 'journal-entry')
-    .single()
-
-  if (entryError || !entry) {
-    return false
-  }
-  return true
 }
 
 export async function POST(request: NextRequest) {
