@@ -51,6 +51,31 @@ interface ErrorResponse {
   details?: string
 }
 
+// Helper used for testing and route logic
+export function shouldSkipEntryValidation(entryId?: string | null) {
+  if (!entryId) return true
+  return entryId.startsWith('local-entry-') || entryId === 'guest-entry'
+}
+
+export async function validateJournalEntryOwnership(
+  supabaseClient: any,
+  entryId: string,
+  userId: string
+): Promise<boolean> {
+  const { data: entry, error: entryError } = await supabaseClient
+    .from('notes')
+    .select('id, note_type')
+    .eq('id', entryId)
+    .eq('user_id', userId)
+    .eq('note_type', 'journal-entry')
+    .single()
+
+  if (entryError || !entry) {
+    return false
+  }
+  return true
+}
+
 export async function POST(request: NextRequest) {
   try {
     // 1. Authenticate user
@@ -108,16 +133,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate entryId ownership if provided
-    // Skip validation for local entries (test mode) which have IDs starting with 'local-entry-'
-    if (entryId && !entryId.startsWith('local-entry-')) {
-      const { data: entry, error: entryError } = await supabase
-        .from('journal_entries')
-        .select('id')
-        .eq('id', entryId)
-        .eq('user_id', user.id)
-        .single()
+    // Skip validation for local/test/guest entries
+    if (!shouldSkipEntryValidation(entryId)) {
+      const ownsEntry = await validateJournalEntryOwnership(supabase, entryId!, user.id)
 
-      if (entryError || !entry) {
+      if (!ownsEntry) {
         return NextResponse.json<ErrorResponse>(
           { error: 'Journal entry not found or access denied', code: VideoSummarizeErrorCode.INVALID_REQUEST },
           { status: 403 }
