@@ -51,10 +51,7 @@ interface YouTubeEmbedProps {
  */
 export function YouTubeEmbed({
   videoId,
-  videoUrl: _videoUrl,  // Reserved for future use (storing with note metadata)
-  entryId: _entryId,    // Reserved for future use (linking to journal entry)
   onSummarize,
-  onSummaryCreated: _onSummaryCreated,  // Reserved for future use (callback after note creation)
   showSummarizeButton = true,
 }: YouTubeEmbedProps) {
   const [isLoading, setIsLoading] = useState(false)

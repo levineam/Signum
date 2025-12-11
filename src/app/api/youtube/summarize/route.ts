@@ -9,7 +9,7 @@
  * Returns: { noteId: string, summary: string, tokensUsed: number, model: string }
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { convertMarkdownToHtml } from '@/lib/ai/markdown-to-html'
@@ -58,7 +58,7 @@ export function shouldSkipEntryValidation(entryId?: string | null) {
 }
 
 export async function validateJournalEntryOwnership(
-  supabaseClient: any,
+  supabaseClient: SupabaseClient,
   entryId: string,
   userId: string
 ): Promise<boolean> {
