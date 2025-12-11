@@ -199,22 +199,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         ])
         console.log('[JournalStream] Fetched notes:', allNotes.length)
 
-        // Clean up empty journal entries older than 24 hours (Issue #10, #67)
-        const now = new Date()
-        const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-
-        const emptyJournalEntries = allNotes.filter(note =>
-          note.noteType === 'journal-entry' &&
-          isContentEmpty(note.content) &&
-          new Date(note.createdAt) < oneDayAgo
-        )
-
-        if (emptyJournalEntries.length > 0) {
-          console.log(`[JournalStream] Cleaning up ${emptyJournalEntries.length} empty journal entries older than 24 hours`)
-          await Promise.all(
-            emptyJournalEntries.map(note => deleteNote(note.id, user.id))
-          )
-        }
+        // Clean up empty journal entries logic REMOVED (Issue: caused data loss)
+        // Previous logic deleted entries >24h old if content appeared empty.
+        // See root_cause_analysis.md regarding incident on 2025-12-11.
 
         // Filter to journal entries only (excluding the ones we just deleted)
         const journalNotes = allNotes.filter(note =>
@@ -1129,11 +1116,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             <Card
               key={entry.id}
               data-entry-id={entry.id}
-              className={`py-0 bg-card transition-all ${
-                isTodayEntry ? 'border-2 border-primary/20' : ''
-              } ${
-                isEditingThis ? 'ring-2 ring-primary/30' : ''
-              }`}
+              className={`py-0 bg-card transition-all ${isTodayEntry ? 'border-2 border-primary/20' : ''
+                } ${isEditingThis ? 'ring-2 ring-primary/30' : ''
+                }`}
             >
               {/* Header Section */}
               <div className="flex items-center justify-between px-3 md:px-2 py-3 md:py-2">
@@ -1234,24 +1219,24 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                             // Find the closest link element (in case click is on nested content)
                             const linkElement = target.closest('a[data-note-id]') as HTMLElement
 
-                          console.log('🖱️ Read-only click:', {
-                            targetTag: target.tagName,
-                            linkElement: !!linkElement,
-                            noteId: linkElement?.getAttribute('data-note-id')
-                          })
+                            console.log('🖱️ Read-only click:', {
+                              targetTag: target.tagName,
+                              linkElement: !!linkElement,
+                              noteId: linkElement?.getAttribute('data-note-id')
+                            })
 
-                          if (linkElement) {
-                            console.log('✅ Valid link click in read-only mode')
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const noteId = linkElement.getAttribute('data-note-id')
-                            if (noteId) {
-                              console.log('📱 Opening note viewer for:', noteId)
-                              handleLinkClick(noteId)
+                            if (linkElement) {
+                              console.log('✅ Valid link click in read-only mode')
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const noteId = linkElement.getAttribute('data-note-id')
+                              if (noteId) {
+                                console.log('📱 Opening note viewer for:', noteId)
+                                handleLinkClick(noteId)
+                              }
                             }
-                          }
-                        }}
-                      />
+                          }}
+                        />
                       ) : (
                         <div className="text-muted-foreground px-2">Loading content...</div>
                       )
