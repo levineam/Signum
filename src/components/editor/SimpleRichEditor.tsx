@@ -23,6 +23,7 @@ interface SimpleRichEditorProps {
   entryId?: string
   onNoteCreated?: (noteId: string, selectedText: string, entryId?: string) => void
   onAskAISelection?: (selectedText: string) => void
+  onYouTubeSummarize?: (videoId: string, videoUrl: string | undefined) => void
   variant?: 'default' | 'flush'
   className?: string
 }
@@ -40,6 +41,7 @@ export function SimpleRichEditor({
   entryId,
   onNoteCreated,
   onAskAISelection,
+  onYouTubeSummarize,
   variant = 'default',
   className
 }: SimpleRichEditorProps) {
@@ -62,16 +64,23 @@ export function SimpleRichEditor({
     e.preventDefault()
     e.stopPropagation()
 
-    if (!session?.access_token) {
-      toast.error('Please sign in to use AI features')
-      return
-    }
-
     const videoId = summarizeBtn.dataset.videoId
     const videoUrl = summarizeBtn.dataset.videoUrl
 
     if (!videoId) {
       toast.error('Could not find video ID')
+      return
+    }
+
+    // If parent provided a handler, delegate to it (uses dialog flow)
+    if (onYouTubeSummarize) {
+      onYouTubeSummarize(videoId, videoUrl || undefined)
+      return
+    }
+
+    // Fallback: Original behavior for standalone usage (no dialog)
+    if (!session?.access_token) {
+      toast.error('Please sign in to use AI features')
       return
     }
 
@@ -117,7 +126,7 @@ export function SimpleRichEditor({
       summarizeBtn.classList.remove('loading')
       summarizeBtn.disabled = false
     }
-  }, [session?.access_token, entryId])
+  }, [session?.access_token, entryId, onYouTubeSummarize])
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
