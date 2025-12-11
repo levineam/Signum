@@ -32,15 +32,20 @@ const sanitizeConfig: Config = {
     'blockquote', 'code', 'pre',
     'mark', // For text highlighting (including Obsidian imports)
     'iframe', // For YouTube video embeds (filtered by domain in hook)
+    'button', // For YouTube summarize button
+    'svg', 'path', // For button icons
   ],
   // Allow safe attributes (style will be filtered via hook)
   ALLOWED_ATTR: [
-    'href', 'title', 'class', 'style',
+    'href', 'title', 'class', 'style', 'type',
     'data-note-id', // For internal note links
     'data-target', // For Obsidian wikilinks
     'data-video-id', // For YouTube embed containers
+    'data-video-url', // For YouTube embed metadata
     // Iframe-specific attributes (used for YouTube embeds)
     'src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'loading',
+    // SVG attributes for icons
+    'xmlns', 'viewBox', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'd',
   ],
   // Allow only safe protocols for links
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,

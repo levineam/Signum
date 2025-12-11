@@ -7,6 +7,8 @@ import { VoiceRecordButton } from '@/components/editor/VoiceRecordButton'
 import { AskAIDialog } from '@/components/journal/AskAIDialog'
 import { cn } from '@/lib/utils'
 import { detectYouTubeUrls, createEmbedHtml } from '@/utils/youtube'
+import { useAuth } from '@/contexts/AuthContext'
+import { toast } from 'sonner'
 
 interface SimpleRichEditorProps {
   value?: string
@@ -48,6 +50,74 @@ export function SimpleRichEditor({
   const isInternalChangeRef = useRef(false)
   const suppressBlurRef = useRef(false)
   const canShowAskAIButton = Boolean(entryId || onNoteCreated)
+  const { session } = useAuth()
+
+  // Handle YouTube summarize button clicks via event delegation
+  const handleEditorClick = useCallback(async (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    const summarizeBtn = target.closest('.youtube-summarize-btn') as HTMLButtonElement
+
+    if (!summarizeBtn) return
+
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!session?.access_token) {
+      toast.error('Please sign in to use AI features')
+      return
+    }
+
+    const videoId = summarizeBtn.dataset.videoId
+    const videoUrl = summarizeBtn.dataset.videoUrl
+
+    if (!videoId) {
+      toast.error('Could not find video ID')
+      return
+    }
+
+    // Add loading state to button
+    summarizeBtn.classList.add('loading')
+    summarizeBtn.disabled = true
+
+    try {
+      const response = await fetch('/api/youtube/summarize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          videoId,
+          videoUrl,
+          entryId,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate summary')
+      }
+
+      const data = await response.json()
+      toast.success('Video summary created!', {
+        description: 'A new note has been created with the summary.',
+        action: {
+          label: 'View Note',
+          onClick: () => {
+            // Emit custom event to open the note
+            window.dispatchEvent(new CustomEvent('openNote', { detail: { noteId: data.noteId } }))
+          },
+        },
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to generate summary'
+      toast.error(message)
+    } finally {
+      // Remove loading state
+      summarizeBtn.classList.remove('loading')
+      summarizeBtn.disabled = false
+    }
+  }, [session?.access_token, entryId])
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
@@ -789,10 +859,10 @@ export function SimpleRichEditor({
       // Then insert embed(s) after each YouTube URL
       // For simplicity, we'll add the first embed after the pasted text
       const firstVideo = youtubeUrls[0]
-      const embedHtml = createEmbedHtml(firstVideo.videoId)
+      const embedHtml = createEmbedHtml(firstVideo.videoId, firstVideo.url)
 
-      // Insert a line break and the embed after the URL
-      document.execCommand('insertHTML', false, '<br>' + embedHtml + '<br>')
+      // Insert the embed directly after the URL (margin in CSS provides spacing)
+      document.execCommand('insertHTML', false, embedHtml)
 
       // Trigger onChange to save the content
       if (onChange && editorRef.current) {
@@ -1015,6 +1085,7 @@ export function SimpleRichEditor({
           onFocus={onFocus}
           onBlur={handleEditorBlur}
           onPaste={handlePaste}
+          onClick={handleEditorClick}
           className={cn(
             "rich-editor-body min-h-[120px] w-full resize-none border-0 bg-transparent text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed",
             variant === 'default' ? "p-4" : "px-2 py-0"

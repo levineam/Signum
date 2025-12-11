@@ -434,4 +434,43 @@
   .youtube-embed-actions {
     margin-top: 0.5rem;
   }
+
+  /* YouTube summarize button styling */
+  .youtube-summarize-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: hsl(var(--foreground));
+    background-color: transparent;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+  }
+
+  .youtube-summarize-btn:hover {
+    background-color: hsl(var(--accent));
+    border-color: hsl(var(--accent));
+  }
+
+  .youtube-summarize-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .youtube-summarize-btn svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .youtube-summarize-btn.loading span {
+    display: none;
+  }
+
+  .youtube-summarize-btn.loading::after {
+    content: 'Generating summary...';
+  }
 }
