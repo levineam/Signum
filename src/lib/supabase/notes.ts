@@ -15,6 +15,74 @@ import {
 import { decryptNote, encryptNote } from '@/lib/crypto/encryption'
 import { getUserEncryptionKey, hasEncryptionKey } from '@/lib/crypto/keyManagement'
 
+const ENCRYPTION_FLAG_ENABLED = ['true', '1', 'yes'].includes(
+  String(process.env.NEXT_PUBLIC_ENABLE_ENCRYPTION || '').toLowerCase()
+)
+
+let encryptionSchemaCheckPromise: Promise<boolean> | null = null
+const encryptionFallbackNoticeShown = new Map<string, string>()
+
+export async function isEncryptionSchemaAvailable(): Promise<boolean> {
+  if (encryptionSchemaCheckPromise) {
+    return encryptionSchemaCheckPromise
+  }
+
+  encryptionSchemaCheckPromise = (async () => {
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .select('encrypted_title,title_iv,encrypted_content,content_iv,encryption_version')
+        .limit(1)
+
+      if (error) {
+        const message = (error.message || '').toLowerCase()
+        if (message.includes('column') || message.includes('does not exist') || error.code === 'PGRST204') {
+          return false
+        }
+        console.warn('Unexpected error probing encryption columns, disabling encryption as precaution:', error)
+        return false
+      }
+
+      return true
+    } catch (probeError) {
+      console.warn('Failed to probe encryption schema, disabling encryption as precaution:', probeError)
+      return false
+    }
+  })()
+
+  return encryptionSchemaCheckPromise
+}
+
+function logEncryptionFallback(userId: string, reason: string) {
+  const key = `${userId}:${reason}`
+  if (encryptionFallbackNoticeShown.has(key)) return
+  console.warn(`[Encryption] Falling back to plaintext for user ${userId}: ${reason}`)
+  encryptionFallbackNoticeShown.set(key, reason)
+}
+
+export async function resolveEncryptionMode(userId: string): Promise<{
+  canEncrypt: boolean
+  reason: 'flag-disabled' | 'no-key' | 'schema-missing' | 'ok'
+  key?: Awaited<ReturnType<typeof getUserEncryptionKey>>
+}> {
+  if (!ENCRYPTION_FLAG_ENABLED) {
+    return { canEncrypt: false, reason: 'flag-disabled' }
+  }
+
+  const hasKey = await hasEncryptionKey(userId)
+  if (!hasKey) {
+    return { canEncrypt: false, reason: 'no-key' }
+  }
+
+  const schemaAvailable = await isEncryptionSchemaAvailable()
+  if (!schemaAvailable) {
+    return { canEncrypt: false, reason: 'schema-missing' }
+  }
+
+  const key = await getUserEncryptionKey(userId)
+  return { canEncrypt: true, reason: 'ok', key }
+}
+
 // ============================================================================
 // Note CRUD Operations
 // ============================================================================
@@ -145,21 +213,18 @@ export async function createNote(
 ): Promise<Note> {
 
 
-  // Check if user has encryption enabled
-  // FORCE DISABLE: Encryption abandoned in production, but keys exist in some browsers.
-  // We must force plaintext to match DB schema.
-  const hasKey = false // await hasEncryptionKey(userId)
+  // Determine if encryption is safe to use for this user + schema
+  const encryption = await resolveEncryptionMode(userId)
 
   let insertData: Record<string, unknown>
 
-  if (hasKey) {
+  if (encryption.canEncrypt && encryption.key) {
     // User has encryption enabled - encrypt the note
-    const key = await getUserEncryptionKey(userId)
     const title = request.title ?? ''
     const content = request.content ?? ''
 
-    const encryptedTitle = await encryptNote(title, key)
-    const encryptedContent = await encryptNote(content, key)
+    const encryptedTitle = await encryptNote(title, encryption.key)
+    const encryptedContent = await encryptNote(content, encryption.key)
 
     insertData = {
       user_id: userId,
@@ -185,6 +250,8 @@ export async function createNote(
       is_pinned: request.isPinned || false,
       metadata: request.metadata || {},
     }
+
+    logEncryptionFallback(userId, encryption.reason)
   }
 
   const builder = supabase
@@ -222,16 +289,12 @@ export async function updateNote(
 
   const updates: Record<string, string | number | boolean | object | null> = {}
 
-  // Check if user has encryption enabled
-  // FORCE DISABLE: Encryption abandoned in production, but keys exist in some browsers.
-  // We must force plaintext to match DB schema.
-  const hasKey = false // await hasEncryptionKey(userId)
+  // Determine if encryption is safe to use for this user + schema
+  const encryption = await resolveEncryptionMode(userId)
 
   // Handle title and content updates with encryption if enabled
-  if (hasKey && (request.title !== undefined || request.content !== undefined)) {
+  if (encryption.canEncrypt && encryption.key && (request.title !== undefined || request.content !== undefined)) {
     // User has encryption enabled - need to encrypt updates
-    const key = await getUserEncryptionKey(userId)
-
     // Get current note to preserve unchanged fields
     const current = await getNoteById(request.id, userId)
     if (!current) {
@@ -243,8 +306,8 @@ export async function updateNote(
     const contentToEncrypt = request.content !== undefined ? request.content : current.content
 
     // Encrypt both title and content
-    const encryptedTitle = await encryptNote(titleToEncrypt ?? '', key)
-    const encryptedContent = await encryptNote(contentToEncrypt ?? '', key)
+    const encryptedTitle = await encryptNote(titleToEncrypt ?? '', encryption.key)
+    const encryptedContent = await encryptNote(contentToEncrypt ?? '', encryption.key)
 
     updates.encrypted_title = encryptedTitle.ciphertext
     updates.title_iv = encryptedTitle.iv
@@ -258,6 +321,7 @@ export async function updateNote(
     // User does not have encryption enabled - use plaintext
     if (request.title !== undefined) updates.title = request.title
     if (request.content !== undefined) updates.content = request.content
+    logEncryptionFallback(userId, encryption.reason)
   }
 
   // Handle other fields (not encrypted)
