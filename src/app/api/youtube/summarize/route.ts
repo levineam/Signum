@@ -107,6 +107,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate entryId ownership if provided
+    if (entryId) {
+      const { data: entry, error: entryError } = await supabase
+        .from('journal_entries')
+        .select('id')
+        .eq('id', entryId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (entryError || !entry) {
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Journal entry not found or access denied', code: VideoSummarizeErrorCode.INVALID_REQUEST },
+          { status: 403 }
+        )
+      }
+    }
+
     // 3. Fetch transcript
     console.log('[Video Summarize] Fetching transcript for video:', videoId)
     let transcript: string
