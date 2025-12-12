@@ -981,9 +981,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
   const handleYouTubeSummarizeBtnClick = useCallback(
     (e: React.MouseEvent, entryId: string) => {
-      const target = e.target as HTMLElement
-      const summarizeBtn = target.closest('.youtube-summarize-btn') as HTMLButtonElement
-      if (!summarizeBtn) return false
+      const target = e.target as Element | null
+      const summarizeBtn = target?.closest('.youtube-summarize-btn')
+      if (!summarizeBtn || !(summarizeBtn instanceof HTMLButtonElement)) return false
 
       e.preventDefault()
       e.stopPropagation()
@@ -1067,7 +1067,12 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
     // Persist the updated content to Supabase
     setTimeout(async () => {
-      if (entryId.startsWith('local-note-') || !hasPublicSupabase()) {
+      if (
+        entryId === 'guest-entry' ||
+        entryId.startsWith('local-entry-') ||
+        entryId.startsWith('local-note-') ||
+        !hasPublicSupabase()
+      ) {
         return
       }
 
