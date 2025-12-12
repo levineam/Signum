@@ -13,6 +13,7 @@ import { Note } from '@/types/note'
 import { createLink, getOutgoingLinks } from '@/lib/supabase/notes'
 import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata } from '@/utils/textToLink'
 import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '@/lib/notes'
+import { hasPublicSupabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocalNotes } from '@/contexts/LocalNotesContext'
 import { toast } from 'sonner'
@@ -1066,6 +1067,10 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
     // Persist the updated content to Supabase
     setTimeout(async () => {
+      if (entryId.startsWith('local-note-') || !hasPublicSupabase()) {
+        return
+      }
+
       if (user) {
         // Re-read from DOM to get the latest content with the link
         const editorElement = document.querySelector(
