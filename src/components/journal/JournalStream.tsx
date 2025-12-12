@@ -211,9 +211,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         // Clean up empty journal entries older than 24 hours (Issue #10, #67)
         const now = new Date()
         const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-        let emptyJournalEntries: Note[] = []
-
-        emptyJournalEntries = allNotes.filter(note =>
+        const emptyJournalEntries = allNotes.filter(note =>
           note.noteType === 'journal-entry' &&
           isContentEmpty(note.content) &&
           new Date(note.createdAt) < oneDayAgo
@@ -1061,8 +1059,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
     // Persist the updated content to Supabase
     setTimeout(async () => {
-      const updatedEntry = entries.find(e => e.id === entryId)
-      if (updatedEntry && user) {
+      if (user) {
         // Re-read from DOM to get the latest content with the link
         const editorElement = document.querySelector(
           `[data-entry-id="${entryId}"] [contenteditable]`
@@ -1083,7 +1080,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     // Close the dialog
     setShowYouTubeSummarizeDialog(false)
     setYoutubeSummarizeData(null)
-  }, [entries, user])
+  }, [user])
 
   // Story 2.9: Handler for info icon clicks
   const handleInfoClick = (helperType: HelperType) => {
