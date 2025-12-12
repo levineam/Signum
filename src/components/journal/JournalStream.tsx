@@ -1015,45 +1015,52 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     setEntries(prev => prev.map(entry => {
       if (entry.id !== entryId) return entry
 
-      // Parse the content to find the YouTube embed container
-      const tempDiv = document.createElement('div')
-      tempDiv.innerHTML = entry.content
+      try {
+        // Parse the content to find the YouTube embed container
+        const tempDiv = document.createElement('div')
+        tempDiv.innerHTML = entry.content
 
-      // Find the embed container for this video
-      const embedContainer = tempDiv.querySelector(
-        `.youtube-embed-container[data-video-id="${videoId}"]`
-      )
-
-      if (embedContainer) {
-        // Check if a summary link already exists for this video
-        const existingLink = embedContainer.parentElement?.querySelector(
-          `.youtube-summary-link[data-video-id="${videoId}"]`
+        // Find the embed container for this video
+        // Use CSS.escape() to safely escape special characters in videoId
+        const embedContainer = tempDiv.querySelector(
+          `.youtube-embed-container[data-video-id="${CSS.escape(videoId)}"]`
         )
 
-        if (!existingLink) {
-          // Create the summary link element using DOM APIs (XSS-safe)
-          const summaryLinkDiv = document.createElement('p')
-          summaryLinkDiv.className = 'youtube-summary-link'
-          summaryLinkDiv.setAttribute('data-video-id', videoId)
+        if (embedContainer) {
+          // Check if a summary link already exists for this video
+          const existingLink = embedContainer.parentElement?.querySelector(
+            `.youtube-summary-link[data-video-id="${CSS.escape(videoId)}"]`
+          )
 
-          const link = document.createElement('a')
-          link.href = '#'
-          link.setAttribute('data-note-id', noteId)
-          link.textContent = noteTitle // Safe: textContent escapes HTML
-          summaryLinkDiv.appendChild(link)
+          if (!existingLink) {
+            // Create the summary link element using DOM APIs (XSS-safe)
+            const summaryLinkDiv = document.createElement('p')
+            summaryLinkDiv.className = 'youtube-summary-link'
+            summaryLinkDiv.setAttribute('data-video-id', videoId)
 
-          // Insert after the embed container
-          embedContainer.after(summaryLinkDiv)
-          console.log('[YouTube Summary] Inserted summary link after embed')
+            const link = document.createElement('a')
+            link.href = '#'
+            link.setAttribute('data-note-id', noteId)
+            link.textContent = noteTitle // Safe: textContent escapes HTML
+            summaryLinkDiv.appendChild(link)
+
+            // Insert after the embed container
+            embedContainer.after(summaryLinkDiv)
+            console.log('[YouTube Summary] Inserted summary link after embed')
+          }
+        } else {
+          console.warn('[YouTube Summary] Could not find embed container for video:', videoId)
         }
-      } else {
-        console.warn('[YouTube Summary] Could not find embed container for video:', videoId)
-      }
 
-      return {
-        ...entry,
-        content: tempDiv.innerHTML,
-        lastModified: new Date().toISOString()
+        return {
+          ...entry,
+          content: tempDiv.innerHTML,
+          lastModified: new Date().toISOString()
+        }
+      } catch (error) {
+        console.error('[YouTube Summary] Error updating entry content:', error)
+        // Return entry unchanged if DOM manipulation fails
+        return entry
       }
     }))
 
