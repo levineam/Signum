@@ -7,6 +7,7 @@
 
 import { YoutubeTranscript } from 'youtube-transcript'
 import { validateVideoId } from '@/utils/youtube'
+import { fetchTranscriptViaYoutubei } from '@/lib/youtube/youtubeiTranscript'
 
 /**
  * A single transcript segment with text and timing
@@ -83,6 +84,16 @@ export async function fetchTranscript(videoId: string): Promise<TranscriptResult
   }
 
   try {
+    // Attempt A (preferred): Innertube youtubei/v1/get_transcript (plugin-inspired)
+    try {
+      return await fetchTranscriptViaYoutubei(videoId, { lang: 'en', country: 'US' })
+    } catch (err) {
+      // Fall through to legacy lib as fallback (it occasionally succeeds when youtubei fails)
+      if (err instanceof TranscriptError && err.code === TranscriptErrorCode.INVALID_VIDEO_ID) {
+        throw err
+      }
+    }
+
     // Fetch transcript using youtube-transcript library
     const rawTranscript = await YoutubeTranscript.fetchTranscript(videoId)
 

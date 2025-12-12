@@ -1002,9 +1002,34 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     noteId: string,
     noteTitle: string,
     videoId: string,
-    entryId: string
+    entryId: string,
+    summaryHtml: string,
+    isLocal?: boolean
   ) => {
     console.log('[YouTube Summary] Created note:', { noteId, noteTitle, videoId, entryId })
+
+    // In test mode / local mode, store the generated note in LocalNotes so it can be opened.
+    if ((isLocal || noteId.startsWith('local-note-')) && summaryHtml) {
+      try {
+        addLocalNote({
+          id: noteId,
+          userId: user?.id || 'test-user',
+          title: noteTitle,
+          content: summaryHtml,
+          noteType: 'custom',
+          isPinned: false,
+          metadata: {
+            sourceType: 'video',
+            videoId,
+            videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
+            generatedAt: new Date().toISOString(),
+          },
+          createdAt: new Date().toISOString(),
+        })
+      } catch (e) {
+        console.warn('[YouTube Summary] Failed to store local summary note:', e)
+      }
+    }
 
     // Switch to edit mode for this entry
     setEditingEntryId(entryId)
@@ -1097,7 +1122,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     // Close the dialog
     setShowYouTubeSummarizeDialog(false)
     setYoutubeSummarizeData(null)
-  }, [user])
+  }, [addLocalNote, user])
 
   // Story 2.9: Handler for info icon clicks
   const handleInfoClick = (helperType: HelperType) => {

@@ -34,6 +34,10 @@ import {
 // Edge runtime for longer timeout (25s+)
 export const runtime = 'edge'
 
+const isTestMode =
+  ['1', 'true'].includes(process.env.E2E_TEST_MODE ?? '') ||
+  ['1', 'true'].includes(process.env.NEXT_PUBLIC_E2E_TEST_MODE ?? '')
+
 // Error codes for this endpoint
 enum VideoSummarizeErrorCode {
   AUTH_REQUIRED = 'AUTH_REQUIRED',
@@ -56,41 +60,58 @@ interface ErrorResponse {
   details?: string
 }
 
+function buildLocalNoteId(): string {
+  try {
+    return `local-note-${crypto.randomUUID()}`
+  } catch {
+    return `local-note-${Date.now()}`
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // 1. Authenticate user
+    // 1. Authenticate user (skip in dev:test mode)
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
 
-    if (!token) {
-      return NextResponse.json<ErrorResponse>(
-        { error: 'Unauthorized', code: VideoSummarizeErrorCode.AUTH_REQUIRED },
-        { status: 401 }
-      )
-    }
+    let userId: string | null = null
+    let supabase: ReturnType<typeof createClient> | null = null
 
-    if (!hasPublicSupabase()) {
-      console.error('[Video Summarize] Missing Supabase environment variables')
-      return NextResponse.json<ErrorResponse>(
-        { error: 'Server configuration error', code: VideoSummarizeErrorCode.SERVER_CONFIG_ERROR },
-        { status: 500 }
-      )
-    }
+    if (!isTestMode) {
+      if (!token) {
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Unauthorized', code: VideoSummarizeErrorCode.AUTH_REQUIRED },
+          { status: 401 }
+        )
+      }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+      if (!hasPublicSupabase()) {
+        console.error('[Video Summarize] Missing Supabase environment variables')
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Server configuration error', code: VideoSummarizeErrorCode.SERVER_CONFIG_ERROR },
+          { status: 500 }
+        )
+      }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    })
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+      supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      })
 
-    if (authError || !user) {
-      return NextResponse.json<ErrorResponse>(
-        { error: 'Unauthorized', code: VideoSummarizeErrorCode.AUTH_REQUIRED },
-        { status: 401 }
-      )
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !user) {
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Unauthorized', code: VideoSummarizeErrorCode.AUTH_REQUIRED },
+          { status: 401 }
+        )
+      }
+
+      userId = user.id
+    } else {
+      userId = 'test-user'
     }
 
     // 2. Parse and validate request
@@ -114,8 +135,8 @@ export async function POST(request: NextRequest) {
 
     // Validate entryId ownership if provided
     // Skip validation for local/test/guest entries
-    if (!shouldSkipEntryValidation(entryId)) {
-      const ownsEntry = await validateJournalEntryOwnership(supabase, entryId!, user.id)
+    if (!isTestMode && !shouldSkipEntryValidation(entryId)) {
+      const ownsEntry = await validateJournalEntryOwnership(supabase!, entryId!, userId!)
 
       if (!ownsEntry) {
         return NextResponse.json<ErrorResponse>(
@@ -141,7 +162,8 @@ export async function POST(request: NextRequest) {
 
         switch (error.code) {
           case TranscriptErrorCode.TRANSCRIPT_NOT_FOUND:
-            statusCode = 404
+            // 422 avoids confusing browser/devtools “route missing” semantics for a known business error
+            statusCode = 422
             errorCode = VideoSummarizeErrorCode.TRANSCRIPT_NOT_FOUND
             break
           case TranscriptErrorCode.VIDEO_UNAVAILABLE:
@@ -174,26 +196,42 @@ export async function POST(request: NextRequest) {
       throw error
     }
 
-    // 4. Check for OpenAI API key
+    // 4. Generate summary (OpenAI if configured, else stub in dev:test)
+    let tokensUsed = 0
+    let modelUsed = 'gpt-4o-mini'
+    let markdownSummary = ''
+
     if (!process.env.OPENAI_API_KEY) {
-      console.error('[Video Summarize] Missing OpenAI API key')
-      return NextResponse.json<ErrorResponse>(
-        { error: 'AI service not configured', code: VideoSummarizeErrorCode.AI_SERVICE_ERROR },
-        { status: 500 }
-      )
-    }
+      if (!isTestMode) {
+        console.error('[Video Summarize] Missing OpenAI API key')
+        return NextResponse.json<ErrorResponse>(
+          { error: 'AI service not configured', code: VideoSummarizeErrorCode.AI_SERVICE_ERROR },
+          { status: 500 }
+        )
+      }
 
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      timeout: 23000, // 23 seconds (leaves 2s buffer within 25s Edge runtime limit)
-      maxRetries: 0,
-    })
+      modelUsed = 'stub'
+      const words = transcript.split(/\s+/).filter(Boolean)
+      const preview = words.slice(0, 180).join(' ')
+      markdownSummary = [
+        '## Summary (Test Mode)',
+        '',
+        preview ? preview + (words.length > 180 ? '…' : '') : 'No transcript text available.',
+        '',
+        '## Key takeaways',
+        '',
+        '- (Test Mode) Configure `OPENAI_API_KEY` for real summaries.',
+      ].join('\n')
+    } else {
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+        timeout: 23000, // 23 seconds (leaves 2s buffer within 25s Edge runtime limit)
+        maxRetries: 0,
+      })
 
-    // 5. Generate summary with OpenAI
-    console.log('[Video Summarize] Calling OpenAI API...')
-    const startTime = Date.now()
+      console.log('[Video Summarize] Calling OpenAI API...')
+      const startTime = Date.now()
 
-    try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -213,76 +251,80 @@ export async function POST(request: NextRequest) {
       const duration = Date.now() - startTime
       console.log(`[Video Summarize] OpenAI API call completed in ${duration}ms`)
 
-      const markdownSummary = completion.choices[0]?.message?.content || ''
-      const tokensUsed = completion.usage?.total_tokens || 0
+      markdownSummary = completion.choices[0]?.message?.content || ''
+      tokensUsed = completion.usage?.total_tokens || 0
+      modelUsed = completion.model || 'gpt-4o-mini'
+    }
 
-      // 6. Convert markdown to HTML
-      console.log('[Video Summarize] Converting markdown to HTML...')
-      const htmlSummary = await convertMarkdownToHtml(markdownSummary)
+    // 5. Convert markdown to HTML
+    console.log('[Video Summarize] Converting markdown to HTML...')
+    const htmlSummary = await convertMarkdownToHtml(markdownSummary)
 
-      // 7. Create note with summary
-      const noteTitle = `Video Summary: ${videoId}`
-      const metadata: VideoSummaryNoteMetadata = {
-        sourceType: 'video',
-        videoId,
-        videoUrl: videoUrl || `https://www.youtube.com/watch?v=${videoId}`,
-        tokensUsed,
-        model: 'gpt-4o-mini',
-        generatedAt: new Date().toISOString(),
-        ...(entryId && { journalEntryId: entryId }),
-      }
+    // 6. Create note with summary (local in dev:test; Supabase otherwise)
+    const noteTitle = `Video Summary: ${videoId}`
+    const metadata: VideoSummaryNoteMetadata = {
+      sourceType: 'video',
+      videoId,
+      videoUrl: videoUrl || `https://www.youtube.com/watch?v=${videoId}`,
+      tokensUsed,
+      model: modelUsed,
+      generatedAt: new Date().toISOString(),
+      ...(entryId && { journalEntryId: entryId }),
+    }
 
-      console.log('[Video Summarize] Creating note...')
-      const { data: note, error: noteError } = await supabase
-        .from('notes')
-        .insert({
-          user_id: user.id,
-          title: noteTitle,
-          content: htmlSummary,
-          note_type: 'custom',
-          metadata,
-        })
-        .select('id')
-        .single()
-
-      if (noteError || !note) {
-        console.error('[Video Summarize] Failed to create note:', noteError)
-        return NextResponse.json<ErrorResponse>(
-          {
-            error: 'Failed to save summary. Please try again.',
-            code: VideoSummarizeErrorCode.NOTE_CREATION_FAILED,
-          },
-          { status: 500 }
-        )
-      }
-
-      // 8. Log usage
-      console.log('[Video Summarize] Request completed', {
-        userId: user.id,
-        videoId,
-        noteId: note.id,
-        tokensUsed,
-        summaryLength: htmlSummary.length,
-        timestamp: new Date().toISOString(),
-      })
-
+    if (isTestMode || !hasPublicSupabase()) {
+      const noteId = buildLocalNoteId()
       return NextResponse.json<VideoSummarizeResponse>({
-        noteId: note.id,
+        noteId,
+        noteTitle,
         summary: htmlSummary,
         tokensUsed,
-        model: 'gpt-4o-mini',
+        model: modelUsed,
+        isLocal: true,
       })
-
-    } catch (error: unknown) {
-      // Handle timeout errors
-      if (error && typeof error === 'object' && 'name' in error && error.name === 'APIConnectionTimeoutError') {
-        return NextResponse.json<ErrorResponse>(
-          { error: 'Request timeout - AI took too long to respond', code: VideoSummarizeErrorCode.TIMEOUT },
-          { status: 408 }
-        )
-      }
-      throw error
     }
+
+    console.log('[Video Summarize] Creating note...')
+    const { data: note, error: noteError } = await supabase!
+      .from('notes')
+      .insert({
+        user_id: userId!,
+        title: noteTitle,
+        content: htmlSummary,
+        note_type: 'custom',
+        metadata,
+      })
+      .select('id')
+      .single()
+
+    if (noteError || !note) {
+      console.error('[Video Summarize] Failed to create note:', noteError)
+      return NextResponse.json<ErrorResponse>(
+        {
+          error: 'Failed to save summary. Please try again.',
+          code: VideoSummarizeErrorCode.NOTE_CREATION_FAILED,
+        },
+        { status: 500 }
+      )
+    }
+
+    // 7. Log usage
+    console.log('[Video Summarize] Request completed', {
+      userId,
+      videoId,
+      noteId: note.id,
+      tokensUsed,
+      summaryLength: htmlSummary.length,
+      timestamp: new Date().toISOString(),
+    })
+
+    return NextResponse.json<VideoSummarizeResponse>({
+      noteId: note.id,
+      noteTitle,
+      summary: htmlSummary,
+      tokensUsed,
+      model: modelUsed,
+    })
 
   } catch (error: unknown) {
     console.error('[Video Summarize] Error occurred:', {

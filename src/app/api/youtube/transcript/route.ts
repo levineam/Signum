@@ -19,6 +19,10 @@ import {
 // Use Edge runtime for longer timeout
 export const runtime = 'edge'
 
+const isTestMode =
+  ['1', 'true'].includes(process.env.E2E_TEST_MODE ?? '') ||
+  ['1', 'true'].includes(process.env.NEXT_PUBLIC_E2E_TEST_MODE ?? '')
+
 interface TranscriptRequest {
   videoId: string
 }
@@ -29,7 +33,7 @@ export async function POST(request: Request) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if ((!supabaseUrl || !supabaseAnonKey) && !isTestMode) {
       console.error('[YouTube Transcript API] Missing Supabase environment variables')
       return NextResponse.json(
         { error: 'Server configuration error', code: 'SERVER_CONFIG_ERROR' },
@@ -37,26 +41,28 @@ export async function POST(request: Request) {
       )
     }
 
-    // Authenticate user
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
-    }
+    // Authenticate user (skip in dev:test mode)
+    if (!isTestMode) {
+      const authHeader = request.headers.get('authorization')
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return NextResponse.json(
+          { error: 'Unauthorized', code: 'UNAUTHORIZED' },
+          { status: 401 }
+        )
+      }
 
-    const token = authHeader.split(' ')[1]
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    })
+      const token = authHeader.split(' ')[1]
+      const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      })
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Unauthorized', code: 'UNAUTHORIZED' },
+          { status: 401 }
+        )
+      }
     }
 
     // Parse and validate request body

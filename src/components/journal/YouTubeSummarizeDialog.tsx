@@ -13,7 +13,14 @@ interface YouTubeSummarizeDialogProps {
   videoId: string
   videoUrl?: string
   entryId: string
-  onSummaryCreated: (noteId: string, noteTitle: string, videoId: string, entryId: string) => void
+  onSummaryCreated: (
+    noteId: string,
+    noteTitle: string,
+    videoId: string,
+    entryId: string,
+    summaryHtml: string,
+    isLocal?: boolean
+  ) => void
 }
 
 type DialogState = 'idle' | 'loading' | 'success' | 'error'
@@ -89,8 +96,15 @@ export function YouTubeSummarizeDialog({
         if (!isMountedRef.current) return
 
         // The API returns noteId and creates a note with title "Video Summary: {videoId}"
-        const noteTitle = `Video Summary: ${videoId}`
-        onSummaryCreated(data.noteId, noteTitle, videoId, entryId)
+        const noteTitle = data.noteTitle || `Video Summary: ${videoId}`
+        onSummaryCreated(
+          data.noteId,
+          noteTitle,
+          videoId,
+          entryId,
+          data.summary,
+          data.isLocal
+        )
         onClose()
         toast.success('Video summary created!', {
           description: 'Click the link in your entry to view the summary.',

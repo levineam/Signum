@@ -135,6 +135,8 @@ export interface VideoSummarizeRequest {
 export interface VideoSummarizeResponse {
   /** ID of the created summary note */
   noteId: string
+  /** Title of the created summary note */
+  noteTitle?: string
   /** The AI-generated summary (HTML format) */
   summary: string
   /** Number of tokens used */
@@ -143,4 +145,9 @@ export interface VideoSummarizeResponse {
   model: string
   /** Video title (if available) */
   videoTitle?: string
+  /**
+   * True when the summary note is not persisted in Supabase and should be stored locally
+   * (e.g., NEXT_PUBLIC_E2E_TEST_MODE / offline mode).
+   */
+  isLocal?: boolean
 }
