@@ -875,13 +875,11 @@ export function SimpleRichEditor({
       // Insert the text first
       document.execCommand('insertText', false, text)
 
-      // Then insert embed(s) after each YouTube URL
-      // For simplicity, we'll add the first embed after the pasted text
-      const firstVideo = youtubeUrls[0]
-      const embedHtml = createEmbedHtml(firstVideo.videoId, firstVideo.url)
-
-      // Insert the embed directly after the URL (margin in CSS provides spacing)
-      document.execCommand('insertHTML', false, embedHtml)
+      // Then insert embeds for all detected YouTube URLs (after the pasted text)
+      youtubeUrls.forEach(video => {
+        const embedHtml = createEmbedHtml(video.videoId, video.url)
+        document.execCommand('insertHTML', false, embedHtml)
+      })
 
       // Trigger onChange to save the content
       if (onChange && editorRef.current) {
@@ -891,6 +889,12 @@ export function SimpleRichEditor({
     } else {
       // Normal paste behavior - just insert plain text
       document.execCommand('insertText', false, text)
+
+      // Trigger onChange to ensure content is saved
+      if (onChange && editorRef.current) {
+        const content = editorRef.current.innerHTML || ''
+        onChange(content)
+      }
     }
   }, [onChange])
 

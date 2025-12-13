@@ -39,7 +39,7 @@ export function YouTubeSummarizeDialog({
   const abortControllerRef = useRef<AbortController | null>(null)
   const hasStartedRef = useRef(false)
   const isMountedRef = useRef(true)
-  const successTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Define generateSummary first so it can be used in useEffect
   const generateSummary = useCallback(async () => {
@@ -78,7 +78,15 @@ export function YouTubeSummarizeDialog({
             errorMessage = errorData.error
           }
         } catch {
-          // Response was not JSON, use default message with status code
+          // Response was not JSON, try raw text for more context
+          try {
+            const raw = await response.text()
+            if (raw) {
+              errorMessage = `${errorMessage}: ${raw}`
+            }
+          } catch {
+            // ignore secondary parse failure
+          }
         }
         throw new Error(errorMessage)
       }

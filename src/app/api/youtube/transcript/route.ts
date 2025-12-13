@@ -56,8 +56,8 @@ export async function POST(request: Request) {
         global: { headers: { Authorization: `Bearer ${token}` } },
       })
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data, error } = await supabase.auth.getUser()
+      if (error || !data?.user) {
         return NextResponse.json(
           { error: 'Unauthorized', code: 'UNAUTHORIZED' },
           { status: 401 }
