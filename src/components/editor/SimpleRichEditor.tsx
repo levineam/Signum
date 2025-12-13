@@ -84,11 +84,12 @@ export function SimpleRichEditor({
       return
     }
 
-    // Add loading state to button, swapping text for accessibility/localization
-    const originalLabel = summarizeBtn.innerText
+    // Add loading state to button by updating only the text span (preserves SVG icon)
+    const labelSpan = summarizeBtn.querySelector('span')
+    const originalLabel = labelSpan?.textContent || 'Summarize Video'
     summarizeBtn.classList.add('loading')
     summarizeBtn.disabled = true
-    summarizeBtn.innerText = 'Generating summary...'
+    if (labelSpan) labelSpan.textContent = 'Generating summary...'
 
     try {
       const response = await fetch('/api/youtube/summarize', {
@@ -134,7 +135,7 @@ export function SimpleRichEditor({
       // Remove loading state and restore label
       summarizeBtn.classList.remove('loading')
       summarizeBtn.disabled = false
-      summarizeBtn.innerText = originalLabel
+      if (labelSpan) labelSpan.textContent = originalLabel
     }
   }, [session?.access_token, entryId, onYouTubeSummarize])
   const [activeFormats, setActiveFormats] = useState({

@@ -44,7 +44,7 @@ describe('youtubeiTranscript helpers', () => {
                             transcriptSegmentRenderer: {
                               startMs: '1000',
                               endMs: '2500',
-                              snippet: { runs: [{ text: 'Hello' }] },
+                              snippet: { runs: [{ text: 'Hel' }, { text: 'lo' }] },
                             },
                           },
                           {
@@ -63,6 +63,31 @@ describe('youtubeiTranscript helpers', () => {
             },
           },
         },
+        {
+          updateEngagementPanelAction: {
+            content: {
+              transcriptRenderer: {
+                content: {
+                  transcriptSearchPanelRenderer: {
+                    body: {
+                      transcriptSegmentListRenderer: {
+                        initialSegments: [
+                          {
+                            transcriptSegmentRenderer: {
+                              startMs: '4000',
+                              endMs: '5000',
+                              snippet: { runs: [{ text: '!' }] },
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       ],
     }
 
@@ -70,8 +95,8 @@ describe('youtubeiTranscript helpers', () => {
     expect(segs).toEqual([
       { text: 'Hello', startMs: 1000, endMs: 2500 },
       { text: 'world', startMs: 2500, endMs: 4000 },
+      { text: '!', startMs: 4000, endMs: 5000 },
     ])
   })
 })
-
 

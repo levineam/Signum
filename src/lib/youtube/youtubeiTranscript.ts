@@ -162,14 +162,22 @@ type YoutubeiTranscriptResponse = {
 
 export function parseYoutubeiTranscriptResponse(json: unknown): YoutubeiTranscriptSegment[] {
   const root = json as YoutubeiTranscriptResponse
-  const segments =
-    root.actions?.[0]?.updateEngagementPanelAction?.content?.transcriptRenderer?.content
-      ?.transcriptSearchPanelRenderer?.body?.transcriptSegmentListRenderer?.initialSegments
+  const actions = Array.isArray(root.actions) ? root.actions : []
 
-  if (!Array.isArray(segments)) return []
+  const allSegments: unknown[] = []
+  for (const action of actions) {
+    const segments =
+      action.updateEngagementPanelAction?.content?.transcriptRenderer?.content
+        ?.transcriptSearchPanelRenderer?.body?.transcriptSegmentListRenderer?.initialSegments
+    if (Array.isArray(segments)) {
+      allSegments.push(...segments)
+    }
+  }
+
+  if (allSegments.length === 0) return []
 
   const parsed: YoutubeiTranscriptSegment[] = []
-  for (const seg of segments) {
+  for (const seg of allSegments) {
     const cue = (seg as { transcriptSegmentRenderer?: unknown })?.transcriptSegmentRenderer as
       | {
           startMs?: string
@@ -179,7 +187,7 @@ export function parseYoutubeiTranscriptResponse(json: unknown): YoutubeiTranscri
       | undefined
     const startMs = Number.parseInt(cue?.startMs ?? '', 10)
     const endMs = Number.parseInt(cue?.endMs ?? '', 10)
-    const text = cue?.snippet?.runs?.[0]?.text ?? ''
+    const text = cue?.snippet?.runs?.map((r) => r.text ?? '').join('').trim() ?? ''
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || !text) continue
     parsed.push({ text, startMs, endMs })
   }
@@ -255,7 +263,15 @@ async function callYoutubeiGetTranscript(args: {
   })
 
   if (!resp.ok) {
-    // YouTube may return 400/403 when params are invalid; treat as non-fatal.
+    // Distinguish transient failures (rate limiting / server errors) from "no transcript".
+    if (resp.status === 429 || resp.status === 403 || resp.status >= 500) {
+      throw new TranscriptError(
+        `Network error while fetching transcript (${resp.status}). Please try again.`,
+        TranscriptErrorCode.NETWORK_ERROR
+      )
+    }
+
+    // YouTube may return 400 when params are invalid; treat as non-fatal.
     return []
   }
 
@@ -263,7 +279,10 @@ async function callYoutubeiGetTranscript(args: {
   try {
     json = await resp.json()
   } catch {
-    return []
+    throw new TranscriptError(
+      'Network error while parsing transcript response.',
+      TranscriptErrorCode.NETWORK_ERROR
+    )
   }
 
   return parseYoutubeiTranscriptResponse(json)
@@ -307,7 +326,10 @@ export async function fetchTranscriptViaYoutubei(
       const last = segments[segments.length - 1]
       const durationSeconds = last ? Math.round((last.offset + last.duration) / 1000) : undefined
       return { text: fullText, segments, durationSeconds }
-    } catch {
+    } catch (e) {
+      if (e instanceof TranscriptError && e.code === TranscriptErrorCode.NETWORK_ERROR) {
+        throw e
+      }
       // try next candidate
     }
   }
@@ -317,5 +339,4 @@ export async function fetchTranscriptViaYoutubei(
     TranscriptErrorCode.TRANSCRIPT_NOT_FOUND
   )
 }
-
 
