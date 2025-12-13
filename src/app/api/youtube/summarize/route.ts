@@ -9,7 +9,7 @@
  * Returns: { noteId: string, summary: string, tokensUsed: number, model: string }
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { hasPublicSupabase } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
@@ -60,6 +60,46 @@ interface ErrorResponse {
   details?: string
 }
 
+type NotesRow = {
+  id: string
+  user_id: string
+  title: string
+  content: string
+  note_type: string
+  metadata: VideoSummaryNoteMetadata
+  is_pinned: boolean
+  created_at: string
+  updated_at: string
+}
+
+type NotesInsert = {
+  id?: string
+  user_id: string
+  title: string
+  content?: string
+  note_type: string
+  metadata?: VideoSummaryNoteMetadata
+  is_pinned?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+type Database = {
+  public: {
+    Tables: {
+      notes: {
+        Row: NotesRow
+        Insert: NotesInsert
+        Update: Partial<NotesRow>
+        Relationships: []
+      }
+    }
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: Record<string, never>
+  }
+}
+
 function buildLocalNoteId(): string {
   try {
     return `local-note-${crypto.randomUUID()}`
@@ -75,7 +115,7 @@ export async function POST(request: NextRequest) {
     const token = authHeader?.replace('Bearer ', '')
 
     let userId: string | null = null
-    let supabase: ReturnType<typeof createClient> | null = null
+    let supabase: SupabaseClient<Database> | null = null
 
     if (!isTestMode) {
       if (!token) {
@@ -96,7 +136,7 @@ export async function POST(request: NextRequest) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
       const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
 
-      supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
         global: { headers: { Authorization: `Bearer ${token}` } },
       })
 
@@ -285,15 +325,18 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Video Summarize] Creating note...')
+    const notePayload: NotesInsert = {
+      user_id: userId!,
+      title: noteTitle,
+      content: htmlSummary,
+      note_type: 'custom',
+      metadata,
+    }
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore Supabase type generation is not available in this edge runtime; payload matches runtime schema
     const { data: note, error: noteError } = await supabase!
       .from('notes')
-      .insert({
-        user_id: userId!,
-        title: noteTitle,
-        content: htmlSummary,
-        note_type: 'custom',
-        metadata,
-      })
+      .insert(notePayload)
       .select('id')
       .single()
 

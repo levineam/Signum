@@ -108,7 +108,7 @@ export interface NoteMetadata {
   legacyType?: 'values' | 'beliefs' | 'aims' | 'regular'
 
   // AI Answer metadata (for AI-generated answers via Ask AI feature)
-  sourceType?: 'task' | 'journal'  // Source type of AI query
+  sourceType?: 'task' | 'journal' | 'video'  // Source type of AI query
   taskId?: string                  // Source task ID (if sourceType === 'task')
   taskText?: string                // Text of the task (if sourceType === 'task')
   journalEntryId?: string          // Source journal entry ID (if sourceType === 'journal')
@@ -117,6 +117,11 @@ export interface NoteMetadata {
   tokensUsed?: number              // Number of tokens used
   model?: string                   // AI model used for generation
   generatedAt?: string             // Timestamp when answer was generated
+
+  // Video summary metadata
+  videoId?: string                 // YouTube video ID
+  videoUrl?: string                // Original YouTube URL
+  videoTitle?: string              // Video title (if available)
 
   // Ontology display metadata
   ontologyCategory?: OntologyCategory

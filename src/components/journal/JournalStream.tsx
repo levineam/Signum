@@ -1025,6 +1025,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             generatedAt: new Date().toISOString(),
           },
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         })
       } catch (e) {
         console.warn('[YouTube Summary] Failed to store local summary note:', e)
