@@ -92,7 +92,7 @@ interface JournalStreamProps {
 
 export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const router = useRouter()
-  const { user, session } = useAuth()
+  const { user, session, loading: authLoading } = useAuth()
   const { addLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [entries, setEntries] = useState<JournalEntry[]>([])
@@ -180,6 +180,11 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         return
       }
 
+      // Avoid rendering a misleading signed-out UI during initial hydration in test mode.
+      if (authLoading) {
+        return
+      }
+
       if (!user) {
         console.log('[JournalStream] No user, clearing entries')
         // Clear entries and reset loading state when user signs out
@@ -193,6 +198,16 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       try {
         const today = getLocalDateString() // Use local date instead of UTC
         console.log('[JournalStream] Today\'s date:', today)
+
+        // Local-only mode: do not attempt Supabase reads/writes.
+        if (!hasPublicSupabase()) {
+          console.log('[JournalStream] Supabase not configured, using local-only journal entry')
+          const fallbackEntry = createLocalEntry(today)
+          setEntries([fallbackEntry])
+          setEditingEntryId(fallbackEntry.id)
+          setIsLoading(false)
+          return
+        }
 
         // Get all notes from Supabase
         console.log('[JournalStream] Fetching notes from Supabase...')
@@ -402,7 +417,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       setIsLoading(false)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, isGuest, guestDraft]) // Re-run when user ID, guest mode, or guest draft changes
+  }, [user?.id, isGuest, guestDraft, authLoading]) // Re-run when user ID, guest mode, guest draft, or auth loading changes
 
   // Story 2.8: Deep linking support - check URL for ?helper=type on mount
   // Story 2.9: Updated to set mode to 'use' for deep links
@@ -470,7 +485,14 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       // Save if content is non-empty OR if we're clearing previously non-empty content
       const shouldSave = newContent.trim() !== '' || previousContent.trim() !== ''
 
-      if (shouldSave && user) {
+      if (
+        shouldSave &&
+        user &&
+        hasPublicSupabase() &&
+        entryId !== 'guest-entry' &&
+        !entryId.startsWith('local-entry-') &&
+        !entryId.startsWith('local-note-')
+      ) {
         console.log('Auto-saving entry:', entryId)
         try {
           // Update the note in Supabase
@@ -496,7 +518,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   }
 
   const detectTasksInContent = async (content: string, entryId: string) => {
-    if (!user || !session?.access_token) return
+    if (!user || !session?.access_token || !hasPublicSupabase()) return
 
     // Story 1.2.2: Get rejected task hashes from state
     const rejectedHashes = rejectedTaskHashes.current.get(entryId) || new Set<string>()
@@ -983,12 +1005,12 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     (e: React.MouseEvent, entryId: string) => {
       const target = e.target as Element | null
       const summarizeBtn = target?.closest('.youtube-summarize-btn')
-      if (!summarizeBtn || !(summarizeBtn instanceof HTMLButtonElement)) return false
+      if (!summarizeBtn || !(summarizeBtn instanceof HTMLElement)) return false
 
       e.preventDefault()
       e.stopPropagation()
-      const videoId = summarizeBtn.dataset.videoId
-      const videoUrl = summarizeBtn.dataset.videoUrl
+      const videoId = (summarizeBtn as HTMLElement).dataset.videoId
+      const videoUrl = (summarizeBtn as HTMLElement).dataset.videoUrl
       if (videoId) {
         handleYouTubeSummarize(videoId, videoUrl, entryId)
       }
@@ -1265,7 +1287,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
       {/* Journal Entries - One per day */}
       <div className="space-y-4">
-        {!user && !isGuest ? (
+        {!user && !isGuest && !authLoading ? (
           <Card className="p-6">
             <div className="text-center">
               <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
@@ -1275,7 +1297,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               </Button>
             </div>
           </Card>
-        ) : isLoading ? (
+        ) : (isLoading || authLoading) ? (
           <Card className="p-6">
             <div className="text-center text-muted-foreground">
               Loading your journal...
@@ -1357,8 +1379,16 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                       if (noteLinkClicked) {
                         return
                       }
+                      // Don't exit edit mode if a modal (e.g. YouTube summary) is opening/active.
+                      if (showYouTubeSummarizeDialog) {
+                        return
+                      }
                       const relatedTarget = e.relatedTarget as HTMLElement
                       if (relatedTarget && relatedTarget.closest('a[data-note-id]')) {
+                        return
+                      }
+                      // Don't exit edit mode if the user clicked on the YouTube summarize button
+                      if (relatedTarget && relatedTarget.closest('.youtube-summarize-btn')) {
                         return
                       }
                       // Don't exit edit mode if the user clicked on the voice button

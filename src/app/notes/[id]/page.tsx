@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { use, useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
 import { Note, getNoteDisplayTitle } from '@/types/note'
@@ -20,7 +20,8 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { useLocalNotes } from '@/contexts/LocalNotesContext'
 
-export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
+export default function NoteEditPage(props: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(props.params)
   const router = useRouter()
   const { user } = useAuth()
   const { addLocalNote } = useLocalNotes()
@@ -70,8 +71,6 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     const userId = user.id // Capture user.id for closure
 
     async function loadNote() {
-      const resolvedParams = await params
-
       // Get note from Supabase
       const loadedNote = await getNoteById(resolvedParams.id, userId)
 
@@ -84,7 +83,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       setIsLoading(false)
     }
     loadNote()
-  }, [params, user])
+  }, [resolvedParams.id, user])
 
   // Cleanup: Flush pending autosave before unmount
   // Use empty dependency array so cleanup only runs on unmount, not on every keystroke

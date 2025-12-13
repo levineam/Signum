@@ -18,7 +18,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const [manuallyCollapsed, setManuallyCollapsed] = useState<boolean | null>(null)
   // Mobile drawer state
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
-  const { user, signOut } = useAuth()
+  const { user, signOut, loading: authLoading } = useAuth()
   const [isTestMode, setIsTestMode] = useState(false)
 
   // Check for test mode on mount
@@ -251,7 +251,13 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               border-t border-sidebar-border pt-4 mt-auto
               ${manuallyCollapsed === null ? 'md:hidden xl:block' : ''}
             `}>
-              {user ? (
+              {authLoading ? (
+                <div className="space-y-3">
+                  <div className="h-5 w-40 rounded bg-muted/40" />
+                  <div className="h-5 w-56 rounded bg-muted/40" />
+                  <div className="h-9 w-full rounded bg-muted/40" />
+                </div>
+              ) : user ? (
                 <div className="space-y-3">
                   <div>
                     <p className="text-base font-medium text-sidebar-foreground">Signed in as:</p>
@@ -323,7 +329,13 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
           {/* User Status */}
           <div className="border-t border-sidebar-border pt-4 mt-auto">
-            {user ? (
+            {authLoading ? (
+              <div className="space-y-3">
+                <div className="h-5 w-40 rounded bg-muted/40" />
+                <div className="h-5 w-56 rounded bg-muted/40" />
+                <div className="h-9 w-full rounded bg-muted/40" />
+              </div>
+            ) : user ? (
               <div className="space-y-3">
                 <div>
                   <p className="text-base font-medium text-sidebar-foreground">Signed in as:</p>

@@ -180,19 +180,7 @@ export function createEmbedHtml(videoId: string, videoUrl?: string): string {
   const safeEmbedUrl = escapeHtmlAttribute(embedUrl)
   const safeOriginalUrl = escapeHtmlAttribute(originalUrl)
 
-  return `<div class="youtube-embed-container" data-video-id="${safeVideoId}" data-video-url="${safeOriginalUrl}">
-  <iframe
-    src="${safeEmbedUrl}"
-    title="YouTube video player"
-    allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; web-share"
-    allowfullscreen
-    loading="lazy"
-  ></iframe>
-  <div class="youtube-embed-actions">
-    <button type="button" class="youtube-summarize-btn" data-video-id="${safeVideoId}" data-video-url="${safeOriginalUrl}">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
-      <span>Summarize Video</span>
-    </button>
-  </div>
-</div>`
+  // IMPORTANT: keep this HTML compact (no newlines/indentation) because the editor uses
+  // `white-space: pre-wrap`, which would otherwise render formatting whitespace as gaps.
+  return `<div class="youtube-embed-container" contenteditable="false" data-video-id="${safeVideoId}" data-video-url="${safeOriginalUrl}"><iframe contenteditable="false" tabindex="-1" src="${safeEmbedUrl}" title="YouTube video player" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe><div class="youtube-embed-actions" contenteditable="false"><span class="youtube-summarize-btn" role="button" contenteditable="false" tabindex="-1" data-video-id="${safeVideoId}" data-video-url="${safeOriginalUrl}">Summarize Video</span></div></div>`
 }

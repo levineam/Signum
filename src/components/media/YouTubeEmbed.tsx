@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getEmbedUrl, validateVideoId } from '@/utils/youtube'
 
@@ -90,7 +90,7 @@ export function YouTubeEmbed({
       <iframe
         src={embedUrl}
         title="YouTube video player"
-        allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
         loading="lazy"
       />
@@ -102,7 +102,6 @@ export function YouTubeEmbed({
             size="sm"
             onClick={handleSummarize}
             disabled={isLoading || !onSummarize}
-            className="gap-2"
           >
             {isLoading ? (
               <>
@@ -110,10 +109,7 @@ export function YouTubeEmbed({
                 Generating summary...
               </>
             ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Summarize Video
-              </>
+              <>Summarize Video</>
             )}
           </Button>
 
