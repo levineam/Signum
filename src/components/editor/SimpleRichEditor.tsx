@@ -53,6 +53,14 @@ export function SimpleRichEditor({
   const suppressBlurRef = useRef(false)
   const canShowAskAIButton = Boolean(entryId || onNoteCreated)
   const { session } = useAuth()
+  const updateActiveFormatsRef = useRef<(() => void) | null>(null)
+
+  const emitEditorChange = useCallback(() => {
+    if (onChange && editorRef.current) {
+      const content = editorRef.current.innerHTML || ''
+      onChange(content)
+    }
+  }, [onChange])
 
   const moveCaretIntoStart = useCallback((el: HTMLElement) => {
     const selection = window.getSelection()
@@ -65,6 +73,77 @@ export function SimpleRichEditor({
       selection.addRange(range)
     } catch {
       selection.collapseToEnd()
+    }
+  }, [])
+
+  const getEditorBlockFromSelection = useCallback((): HTMLElement | null => {
+    const editor = editorRef.current
+    if (!editor) return null
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return null
+
+    const range = selection.getRangeAt(0)
+    if (!editor.contains(range.startContainer)) return null
+
+    let el: HTMLElement | null =
+      range.startContainer instanceof HTMLElement
+        ? range.startContainer
+        : range.startContainer.parentElement
+
+    // Walk up to a direct child of the editor (our “block” element).
+    while (el && el.parentElement && el.parentElement !== editor) {
+      el = el.parentElement
+    }
+
+    return el && el.parentElement === editor ? el : null
+  }, [])
+
+  const getMeaningfulSiblingElement = useCallback(
+    (node: HTMLElement, direction: 'prev' | 'next'): HTMLElement | null => {
+      let sib: ChildNode | null = direction === 'prev' ? node.previousSibling : node.nextSibling
+      while (sib) {
+        if (sib.nodeType === Node.TEXT_NODE) {
+          if (!(sib.textContent || '').trim()) {
+            sib = direction === 'prev' ? sib.previousSibling : sib.nextSibling
+            continue
+          }
+          return null
+        }
+
+        if (sib.nodeType === Node.ELEMENT_NODE) {
+          const el = sib as HTMLElement
+          if (el.tagName === 'BR') {
+            sib = direction === 'prev' ? sib.previousSibling : sib.nextSibling
+            continue
+          }
+          return el
+        }
+
+        sib = direction === 'prev' ? sib.previousSibling : sib.nextSibling
+      }
+      return null
+    },
+    []
+  )
+
+  const isCaretAtBlockBoundary = useCallback((block: HTMLElement, where: 'start' | 'end') => {
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return false
+    const range = selection.getRangeAt(0)
+    if (!range.collapsed) return false
+
+    try {
+      const probe = range.cloneRange()
+      probe.selectNodeContents(block)
+      if (where === 'start') {
+        probe.setEnd(range.startContainer, range.startOffset)
+      } else {
+        probe.setStart(range.endContainer, range.endOffset)
+      }
+      const text = probe.toString().replace(/\u200B/g, '')
+      return text.trim() === ''
+    } catch {
+      return false
     }
   }, [])
 
@@ -135,20 +214,120 @@ export function SimpleRichEditor({
   }, [isSelectionInsideYouTubeEmbed, ensureEditableLineAfter, moveCaretIntoStart])
 
   const handleEditorKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!isSelectionInsideYouTubeEmbed()) return
-    // Allow navigation keys to move away; block text entry/deletion into the embed.
-    const allowed = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Shift', 'Meta', 'Control', 'Alt'])
-    if (allowed.has(e.key)) return
-    e.preventDefault()
-    e.stopPropagation()
-    const anchor = window.getSelection()?.anchorNode
-    const element = anchor instanceof Element ? anchor : anchor?.parentElement
-    const container = element?.closest?.('.youtube-embed-container') as HTMLElement | null
-    if (container) {
-      const line = ensureEditableLineAfter(container)
-      if (line) moveCaretIntoStart(line)
+    const key = e.key
+    const isBackwardDelete = key === 'Backspace'
+    const isForwardDelete = key === 'Delete'
+
+    // Atomic deletion when deleting *across* an embed boundary (most common case: Backspace at start of line).
+    if (isBackwardDelete || isForwardDelete) {
+      const block = getEditorBlockFromSelection()
+      const selection = window.getSelection()
+      const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
+
+      if (block && range && range.collapsed) {
+        if (isBackwardDelete && isCaretAtBlockBoundary(block, 'start')) {
+          const prev = getMeaningfulSiblingElement(block, 'prev')
+          if (prev?.classList.contains('youtube-summary-link')) {
+            e.preventDefault()
+            e.stopPropagation()
+            prev.remove()
+            moveCaretIntoStart(block)
+            emitEditorChange()
+            updateActiveFormatsRef.current?.()
+            return
+          }
+          if (prev?.classList.contains('youtube-embed-container')) {
+            e.preventDefault()
+            e.stopPropagation()
+            const actions = prev.querySelector('.youtube-embed-actions') as HTMLElement | null
+            if (actions) {
+              actions.remove()
+            } else {
+              prev.remove()
+            }
+            moveCaretIntoStart(block)
+            emitEditorChange()
+            updateActiveFormatsRef.current?.()
+            return
+          }
+        }
+
+        // Optional forward delete behavior: Delete at end of line removes next summary link/actions/embed.
+        if (isForwardDelete && isCaretAtBlockBoundary(block, 'end')) {
+          const next = getMeaningfulSiblingElement(block, 'next')
+          if (next?.classList.contains('youtube-summary-link')) {
+            e.preventDefault()
+            e.stopPropagation()
+            next.remove()
+            moveCaretIntoStart(block)
+            emitEditorChange()
+            updateActiveFormatsRef.current?.()
+            return
+          }
+          if (next?.classList.contains('youtube-embed-container')) {
+            e.preventDefault()
+            e.stopPropagation()
+            const actions = next.querySelector('.youtube-embed-actions') as HTMLElement | null
+            if (actions) {
+              actions.remove()
+            } else {
+              next.remove()
+            }
+            moveCaretIntoStart(block)
+            emitEditorChange()
+            updateActiveFormatsRef.current?.()
+            return
+          }
+        }
+      }
     }
-  }, [isSelectionInsideYouTubeEmbed, ensureEditableLineAfter, moveCaretIntoStart])
+
+    // If selection is inside an embed, never allow destructive keys to push content “into” the embed.
+    if (isSelectionInsideYouTubeEmbed()) {
+      // Allow navigation keys to move away; intercept deletion/typing.
+      const allowed = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Shift', 'Meta', 'Control', 'Alt'])
+      if (allowed.has(key)) return
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      const anchor = window.getSelection()?.anchorNode
+      const element = anchor instanceof Element ? anchor : anchor?.parentElement
+      const container = element?.closest?.('.youtube-embed-container') as HTMLElement | null
+      if (container) {
+        // If user is trying to delete from within the embed, delete actions first, then embed.
+        const line = ensureEditableLineAfter(container)
+        const actions = container.querySelector('.youtube-embed-actions') as HTMLElement | null
+        if ((isBackwardDelete || isForwardDelete) && actions) {
+          actions.remove()
+          if (line) moveCaretIntoStart(line)
+          emitEditorChange()
+          updateActiveFormatsRef.current?.()
+          return
+        }
+
+        if (isBackwardDelete || isForwardDelete) {
+          // Ensure caret has somewhere valid to go after removal.
+          if (line) moveCaretIntoStart(line)
+          container.remove()
+          emitEditorChange()
+          updateActiveFormatsRef.current?.()
+          return
+        }
+
+        // Non-delete typing attempt: move caret to editable line after.
+        if (line) moveCaretIntoStart(line)
+      }
+    }
+  }, [
+    emitEditorChange,
+    ensureEditableLineAfter,
+    getEditorBlockFromSelection,
+    getMeaningfulSiblingElement,
+    isCaretAtBlockBoundary,
+    isSelectionInsideYouTubeEmbed,
+    moveCaretIntoStart,
+  ])
 
   // Handle YouTube summarize button clicks via event delegation
   const handleEditorClick = useCallback(async (e: React.MouseEvent) => {
@@ -311,6 +490,10 @@ export function SimpleRichEditor({
 
     setActiveFormats(formats)
   }, [])
+
+  useEffect(() => {
+    updateActiveFormatsRef.current = updateActiveFormats
+  }, [updateActiveFormats])
 
   const formatText = useCallback((command: string, value?: string) => {
     if (editorRef.current) {

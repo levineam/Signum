@@ -1339,7 +1339,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               </div>
 
               {/* Helpers (only on today's entry) - Story 2.8: Tile-based UI */}
-              {isTodayEntry && (user || isGuest) && !isForcedTestUser && (
+              {isTodayEntry && (user || isGuest) && (
                 <div className="px-3 md:px-2">
                   <HelperTileGrid
                     helperTypes={[
@@ -1494,7 +1494,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       )}
 
       {/* Story 2.9: Helper Dialog (rendered once, outside entry loop) */}
-      {!isForcedTestUser && activeHelper && (user || isGuest) && (activeHelperMode === 'info' || activeEntryId) && (
+      {activeHelper && (user || isGuest) && (activeHelperMode === 'info' || activeEntryId) && (
         <Dialog open={true} onOpenChange={(open) => !open && handleHelperClose()}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             {activeHelperMode === 'info' ? (
