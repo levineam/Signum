@@ -54,21 +54,6 @@ export function SimpleRichEditor({
   const canShowAskAIButton = Boolean(entryId || onNoteCreated)
   const { session } = useAuth()
 
-  const moveCaretAfter = useCallback((el: HTMLElement) => {
-    const selection = window.getSelection()
-    if (!selection) return
-    const range = document.createRange()
-    try {
-      range.setStartAfter(el)
-      range.collapse(true)
-      selection.removeAllRanges()
-      selection.addRange(range)
-    } catch {
-      // If we can't place after (e.g. detached), just collapse to end.
-      selection.collapseToEnd()
-    }
-  }, [])
-
   const moveCaretIntoStart = useCallback((el: HTMLElement) => {
     const selection = window.getSelection()
     if (!selection) return
@@ -140,9 +125,9 @@ export function SimpleRichEditor({
     if (!isSelectionInsideYouTubeEmbed()) return
     e.preventDefault()
     e.stopPropagation()
-    const container = (window.getSelection()?.anchorNode as any)?.parentElement?.closest?.('.youtube-embed-container') as
-      | HTMLElement
-      | null
+    const anchor = window.getSelection()?.anchorNode
+    const element = anchor instanceof Element ? anchor : anchor?.parentElement
+    const container = element?.closest?.('.youtube-embed-container') as HTMLElement | null
     if (container) {
       const line = ensureEditableLineAfter(container)
       if (line) moveCaretIntoStart(line)
@@ -156,9 +141,9 @@ export function SimpleRichEditor({
     if (allowed.has(e.key)) return
     e.preventDefault()
     e.stopPropagation()
-    const container = (window.getSelection()?.anchorNode as any)?.parentElement?.closest?.('.youtube-embed-container') as
-      | HTMLElement
-      | null
+    const anchor = window.getSelection()?.anchorNode
+    const element = anchor instanceof Element ? anchor : anchor?.parentElement
+    const container = element?.closest?.('.youtube-embed-container') as HTMLElement | null
     if (container) {
       const line = ensureEditableLineAfter(container)
       if (line) moveCaretIntoStart(line)
@@ -205,11 +190,16 @@ export function SimpleRichEditor({
       return
     }
 
-    // Add loading state to button, swapping text for accessibility/localization
-    const originalLabel = summarizeBtn.textContent || ''
+    // Add loading state to button, swapping only the text (preserves SVG icon)
+    const labelSpan = summarizeBtn.querySelector('span')
+    const originalLabel = labelSpan?.textContent || summarizeBtn.textContent || ''
     summarizeBtn.classList.add('loading')
     summarizeBtn.setAttribute('aria-disabled', 'true')
-    summarizeBtn.textContent = 'Generating summary...'
+    if (labelSpan) {
+      labelSpan.textContent = 'Generating summary...'
+    } else {
+      summarizeBtn.textContent = 'Generating summary...'
+    }
 
     try {
       const response = await fetch('/api/youtube/summarize', {
@@ -255,11 +245,15 @@ export function SimpleRichEditor({
       // Remove loading state and restore label
       summarizeBtn.classList.remove('loading')
       summarizeBtn.removeAttribute('aria-disabled')
-      summarizeBtn.textContent = originalLabel
+      if (labelSpan) {
+        labelSpan.textContent = originalLabel
+      } else {
+        summarizeBtn.textContent = originalLabel
+      }
       suppressBlurRef.current = false
       setTimeout(() => editorRef.current?.focus(), 0)
     }
-  }, [session?.access_token, entryId, onYouTubeSummarize])
+  }, [session?.access_token, entryId, onYouTubeSummarize, ensureEditableLineAfter, moveCaretIntoStart])
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
@@ -1002,11 +996,8 @@ export function SimpleRichEditor({
       youtubeUrls.forEach(video => {
         const embedHtml = createEmbedHtml(video.videoId, video.url)
         document.execCommand('insertHTML', false, embedHtml)
-<<<<<<< HEAD
-=======
         // Ensure there's an editable line beneath the embed so the user can keep typing.
         document.execCommand('insertHTML', false, '<div><br></div>')
->>>>>>> fd64c80e (fix(youtube): Prevent typing into summarize button and improve embed UX)
       })
 
       // Trigger onChange to save the content
