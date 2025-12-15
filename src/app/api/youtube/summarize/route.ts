@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
     if (!isTestMode && supabase) {
       const { data: existingNote } = await supabase
         .from('notes')
-        .select('id, content, metadata')
+        .select('id, title, content, metadata')
         .eq('user_id', userId!)
         .eq('note_type', 'custom')
         .contains('metadata', { videoId, sourceType: 'video' })
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
       if (existingNote) {
         return NextResponse.json<VideoSummarizeResponse>({
           noteId: existingNote.id,
-          noteTitle: existingNote.metadata?.title,
+          noteTitle: existingNote.title,
           summary: existingNote.content ?? '',
           tokensUsed: existingNote.metadata?.tokensUsed ?? 0,
           model: existingNote.metadata?.model ?? 'cached',
