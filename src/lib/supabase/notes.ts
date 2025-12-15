@@ -146,7 +146,9 @@ export async function createNote(
 
 
   // Check if user has encryption enabled
-  const hasKey = await hasEncryptionKey(userId)
+  // FORCE DISABLE: Encryption abandoned in production, but keys exist in some browsers.
+  // We must force plaintext to match DB schema.
+  const hasKey = false // await hasEncryptionKey(userId)
 
   let insertData: Record<string, unknown>
 
@@ -221,7 +223,9 @@ export async function updateNote(
   const updates: Record<string, string | number | boolean | object | null> = {}
 
   // Check if user has encryption enabled
-  const hasKey = await hasEncryptionKey(userId)
+  // FORCE DISABLE: Encryption abandoned in production, but keys exist in some browsers.
+  // We must force plaintext to match DB schema.
+  const hasKey = false // await hasEncryptionKey(userId)
 
   // Handle title and content updates with encryption if enabled
   if (hasKey && (request.title !== undefined || request.content !== undefined)) {
@@ -296,7 +300,7 @@ export async function deleteNote(
   noteId: string,
   userId: string
 ): Promise<void> {
-  
+
 
   const { error } = await supabase
     .from('notes')
@@ -321,7 +325,7 @@ export async function getLinksForNote(
   noteId: string,
   userId: string
 ): Promise<Link[]> {
-  
+
 
   const { data, error } = await supabase
     .from('links')
@@ -344,7 +348,7 @@ export async function getOutgoingLinks(
   noteId: string,
   userId: string
 ): Promise<Link[]> {
-  
+
 
   const { data, error } = await supabase
     .from('links')
@@ -367,7 +371,7 @@ export async function getIncomingLinks(
   noteId: string,
   userId: string
 ): Promise<Link[]> {
-  
+
 
   const { data, error } = await supabase
     .from('links')
@@ -390,9 +394,9 @@ export async function createLink(
   request: CreateLinkRequest,
   userId: string
 ): Promise<Link> {
-  
 
-  const { data, error} = await supabase
+
+  const { data, error } = await supabase
     .from('links')
     .insert({
       source_note_id: request.sourceNoteId,
@@ -419,7 +423,7 @@ export async function deleteLink(
   linkId: string,
   userId: string
 ): Promise<void> {
-  
+
 
   const { error } = await supabase
     .from('links')
@@ -581,7 +585,7 @@ function mapDatabaseLinksToLinks(dbLinks: Array<{
  * Creates empty Values, Beliefs, and Aims notes.
  */
 export async function initializeOntologyNotes(userId: string): Promise<void> {
-  
+
 
   const ontologyNotes = [
     {
@@ -622,7 +626,7 @@ export async function initializeOntologyNotes(userId: string): Promise<void> {
  * Check if user has any journal entries.
  */
 export async function hasJournalEntries(userId: string): Promise<boolean> {
-  
+
 
   const { count, error } = await supabase
     .from('notes')
