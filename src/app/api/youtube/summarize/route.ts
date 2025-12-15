@@ -186,6 +186,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validate videoUrl if provided (must be YouTube domain and well-formed)
+    if (videoUrl) {
+      try {
+        const parsedUrl = new URL(videoUrl)
+        const hostname = parsedUrl.hostname.toLowerCase()
+        const isYouTubeHost = hostname.includes('youtube.com') || hostname.includes('youtu.be')
+
+        if (!isYouTubeHost) {
+          return NextResponse.json<ErrorResponse>(
+            { error: 'Invalid video URL domain', code: VideoSummarizeErrorCode.INVALID_REQUEST },
+            { status: 400 }
+          )
+        }
+      } catch {
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Invalid video URL format', code: VideoSummarizeErrorCode.INVALID_REQUEST },
+          { status: 400 }
+        )
+      }
+    }
+
     // 2b. Avoid duplicate summaries for the same user/video
     if (!isTestMode && supabase) {
       const { data: existingNote } = await supabase
