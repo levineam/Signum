@@ -8,6 +8,16 @@ import { Logo } from '@/components/branding/Logo'
 import { Menu, X, BookOpen, StickyNote, Target, MessageCircle, FileText, Users, Coins, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
 import { isForcedTestUserEnabled } from '@/lib/e2eTestUtils'
 
+function UserStatusSkeleton() {
+  return (
+    <div className="space-y-3" role="status" aria-busy="true" aria-label="Loading account status">
+      <div className="h-5 w-40 rounded bg-muted/40" />
+      <div className="h-5 w-56 rounded bg-muted/40" />
+      <div className="h-9 w-full rounded bg-muted/40" />
+    </div>
+  )
+}
+
 interface SidebarProps {
   activeSection: string
   onSectionChange: (section: string) => void
@@ -252,11 +262,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               ${manuallyCollapsed === null ? 'md:hidden xl:block' : ''}
             `}>
               {authLoading ? (
-                <div className="space-y-3">
-                  <div className="h-5 w-40 rounded bg-muted/40" />
-                  <div className="h-5 w-56 rounded bg-muted/40" />
-                  <div className="h-9 w-full rounded bg-muted/40" />
-                </div>
+                <UserStatusSkeleton />
               ) : user ? (
                 <div className="space-y-3">
                   <div>
@@ -330,11 +336,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           {/* User Status */}
           <div className="border-t border-sidebar-border pt-4 mt-auto">
             {authLoading ? (
-              <div className="space-y-3">
-                <div className="h-5 w-40 rounded bg-muted/40" />
-                <div className="h-5 w-56 rounded bg-muted/40" />
-                <div className="h-9 w-full rounded bg-muted/40" />
-              </div>
+              <UserStatusSkeleton />
             ) : user ? (
               <div className="space-y-3">
                 <div>

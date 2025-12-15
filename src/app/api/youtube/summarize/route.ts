@@ -186,6 +186,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 2b. Avoid duplicate summaries for the same user/video
+    if (!isTestMode && supabase) {
+      const { data: existingNote } = await supabase
+        .from('notes')
+        .select('id, content, metadata')
+        .eq('user_id', userId!)
+        .eq('note_type', 'custom')
+        .contains('metadata', { videoId, sourceType: 'video' })
+        .maybeSingle()
+
+      if (existingNote) {
+        return NextResponse.json<VideoSummarizeResponse>({
+          noteId: existingNote.id,
+          noteTitle: existingNote.metadata?.title,
+          summary: existingNote.content ?? '',
+          tokensUsed: existingNote.metadata?.tokensUsed ?? 0,
+          model: existingNote.metadata?.model ?? 'cached',
+        })
+      }
+    }
+
     // 3. Fetch transcript
     console.log('[Video Summarize] Fetching transcript for video:', videoId)
     let transcript: string

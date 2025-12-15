@@ -93,6 +93,7 @@ export function YouTubeEmbed({
         allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
         loading="lazy"
+        className="border-0"
       />
 
       {showSummarizeButton && (
