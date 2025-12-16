@@ -321,7 +321,10 @@ export async function updateNote(
     // User does not have encryption enabled - use plaintext
     if (request.title !== undefined) updates.title = request.title
     if (request.content !== undefined) updates.content = request.content
-    logEncryptionFallback(userId, encryption.reason)
+    // Only log fallback when we're writing plaintext content/title
+    if (request.title !== undefined || request.content !== undefined) {
+      logEncryptionFallback(userId, encryption.reason)
+    }
   }
 
   // Handle other fields (not encrypted)

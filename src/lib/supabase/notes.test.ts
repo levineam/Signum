@@ -64,4 +64,11 @@ describe('resolveEncryptionMode', () => {
     expect(result.canEncrypt).toBe(false)
     expect(result.reason).toBe('flag-disabled')
   })
+
+  it('disables encryption when user has no key', async () => {
+    const { notes } = await loadModule({ schemaError: null, hasKey: false })
+    const result = await notes.resolveEncryptionMode('user-1')
+    expect(result.canEncrypt).toBe(false)
+    expect(result.reason).toBe('no-key')
+  })
 })

@@ -3,6 +3,28 @@ import { filterJournalEntries } from './JournalStream'
 import { Note } from '@/types/note'
 
 describe('filterJournalEntries', () => {
+  it('returns empty array when no notes provided', () => {
+    expect(filterJournalEntries([])).toEqual([])
+  })
+
+  it('returns empty array when no journal entries exist', () => {
+    const notes: Note[] = [
+      {
+        id: 'custom',
+        userId: 'u1',
+        title: 'Custom note',
+        content: '',
+        noteType: 'custom',
+        isPinned: false,
+        metadata: {},
+        createdAt: '2025-12-10T08:00:00Z',
+        updatedAt: '2025-12-10T08:00:00Z'
+      }
+    ]
+
+    expect(filterJournalEntries(notes)).toEqual([])
+  })
+
   it('retains all journal entries regardless of age or emptiness', () => {
     const notes: Note[] = [
       {
