@@ -12,7 +12,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { hasPublicSupabase } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import OpenAI, { APIError } from 'openai'
 import { convertMarkdownToHtml } from '@/lib/ai/markdown-to-html'
 import { VIDEO_SUMMARY_SYSTEM_PROMPT } from '@/lib/ai/prompt-templates'
 import type {
@@ -37,6 +37,8 @@ export const runtime = 'edge'
 const isTestMode =
   ['1', 'true'].includes(process.env.E2E_TEST_MODE ?? '') ||
   ['1', 'true'].includes(process.env.NEXT_PUBLIC_E2E_TEST_MODE ?? '')
+
+const TRANSCRIPT_TIMEOUT_MS = 8000
 
 // Error codes for this endpoint
 enum VideoSummarizeErrorCode {
@@ -233,7 +235,20 @@ export async function POST(request: NextRequest) {
     let transcript: string
 
     try {
-      const result = await fetchTranscript(videoId)
+      let timeoutId: NodeJS.Timeout | undefined
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(
+            new TranscriptError(
+              'Transcript request timed out',
+              TranscriptErrorCode.NETWORK_ERROR
+            )
+          )
+        }, TRANSCRIPT_TIMEOUT_MS)
+      })
+
+      const result = await Promise.race([fetchTranscript(videoId), timeoutPromise])
+      if (timeoutId) clearTimeout(timeoutId)
       transcript = result.text
       console.log('[Video Summarize] Transcript fetched, length:', transcript.length)
     } catch (error) {
@@ -374,9 +389,8 @@ export async function POST(request: NextRequest) {
       note_type: 'custom',
       metadata,
     }
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore Supabase type generation is not available in this edge runtime; payload matches runtime schema
-    const { data: note, error: noteError } = await supabase!
+    const supabaseClient = supabase as SupabaseClient<Database>
+    const { data: note, error: noteError } = await supabaseClient
       .from('notes')
       .insert(notePayload)
       .select('id')
@@ -419,14 +433,11 @@ export async function POST(request: NextRequest) {
     })
 
     // Handle OpenAI rate limit
-    if (error && typeof error === 'object' && 'response' in error) {
-      const errorResponse = error as { response?: { status?: number } }
-      if (errorResponse.response?.status === 429) {
-        return NextResponse.json<ErrorResponse>(
-          { error: 'AI rate limit reached. Please try again later.', code: VideoSummarizeErrorCode.OPENAI_RATE_LIMIT },
-          { status: 429 }
-        )
-      }
+    if (error instanceof APIError && error.status === 429) {
+      return NextResponse.json<ErrorResponse>(
+        { error: 'AI rate limit reached. Please try again later.', code: VideoSummarizeErrorCode.OPENAI_RATE_LIMIT },
+        { status: 429 }
+      )
     }
 
     // JSON parse errors
