@@ -21,6 +21,7 @@ const ENCRYPTION_FLAG_ENABLED = ['true', '1', 'yes'].includes(
 
 let encryptionSchemaCheckPromise: Promise<boolean> | null = null
 const encryptionFallbackNoticeShown = new Map<string, string>()
+const FALLBACK_NOTICE_CACHE_LIMIT = 1000
 
 export async function isEncryptionSchemaAvailable(): Promise<boolean> {
   if (encryptionSchemaCheckPromise) {
@@ -56,7 +57,13 @@ export async function isEncryptionSchemaAvailable(): Promise<boolean> {
 function logEncryptionFallback(userId: string, reason: string) {
   const key = `${userId}:${reason}`
   if (encryptionFallbackNoticeShown.has(key)) return
-  console.warn(`[Encryption] Falling back to plaintext for user ${userId}: ${reason}`)
+  // Log reason only (no userId) to avoid PII in console output
+  console.warn(`[Encryption] Falling back to plaintext: ${reason}`)
+  // Evict oldest entries if cache exceeds limit to prevent unbounded memory growth
+  if (encryptionFallbackNoticeShown.size >= FALLBACK_NOTICE_CACHE_LIMIT) {
+    const firstKey = encryptionFallbackNoticeShown.keys().next().value
+    if (firstKey) encryptionFallbackNoticeShown.delete(firstKey)
+  }
   encryptionFallbackNoticeShown.set(key, reason)
 }
 
@@ -79,8 +86,14 @@ export async function resolveEncryptionMode(userId: string): Promise<{
     return { canEncrypt: false, reason: 'schema-missing' }
   }
 
-  const key = await getUserEncryptionKey(userId)
-  return { canEncrypt: true, reason: 'ok', key }
+  // Wrap in try-catch to handle TOCTOU race where key disappears between check and retrieval
+  try {
+    const key = await getUserEncryptionKey(userId)
+    return { canEncrypt: true, reason: 'ok', key }
+  } catch {
+    // Key was removed between hasEncryptionKey check and retrieval
+    return { canEncrypt: false, reason: 'no-key' }
+  }
 }
 
 // ============================================================================
@@ -292,18 +305,24 @@ export async function updateNote(
   // Determine if encryption is safe to use for this user + schema
   const encryption = await resolveEncryptionMode(userId)
 
-  // Handle title and content updates with encryption if enabled
-  if (encryption.canEncrypt && encryption.key && (request.title !== undefined || request.content !== undefined)) {
-    // User has encryption enabled - need to encrypt updates
-    // Get current note to preserve unchanged fields
-    const current = await getNoteById(request.id, userId)
-    if (!current) {
+  // Fetch current note once if needed for encryption or metadata merge
+  const needsCurrentNote =
+    (encryption.canEncrypt && encryption.key && (request.title !== undefined || request.content !== undefined)) ||
+    request.metadata !== undefined
+
+  let currentNote: Note | null = null
+  if (needsCurrentNote) {
+    currentNote = await getNoteById(request.id, userId)
+    if (!currentNote) {
       throw new Error('Note not found')
     }
+  }
 
+  // Handle title and content updates with encryption if enabled
+  if (encryption.canEncrypt && encryption.key && (request.title !== undefined || request.content !== undefined)) {
     // Use updated values or fall back to current values
-    const titleToEncrypt = request.title !== undefined ? request.title : current.title
-    const contentToEncrypt = request.content !== undefined ? request.content : current.content
+    const titleToEncrypt = request.title !== undefined ? request.title : currentNote!.title
+    const contentToEncrypt = request.content !== undefined ? request.content : currentNote!.content
 
     // Encrypt both title and content
     const encryptedTitle = await encryptNote(titleToEncrypt ?? '', encryption.key)
@@ -329,14 +348,11 @@ export async function updateNote(
 
   // Handle other fields (not encrypted)
   if (request.isPinned !== undefined) updates.is_pinned = request.isPinned
-  if (request.metadata !== undefined) {
-    // Merge metadata instead of replacing
-    const current = await getNoteById(request.id, userId)
-    if (current) {
-      updates.metadata = {
-        ...current.metadata,
-        ...request.metadata
-      }
+  if (request.metadata !== undefined && currentNote) {
+    // Merge metadata instead of replacing (currentNote already fetched above)
+    updates.metadata = {
+      ...currentNote.metadata,
+      ...request.metadata
     }
   }
 

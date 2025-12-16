@@ -17,7 +17,7 @@ A production incident caused journal entries older than ~24 hours to disappear f
 - Journal entries older than 24h for affected accounts were deleted in the Supabase `notes` table (scope under investigation; at least two accounts confirmed).
 
 ## Immediate Mitigations
-- Disable encryption writes in the client and bypass cleanup logic (PR #224, #225).
+- Disable encryption writes in the client and bypass cleanup logic (PR [#224](https://github.com/levineam/Signum/pull/224), [#225](https://github.com/levineam/Signum/pull/225)).
 - Add UI/console surfacing for save failures to avoid silent loss.
 
 ## Follow-Up Actions
