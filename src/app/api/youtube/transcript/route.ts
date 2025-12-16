@@ -16,8 +16,8 @@ import {
   TranscriptErrorCode,
 } from '@/lib/youtube/transcript'
 
-// Use Edge runtime for longer timeout
-export const runtime = 'edge'
+// Use Node.js runtime for compatibility with youtube-transcript library
+export const runtime = 'nodejs'
 
 const isTestMode =
   ['1', 'true'].includes(process.env.E2E_TEST_MODE ?? '') ||

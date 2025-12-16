@@ -21,7 +21,7 @@ import {
 } from '@/lib/youtube/transcript'
 import { getEmbedUrl, validateVideoId } from '@/utils/youtube'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 const isTestMode =
   ['1', 'true'].includes(process.env.E2E_TEST_MODE ?? '') ||
@@ -37,6 +37,7 @@ type TranscriptNoteResponse = {
   noteTitle: string
   html: string
   isLocal?: boolean
+  debugId?: string
 }
 
 type VideoTranscriptNoteMetadata = {
@@ -96,6 +97,12 @@ function buildLocalNoteId(): string {
   } catch {
     return `local-note-${Date.now()}`
   }
+}
+
+function generateDebugId(): string {
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 8)
+  return `yt-transcript-${timestamp}-${random}`
 }
 
 function escapeHtmlText(str: string): string {
@@ -159,6 +166,10 @@ function buildTranscriptNoteHtml(args: {
 }
 
 export async function POST(request: NextRequest) {
+  const debugId = generateDebugId()
+  let videoId: string | undefined
+  let videoUrl: string | undefined
+  
   try {
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
@@ -192,8 +203,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = (await request.json()) as TranscriptNoteRequest
-    const { videoId } = body
-    const videoUrl = body.videoUrl || `https://www.youtube.com/watch?v=${videoId}`
+    videoId = body.videoId
 
     if (!videoId) {
       return NextResponse.json({ error: 'Video ID is required' }, { status: 400 })
@@ -202,6 +212,9 @@ export async function POST(request: NextRequest) {
     if (!validateVideoId(videoId)) {
       return NextResponse.json({ error: 'Invalid video ID format' }, { status: 400 })
     }
+
+    // At this point videoId is validated, so videoUrl is always a concrete string.
+    videoUrl = body.videoUrl || `https://www.youtube.com/watch?v=${videoId}`
 
     // If this is a real user environment, try to reuse an existing transcript note for this video.
     if (!isTestMode && supabase) {
@@ -227,7 +240,20 @@ export async function POST(request: NextRequest) {
 
     const [title, transcript] = await Promise.all([
       fetchYouTubeTitle(videoId),
-      fetchTranscript(videoId),
+      fetchTranscript(videoId).catch((err) => {
+        // Log structured error details for diagnostics
+        const errorDetails = {
+          debugId,
+          videoId,
+          videoUrl,
+          errorName: err instanceof Error ? err.name : 'Unknown',
+          errorCode: err instanceof TranscriptError ? err.code : undefined,
+          errorMessage: err instanceof Error ? err.message : String(err),
+          errorStack: err instanceof Error ? err.stack : undefined,
+        }
+        console.error('[YouTube Transcript Note] Transcript fetch failed:', JSON.stringify(errorDetails, null, 2))
+        throw err
+      }),
     ])
 
     const embedUrl = getEmbedUrl(videoId)
@@ -256,6 +282,7 @@ export async function POST(request: NextRequest) {
         noteTitle: title,
         html,
         isLocal: true,
+        debugId,
       })
     }
 
@@ -279,9 +306,20 @@ export async function POST(request: NextRequest) {
       noteId: note.id,
       noteTitle: title,
       html,
+      debugId,
     })
   } catch (error) {
-    console.error('[YouTube Transcript Note] Error:', error)
+    // Log structured error details for diagnostics
+    const errorDetails = {
+      debugId,
+      videoId: videoId || 'unknown',
+      videoUrl: videoUrl || 'unknown',
+      errorName: error instanceof Error ? error.name : 'Unknown',
+      errorCode: error instanceof TranscriptError ? error.code : undefined,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    }
+    console.error('[YouTube Transcript Note] Error:', JSON.stringify(errorDetails, null, 2))
 
     if (error instanceof TranscriptError) {
       let statusCode = 500
@@ -299,20 +337,21 @@ export async function POST(request: NextRequest) {
           break
         case TranscriptErrorCode.NETWORK_ERROR:
           statusCode = 503
+          message = 'Transcript temporarily unavailable (YouTube rate-limited/blocked our server). Try again later.'
           break
         case TranscriptErrorCode.UNKNOWN_ERROR:
         default:
           statusCode = 500
           break
       }
-      return NextResponse.json({ error: message, code: error.code }, { status: statusCode })
+      return NextResponse.json({ error: message, code: error.code, debugId }, { status: statusCode })
     }
 
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid request body', debugId }, { status: 400 })
     }
 
-    return NextResponse.json({ error: 'Failed to create transcript note' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to create transcript note', debugId }, { status: 500 })
   }
 }
 

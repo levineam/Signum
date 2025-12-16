@@ -12,8 +12,7 @@ import type { TranscriptResult, TranscriptSegment } from './transcript'
 import { TranscriptError, TranscriptErrorCode } from './transcript'
 
 const WATCH_URL_BASE = 'https://www.youtube.com/watch?v='
-const YOUTUBEI_GET_TRANSCRIPT_URL =
-  'https://www.youtube.com/youtubei/v1/get_transcript?prettyPrint=false'
+const YOUTUBEI_GET_TRANSCRIPT_URL_BASE = 'https://www.youtube.com/youtubei/v1/get_transcript'
 
 export interface YoutubeiTranscriptConfig {
   lang?: string // e.g. 'en'
@@ -25,6 +24,17 @@ export interface YoutubeiTranscriptConfig {
  */
 export function extractVisitorData(html: string): string | null {
   const m = html.match(/"visitorData"\s*:\s*"([^"]+)"/)
+  return m?.[1] ?? null
+}
+
+/**
+ * Extract INNERTUBE_API_KEY from YouTube watch HTML.
+ *
+ * YouTube now requires an API key query param for youtubei calls; without it,
+ * the endpoint often returns 400 "Precondition check failed."
+ */
+export function extractInnertubeApiKey(html: string): string | null {
+  const m = html.match(/"INNERTUBE_API_KEY"\s*:\s*"([^"]+)"/)
   return m?.[1] ?? null
 }
 
@@ -227,9 +237,10 @@ async function callYoutubeiGetTranscript(args: {
   videoId: string
   params: string
   visitorData?: string | null
+  apiKey: string
   config?: YoutubeiTranscriptConfig
 }): Promise<YoutubeiTranscriptSegment[]> {
-  const { videoId, params, visitorData, config } = args
+  const { videoId, params, visitorData, apiKey, config } = args
 
   const body = {
     context: {
@@ -245,7 +256,11 @@ async function callYoutubeiGetTranscript(args: {
     params,
   }
 
-  const resp = await fetch(YOUTUBEI_GET_TRANSCRIPT_URL, {
+  const url = new URL(YOUTUBEI_GET_TRANSCRIPT_URL_BASE)
+  url.searchParams.set('prettyPrint', 'false')
+  url.searchParams.set('key', apiKey)
+
+  const resp = await fetch(url.toString(), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -271,7 +286,25 @@ async function callYoutubeiGetTranscript(args: {
       )
     }
 
-    // YouTube may return 400 when params are invalid; treat as non-fatal.
+    // YouTube may return 400 when params are invalid; treat as non-fatal EXCEPT failed precondition,
+    // which we see when YouTube blocks unauthenticated transcript fetches.
+    if (resp.status === 400) {
+      try {
+        const body = (await resp.json()) as { error?: { status?: string; message?: string } }
+        const status = body?.error?.status ?? ''
+        const message = body?.error?.message ?? ''
+        if (status === 'FAILED_PRECONDITION' || /precondition check failed/i.test(message)) {
+          throw new TranscriptError(
+            'Transcript temporarily unavailable (YouTube blocked transcript fetch). Try again later.',
+            TranscriptErrorCode.NETWORK_ERROR
+          )
+        }
+      } catch (e) {
+        if (e instanceof TranscriptError) throw e
+        // ignore parse failures, treat as non-fatal
+      }
+    }
+
     return []
   }
 
@@ -309,12 +342,19 @@ export async function fetchTranscriptViaYoutubei(
   }
 
   const visitorData = extractVisitorData(html)
+  const apiKey = extractInnertubeApiKey(html)
+  if (!apiKey) {
+    throw new TranscriptError(
+      'Network error while preparing transcript request.',
+      TranscriptErrorCode.NETWORK_ERROR
+    )
+  }
   const pageParams = extractTranscriptParams(html)
   const candidates = pageParams ? [pageParams, ...generateTranscriptParamVariants(videoId)] : generateTranscriptParamVariants(videoId)
 
   for (const params of candidates) {
     try {
-      const segs = await callYoutubeiGetTranscript({ videoId, params, visitorData, config })
+      const segs = await callYoutubeiGetTranscript({ videoId, params, visitorData, apiKey, config })
       if (segs.length === 0) continue
 
       const segments: TranscriptSegment[] = segs.map((s) => ({

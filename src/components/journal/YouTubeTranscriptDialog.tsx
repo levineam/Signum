@@ -71,7 +71,14 @@ export function YouTubeTranscriptDialog({
         let message = `Failed to create transcript (${response.status})`
         try {
           const errorData = await response.json()
-          message = errorData.error || message
+          const base = (errorData?.error as string | undefined) || message
+          const debugId = errorData?.debugId as string | undefined
+          const code = errorData?.code as string | undefined
+          message = debugId ? `${base} (debugId: ${debugId})` : base
+          // Surface code in console for debugging without spamming the UI.
+          if (code) {
+            console.warn('[YouTubeTranscriptDialog] transcript-note error code:', code)
+          }
         } catch {
           const raw = await response.text().catch(() => '')
           if (raw) message = `${message}: ${raw}`
