@@ -14,7 +14,11 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { hasPublicSupabase } from '@/lib/supabase'
-import { fetchTranscript } from '@/lib/youtube/transcript'
+import {
+  fetchTranscript,
+  TranscriptError,
+  TranscriptErrorCode,
+} from '@/lib/youtube/transcript'
 import { getEmbedUrl, validateVideoId } from '@/utils/youtube'
 
 export const runtime = 'edge'
@@ -278,6 +282,36 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[YouTube Transcript Note] Error:', error)
+
+    if (error instanceof TranscriptError) {
+      let statusCode = 500
+      let message = error.message
+      switch (error.code) {
+        case TranscriptErrorCode.INVALID_VIDEO_ID:
+          statusCode = 400
+          break
+        case TranscriptErrorCode.TRANSCRIPT_NOT_FOUND:
+          statusCode = 422
+          message = 'Transcript not found for this video'
+          break
+        case TranscriptErrorCode.VIDEO_UNAVAILABLE:
+          statusCode = 404
+          break
+        case TranscriptErrorCode.NETWORK_ERROR:
+          statusCode = 503
+          break
+        case TranscriptErrorCode.UNKNOWN_ERROR:
+        default:
+          statusCode = 500
+          break
+      }
+      return NextResponse.json({ error: message, code: error.code }, { status: statusCode })
+    }
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+
     return NextResponse.json({ error: 'Failed to create transcript note' }, { status: 500 })
   }
 }
