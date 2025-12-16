@@ -24,6 +24,7 @@ interface SimpleRichEditorProps {
   onNoteCreated?: (noteId: string, selectedText: string, entryId?: string) => void
   onAskAISelection?: (selectedText: string) => void
   onYouTubeSummarize?: (videoId: string, videoUrl: string | undefined) => void
+  onYouTubeTranscript?: (videoId: string, videoUrl: string | undefined) => void
   variant?: 'default' | 'flush'
   className?: string
 }
@@ -42,6 +43,7 @@ export function SimpleRichEditor({
   onNoteCreated,
   onAskAISelection,
   onYouTubeSummarize,
+  onYouTubeTranscript,
   variant = 'default',
   className
 }: SimpleRichEditorProps) {
@@ -329,11 +331,71 @@ export function SimpleRichEditor({
     moveCaretIntoStart,
   ])
 
-  // Handle YouTube summarize button clicks via event delegation
+  const seekAndAutoplayEmbed = useCallback((videoId: string, seconds: number) => {
+    const editor = editorRef.current
+    if (!editor) return false
+    const iframe = editor.querySelector(
+      `.youtube-embed-container[data-video-id="${CSS.escape(videoId)}"] iframe`
+    ) as HTMLIFrameElement | null
+    if (!iframe?.src) return false
+
+    try {
+      const url = new URL(iframe.src)
+      url.searchParams.set('start', String(Math.max(0, Math.floor(seconds))))
+      url.searchParams.set('autoplay', '1')
+      iframe.src = url.toString()
+      return true
+    } catch {
+      return false
+    }
+  }, [])
+
+  // Handle YouTube transcript/summarize/timestamp clicks via event delegation
   const handleEditorClick = useCallback(async (e: React.MouseEvent) => {
     const target = e.target as HTMLElement
-    const summarizeBtn = target.closest('.youtube-summarize-btn') as HTMLElement | null
+    const timestampLink = target.closest('a.youtube-timestamp') as HTMLAnchorElement | null
+    if (timestampLink) {
+      const href = timestampLink.getAttribute('href') || ''
+      const match = href.match(/^#yt=([^&]+)&t=(\d+)$/)
+      if (match) {
+        e.preventDefault()
+        e.stopPropagation()
+        const tsVideoId = match[1]
+        const seconds = Number(match[2])
+        const ok = seekAndAutoplayEmbed(tsVideoId, seconds)
+        if (!ok) {
+          toast.error('Could not seek video')
+        }
+        setTimeout(() => editorRef.current?.focus(), 0)
+        return
+      }
+    }
 
+    const transcriptBtn = target.closest('.youtube-transcript-btn') as HTMLElement | null
+    if (transcriptBtn) {
+      e.preventDefault()
+      e.stopPropagation()
+
+      const videoId = transcriptBtn.dataset.videoId
+      const videoUrl = transcriptBtn.dataset.videoUrl
+      if (!videoId) {
+        toast.error('Could not find video ID')
+        return
+      }
+
+      const embedContainer = transcriptBtn.closest('.youtube-embed-container') as HTMLElement | null
+      if (embedContainer) {
+        const line = ensureEditableLineAfter(embedContainer)
+        if (line) moveCaretIntoStart(line)
+      }
+
+      onYouTubeTranscript?.(videoId, videoUrl || undefined)
+      setTimeout(() => editorRef.current?.focus(), 0)
+      suppressBlurRef.current = false
+      return
+    }
+
+    const summarizeBtn = target.closest('.youtube-summarize-btn') as HTMLElement | null
     if (!summarizeBtn) return
 
     e.preventDefault()
@@ -432,7 +494,7 @@ export function SimpleRichEditor({
       suppressBlurRef.current = false
       setTimeout(() => editorRef.current?.focus(), 0)
     }
-  }, [session?.access_token, entryId, onYouTubeSummarize, ensureEditableLineAfter, moveCaretIntoStart])
+  }, [session?.access_token, entryId, ensureEditableLineAfter, moveCaretIntoStart, onYouTubeSummarize, onYouTubeTranscript, seekAndAutoplayEmbed])
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,

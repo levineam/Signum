@@ -432,9 +432,12 @@
   .youtube-embed-actions {
     margin-top: 0.25rem;
     white-space: normal;
+    display: flex;
+    gap: 0.5rem;
   }
 
   /* YouTube summarize button styling (simple outline, no AI icon/gradient) */
+  .youtube-transcript-btn,
   .youtube-summarize-btn {
     display: inline-flex;
     align-items: center;
@@ -452,15 +455,18 @@
     transition: all 0.2s;
   }
 
+  .youtube-transcript-btn:hover,
   .youtube-summarize-btn:hover {
     background: hsl(var(--muted));
   }
 
+  .youtube-transcript-btn:disabled,
   .youtube-summarize-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
 
+  .youtube-transcript-btn svg,
   .youtube-summarize-btn svg {
     display: none;
   }

@@ -110,6 +110,109 @@ function buildLocalNoteId(): string {
   }
 }
 
+function escapeHtmlText(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+async function fetchYouTubeTitle(videoId: string): Promise<string> {
+  try {
+    const url = `https://www.youtube.com/oembed?url=${encodeURIComponent(
+      `https://www.youtube.com/watch?v=${videoId}`
+    )}&format=json`
+    const res = await fetch(url, { method: 'GET' })
+    if (!res.ok) return `Video: ${videoId}`
+    const data = (await res.json()) as { title?: string }
+    return data.title?.trim() || `Video: ${videoId}`
+  } catch {
+    return `Video: ${videoId}`
+  }
+}
+
+function formatTimestamp(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds))
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const ss = s % 60
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+  return `${m}:${String(ss).padStart(2, '0')}`
+}
+
+function buildTranscriptNoteHtml(args: {
+  videoId: string
+  videoUrl: string
+  embedUrl: string
+  transcriptSegments: { text: string; offset: number; duration: number }[]
+}): string {
+  const { videoId, videoUrl, embedUrl, transcriptSegments } = args
+  const safeVideoId = escapeHtmlText(videoId)
+  const safeVideoUrl = escapeHtmlText(videoUrl)
+  const safeEmbedUrl = escapeHtmlText(embedUrl)
+
+  const embedBlock = `<div class="youtube-embed-container" contenteditable="false" data-video-id="${safeVideoId}" data-video-url="${safeVideoUrl}"><iframe contenteditable="false" tabindex="-1" src="${safeEmbedUrl}" title="YouTube video player" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe><div class="youtube-embed-actions" contenteditable="false"><span class="youtube-summarize-btn" role="button" contenteditable="false" tabindex="-1" data-video-id="${safeVideoId}" data-video-url="${safeVideoUrl}">Summarize</span></div></div>`
+
+  const transcriptLines = transcriptSegments
+    .map((seg) => {
+      const seconds = Math.floor(seg.offset / 1000)
+      const ts = formatTimestamp(seconds)
+      const safeText = escapeHtmlText(seg.text)
+      return `<p><a class="youtube-timestamp" href="#yt=${safeVideoId}&t=${seconds}" data-video-id="${safeVideoId}" data-t="${seconds}">${ts}</a> ${safeText}</p>`
+    })
+    .join('')
+
+  return `${embedBlock}<div class="youtube-transcript" data-video-id="${safeVideoId}"><h2>Transcript</h2>${transcriptLines}</div>`
+}
+
+function upsertSummaryIntoTranscriptNoteHtml(args: {
+  noteHtml: string
+  videoId: string
+  summaryHtml: string
+}): string {
+  const { noteHtml, videoId, summaryHtml } = args
+
+  // DOMParser is available in Edge runtime (Web API). If it fails, fall back to naive append.
+  try {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(noteHtml, 'text/html')
+
+    const transcript = doc.querySelector(
+      `.youtube-transcript[data-video-id="${CSS.escape(videoId)}"]`
+    )
+    const existingSummary = doc.querySelector(
+      `.youtube-summary[data-video-id="${CSS.escape(videoId)}"]`
+    ) as HTMLElement | null
+
+    const summaryWrapper = doc.createElement('div')
+    summaryWrapper.className = 'youtube-summary'
+    summaryWrapper.setAttribute('data-video-id', videoId)
+    summaryWrapper.innerHTML = `<h2>Summary</h2>${summaryHtml}`
+
+    if (existingSummary) {
+      existingSummary.replaceWith(summaryWrapper)
+    } else if (transcript && transcript.parentNode) {
+      transcript.parentNode.insertBefore(summaryWrapper, transcript)
+    } else {
+      // Best effort: put summary after the embed block if present, else append.
+      const embed = doc.querySelector(
+        `.youtube-embed-container[data-video-id="${CSS.escape(videoId)}"]`
+      )
+      if (embed && embed.parentNode) {
+        embed.parentNode.insertBefore(summaryWrapper, embed.nextSibling)
+      } else {
+        doc.body.appendChild(summaryWrapper)
+      }
+    }
+
+    return doc.body.innerHTML
+  } catch {
+    return `${noteHtml}<div class="youtube-summary" data-video-id="${escapeHtmlText(videoId)}"><h2>Summary</h2>${summaryHtml}</div>`
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // 1. Authenticate user (skip in dev:test mode)
@@ -158,7 +261,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse and validate request
     const body: VideoSummarizeRequest = await request.json()
-    const { videoId, videoUrl, entryId } = body
+    const { videoId, videoUrl, entryId, targetNoteId } = body
 
     if (!videoId) {
       return NextResponse.json<ErrorResponse>(
@@ -209,30 +312,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 2b. Avoid duplicate summaries for the same user/video
-    if (!isTestMode && supabase) {
-      const { data: existingNote } = await supabase
-        .from('notes')
-        .select('id, title, content, metadata')
-        .eq('user_id', userId!)
-        .eq('note_type', 'custom')
-        .contains('metadata', { videoId, sourceType: 'video' })
-        .maybeSingle()
-
-      if (existingNote) {
-        return NextResponse.json<VideoSummarizeResponse>({
-          noteId: existingNote.id,
-          noteTitle: existingNote.title,
-          summary: existingNote.content ?? '',
-          tokensUsed: existingNote.metadata?.tokensUsed ?? 0,
-          model: existingNote.metadata?.model ?? 'cached',
-        })
-      }
-    }
+    const effectiveVideoUrl = videoUrl || `https://www.youtube.com/watch?v=${videoId}`
 
     // 3. Fetch transcript
     console.log('[Video Summarize] Fetching transcript for video:', videoId)
-    let transcript: string
+    let transcriptText: string
+    let transcriptSegments: { text: string; offset: number; duration: number }[] = []
 
     try {
       let timeoutId: NodeJS.Timeout | undefined
@@ -249,8 +334,9 @@ export async function POST(request: NextRequest) {
 
       const result = await Promise.race([fetchTranscript(videoId), timeoutPromise])
       if (timeoutId) clearTimeout(timeoutId)
-      transcript = result.text
-      console.log('[Video Summarize] Transcript fetched, length:', transcript.length)
+      transcriptText = result.text
+      transcriptSegments = result.segments
+      console.log('[Video Summarize] Transcript fetched, length:', transcriptText.length)
     } catch (error) {
       if (error instanceof TranscriptError) {
         // Map transcript error codes to appropriate HTTP status and error codes
@@ -308,7 +394,7 @@ export async function POST(request: NextRequest) {
       }
 
       modelUsed = 'stub'
-      const words = transcript.split(/\s+/).filter(Boolean)
+      const words = transcriptText.split(/\s+/).filter(Boolean)
       const preview = words.slice(0, 180).join(' ')
       markdownSummary = [
         '## Summary (Test Mode)',
@@ -338,7 +424,7 @@ export async function POST(request: NextRequest) {
           },
           {
             role: 'user',
-            content: `Please summarize this YouTube video based on its transcript:\n\n${transcript}`,
+            content: `Please summarize this YouTube video based on its transcript:\n\n${transcriptText}`,
           },
         ],
         temperature: 0.7,
@@ -357,52 +443,162 @@ export async function POST(request: NextRequest) {
     console.log('[Video Summarize] Converting markdown to HTML...')
     const htmlSummary = await convertMarkdownToHtml(markdownSummary)
 
-    // 6. Create note with summary (local in dev:test; Supabase otherwise)
-    const noteTitle = `Video Summary: ${videoId}`
-    const metadata: VideoSummaryNoteMetadata = {
-      sourceType: 'video',
-      videoId,
-      videoUrl: videoUrl || `https://www.youtube.com/watch?v=${videoId}`,
-      tokensUsed,
-      model: modelUsed,
-      generatedAt: new Date().toISOString(),
-      ...(entryId && { journalEntryId: entryId }),
-    }
+    // 6. Summarize into an existing transcript note (preferred), or create one if needed.
+    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`
+    const videoTitle = await fetchYouTubeTitle(videoId)
+    const supabaseClient = supabase as SupabaseClient<Database> | null
 
-    if (isTestMode || !hasPublicSupabase()) {
+    // Local/test mode: return a local note payload for the UI to store.
+    if (isTestMode || !hasPublicSupabase() || !supabaseClient) {
       const noteId = buildLocalNoteId()
+      const baseHtml = buildTranscriptNoteHtml({
+        videoId,
+        videoUrl: effectiveVideoUrl,
+        embedUrl,
+        transcriptSegments,
+      })
+      const updatedHtml = upsertSummaryIntoTranscriptNoteHtml({
+        noteHtml: baseHtml,
+        videoId,
+        summaryHtml: htmlSummary,
+      })
       return NextResponse.json<VideoSummarizeResponse>({
         noteId,
-        noteTitle,
+        noteTitle: videoTitle,
         summary: htmlSummary,
+        noteHtml: updatedHtml,
         tokensUsed,
         model: modelUsed,
         isLocal: true,
       })
     }
 
-    console.log('[Video Summarize] Creating note...')
-    const notePayload: NotesInsert = {
-      user_id: userId!,
-      title: noteTitle,
-      content: htmlSummary,
-      note_type: 'custom',
-      metadata,
-    }
-    const supabaseClient = supabase as SupabaseClient<Database>
-    const { data: note, error: noteError } = await supabaseClient
-      .from('notes')
-      .insert(notePayload)
-      .select('id')
-      .single()
+    let noteIdToUpdate = targetNoteId || ''
+    let noteTitleToUse = videoTitle
+    let existingContent: string | null = null
+    let existingMetadata: Record<string, unknown> | null = null
 
-    if (noteError || !note) {
-      console.error('[Video Summarize] Failed to create note:', noteError)
+    if (noteIdToUpdate) {
+      const { data: existing } = await supabaseClient
+        .from('notes')
+        .select('id, title, content, metadata')
+        .eq('id', noteIdToUpdate)
+        .eq('user_id', userId!)
+        .maybeSingle()
+      if (!existing) {
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Note not found', code: VideoSummarizeErrorCode.INVALID_REQUEST },
+          { status: 404 }
+        )
+      }
+      noteTitleToUse = existing.title
+      existingContent = existing.content ?? ''
+      existingMetadata = (existing.metadata as unknown as Record<string, unknown>) ?? null
+    } else {
+      // Find existing transcript note for this video.
+      const { data: existingTranscriptNote } = await supabaseClient
+        .from('notes')
+        .select('id, title, content, metadata')
+        .eq('user_id', userId!)
+        .eq('note_type', 'custom')
+        // Prefer transcript note marker so we don't match old summary-only notes.
+        .contains(
+          'metadata',
+          { videoId, sourceType: 'video', hasTranscript: true } as Record<string, unknown>
+        )
+        .maybeSingle()
+
+      if (existingTranscriptNote) {
+        noteIdToUpdate = existingTranscriptNote.id
+        noteTitleToUse = existingTranscriptNote.title
+        existingContent = existingTranscriptNote.content ?? ''
+        existingMetadata = (existingTranscriptNote.metadata as unknown as Record<string, unknown>) ?? null
+      } else {
+        // Create a new transcript note (single note model).
+        const baseHtml = buildTranscriptNoteHtml({
+          videoId,
+          videoUrl: effectiveVideoUrl,
+          embedUrl,
+          transcriptSegments,
+        })
+        const initialHtml = upsertSummaryIntoTranscriptNoteHtml({
+          noteHtml: baseHtml,
+          videoId,
+          summaryHtml: htmlSummary,
+        })
+        const metadata: Record<string, unknown> = {
+          sourceType: 'video',
+          videoId,
+          videoUrl: effectiveVideoUrl,
+          videoTitle,
+          hasTranscript: true,
+          hasSummary: true,
+          tokensUsed,
+          model: modelUsed,
+          generatedAt: new Date().toISOString(),
+          ...(entryId && { journalEntryId: entryId }),
+        }
+
+        const { data: created, error: createError } = await supabaseClient
+          .from('notes')
+          .insert({
+            user_id: userId!,
+            title: videoTitle,
+            content: initialHtml,
+            note_type: 'custom',
+            metadata: metadata as unknown as VideoSummaryNoteMetadata,
+          })
+          .select('id')
+          .single()
+
+        if (createError || !created) {
+          return NextResponse.json<ErrorResponse>(
+            { error: 'Failed to save summary. Please try again.', code: VideoSummarizeErrorCode.NOTE_CREATION_FAILED },
+            { status: 500 }
+          )
+        }
+
+        return NextResponse.json<VideoSummarizeResponse>({
+          noteId: created.id,
+          noteTitle: videoTitle,
+          summary: htmlSummary,
+          noteHtml: initialHtml,
+          tokensUsed,
+          model: modelUsed,
+        })
+      }
+    }
+
+    // Update existing transcript note by inserting/replacing summary above transcript.
+    const updatedHtml = upsertSummaryIntoTranscriptNoteHtml({
+      noteHtml: existingContent || '',
+      videoId,
+      summaryHtml: htmlSummary,
+    })
+
+    const updatedMetadata: Record<string, unknown> = {
+      ...(existingMetadata || {}),
+      sourceType: 'video',
+      videoId,
+      videoUrl: effectiveVideoUrl,
+      videoTitle,
+      hasTranscript: true,
+      hasSummary: true,
+      tokensUsed,
+      model: modelUsed,
+      generatedAt: new Date().toISOString(),
+      ...(entryId && { journalEntryId: entryId }),
+    }
+
+    const { error: updateError } = await supabaseClient
+      .from('notes')
+      .update({ content: updatedHtml, metadata: updatedMetadata as unknown as VideoSummaryNoteMetadata })
+      .eq('id', noteIdToUpdate)
+      .eq('user_id', userId!)
+
+    if (updateError) {
       return NextResponse.json<ErrorResponse>(
-        {
-          error: 'Failed to save summary. Please try again.',
-          code: VideoSummarizeErrorCode.NOTE_CREATION_FAILED,
-        },
+        { error: 'Failed to save summary. Please try again.', code: VideoSummarizeErrorCode.NOTE_CREATION_FAILED },
         { status: 500 }
       )
     }
@@ -411,16 +607,17 @@ export async function POST(request: NextRequest) {
     console.log('[Video Summarize] Request completed', {
       userId,
       videoId,
-      noteId: note.id,
+      noteId: noteIdToUpdate,
       tokensUsed,
       summaryLength: htmlSummary.length,
       timestamp: new Date().toISOString(),
     })
 
     return NextResponse.json<VideoSummarizeResponse>({
-      noteId: note.id,
-      noteTitle,
+      noteId: noteIdToUpdate,
+      noteTitle: noteTitleToUse,
       summary: htmlSummary,
+      noteHtml: updatedHtml,
       tokensUsed,
       model: modelUsed,
     })

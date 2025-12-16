@@ -9,6 +9,7 @@ import { Calendar, BookOpen } from 'lucide-react'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
 import { NoteViewer } from '@/components/notes/NoteViewer'
 import { YouTubeSummarizeDialog } from '@/components/journal/YouTubeSummarizeDialog'
+import { YouTubeTranscriptDialog } from '@/components/journal/YouTubeTranscriptDialog'
 import { Note } from '@/types/note'
 import { createLink, getOutgoingLinks } from '@/lib/supabase/notes'
 import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata } from '@/utils/textToLink'
@@ -112,6 +113,12 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   // YouTube summarize dialog state
   const [showYouTubeSummarizeDialog, setShowYouTubeSummarizeDialog] = useState(false)
   const [youtubeSummarizeData, setYoutubeSummarizeData] = useState<{
+    videoId: string
+    videoUrl?: string
+    entryId: string
+  } | null>(null)
+  const [showYouTubeTranscriptDialog, setShowYouTubeTranscriptDialog] = useState(false)
+  const [youtubeTranscriptData, setYoutubeTranscriptData] = useState<{
     videoId: string
     videoUrl?: string
     entryId: string
@@ -1001,9 +1008,26 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     setShowYouTubeSummarizeDialog(true)
   }, [])
 
-  const handleYouTubeSummarizeBtnClick = useCallback(
+  const handleYouTubeTranscript = useCallback((videoId: string, videoUrl: string | undefined, entryId: string) => {
+    setYoutubeTranscriptData({ videoId, videoUrl, entryId })
+    setShowYouTubeTranscriptDialog(true)
+  }, [])
+
+  const handleYouTubeEmbedActionClick = useCallback(
     (e: React.MouseEvent, entryId: string) => {
       const target = e.target as Element | null
+      const transcriptBtn = target?.closest('.youtube-transcript-btn')
+      if (transcriptBtn && transcriptBtn instanceof HTMLElement) {
+        e.preventDefault()
+        e.stopPropagation()
+        const videoId = (transcriptBtn as HTMLElement).dataset.videoId
+        const videoUrl = (transcriptBtn as HTMLElement).dataset.videoUrl
+        if (videoId) {
+          handleYouTubeTranscript(videoId, videoUrl, entryId)
+        }
+        return true
+      }
+
       const summarizeBtn = target?.closest('.youtube-summarize-btn')
       if (!summarizeBtn || !(summarizeBtn instanceof HTMLElement)) return false
 
@@ -1016,7 +1040,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       }
       return true
     },
-    [handleYouTubeSummarize]
+    [handleYouTubeSummarize, handleYouTubeTranscript]
   )
 
   // Callback when YouTube summary is created - insert link to note below the embed
@@ -1363,7 +1387,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               {/* Content Section */}
               <CardContent
                 onClick={(e) => {
-                  if (handleYouTubeSummarizeBtnClick(e, entry.id)) return
+                  if (handleYouTubeEmbedActionClick(e, entry.id)) return
                   setEditingEntryId(entry.id)
                 }}
                 className="px-3 md:px-2 pb-3 md:pb-2 pt-0 cursor-text hover:bg-muted/30 rounded-md transition-colors"
@@ -1374,6 +1398,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                     value={entry.content}
                     placeholder={isTodayEntry ? "What's on your mind today? Start writing..." : "Continue your thoughts..."}
                     onChange={(content) => handleContentChange(entry.id, content)}
+                    onYouTubeTranscript={(videoId, videoUrl) => handleYouTubeTranscript(videoId, videoUrl, entry.id)}
                     onBlur={(e) => {
                       // Don't exit edit mode if the user clicked on a note link
                       if (noteLinkClicked) {
@@ -1383,12 +1408,18 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                       if (showYouTubeSummarizeDialog) {
                         return
                       }
+                      if (showYouTubeTranscriptDialog) {
+                        return
+                      }
                       const relatedTarget = e.relatedTarget as HTMLElement
                       if (relatedTarget && relatedTarget.closest('a[data-note-id]')) {
                         return
                       }
                       // Don't exit edit mode if the user clicked on the YouTube summarize button
                       if (relatedTarget && relatedTarget.closest('.youtube-summarize-btn')) {
+                        return
+                      }
+                      if (relatedTarget && relatedTarget.closest('.youtube-transcript-btn')) {
                         return
                       }
                       // Don't exit edit mode if the user clicked on the voice button
@@ -1423,7 +1454,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                           dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.content) }}
                           onClick={(e) => {
                             // Handle link and button clicks in read-only mode
-                            if (handleYouTubeSummarizeBtnClick(e, entry.id)) return
+                            if (handleYouTubeEmbedActionClick(e, entry.id)) return
 
                             const target = e.target as HTMLElement
                             const linkElement = target.closest('a[data-note-id]') as HTMLElement
@@ -1490,6 +1521,21 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
           videoUrl={youtubeSummarizeData.videoUrl}
           entryId={youtubeSummarizeData.entryId}
           onSummaryCreated={handleYouTubeSummaryCreated}
+        />
+      )}
+
+      {/* YouTube Transcript Dialog */}
+      {youtubeTranscriptData && (
+        <YouTubeTranscriptDialog
+          isOpen={showYouTubeTranscriptDialog}
+          onClose={() => {
+            setShowYouTubeTranscriptDialog(false)
+            setYoutubeTranscriptData(null)
+          }}
+          videoId={youtubeTranscriptData.videoId}
+          videoUrl={youtubeTranscriptData.videoUrl}
+          entryId={youtubeTranscriptData.entryId}
+          onTranscriptCreated={handleYouTubeSummaryCreated}
         />
       )}
 

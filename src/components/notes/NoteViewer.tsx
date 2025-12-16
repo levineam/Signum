@@ -33,7 +33,7 @@ export function NoteViewer({
   resolveLocalNote
 }: NoteViewerProps) {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const { getLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
@@ -182,6 +182,67 @@ export function NoteViewer({
     })
   }
 
+  const seekAndAutoplayEmbed = (root: HTMLElement, videoId: string, seconds: number) => {
+    const iframe = root.querySelector(
+      `.youtube-embed-container[data-video-id="${CSS.escape(videoId)}"] iframe`
+    ) as HTMLIFrameElement | null
+    if (!iframe?.src) return
+    try {
+      const url = new URL(iframe.src)
+      url.searchParams.set('start', String(Math.max(0, Math.floor(seconds))))
+      url.searchParams.set('autoplay', '1')
+      iframe.src = url.toString()
+    } catch {
+      // ignore
+    }
+  }
+
+  const summarizeIntoThisNote = async (videoId: string, videoUrl: string | undefined) => {
+    if (!note) return
+    if (!session?.access_token) {
+      toast.error('Please sign in to use AI features')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/youtube/summarize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          videoId,
+          videoUrl,
+          targetNoteId: note.id,
+        }),
+      })
+
+      if (!response.ok) {
+        let message = `Failed to generate summary (${response.status})`
+        try {
+          const errorData = await response.json()
+          message = errorData.error || message
+        } catch {
+          const raw = await response.text().catch(() => '')
+          if (raw) message = `${message}: ${raw}`
+        }
+        throw new Error(message)
+      }
+
+      const data = await response.json()
+      const updatedHtml = data.noteHtml as string | undefined
+      if (updatedHtml) {
+        setNote((prev) => (prev ? { ...prev, content: updatedHtml } : prev))
+        setEditContent(updatedHtml)
+      }
+      toast.success('Summary added to note')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to generate summary'
+      toast.error(message)
+    }
+  }
+
   if (!note) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -304,6 +365,35 @@ export function NoteViewer({
                   <div
                     className="text-base leading-relaxed text-foreground rich-editor-body"
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement
+
+                      const summarizeBtn = target.closest('.youtube-summarize-btn') as HTMLElement | null
+                      if (summarizeBtn) {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        const videoId = summarizeBtn.dataset.videoId
+                        const videoUrl = summarizeBtn.dataset.videoUrl
+                        if (videoId) {
+                          summarizeIntoThisNote(videoId, videoUrl)
+                        }
+                        return
+                      }
+
+                      const timestampLink = target.closest('a.youtube-timestamp') as HTMLAnchorElement | null
+                      if (timestampLink) {
+                        const href = timestampLink.getAttribute('href') || ''
+                        const match = href.match(/^#yt=([^&]+)&t=(\d+)$/)
+                        if (match) {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const tsVideoId = match[1]
+                          const seconds = Number(match[2])
+                          seekAndAutoplayEmbed(e.currentTarget as HTMLElement, tsVideoId, seconds)
+                          return
+                        }
+                      }
+                    }}
                   />
                 ) : (
                   <div className="text-muted-foreground">Loading content...</div>

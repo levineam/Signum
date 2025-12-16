@@ -127,6 +127,8 @@ export interface VideoSummarizeRequest {
   videoUrl?: string
   /** ID of journal entry to link the summary to */
   entryId?: string
+  /** Optional note ID to update in-place (e.g., transcript note) */
+  targetNoteId?: string
 }
 
 /**
@@ -139,6 +141,8 @@ export interface VideoSummarizeResponse {
   noteTitle?: string
   /** The AI-generated summary (HTML format) */
   summary: string
+  /** Full updated note HTML when summarizing into a note */
+  noteHtml?: string
   /** Number of tokens used */
   tokensUsed: number
   /** Model used for generation */
