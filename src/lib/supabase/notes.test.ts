@@ -8,8 +8,14 @@ const loadModule = async (
   {
     schemaError = null,
     hasKey = true,
-    flag = 'true'
-  }: { schemaError?: { message: string; code?: string } | null; hasKey?: boolean; flag?: string }
+    flag = 'true',
+    supabaseAvailable = true
+  }: {
+    schemaError?: { message: string; code?: string } | null
+    hasKey?: boolean
+    flag?: string
+    supabaseAvailable?: boolean
+  }
 ) => {
   process.env.NEXT_PUBLIC_ENABLE_ENCRYPTION = flag
 
@@ -20,7 +26,8 @@ const loadModule = async (
   const fromMock = vi.fn(() => ({ select: selectMock }))
 
   vi.doMock('@/lib/supabase', () => ({
-    supabase: { from: fromMock }
+    supabase: { from: fromMock },
+    hasPublicSupabase: () => supabaseAvailable
   }))
 
   const hasEncryptionKey = vi.fn().mockResolvedValue(hasKey)

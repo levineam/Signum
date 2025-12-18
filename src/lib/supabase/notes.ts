@@ -3,7 +3,7 @@
  * Story 2.3.6: Replaces localStorage-based operations.
  */
 
-import { supabase } from '@/lib/supabase'
+import { supabase, hasPublicSupabase } from '@/lib/supabase'
 import {
   Note,
   Link,
@@ -30,6 +30,11 @@ export async function isEncryptionSchemaAvailable(): Promise<boolean> {
 
   encryptionSchemaCheckPromise = (async () => {
     try {
+      // Skip probe when Supabase client is unavailable (e.g., test mode)
+      if (!hasPublicSupabase()) {
+        return false
+      }
+
       const { error } = await supabase
         .from('notes')
         .select('encrypted_title,title_iv,encrypted_content,content_iv,encryption_version')
@@ -383,7 +388,10 @@ export async function deleteNote(
   noteId: string,
   userId: string
 ): Promise<void> {
-
+  // Skip remote deletes for local test notes
+  if (noteId.startsWith('local-note-')) {
+    return
+  }
 
   const { error } = await supabase
     .from('notes')
@@ -668,41 +676,24 @@ function mapDatabaseLinksToLinks(dbLinks: Array<{
  * Creates empty Values, Beliefs, and Aims notes.
  */
 export async function initializeOntologyNotes(userId: string): Promise<void> {
-
-
   const ontologyNotes = [
-    {
-      user_id: userId,
-      title: 'Values',
-      content: '',
-      note_type: 'ontology-value',
-      is_pinned: true,
-      metadata: {}
-    },
-    {
-      user_id: userId,
-      title: 'Beliefs',
-      content: '',
-      note_type: 'ontology-belief',
-      is_pinned: true,
-      metadata: {}
-    },
-    {
-      user_id: userId,
-      title: 'Aims',
-      content: JSON.stringify({ todos: '', goals: '' }),
-      note_type: 'ontology-aim',
-      is_pinned: true,
-      metadata: {}
-    }
+    { title: 'Values', content: '', noteType: 'ontology-value' as const },
+    { title: 'Beliefs', content: '', noteType: 'ontology-belief' as const },
+    { title: 'Aims', content: JSON.stringify({ todos: '', goals: '' }), noteType: 'ontology-aim' as const }
   ]
 
-  const { error } = await supabase.from('notes').insert(ontologyNotes)
-
-  if (error) {
-    console.error('Error initializing ontology notes:', error)
-    throw error
-  }
+  await Promise.all(
+    ontologyNotes.map(data =>
+      createNote(
+        {
+          ...data,
+          isPinned: true,
+          metadata: {}
+        },
+        userId
+      )
+    )
+  )
 }
 
 /**
