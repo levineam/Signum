@@ -3,7 +3,7 @@
  * Story 2.3.6: Replaces localStorage-based operations.
  */
 
-import { supabase } from '@/lib/supabase'
+import { supabase, hasPublicSupabase } from '@/lib/supabase'
 import {
   Note,
   Link,
@@ -14,6 +14,92 @@ import {
 } from '@/types/note'
 import { decryptNote, encryptNote } from '@/lib/crypto/encryption'
 import { getUserEncryptionKey, hasEncryptionKey } from '@/lib/crypto/keyManagement'
+
+const ENCRYPTION_FLAG_ENABLED = ['true', '1', 'yes'].includes(
+  String(process.env.NEXT_PUBLIC_ENABLE_ENCRYPTION || '').toLowerCase()
+)
+
+let encryptionSchemaCheckPromise: Promise<boolean> | null = null
+const encryptionFallbackNoticeShown = new Map<string, string>()
+const FALLBACK_NOTICE_CACHE_LIMIT = 1000
+
+export async function isEncryptionSchemaAvailable(): Promise<boolean> {
+  if (encryptionSchemaCheckPromise) {
+    return encryptionSchemaCheckPromise
+  }
+
+  encryptionSchemaCheckPromise = (async () => {
+    try {
+      // Skip probe when Supabase client is unavailable (e.g., test mode)
+      if (!hasPublicSupabase()) {
+        return false
+      }
+
+      const { error } = await supabase
+        .from('notes')
+        .select('encrypted_title,title_iv,encrypted_content,content_iv,encryption_version')
+        .limit(1)
+
+      if (error) {
+        const message = (error.message || '').toLowerCase()
+        if (message.includes('column') || message.includes('does not exist') || error.code === 'PGRST204') {
+          return false
+        }
+        console.warn('Unexpected error probing encryption columns, disabling encryption as precaution:', error)
+        return false
+      }
+
+      return true
+    } catch (probeError) {
+      console.warn('Failed to probe encryption schema, disabling encryption as precaution:', probeError)
+      return false
+    }
+  })()
+
+  return encryptionSchemaCheckPromise
+}
+
+function logEncryptionFallback(userId: string, reason: string) {
+  const key = `${userId}:${reason}`
+  if (encryptionFallbackNoticeShown.has(key)) return
+  // Log reason only (no userId) to avoid PII in console output
+  console.warn(`[Encryption] Falling back to plaintext: ${reason}`)
+  // Evict oldest entries if cache exceeds limit to prevent unbounded memory growth
+  if (encryptionFallbackNoticeShown.size >= FALLBACK_NOTICE_CACHE_LIMIT) {
+    const firstKey = encryptionFallbackNoticeShown.keys().next().value
+    if (firstKey) encryptionFallbackNoticeShown.delete(firstKey)
+  }
+  encryptionFallbackNoticeShown.set(key, reason)
+}
+
+export async function resolveEncryptionMode(userId: string): Promise<{
+  canEncrypt: boolean
+  reason: 'flag-disabled' | 'no-key' | 'schema-missing' | 'ok'
+  key?: Awaited<ReturnType<typeof getUserEncryptionKey>>
+}> {
+  if (!ENCRYPTION_FLAG_ENABLED) {
+    return { canEncrypt: false, reason: 'flag-disabled' }
+  }
+
+  const hasKey = await hasEncryptionKey(userId)
+  if (!hasKey) {
+    return { canEncrypt: false, reason: 'no-key' }
+  }
+
+  const schemaAvailable = await isEncryptionSchemaAvailable()
+  if (!schemaAvailable) {
+    return { canEncrypt: false, reason: 'schema-missing' }
+  }
+
+  // Wrap in try-catch to handle TOCTOU race where key disappears between check and retrieval
+  try {
+    const key = await getUserEncryptionKey(userId)
+    return { canEncrypt: true, reason: 'ok', key }
+  } catch {
+    // Key was removed between hasEncryptionKey check and retrieval
+    return { canEncrypt: false, reason: 'no-key' }
+  }
+}
 
 // ============================================================================
 // Note CRUD Operations
@@ -145,19 +231,18 @@ export async function createNote(
 ): Promise<Note> {
 
 
-  // Check if user has encryption enabled
-  const hasKey = await hasEncryptionKey(userId)
+  // Determine if encryption is safe to use for this user + schema
+  const encryption = await resolveEncryptionMode(userId)
 
   let insertData: Record<string, unknown>
 
-  if (hasKey) {
+  if (encryption.canEncrypt && encryption.key) {
     // User has encryption enabled - encrypt the note
-    const key = await getUserEncryptionKey(userId)
     const title = request.title ?? ''
     const content = request.content ?? ''
 
-    const encryptedTitle = await encryptNote(title, key)
-    const encryptedContent = await encryptNote(content, key)
+    const encryptedTitle = await encryptNote(title, encryption.key)
+    const encryptedContent = await encryptNote(content, encryption.key)
 
     insertData = {
       user_id: userId,
@@ -183,6 +268,8 @@ export async function createNote(
       is_pinned: request.isPinned || false,
       metadata: request.metadata || {},
     }
+
+    logEncryptionFallback(userId, encryption.reason)
   }
 
   const builder = supabase
@@ -220,27 +307,31 @@ export async function updateNote(
 
   const updates: Record<string, string | number | boolean | object | null> = {}
 
-  // Check if user has encryption enabled
-  const hasKey = await hasEncryptionKey(userId)
+  // Determine if encryption is safe to use for this user + schema
+  const encryption = await resolveEncryptionMode(userId)
 
-  // Handle title and content updates with encryption if enabled
-  if (hasKey && (request.title !== undefined || request.content !== undefined)) {
-    // User has encryption enabled - need to encrypt updates
-    const key = await getUserEncryptionKey(userId)
+  // Fetch current note once if needed for encryption or metadata merge
+  const needsCurrentNote =
+    (encryption.canEncrypt && encryption.key && (request.title !== undefined || request.content !== undefined)) ||
+    request.metadata !== undefined
 
-    // Get current note to preserve unchanged fields
-    const current = await getNoteById(request.id, userId)
-    if (!current) {
+  let currentNote: Note | null = null
+  if (needsCurrentNote) {
+    currentNote = await getNoteById(request.id, userId)
+    if (!currentNote) {
       throw new Error('Note not found')
     }
+  }
 
+  // Handle title and content updates with encryption if enabled
+  if (encryption.canEncrypt && encryption.key && (request.title !== undefined || request.content !== undefined)) {
     // Use updated values or fall back to current values
-    const titleToEncrypt = request.title !== undefined ? request.title : current.title
-    const contentToEncrypt = request.content !== undefined ? request.content : current.content
+    const titleToEncrypt = request.title !== undefined ? request.title : currentNote!.title
+    const contentToEncrypt = request.content !== undefined ? request.content : currentNote!.content
 
     // Encrypt both title and content
-    const encryptedTitle = await encryptNote(titleToEncrypt ?? '', key)
-    const encryptedContent = await encryptNote(contentToEncrypt ?? '', key)
+    const encryptedTitle = await encryptNote(titleToEncrypt ?? '', encryption.key)
+    const encryptedContent = await encryptNote(contentToEncrypt ?? '', encryption.key)
 
     updates.encrypted_title = encryptedTitle.ciphertext
     updates.title_iv = encryptedTitle.iv
@@ -254,18 +345,19 @@ export async function updateNote(
     // User does not have encryption enabled - use plaintext
     if (request.title !== undefined) updates.title = request.title
     if (request.content !== undefined) updates.content = request.content
+    // Only log fallback when we're writing plaintext content/title
+    if (request.title !== undefined || request.content !== undefined) {
+      logEncryptionFallback(userId, encryption.reason)
+    }
   }
 
   // Handle other fields (not encrypted)
   if (request.isPinned !== undefined) updates.is_pinned = request.isPinned
-  if (request.metadata !== undefined) {
-    // Merge metadata instead of replacing
-    const current = await getNoteById(request.id, userId)
-    if (current) {
-      updates.metadata = {
-        ...current.metadata,
-        ...request.metadata
-      }
+  if (request.metadata !== undefined && currentNote) {
+    // Merge metadata instead of replacing (currentNote already fetched above)
+    updates.metadata = {
+      ...currentNote.metadata,
+      ...request.metadata
     }
   }
 
@@ -296,7 +388,10 @@ export async function deleteNote(
   noteId: string,
   userId: string
 ): Promise<void> {
-  
+  // Skip remote deletes for local test notes
+  if (noteId.startsWith('local-note-')) {
+    return
+  }
 
   const { error } = await supabase
     .from('notes')
@@ -321,7 +416,7 @@ export async function getLinksForNote(
   noteId: string,
   userId: string
 ): Promise<Link[]> {
-  
+
 
   const { data, error } = await supabase
     .from('links')
@@ -344,7 +439,7 @@ export async function getOutgoingLinks(
   noteId: string,
   userId: string
 ): Promise<Link[]> {
-  
+
 
   const { data, error } = await supabase
     .from('links')
@@ -367,7 +462,7 @@ export async function getIncomingLinks(
   noteId: string,
   userId: string
 ): Promise<Link[]> {
-  
+
 
   const { data, error } = await supabase
     .from('links')
@@ -390,9 +485,9 @@ export async function createLink(
   request: CreateLinkRequest,
   userId: string
 ): Promise<Link> {
-  
 
-  const { data, error} = await supabase
+
+  const { data, error } = await supabase
     .from('links')
     .insert({
       source_note_id: request.sourceNoteId,
@@ -419,7 +514,7 @@ export async function deleteLink(
   linkId: string,
   userId: string
 ): Promise<void> {
-  
+
 
   const { error } = await supabase
     .from('links')
@@ -581,48 +676,31 @@ function mapDatabaseLinksToLinks(dbLinks: Array<{
  * Creates empty Values, Beliefs, and Aims notes.
  */
 export async function initializeOntologyNotes(userId: string): Promise<void> {
-  
-
   const ontologyNotes = [
-    {
-      user_id: userId,
-      title: 'Values',
-      content: '',
-      note_type: 'ontology-value',
-      is_pinned: true,
-      metadata: {}
-    },
-    {
-      user_id: userId,
-      title: 'Beliefs',
-      content: '',
-      note_type: 'ontology-belief',
-      is_pinned: true,
-      metadata: {}
-    },
-    {
-      user_id: userId,
-      title: 'Aims',
-      content: JSON.stringify({ todos: '', goals: '' }),
-      note_type: 'ontology-aim',
-      is_pinned: true,
-      metadata: {}
-    }
+    { title: 'Values', content: '', noteType: 'ontology-value' as const },
+    { title: 'Beliefs', content: '', noteType: 'ontology-belief' as const },
+    { title: 'Aims', content: JSON.stringify({ todos: '', goals: '' }), noteType: 'ontology-aim' as const }
   ]
 
-  const { error } = await supabase.from('notes').insert(ontologyNotes)
-
-  if (error) {
-    console.error('Error initializing ontology notes:', error)
-    throw error
-  }
+  await Promise.all(
+    ontologyNotes.map(data =>
+      createNote(
+        {
+          ...data,
+          isPinned: true,
+          metadata: {}
+        },
+        userId
+      )
+    )
+  )
 }
 
 /**
  * Check if user has any journal entries.
  */
 export async function hasJournalEntries(userId: string): Promise<boolean> {
-  
+
 
   const { count, error } = await supabase
     .from('notes')
