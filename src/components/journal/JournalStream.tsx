@@ -1109,7 +1109,13 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       }
 
       const entryContainer = document.querySelector(`[data-entry-id="${entryId}"]`) as HTMLElement | null
-      entryContainer?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      if (entryContainer) {
+        const rect = entryContainer.getBoundingClientRect()
+        const isInViewport = rect.top >= 0 && rect.bottom <= window.innerHeight
+        if (!isInViewport) {
+          entryContainer.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }
 
       const editorElement = document.querySelector(`[data-entry-id="${entryId}"] [contenteditable]`) as HTMLElement | null
       if (!editorElement) {

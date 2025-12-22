@@ -15,7 +15,7 @@ export type OntologyWritingSparkInput = {
 
 function toPlainText(content?: string): string {
   if (!content) return ''
-  return content.replace(/<[^>]*>?/gm, '').trim()
+  return content.replace(/<[^>]+>/g, '').trim()
 }
 
 function getItems(note?: Note): HierarchicalOntologyItem[] {
