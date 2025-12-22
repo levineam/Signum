@@ -14,7 +14,8 @@ import {
 } from '@/types/note'
 import * as supabaseNotes from '@/lib/supabase/notes'
 import { normalizeOntologyItems } from '@/lib/ontology/hierarchy'
-import { supabase } from '@/lib/supabase'
+import { hasPublicSupabase, supabase } from '@/lib/supabase'
+import { SAMPLE_ONTOLOGY, SAMPLE_MISSION_HTML } from '@/data/sampleOntology'
 
 const ONTOLOGY_CATEGORY_ORDER: Record<string, number> = {
   'higher-power': 0,
@@ -114,8 +115,18 @@ export async function getNoteById(id: string, userId: string): Promise<Note | nu
  * Creates any missing notes individually to recover from partial data
  * Migrates legacy multi-note pattern to single-note-with-items pattern
  */
-export async function initializePinnedNotes(userId: string): Promise<void> {
+export async function initializePinnedNotes(
+  userId: string,
+  options?: { seedSampleData?: boolean }
+): Promise<void> {
   try {
+    // Avoid slow failures in dev/test when Supabase isn't configured
+    if (!hasPublicSupabase()) {
+      return
+    }
+
+    const shouldSeedSampleData = Boolean(options?.seedSampleData) && process.env.NODE_ENV !== 'production'
+
     // Get all ontology notes (including old multi-note pattern)
     const existingOntology = await supabaseNotes.getOntologyDashboardNotes(userId)
 
@@ -141,10 +152,43 @@ export async function initializePinnedNotes(userId: string): Promise<void> {
       metadata?: Note['metadata']
     }> = [
       { key: 'higher-power', type: 'custom', title: 'Higher Order / Power', content: '', metadata: { ontologyCategory: 'higher-power' } },
-      { key: 'beliefs', type: 'ontology-belief', title: 'Beliefs', content: '', metadata: { ontologyCategory: 'beliefs', items: [] } },
-      { key: 'values', type: 'ontology-value', title: 'Values', content: '', metadata: { ontologyCategory: 'values', items: [] } },
-      { key: 'people', type: 'custom', title: 'People', content: '', metadata: { ontologyCategory: 'people', items: [] } },
-      { key: 'mission', type: 'custom', title: 'Mission', content: '', metadata: { ontologyCategory: 'mission' } },
+      {
+        key: 'beliefs',
+        type: 'ontology-belief',
+        title: 'Beliefs',
+        content: '',
+        metadata: {
+          ontologyCategory: 'beliefs',
+          items: shouldSeedSampleData ? (SAMPLE_ONTOLOGY.beliefs ?? []) : []
+        }
+      },
+      {
+        key: 'values',
+        type: 'ontology-value',
+        title: 'Values',
+        content: '',
+        metadata: {
+          ontologyCategory: 'values',
+          items: shouldSeedSampleData ? (SAMPLE_ONTOLOGY.values ?? []) : []
+        }
+      },
+      {
+        key: 'people',
+        type: 'custom',
+        title: 'People',
+        content: '',
+        metadata: {
+          ontologyCategory: 'people',
+          items: shouldSeedSampleData ? (SAMPLE_ONTOLOGY.people ?? []) : []
+        }
+      },
+      {
+        key: 'mission',
+        type: 'custom',
+        title: 'Mission',
+        content: shouldSeedSampleData ? SAMPLE_MISSION_HTML : '',
+        metadata: { ontologyCategory: 'mission' }
+      },
       { key: 'goals', type: 'ontology-aim', title: 'Goals', content: JSON.stringify({ todos: '', goals: '' }), metadata: { ontologyCategory: 'goals', items: [] } },
       { key: 'projects', type: 'custom', title: 'Projects', content: '', metadata: { ontologyCategory: 'projects', items: [] } },
       { key: 'tasks', type: 'custom', title: 'Tasks', content: '', metadata: { ontologyCategory: 'tasks', items: [] } }
@@ -161,6 +205,49 @@ export async function initializePinnedNotes(userId: string): Promise<void> {
           metadata: noteConfig.metadata || {}
         }, userId)
       }
+    }
+
+    if (shouldSeedSampleData) {
+      const stripHtml = (content?: string) => (content ? content.replace(/<[^>]*>?/gm, '').trim() : '')
+
+      // Reload after creating any missing notes so we can seed existing empty notes too.
+      const seededOntology = await supabaseNotes.getOntologyDashboardNotes(userId)
+      const byCategory = new Map<string, Note>()
+      seededOntology.forEach((note) => {
+        const key = getOntologyCategoryKey(note)
+        byCategory.set(key, note)
+      })
+
+      const seedIfEmpty = async (
+        category: OntologyCategory,
+        next: { items?: HierarchicalOntologyItem[]; content?: string }
+      ) => {
+        const note = byCategory.get(category)
+        if (!note) return
+
+        const existingItems = Array.isArray(note.metadata?.items) ? (note.metadata.items as HierarchicalOntologyItem[]) : []
+        const existingText = stripHtml(note.content)
+        const isEmpty = existingItems.length === 0 && existingText.length === 0
+        if (!isEmpty) return
+
+        await updateNote(
+          note.id,
+          {
+            content: next.content ?? note.content,
+            metadata: {
+              ...note.metadata,
+              ontologyCategory: category,
+              ...(next.items ? { items: next.items } : {})
+            }
+          },
+          userId
+        )
+      }
+
+      await seedIfEmpty('values', { items: SAMPLE_ONTOLOGY.values ?? [] })
+      await seedIfEmpty('beliefs', { items: SAMPLE_ONTOLOGY.beliefs ?? [] })
+      await seedIfEmpty('people', { items: SAMPLE_ONTOLOGY.people ?? [] })
+      await seedIfEmpty('mission', { content: SAMPLE_MISSION_HTML })
     }
   } catch (error) {
     console.error('Error initializing pinned notes:', error)

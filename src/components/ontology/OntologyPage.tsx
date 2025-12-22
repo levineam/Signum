@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Target, Trash2, Users, Zap } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getPinnedNotes, initializePinnedNotes, updateNote } from '@/lib/notes'
+import { hasPublicSupabase } from '@/lib/supabase'
 import { ConfidenceLevel, HierarchicalOntologyItem, Note } from '@/types/note'
 import { OntologyAnalysisButton } from '../notes/OntologyAnalysisButton'
 import { Button } from '@/components/ui/button'
@@ -194,6 +195,25 @@ export function OntologyPage() {
       await loadNotes()
     })()
   }, [user, loadNotes])
+
+  const handleSeedSampleOntology = useCallback(async () => {
+    if (!user) return
+    if (!hasPublicSupabase()) {
+      toast.error('Supabase not configured', {
+        description: 'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to seed sample data.'
+      })
+      return
+    }
+    try {
+      await initializePinnedNotes(user.id, { seedSampleData: true })
+      await loadNotes()
+      toast.success('Seeded sample ontology data (dev only)')
+    } catch (e) {
+      toast.error('Failed to seed sample ontology data', {
+        description: e instanceof Error ? e.message : 'Please try again'
+      })
+    }
+  }, [loadNotes, user])
 
   useEffect(() => {
     const missionNote = pinnedNotes.find((note) => resolveSectionKey(note) === 'mission')
@@ -937,7 +957,7 @@ export function OntologyPage() {
           </>
         ) : (
           <>
-            <p className="text-base leading-relaxed text-slate-800">
+            <p className="text-base leading-relaxed text-foreground">
               {content || placeholder || 'Add your perspective.'}
             </p>
             <Button variant="ghost" size="sm" onClick={() => startTextEdit(key)}>
@@ -961,11 +981,11 @@ export function OntologyPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8">
-      <Card className="border border-slate-200 shadow-sm">
+      <Card className="border border-border bg-card shadow-sm">
         <CardContent className="p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold text-slate-900">Ontology</h1>
+              <h1 className="text-2xl font-semibold text-foreground">Ontology</h1>
               <p className="text-sm text-muted-foreground">Map of meaning &amp; action</p>
             </div>
             <div className="flex flex-col gap-2 md:items-end w-full md:w-auto">
@@ -996,7 +1016,7 @@ export function OntologyPage() {
                     </>
                   ) : (
                     <>
-                      <span className="text-2xl font-semibold text-slate-900">{meaningIndex}</span>
+                      <span className="text-2xl font-semibold text-foreground">{meaningIndex}</span>
                       <Button variant="ghost" size="sm" onClick={() => setMeaningEditing(true)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -1010,9 +1030,9 @@ export function OntologyPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-violet-200 shadow-sm bg-gradient-to-b from-white to-violet-50">
+      <Card className="shadow-sm bg-violet-50/50 border-violet-200/60 dark:bg-violet-950/20 dark:border-violet-900/40">
         <CardContent className="p-8 text-center space-y-3">
-          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-violet-500">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-violet-600 dark:text-violet-300">
             Higher Order / Power
           </div>
           {renderTextEditor(
@@ -1023,41 +1043,41 @@ export function OntologyPage() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-purple-100">
+        <Card className="shadow-sm bg-purple-50/40 border-purple-200/50 dark:bg-purple-950/15 dark:border-purple-900/40">
           <CardContent className="p-5 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-purple-500">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-purple-700 dark:text-purple-300">
               <Zap className="h-4 w-4" />
               Beliefs
             </div>
-            {renderListEditor('beliefs', 'bg-purple-50 text-purple-800')}
+            {renderListEditor('beliefs', 'bg-purple-100/70 text-purple-900 dark:bg-purple-950/40 dark:text-purple-100')}
           </CardContent>
         </Card>
 
-        <Card className="border-pink-100">
+        <Card className="shadow-sm bg-pink-50/40 border-pink-200/50 dark:bg-pink-950/15 dark:border-pink-900/40">
           <CardContent className="p-5 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-pink-500">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-pink-700 dark:text-pink-300">
               <Target className="h-4 w-4" />
               Values
             </div>
-            {renderListEditor('values', 'bg-pink-50 text-pink-800')}
+            {renderListEditor('values', 'bg-pink-100/70 text-pink-900 dark:bg-pink-950/40 dark:text-pink-100')}
           </CardContent>
         </Card>
 
-        <Card className="border-indigo-100">
+        <Card className="shadow-sm bg-indigo-50/40 border-indigo-200/50 dark:bg-indigo-950/15 dark:border-indigo-900/40">
           <CardContent className="p-5 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-indigo-500">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-indigo-700 dark:text-indigo-300">
               <Users className="h-4 w-4" />
               People
             </div>
-            {renderListEditor('people', 'bg-indigo-50 text-indigo-800')}
+            {renderListEditor('people', 'bg-indigo-100/70 text-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-100')}
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-violet-200 shadow-sm bg-gradient-to-b from-white to-indigo-50">
+      <Card className="shadow-sm bg-indigo-50/40 border-indigo-200/60 dark:bg-indigo-950/20 dark:border-indigo-900/40">
         <CardContent className="p-8 space-y-3">
           <div className="text-center space-y-2">
-            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-indigo-500">
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-indigo-700 dark:text-indigo-300">
               Mission
             </div>
             {renderTextEditor(
@@ -1069,7 +1089,7 @@ export function OntologyPage() {
       </Card>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+        <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
             Execution Stack (Goal Columns)
@@ -1096,7 +1116,6 @@ export function OntologyPage() {
             )}
           </div>
         </div>
-
         <div className="flex gap-4 overflow-x-auto pb-4">
           {executionStack.hierarchy.goals.map((goal, goalIndex) => {
             const counts = countDescendants(goal)
@@ -1207,7 +1226,7 @@ export function OntologyPage() {
                         return (
                           <div
                             key={project.id}
-                            className="relative rounded-md border border-slate-200/80 bg-white shadow-sm"
+                            className="relative rounded-md border border-border bg-card shadow-sm"
                           >
                             <div className="group/project-header flex items-start justify-between px-3 py-2">
                               <div className="flex items-start gap-2 flex-1">
@@ -1232,7 +1251,7 @@ export function OntologyPage() {
                                 </Button>
                                 <div className="space-y-1 flex-1">
                                   <p
-                                    className="font-medium text-slate-900 leading-tight line-clamp-2 cursor-pointer hover:text-slate-700 transition-colors"
+                                    className="font-medium text-foreground leading-tight line-clamp-2 cursor-pointer hover:text-foreground/80 transition-colors"
                                     onClick={() => startEditItem('projects', project)}
                                     role="button"
                                     tabIndex={0}
@@ -1338,7 +1357,7 @@ export function OntologyPage() {
                                   return (
                                     <li
                                       key={task.id}
-                                      className="group/task rounded-md border border-slate-200/80 bg-white p-2"
+                                      className="group/task rounded-md border border-border bg-card p-2"
                                     >
                                       {isEditingTask ? (
                                         <div className="space-y-2">
@@ -1392,7 +1411,7 @@ export function OntologyPage() {
                                         <div className="flex items-start justify-between gap-2">
                                           <div className="space-y-1 flex-1">
                                             <p
-                                              className="text-sm font-medium text-slate-900 leading-snug line-clamp-2 cursor-pointer hover:text-slate-700 transition-colors"
+                                              className="text-sm font-medium text-foreground leading-snug line-clamp-2 cursor-pointer hover:text-foreground/80 transition-colors"
                                               onClick={() => startEditItem('tasks', task)}
                                               role="button"
                                               tabIndex={0}
@@ -1436,6 +1455,16 @@ export function OntologyPage() {
           })}
         </div>
       </div>
+
+      {process.env.NODE_ENV !== 'production' && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="rounded-lg border border-border bg-background shadow-md">
+            <Button size="sm" variant="outline" className="m-2" onClick={handleSeedSampleOntology}>
+              Seed sample
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) closeDeleteDialog() }}>
         <DialogContent>

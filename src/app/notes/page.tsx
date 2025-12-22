@@ -24,7 +24,7 @@ export default function NotesRoute() {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
-      <main className="lg:pl-64">
+      <main className="md:pl-20 xl:pl-64 transition-all duration-300">
         <div className="flex min-h-screen flex-col">
           <AppHeader />
           <div className="flex-1">

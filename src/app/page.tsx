@@ -6,9 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { JournalStream } from '@/components/journal/JournalStream'
 import { AppHeader } from '@/components/layout/AppHeader'
-import { RemindersWidget } from '@/components/widgets/RemindersWidget'
-import { TasksWidget } from '@/components/widgets/TasksWidget'
-import { FEATURES } from '@/config/features'
+import { HomepagePrimer } from '@/components/home/HomepagePrimer'
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth()
@@ -40,15 +38,7 @@ export default function Home() {
       case 'journal':
         return (
           <div>
-            {/* Tasks & Reminders Widgets (Prototype - Feature Flag) */}
-            {FEATURES.TEMPORAL_SYSTEM_ENABLED && (
-              <div className="mx-auto max-w-4xl px-6 pt-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <RemindersWidget />
-                  <TasksWidget />
-                </div>
-              </div>
-            )}
+            <HomepagePrimer />
             {/* Journal Stream */}
             <JournalStream isGuest={isGuest} />
           </div>
@@ -69,7 +59,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
-      <main className="lg:pl-64">
+      <main className="md:pl-20 xl:pl-64 transition-all duration-300">
         <div className="flex min-h-screen flex-col">
           <AppHeader />
           <div className="flex-1">
