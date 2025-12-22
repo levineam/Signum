@@ -74,18 +74,20 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
     'tasks',
   ]
 
-  const sectionNotes = order
-    .map((section) => findSectionNote(pinnedNotes, section))
-    .filter((note): note is Note => Boolean(note))
+  const sectionMap = new Map<OntologyCategory, Note>()
+  for (const section of order) {
+    const note = findSectionNote(pinnedNotes, section)
+    if (note) sectionMap.set(section, note)
+  }
 
   // Handle migrations or new accounts with no section notes yet.
-  if (sectionNotes.length === 0) {
+  if (sectionMap.size === 0) {
     return { focus: 'values', signal: 'empty' }
   }
 
   // 1) Prefer the first empty foundational-ish area in order
   for (const section of order) {
-    const note = findSectionNote(pinnedNotes, section)
+    const note = sectionMap.get(section)
     if (!note) continue
     if (!hasAnyContent(note)) {
       return { focus: section, signal: 'empty' }
@@ -94,7 +96,7 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
 
   // 2) If nothing is empty, pick the earliest stale section (no mention of time in copy)
   for (const section of order) {
-    const note = findSectionNote(pinnedNotes, section)
+    const note = sectionMap.get(section)
     if (!note) continue
     if (hasAnyContent(note) && isStale(note, staleDays)) {
       const items = getItems(note).map((i) => i.name).filter(Boolean).slice(0, 4)
