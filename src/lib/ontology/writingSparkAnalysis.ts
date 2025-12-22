@@ -74,6 +74,15 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
     'tasks',
   ]
 
+  const sectionNotes = order
+    .map((section) => findSectionNote(pinnedNotes, section))
+    .filter((note): note is Note => Boolean(note))
+
+  // Handle migrations or new accounts with no section notes yet.
+  if (sectionNotes.length === 0) {
+    return { focus: 'values', signal: 'empty' }
+  }
+
   // 1) Prefer the first empty foundational-ish area in order
   for (const section of order) {
     const note = findSectionNote(pinnedNotes, section)
@@ -96,5 +105,6 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
   // 3) Otherwise, we’re in a healthy state
   return { focus: 'values', signal: 'healthy' }
 }
+
 
 

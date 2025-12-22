@@ -61,7 +61,12 @@ export function OntologyInsightCard() {
       className="relative p-5 cursor-pointer select-none transition-colors ontology-insight-gold"
       onClick={dispatchSeed}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') dispatchSeed()
+        if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === ' ') {
+            e.preventDefault()
+          }
+          dispatchSeed()
+        }
       }}
       aria-label={text}
       data-ontology-insight-card

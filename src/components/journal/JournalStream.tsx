@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { HelperType } from '@/types/helper'
 import { HELPER_TILES } from '@/constants/helperTitles'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
+import { escapeHtml } from '@/utils/htmlEscape'
 import { useGuestDraft } from '@/hooks/useGuestDraft'
 import { useIdleTimer } from '@/hooks/useIdleTimer'
 import { GuestAuthModal } from '@/components/auth/GuestAuthModal'
@@ -50,15 +51,6 @@ interface ParsedTask {
   dueAt: string | null
   rrule: string | null
   status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
 }
 
 function toWritingSparkHtml(text: string): string {
