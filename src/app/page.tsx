@@ -4,16 +4,21 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { RightPanel } from '@/components/layout/RightPanel'
 import { JournalStream } from '@/components/journal/JournalStream'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { RemindersWidget } from '@/components/widgets/RemindersWidget'
 import { TasksWidget } from '@/components/widgets/TasksWidget'
 import { FEATURES } from '@/config/features'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth()
   const [activeSection, setActiveSection] = useState('journal')
   const router = useRouter()
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
+  const showTemporalWidgets = FEATURES.TEMPORAL_SYSTEM_ENABLED
+  const showInlineWidgets = showTemporalWidgets && !isDesktop
 
   useEffect(() => {
     const handleNavigateToNotes = () => {
@@ -41,8 +46,8 @@ export default function Home() {
         return (
           <div>
             {/* Tasks & Reminders Widgets (Prototype - Feature Flag) */}
-            {FEATURES.TEMPORAL_SYSTEM_ENABLED && (
-              <div className="mx-auto max-w-4xl px-6 pt-6">
+            {showInlineWidgets && (
+              <div className="mx-auto max-w-4xl px-6 pt-6 lg:hidden">
                 <div className="grid gap-6 md:grid-cols-2">
                   <RemindersWidget />
                   <TasksWidget />
@@ -69,7 +74,12 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
-      <main className="lg:pl-64">
+      {showTemporalWidgets && <RightPanel />}
+      <main
+        className={`md:pl-20 xl:pl-64 transition-all duration-300 ${
+          showTemporalWidgets ? 'lg:pr-80' : ''
+        }`}
+      >
         <div className="flex min-h-screen flex-col">
           <AppHeader />
           <div className="flex-1">

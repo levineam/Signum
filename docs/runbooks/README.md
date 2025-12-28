@@ -99,6 +99,15 @@ Step-by-step procedures for adding formatting features to SimpleRichEditor.
 
 **⚠️ CRITICAL:** Must update BOTH edit mode AND read-only mode or formatting will be stripped!
 
+### [Writing Spark Guide](./writing-spark-guide.md)
+
+Architecture and procedures for journal helper writing sparks.
+
+**Use when:**
+- Understanding helper tile insertion flow
+- Debugging helper dialog or prompt insertion issues
+- Extending helper content components
+
 ## Verification Procedures
 
 ### [Verify Helper Types Constraint](./verify-helper-types-constraint.md)
