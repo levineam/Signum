@@ -21,7 +21,7 @@ The Writing Spark system provides AI-generated journal prompts based on the user
 
 ## Architecture
 
-```
+```text
 User loads homepage
        │
        ▼
