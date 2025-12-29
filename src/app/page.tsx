@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { JournalStream } from '@/components/journal/JournalStream'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { HomepagePrimer } from '@/components/home/HomepagePrimer'
+import { RightPanel } from '@/components/layout/RightPanel'
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth()
@@ -59,7 +60,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
-      <main className="md:pl-20 xl:pl-64 transition-all duration-300">
+      <RightPanel />
+      <main className="md:pl-20 xl:pl-64 lg:pr-80 transition-all duration-300">
         <div className="flex min-h-screen flex-col">
           <AppHeader />
           <div className="flex-1">

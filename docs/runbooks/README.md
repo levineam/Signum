@@ -99,6 +99,23 @@ Step-by-step procedures for adding formatting features to SimpleRichEditor.
 
 **⚠️ CRITICAL:** Must update BOTH edit mode AND read-only mode or formatting will be stripped!
 
+### [Writing Spark Guide](./writing-spark-guide.md) 🆕
+
+Architecture and procedures for the ontology-based writing spark system.
+
+**Use when:**
+- Understanding how journal prompts are generated
+- Debugging spark loading issues
+- Working on the right panel layout
+- Modifying the ontology analysis logic
+
+**Key sections:**
+- System architecture (ASCII diagram)
+- Guiding principles (UX anti-patterns to avoid)
+- Responsive layout behavior
+- Integration points (seed-journal-entry event)
+- Troubleshooting
+
 ## Verification Procedures
 
 ### [Verify Helper Types Constraint](./verify-helper-types-constraint.md)
@@ -119,6 +136,7 @@ SQL queries to verify helper_types constraint after migration.
 | Rich Text Formatting | [HTML Formatting Guide](./html-formatting-guide.md) | [Local Testing Guide](./local-testing-guide.md) |
 | Database Schema | [Database Index Management](./database-index-management.md) | *Test on Vercel only* |
 | Ontology Feature | [Ontology Incremental](./ontology-incremental.md) | [Testing Decision Matrix](./TESTING_DECISION_MATRIX.md) |
+| Writing Spark / Homepage Widgets | [Writing Spark Guide](./writing-spark-guide.md) | [Local Testing Guide](./local-testing-guide.md) |
 
 ### 🐛 Debugging Issues
 
@@ -128,6 +146,8 @@ SQL queries to verify helper_types constraint after migration.
 | Slow local iteration cycles | [Testing Decision Matrix](./TESTING_DECISION_MATRIX.md) → Use test mode |
 | Migration drops critical constraint | [Database Index Management](./database-index-management.md) → Verification checklist |
 | Ontology analysis not running | [Ontology Incremental](./ontology-incremental.md) → Troubleshooting |
+| Writing spark not loading | [Writing Spark Guide](./writing-spark-guide.md) → Troubleshooting |
+| Right panel not showing on desktop | [Writing Spark Guide](./writing-spark-guide.md) → Troubleshooting |
 
 ### 🔍 Understanding Architecture
 
@@ -137,6 +157,8 @@ SQL queries to verify helper_types constraint after migration.
 | Ontology extraction pipeline | [Ontology Incremental](./ontology-incremental.md) → Architecture |
 | Database constraints | [Database Index Management](./database-index-management.md) → Three Purposes |
 | HTML sanitization | [HTML Formatting Guide](./html-formatting-guide.md) → Security Considerations |
+| Writing spark system | [Writing Spark Guide](./writing-spark-guide.md) → Architecture |
+| Homepage layout / Right panel | [Writing Spark Guide](./writing-spark-guide.md) → Responsive Layout |
 
 ## Contributing to Runbooks
 
