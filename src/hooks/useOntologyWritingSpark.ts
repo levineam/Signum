@@ -9,7 +9,7 @@ type WritingSparkState = {
   input: OntologyWritingSparkInput
 }
 
-const SESSION_KEY = 'signum-writing-spark-v1'
+const SESSION_KEY_PREFIX = 'signum-writing-spark-v2-'
 
 const FALLBACK: WritingSparkState = {
   text: "What's been feeling important to you lately? Sometimes our priorities shift in ways we don't fully notice until we pause to reflect.",
@@ -23,13 +23,22 @@ export function useOntologyWritingSpark() {
 
   const canUseSupabase = useMemo(() => hasPublicSupabase() && !!user?.id, [user?.id])
 
+  // Scope cache key to user ID to prevent cross-account leakage
+  const sessionKey = user?.id ? `${SESSION_KEY_PREFIX}${user.id}` : null
+
   useEffect(() => {
     let cancelled = false
 
     async function run() {
       try {
+        // If no user, skip caching and use fallback
+        if (!sessionKey) {
+          if (!cancelled) setLoading(false)
+          return
+        }
+
         // Session cache first (fast, avoids repeat AI calls)
-        const cached = sessionStorage.getItem(SESSION_KEY)
+        const cached = sessionStorage.getItem(sessionKey)
         if (cached) {
           const parsed = JSON.parse(cached) as WritingSparkState
           if (!cancelled && parsed?.text) {
@@ -58,7 +67,7 @@ export function useOntologyWritingSpark() {
           if (!cancelled) {
             const next = { ...FALLBACK, input }
             setState(next)
-            sessionStorage.setItem(SESSION_KEY, JSON.stringify(next))
+            sessionStorage.setItem(sessionKey, JSON.stringify(next))
             setLoading(false)
           }
           return
@@ -70,7 +79,7 @@ export function useOntologyWritingSpark() {
 
         if (!cancelled) {
           setState(next)
-          sessionStorage.setItem(SESSION_KEY, JSON.stringify(next))
+          sessionStorage.setItem(sessionKey, JSON.stringify(next))
           setLoading(false)
         }
       } catch {
@@ -82,7 +91,7 @@ export function useOntologyWritingSpark() {
     return () => {
       cancelled = true
     }
-  }, [canUseSupabase, user])
+  }, [canUseSupabase, sessionKey, user])
 
   return { ...state, loading }
 }

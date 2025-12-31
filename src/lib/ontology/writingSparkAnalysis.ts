@@ -10,6 +10,9 @@ export type OntologyWritingSparkInput = {
   // Small, optional context for generation (keep non-sensitive and tiny)
   context?: {
     exampleItems?: string[]
+    missionExcerpt?: string // First ~100 chars of mission (for personalization)
+    recentExcerpt?: string // Excerpt from a recent item (for relevance)
+    totalItemCount?: number // How populated ontology is overall
   }
 }
 
@@ -23,6 +26,25 @@ function getItems(note?: Note): HierarchicalOntologyItem[] {
   return Array.isArray(note.metadata?.items) ? (note.metadata.items as HierarchicalOntologyItem[]) : []
 }
 
+/**
+ * Check if a JSON content field (used by goals section) has actual content.
+ * Goals store content as JSON like {"todos":"","goals":""} even when empty.
+ */
+function hasJsonContent(content?: string): boolean {
+  if (!content) return false
+  try {
+    const parsed = JSON.parse(content)
+    if (typeof parsed !== 'object' || parsed === null) return false
+    // Check if any string values have actual content
+    return Object.values(parsed).some(
+      (val) => typeof val === 'string' && val.trim().length > 0
+    )
+  } catch {
+    // Not JSON, treat as regular text
+    return content.trim().length > 0
+  }
+}
+
 function hasAnyContent(note?: Note): boolean {
   if (!note) return false
   const key = note.metadata?.ontologyCategory
@@ -32,7 +54,12 @@ function hasAnyContent(note?: Note): boolean {
   // Text-oriented sections
   if (key === 'higher-power' || key === 'mission') return text.length > 0
 
-  // List-oriented sections (and structured goals/projects/tasks)
+  // Goals section stores content as JSON - check for actual values
+  if (key === 'goals') {
+    return items.length > 0 || hasJsonContent(note.content)
+  }
+
+  // List-oriented sections (and structured projects/tasks)
   return items.length > 0 || text.length > 0
 }
 
@@ -51,6 +78,56 @@ function isStale(note: Note, staleDays: number): boolean {
 
 function findSectionNote(pinnedNotes: Note[], section: OntologyCategory): Note | undefined {
   return pinnedNotes.find((n) => n.metadata?.ontologyCategory === section)
+}
+
+/**
+ * Helper to extract mission excerpt (strip HTML, truncate to ~100 chars)
+ */
+function getMissionExcerpt(sectionMap: Map<OntologyCategory, Note>): string | undefined {
+  const missionNote = sectionMap.get('mission')
+  if (!missionNote) return undefined
+  const text = toPlainText(missionNote.content)
+  if (!text) return undefined
+  // Truncate at word boundary around 100 chars
+  if (text.length <= 100) return text
+  const truncated = text.slice(0, 100)
+  const lastSpace = truncated.lastIndexOf(' ')
+  return lastSpace > 50 ? truncated.slice(0, lastSpace) + '…' : truncated + '…'
+}
+
+/**
+ * Helper to count total items across all sections
+ */
+function countTotalItems(sectionMap: Map<OntologyCategory, Note>): number {
+  let total = 0
+  for (const note of sectionMap.values()) {
+    const items = getItems(note)
+    total += items.length
+  }
+  return total
+}
+
+/**
+ * Helper to get a representative excerpt from a random populated section
+ */
+function getRecentExcerpt(
+  sectionMap: Map<OntologyCategory, Note>,
+  excludeSection: OntologyCategory
+): string | undefined {
+  // Prioritize goals, values, beliefs for meaningful excerpts
+  const preferredOrder: OntologyCategory[] = ['goals', 'values', 'beliefs', 'people', 'projects']
+  for (const section of preferredOrder) {
+    if (section === excludeSection) continue
+    const note = sectionMap.get(section)
+    if (!note) continue
+    const items = getItems(note)
+    if (items.length > 0) {
+      // Return a random item name for variety
+      const randomItem = items[Math.floor(Math.random() * items.length)]
+      return randomItem?.name
+    }
+  }
+  return undefined
 }
 
 /**
@@ -85,12 +162,25 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
     return { focus: 'values', signal: 'empty' }
   }
 
+  // Extract shared context
+  const missionExcerpt = getMissionExcerpt(sectionMap)
+  const totalItemCount = countTotalItems(sectionMap)
+
   // 1) Prefer the first empty foundational-ish area in order
   for (const section of order) {
     const note = sectionMap.get(section)
     if (!note) continue
     if (!hasAnyContent(note)) {
-      return { focus: section, signal: 'empty' }
+      const recentExcerpt = getRecentExcerpt(sectionMap, section)
+      return {
+        focus: section,
+        signal: 'empty',
+        context: {
+          missionExcerpt,
+          recentExcerpt,
+          totalItemCount: totalItemCount > 0 ? totalItemCount : undefined,
+        },
+      }
     }
   }
 
@@ -100,12 +190,35 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
     if (!note) continue
     if (hasAnyContent(note) && isStale(note, staleDays)) {
       const items = getItems(note).map((i) => i.name).filter(Boolean).slice(0, 4)
-      return { focus: section, signal: 'stale', context: { exampleItems: items } }
+      const recentExcerpt = getRecentExcerpt(sectionMap, section)
+      return {
+        focus: section,
+        signal: 'stale',
+        context: {
+          exampleItems: items,
+          missionExcerpt,
+          recentExcerpt,
+          totalItemCount: totalItemCount > 0 ? totalItemCount : undefined,
+        },
+      }
     }
   }
 
-  // 3) Otherwise, we’re in a healthy state
-  return { focus: 'values', signal: 'healthy' }
+  // 3) Otherwise, we're in a healthy state — still provide rich context
+  const healthyNote = sectionMap.get('values') || sectionMap.get('goals')
+  const healthyItems = healthyNote ? getItems(healthyNote).map((i) => i.name).filter(Boolean).slice(0, 3) : []
+  const recentExcerpt = getRecentExcerpt(sectionMap, 'values')
+
+  return {
+    focus: 'values',
+    signal: 'healthy',
+    context: {
+      exampleItems: healthyItems.length > 0 ? healthyItems : undefined,
+      missionExcerpt,
+      recentExcerpt,
+      totalItemCount: totalItemCount > 0 ? totalItemCount : undefined,
+    },
+  }
 }
 
 

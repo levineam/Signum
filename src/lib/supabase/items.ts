@@ -254,4 +254,23 @@ export const itemQueries = {
     if (!data) throw new Error('Reminder not found')
     return mapItemRow(data as ItemRow)
   },
+
+  /**
+   * Mark an item as pending (uncomplete)
+   */
+  async uncompleteItem(id: string): Promise<Item> {
+    const { data, error } = await supabase
+      .from('items')
+      .update({
+        status: 'pending',
+        completed_at: null,
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw new Error(`Failed to uncomplete item: ${error.message}`)
+    if (!data) throw new Error('Item not found')
+    return mapItemRow(data as ItemRow)
+  },
 }

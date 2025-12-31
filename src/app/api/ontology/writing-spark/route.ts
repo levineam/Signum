@@ -59,15 +59,34 @@ export async function POST(req: NextRequest) {
       'Never sound like homework, a task list, or psychoanalysis.',
       'Use questions more than statements. Aim for 2–3 sentences total.',
       'Do NOT mention ontology, models, AI, algorithms, gaps, staleness, or timestamps.',
-      'Avoid: “you should”, “you need to”, “before you…”, “it’s been N days…”, “your X is empty/incomplete”.',
+      'Avoid: "you should", "you need to", "before you...", "it has been N days...", "your X is empty/incomplete".',
+      '',
+      'When context is provided (mission, values, goals), weave it naturally into your prompt.',
+      "Echo the user's own language and themes without repeating them verbatim.",
+      'Make the prompt feel personally relevant, not generic.',
     ].join('\n')
+
+    // Build rich user prompt with available context
+    const contextLines: string[] = []
+    if (body.context?.missionExcerpt) {
+      contextLines.push(`User's mission: "${body.context.missionExcerpt}"`)
+    }
+    if (body.context?.exampleItems?.length) {
+      contextLines.push(`Items in this area: ${body.context.exampleItems.join(', ')}`)
+    }
+    if (body.context?.recentExcerpt) {
+      contextLines.push(`Something they care about: "${body.context.recentExcerpt}"`)
+    }
+    if (body.context?.totalItemCount && body.context.totalItemCount > 5) {
+      contextLines.push(`They've been actively building their ontology (${body.context.totalItemCount} items across sections)`)
+    }
 
     const user = [
       `Focus area: ${focus}`,
       `Signal: ${signal}`,
-      body.context?.exampleItems?.length ? `Context (optional examples): ${body.context.exampleItems.join(', ')}` : '',
+      contextLines.length > 0 ? `\nContext:\n${contextLines.join('\n')}` : '',
       '',
-      'Write the inspiration now.',
+      'Write a warm, personalized writing invitation that feels relevant to who they are.',
     ]
       .filter(Boolean)
       .join('\n')
