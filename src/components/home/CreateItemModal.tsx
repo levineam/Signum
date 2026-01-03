@@ -32,11 +32,22 @@ export function CreateItemModal({ isOpen, onClose, itemType }: CreateItemModalPr
   const handleSubmit = () => {
     if (!title.trim()) return
 
+    // Validate date if provided
+    let dueAtISO: string | undefined = undefined
+    if (dueAt) {
+      const parsed = new Date(dueAt)
+      if (isNaN(parsed.getTime())) {
+        toast.error('Invalid date format')
+        return
+      }
+      dueAtISO = parsed.toISOString()
+    }
+
     createItem(
       {
         itemType,
         title: title.trim(),
-        dueAt: dueAt ? new Date(dueAt).toISOString() : undefined,
+        dueAt: dueAtISO,
         priority: itemType === 'task' ? priority : undefined,
       },
       {

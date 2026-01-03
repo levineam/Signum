@@ -13,10 +13,22 @@ import { format } from 'date-fns'
 
 function formatReminderTime(item: Item): string {
   if (item.reminderTime) {
-    return format(new Date(item.reminderTime), 'h:mm a')
+    try {
+      const date = new Date(item.reminderTime)
+      if (isNaN(date.getTime())) return ''
+      return format(date, 'h:mm a')
+    } catch {
+      return ''
+    }
   }
   if (item.dueAt) {
-    return format(new Date(item.dueAt), 'h:mm a')
+    try {
+      const date = new Date(item.dueAt)
+      if (isNaN(date.getTime())) return ''
+      return format(date, 'h:mm a')
+    } catch {
+      return ''
+    }
   }
   return ''
 }
