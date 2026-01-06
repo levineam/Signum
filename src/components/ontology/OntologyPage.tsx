@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { initializePinnedNotes, getPinnedNotes } from '@/lib/notes'
 import { Note } from '@/types/note'
@@ -26,10 +26,10 @@ export function OntologyPage() {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
   const [isHydrated, setIsHydrated] = useState(false)
 
-  const loadNotes = async () => {
+  const loadNotes = useCallback(async () => {
     if (!user) return
     setPinnedNotes(await getPinnedNotes(user.id))
-  }
+  }, [user])
 
   // Hydrate expansion state from URL params and localStorage
   // CRITICAL: URL params ALWAYS override localStorage
@@ -69,8 +69,7 @@ export function OntologyPage() {
       await initializePinnedNotes(user.id)
       await loadNotes()
     })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
+  }, [user, loadNotes])
 
   const toggleCard = (category: string) => {
     setExpandedCards((prev) => {
@@ -108,6 +107,7 @@ export function OntologyPage() {
                 note={note}
                 isExpanded={expandedCards.has(category)}
                 onToggle={() => toggleCard(category)}
+                onItemsUpdated={loadNotes}
               />
             )
           })}
