@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
-import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Target, Trash2, Users, Zap } from 'lucide-react'
+import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Sparkles, Target, Trash2, Users, Zap } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getPinnedNotes, initializePinnedNotes, updateNote } from '@/lib/notes'
 import { hasPublicSupabase } from '@/lib/supabase'
 import { ConfidenceLevel, HierarchicalOntologyItem, Note } from '@/types/note'
+import type { ExerciseResult, ExerciseType } from '@/types/exercise'
 import { OntologyAnalysisButton } from '../notes/OntologyAnalysisButton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -32,6 +33,8 @@ import {
 import { Label } from '@/components/ui/label'
 import { GoalNode, ProjectNode, buildExecutionHierarchy, countDescendants, normalizeOntologyItems, resequenceByParent } from '@/lib/ontology/hierarchy'
 import { buildDefaultGoals, buildSampleExecutionSeed, shouldSeedExecutionStack } from '@/lib/ontology/seeding'
+import { ExerciseModal } from '@/components/exercises/ExerciseModal'
+import { getAccessToken, getExerciseCompletionStatus, getLatestExerciseResult, updateExerciseResultGeneratedItems } from '@/lib/exercises/exerciseService'
 
 type SectionKey =
   | 'higher-power'
@@ -168,6 +171,7 @@ export function OntologyPage() {
   const [reassignParent, setReassignParent] = useState<string | undefined>(undefined)
   const [normalizing, setNormalizing] = useState(false)
   const [seedChecked, setSeedChecked] = useState(false)
+  const [exerciseQueue, setExerciseQueue] = useState<ExerciseType[]>([])
 
   const loadNotes = useCallback(async () => {
     if (!user) return
@@ -236,6 +240,8 @@ export function OntologyPage() {
     [pinnedNotes]
   )
 
+  const activeExercise = exerciseQueue[0] ?? null
+
   const goalsNote = findNote('goals')
   const projectsNote = findNote('projects')
   const tasksNote = findNote('tasks')
@@ -260,6 +266,136 @@ export function OntologyPage() {
     ],
     [executionStack.hierarchy]
   )
+
+  const dedupeNames = (names: string[]) => {
+    const seen = new Set<string>()
+    const next: string[] = []
+    names.forEach((name) => {
+      const trimmed = name.trim()
+      if (!trimmed || seen.has(trimmed)) return
+      seen.add(trimmed)
+      next.push(trimmed)
+    })
+    return next
+  }
+
+  const startExercise = (type: ExerciseType) => {
+    setExerciseQueue([type])
+  }
+
+  const startPurposeFlow = async () => {
+    if (!user) {
+      toast.error('Please sign in to continue')
+      return
+    }
+
+    try {
+      const status = await getExerciseCompletionStatus(user.id)
+      const queue: ExerciseType[] = []
+      if (!status.strengths) queue.push('strengths')
+      if (!status.impact) queue.push('impact')
+      queue.push('purpose')
+      setExerciseQueue(queue)
+    } catch (error) {
+      console.error(error)
+      toast.error('Unable to start this flow right now.')
+    }
+  }
+
+  const closeExerciseFlow = () => {
+    setExerciseQueue([])
+  }
+
+  const synthesizeAndMerge = async (exerciseType: ExerciseType, result: ExerciseResult) => {
+    if (!user) return
+    if (exerciseType !== 'values' && exerciseType !== 'purpose') return
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    const token = await getAccessToken()
+    if (token) headers.Authorization = `Bearer ${token}`
+
+    let context: { strengths?: string[]; impact?: string[] } | undefined
+    if (exerciseType === 'purpose') {
+      const [strengthsResult, impactResult] = await Promise.all([
+        getLatestExerciseResult(user.id, 'strengths'),
+        getLatestExerciseResult(user.id, 'impact')
+      ])
+      context = {
+        strengths: strengthsResult?.selections.map((item) => item.name) ?? [],
+        impact: impactResult?.selections.map((item) => item.name) ?? []
+      }
+    }
+
+    const response = await fetch('/api/exercises/synthesize', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        exerciseType,
+        selections: result.selections,
+        freeText: result.freeText,
+        context
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to synthesize results')
+    }
+
+    const data = await response.json()
+    if (!data?.ok) {
+      throw new Error(data?.error ?? 'Failed to synthesize results')
+    }
+
+    const names = dedupeNames((data.items ?? []).map((item: { name?: string }) => item.name ?? ''))
+    if (!names.length) return
+
+    if (exerciseType === 'values') {
+      const valuesNote = findNote('values')
+      if (!valuesNote) return
+      const existing = getItemNames(valuesNote)
+      const combined = dedupeNames([...names, ...existing])
+
+      await updateNote(
+        valuesNote.id,
+        {
+          metadata: {
+            ...valuesNote.metadata,
+            ontologyCategory: valuesNote.metadata?.ontologyCategory ?? 'values',
+            items: mergeItems(valuesNote, combined)
+          },
+          isPinned: true
+        },
+        user.id
+      )
+
+      if (result.id) {
+        await updateExerciseResultGeneratedItems(
+          result.id,
+          user.id,
+          names.map((itemName) => ({ noteId: valuesNote.id, itemName }))
+        )
+      }
+      await loadNotes()
+    }
+
+    if (exerciseType === 'purpose') {
+      const existing = executionStack.goalItems.map((item) => item.name)
+      const combined = dedupeNames([...names, ...existing])
+      if (!goalsNote) return
+
+      const merged = mergeItems(goalsNote, combined)
+      await persistExecutionItems('goals', merged)
+
+      if (result.id) {
+        await updateExerciseResultGeneratedItems(
+          result.id,
+          user.id,
+          names.map((itemName) => ({ noteId: goalsNote.id, itemName }))
+        )
+      }
+      await loadNotes()
+    }
+  }
 
   useEffect(() => {
     setExpandedProjects((prev) => {
@@ -848,7 +984,7 @@ export function OntologyPage() {
     )
   }
 
-  const renderListEditor = (key: SectionKey, accent?: string) => {
+  const renderListEditor = (key: SectionKey, accent?: string, emptyState?: ReactNode) => {
     const note = findNote(key)
     const items = getItemNames(note)
     const draftItems = listDrafts[key] ?? items
@@ -917,6 +1053,8 @@ export function OntologyPage() {
               </Button>
             </div>
           </>
+        ) : !items.length && emptyState ? (
+          <>{emptyState}</>
         ) : (
           <>
             {renderChips(items, accent)}
@@ -1059,7 +1197,19 @@ export function OntologyPage() {
               <Target className="h-4 w-4" />
               Values
             </div>
-            {renderListEditor('values', 'bg-pink-100/70 text-pink-900 dark:bg-pink-950/40 dark:text-pink-100')}
+            {renderListEditor(
+              'values',
+              'bg-pink-100/70 text-pink-900 dark:bg-pink-950/40 dark:text-pink-100',
+              (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">No entries yet.</p>
+                  <Button variant="outline" size="sm" onClick={() => startExercise('values')}>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Discover your values
+                  </Button>
+                </div>
+              )
+            )}
           </CardContent>
         </Card>
 
@@ -1116,6 +1266,15 @@ export function OntologyPage() {
             )}
           </div>
         </div>
+        {executionStack.hierarchy.goals.length === 0 && (
+          <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 space-y-3">
+            <p className="text-sm text-muted-foreground">No goals yet.</p>
+            <Button variant="outline" size="sm" onClick={startPurposeFlow}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Discover your purpose
+            </Button>
+          </div>
+        )}
         <div className="flex gap-4 overflow-x-auto pb-4">
           {executionStack.hierarchy.goals.map((goal, goalIndex) => {
             const counts = countDescendants(goal)
@@ -1590,6 +1749,19 @@ export function OntologyPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {activeExercise && (
+        <ExerciseModal
+          key={activeExercise}
+          exerciseType={activeExercise}
+          isOpen={!!activeExercise}
+          onClose={closeExerciseFlow}
+          onComplete={async (result) => {
+            if (!activeExercise) return
+            await synthesizeAndMerge(activeExercise, result)
+            setExerciseQueue((prev) => prev.slice(1))
+          }}
+        />
+      )}
     </div>
   )
 }
