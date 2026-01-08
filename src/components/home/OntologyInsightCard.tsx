@@ -82,7 +82,7 @@ export function OntologyInsightCard() {
     )
   }
 
-  const handleExerciseComplete = async () => {
+  const handleExerciseComplete = () => {
     // Clear the session cache so the prompt will refresh with new ontology data
     clearCache()
     setExerciseModalOpen(false)

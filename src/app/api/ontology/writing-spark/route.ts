@@ -131,11 +131,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json<WritingSparkResponse>({ ok: true, text, focus, signal })
   } catch (e) {
+    console.error('[writing-spark] Error generating prompt:', e)
     return NextResponse.json<WritingSparkResponse>(
-      { ok: false, error: e instanceof Error ? e.message : 'Unknown error' },
+      { ok: false, error: 'Failed to generate writing prompt' },
       { status: 500 }
     )
   }
 }
-
 
