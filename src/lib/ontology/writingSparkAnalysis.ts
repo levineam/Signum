@@ -9,7 +9,9 @@ export type OntologyWritingSparkInput = {
   signal: OntologySparkSignal
   // Small, optional context for generation (keep non-sensitive and tiny)
   context?: {
-    exampleItems?: string[]
+    exampleItems?: string[] // Items from the focus section
+    valueNames?: string[] // User's values (for personalization)
+    goalNames?: string[] // User's goals (for personalization)
     missionExcerpt?: string // First ~100 chars of mission (for personalization)
     recentExcerpt?: string // Excerpt from a recent item (for relevance)
     totalItemCount?: number // How populated ontology is overall
@@ -108,6 +110,26 @@ function countTotalItems(sectionMap: Map<OntologyCategory, Note>): number {
 }
 
 /**
+ * Helper to extract value names (up to 6)
+ */
+function getValueNames(sectionMap: Map<OntologyCategory, Note>): string[] | undefined {
+  const valuesNote = sectionMap.get('values')
+  if (!valuesNote) return undefined
+  const items = getItems(valuesNote).map((i) => i.name).filter(Boolean).slice(0, 6)
+  return items.length > 0 ? items : undefined
+}
+
+/**
+ * Helper to extract goal names (up to 5)
+ */
+function getGoalNames(sectionMap: Map<OntologyCategory, Note>): string[] | undefined {
+  const goalsNote = sectionMap.get('goals')
+  if (!goalsNote) return undefined
+  const items = getItems(goalsNote).map((i) => i.name).filter(Boolean).slice(0, 5)
+  return items.length > 0 ? items : undefined
+}
+
+/**
  * Helper to get a representative excerpt from a random populated section
  */
 function getRecentExcerpt(
@@ -165,6 +187,8 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
   // Extract shared context
   const missionExcerpt = getMissionExcerpt(sectionMap)
   const totalItemCount = countTotalItems(sectionMap)
+  const valueNames = getValueNames(sectionMap)
+  const goalNames = getGoalNames(sectionMap)
 
   // 1) Prefer the first empty foundational-ish area in order
   for (const section of order) {
@@ -178,6 +202,8 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
         context: {
           missionExcerpt,
           recentExcerpt,
+          valueNames,
+          goalNames,
           totalItemCount: totalItemCount > 0 ? totalItemCount : undefined,
         },
       }
@@ -189,7 +215,7 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
     const note = sectionMap.get(section)
     if (!note) continue
     if (hasAnyContent(note) && isStale(note, staleDays)) {
-      const items = getItems(note).map((i) => i.name).filter(Boolean).slice(0, 4)
+      const items = getItems(note).map((i) => i.name).filter(Boolean).slice(0, 6)
       const recentExcerpt = getRecentExcerpt(sectionMap, section)
       return {
         focus: section,
@@ -198,6 +224,8 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
           exampleItems: items,
           missionExcerpt,
           recentExcerpt,
+          valueNames,
+          goalNames,
           totalItemCount: totalItemCount > 0 ? totalItemCount : undefined,
         },
       }
@@ -206,7 +234,7 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
 
   // 3) Otherwise, we're in a healthy state — still provide rich context
   const healthyNote = sectionMap.get('values') || sectionMap.get('goals')
-  const healthyItems = healthyNote ? getItems(healthyNote).map((i) => i.name).filter(Boolean).slice(0, 3) : []
+  const healthyItems = healthyNote ? getItems(healthyNote).map((i) => i.name).filter(Boolean).slice(0, 5) : []
   const recentExcerpt = getRecentExcerpt(sectionMap, 'values')
 
   return {
@@ -216,6 +244,8 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
       exampleItems: healthyItems.length > 0 ? healthyItems : undefined,
       missionExcerpt,
       recentExcerpt,
+      valueNames,
+      goalNames,
       totalItemCount: totalItemCount > 0 ? totalItemCount : undefined,
     },
   }

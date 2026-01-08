@@ -1,21 +1,23 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { RefreshCw, Sparkles, X } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useOntologyWritingSpark } from '@/hooks/useOntologyWritingSpark'
+import { ExerciseModal } from '@/components/exercises/ExerciseModal'
+import type { ExerciseType } from '@/types/exercise'
 
 /**
  * OntologyInsightCard
- * 
+ *
  * Guiding Principle: Spark writing inspiration that makes the user feel understood.
  * - Invitation, not instruction
  * - Questions, not statements
  * - Warm, not clinical
  * - Writing-focused (inspire journaling, not "complete ontology")
  * - Magical, not mechanical
- * 
+ *
  * Anti-patterns (never do these):
  * - "Your X section is empty/incomplete"
  * - "You should update your Y"
@@ -29,9 +31,36 @@ const ONTOLOGY_BLURB =
 
 const DISMISS_KEY = 'signum-ontology-insight-dismissed-session'
 
+// Warm, inviting copy for exercise buttons
+const EXERCISE_COPY: Record<ExerciseType, { firstTime: string; rejuvenate: string }> = {
+  values: {
+    firstTime: 'Discover what matters most',
+    rejuvenate: 'Revisit your values'
+  },
+  strengths: {
+    firstTime: 'Explore your natural strengths',
+    rejuvenate: 'Check in with your strengths'
+  },
+  impact: {
+    firstTime: 'Clarify who you want to help',
+    rejuvenate: 'Reconnect with your impact'
+  },
+  purpose: {
+    firstTime: 'Shape your sense of purpose',
+    rejuvenate: 'Refresh your purpose'
+  }
+}
+
 export function OntologyInsightCard() {
   const [dismissed, setDismissed] = useState(false)
-  const { text, loading } = useOntologyWritingSpark()
+  const [exerciseModalOpen, setExerciseModalOpen] = useState(false)
+  const {
+    text,
+    loading,
+    suggestedExercise,
+    isRejuvenateMode,
+    clearCache
+  } = useOntologyWritingSpark()
 
   useEffect(() => {
     try {
@@ -53,56 +82,106 @@ export function OntologyInsightCard() {
     )
   }
 
+  const handleExerciseComplete = async () => {
+    // Clear the session cache so the prompt will refresh with new ontology data
+    clearCache()
+    setExerciseModalOpen(false)
+  }
+
+  const exerciseCopy = suggestedExercise
+    ? (isRejuvenateMode
+        ? EXERCISE_COPY[suggestedExercise].rejuvenate
+        : EXERCISE_COPY[suggestedExercise].firstTime)
+    : null
+
   return (
-    <Card
-      spacing="compact"
-      role="button"
-      tabIndex={0}
-      className="relative p-5 cursor-pointer select-none transition-colors ontology-insight-gold"
-      onClick={dispatchSeed}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          if (e.key === ' ') {
-            e.preventDefault()
-          }
-          dispatchSeed()
-        }
-      }}
-      aria-label={text}
-      data-ontology-insight-card
-    >
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-3 right-3 size-7 opacity-60 hover:opacity-100 bg-background/0 hover:bg-background/10"
-        aria-label="Dismiss"
-        onClick={(e) => {
-          e.stopPropagation()
-          try {
-            sessionStorage.setItem(DISMISS_KEY, 'true')
-          } catch {
-            // ignore
-          }
-          setDismissed(true)
-        }}
+    <>
+      <Card
+        spacing="compact"
+        className="relative p-5 select-none ontology-insight-gold"
+        data-ontology-insight-card
       >
-        <X className="h-4 w-4" />
-      </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 size-7 opacity-60 hover:opacity-100 bg-background/0 hover:bg-background/10"
+          aria-label="Dismiss"
+          onClick={(e) => {
+            e.stopPropagation()
+            try {
+              sessionStorage.setItem(DISMISS_KEY, 'true')
+            } catch {
+              // ignore
+            }
+            setDismissed(true)
+          }}
+        >
+          <X className="h-4 w-4" />
+        </Button>
 
-      <div className="mb-2 pr-8">
-        <div className="text-lg leading-none font-semibold tracking-wide text-foreground/80">
-          Inspired by your ontology
+        <div className="mb-2 pr-8">
+          <div className="text-lg leading-none font-semibold tracking-wide text-foreground/80">
+            Inspired by your ontology
+          </div>
         </div>
-      </div>
 
-      <p className="text-sm leading-relaxed text-foreground/75 mb-3 pr-8">
-        {ONTOLOGY_BLURB}
-      </p>
+        <p className="text-sm leading-relaxed text-foreground/75 mb-3 pr-8">
+          {ONTOLOGY_BLURB}
+        </p>
 
-      <p className="text-base leading-relaxed pr-8 text-foreground">
-        {loading ? '…' : text}
-      </p>
-    </Card>
+        {/* Writing prompt - clickable to seed journal */}
+        <div
+          role="button"
+          tabIndex={0}
+          className="cursor-pointer rounded-md p-2 -m-2 transition-colors hover:bg-foreground/5"
+          onClick={dispatchSeed}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              if (e.key === ' ') {
+                e.preventDefault()
+              }
+              dispatchSeed()
+            }
+          }}
+          aria-label={`Use prompt: ${text}`}
+        >
+          <p className="text-base leading-relaxed pr-8 text-foreground">
+            {loading ? '…' : text}
+          </p>
+        </div>
+
+        {/* Exercise button - shown alongside prompt when an exercise is suggested */}
+        {suggestedExercise && exerciseCopy && (
+          <div className="mt-4 pt-4 border-t border-foreground/10">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation()
+                setExerciseModalOpen(true)
+              }}
+            >
+              {isRejuvenateMode ? (
+                <RefreshCw className="h-4 w-4" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              {exerciseCopy}
+            </Button>
+          </div>
+        )}
+      </Card>
+
+      {/* Exercise Modal */}
+      {suggestedExercise && (
+        <ExerciseModal
+          exerciseType={suggestedExercise}
+          isOpen={exerciseModalOpen}
+          onClose={() => setExerciseModalOpen(false)}
+          onComplete={handleExerciseComplete}
+        />
+      )}
+    </>
   )
 }
-

@@ -61,18 +61,40 @@ export async function POST(req: NextRequest) {
       'Do NOT mention ontology, models, AI, algorithms, gaps, staleness, or timestamps.',
       'Avoid: "you should", "you need to", "before you...", "it has been N days...", "your X is empty/incomplete".',
       '',
-      'When context is provided (mission, values, goals), weave it naturally into your prompt.',
+      'CRITICAL: When context includes specific values, goals, or mission text:',
+      '- Reference 1-2 items BY NAME naturally in your prompt',
+      '- Example: "With \'creativity\' among what matters to you, what does it look like to honor that today?"',
+      '- AVOID generic phrases like "As you explore the concept of..."',
+      '- NEVER invent topics or themes the user hasn\'t expressed interest in',
+      '- If the ontology is empty (no context provided), ask open questions about what matters to them',
+      '',
       "Echo the user's own language and themes without repeating them verbatim.",
       'Make the prompt feel personally relevant, not generic.',
     ].join('\n')
 
     // Build rich user prompt with available context
     const contextLines: string[] = []
+    const hasContext = !!(
+      body.context?.missionExcerpt ||
+      body.context?.exampleItems?.length ||
+      body.context?.valueNames?.length ||
+      body.context?.goalNames?.length ||
+      body.context?.recentExcerpt
+    )
+
     if (body.context?.missionExcerpt) {
       contextLines.push(`User's mission: "${body.context.missionExcerpt}"`)
     }
-    if (body.context?.exampleItems?.length) {
-      contextLines.push(`Items in this area: ${body.context.exampleItems.join(', ')}`)
+    if (body.context?.valueNames?.length) {
+      contextLines.push(`Their values include: ${body.context.valueNames.join(', ')}`)
+    }
+    if (body.context?.goalNames?.length) {
+      contextLines.push(`Their goals include: ${body.context.goalNames.join(', ')}`)
+    }
+    if (body.context?.exampleItems?.length && focus !== 'values' && focus !== 'goals') {
+      // Only show exampleItems if they're different from values/goals (already shown above)
+      const itemList = body.context.exampleItems.join(', ')
+      contextLines.push(`Their ${focus} include: ${itemList}`)
     }
     if (body.context?.recentExcerpt) {
       contextLines.push(`Something they care about: "${body.context.recentExcerpt}"`)
@@ -81,12 +103,16 @@ export async function POST(req: NextRequest) {
       contextLines.push(`They've been actively building their ontology (${body.context.totalItemCount} items across sections)`)
     }
 
+    const instructionLine = hasContext
+      ? 'IMPORTANT: Reference at least one specific value, goal, or theme BY NAME in your prompt. Write a warm, personalized writing invitation.'
+      : 'The user is just starting out. Write a warm, open-ended question about what matters to them - do NOT invent specific topics.'
+
     const user = [
       `Focus area: ${focus}`,
       `Signal: ${signal}`,
-      contextLines.length > 0 ? `\nContext:\n${contextLines.join('\n')}` : '',
+      contextLines.length > 0 ? `\nContext:\n${contextLines.join('\n')}` : '\nNo context available - ontology is empty.',
       '',
-      'Write a warm, personalized writing invitation that feels relevant to who they are.',
+      instructionLine,
     ]
       .filter(Boolean)
       .join('\n')
