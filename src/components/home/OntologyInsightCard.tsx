@@ -119,7 +119,7 @@ export function OntologyInsightCard() {
               dispatchSeed()
             }
           }}
-          aria-label="Use this prompt"
+          aria-label="Click to use this writing prompt in your journal"
         >
           <p className="text-base leading-relaxed pr-8 text-foreground">
             {loading ? '…' : text}

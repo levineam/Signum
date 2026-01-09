@@ -12,9 +12,12 @@ const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 10000 })
   : null
 
-function fallbackSpark(input: OntologyWritingSparkInput): string {
+function fallbackSpark(
+  focus: OntologyWritingSparkInput['focus'],
+  signal: OntologyWritingSparkInput['signal']
+): string {
   // Keep it inspirational, question-forward, never “homework”
-  const byFocus: Record<OntologyWritingSparkInput['focus'], string> = {
+  const byFocus: Record<typeof focus, string> = {
     'higher-power': "What feels bigger than you right now? If you had to name what guides you, what would you call it?",
     beliefs: "What have you been telling yourself lately—about you, other people, or the world? What belief might be worth gently questioning on the page?",
     values: "What's been feeling important to you lately? Sometimes our priorities shift in ways we don't fully notice until we pause to reflect.",
@@ -26,11 +29,11 @@ function fallbackSpark(input: OntologyWritingSparkInput): string {
   }
 
   // For “healthy”, keep it open-ended and light
-  if (input.signal === 'healthy') {
+  if (signal === 'healthy') {
     return "You’ve been building a rich picture of what matters. What feels worth exploring on the page today—right now, as you are?"
   }
 
-  return byFocus[input.focus]
+  return byFocus[focus]
 }
 
 export async function POST(req: NextRequest) {
@@ -50,7 +53,7 @@ export async function POST(req: NextRequest) {
     if (!openai) {
       return NextResponse.json<WritingSparkResponse>({
         ok: true,
-        text: fallbackSpark({ focus, signal, context: body.context }),
+        text: fallbackSpark(focus, signal),
         focus,
         signal,
       })
@@ -130,7 +133,7 @@ export async function POST(req: NextRequest) {
       max_tokens: 120,
     })
 
-    const text = completion.choices[0]?.message?.content?.trim() || fallbackSpark({ focus, signal, context: body.context })
+    const text = completion.choices[0]?.message?.content?.trim() || fallbackSpark(focus, signal)
 
     return NextResponse.json<WritingSparkResponse>({ ok: true, text, focus, signal })
   } catch (e) {
@@ -141,4 +144,3 @@ export async function POST(req: NextRequest) {
     )
   }
 }
-

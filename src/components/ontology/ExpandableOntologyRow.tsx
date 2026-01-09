@@ -98,10 +98,18 @@ export function ExpandableOntologyRow({ note, isExpanded, onToggle }: Expandable
             </div>
 
             {/* Concept sections with excerpts */}
-            {items.map((item, index) => (
+            {items.map((item) => {
+              const itemSlug = item.name
+                .toLowerCase()
+                .trim()
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9-]/g, '')
+              const itemHeadingId = `${category}-item-${itemSlug || 'item'}-heading`
+
+              return (
               <div key={item.name} className="space-y-3">
                 <h4
-                  id={`${category}-item-${index}-heading`}
+                  id={itemHeadingId}
                   className="text-base font-semibold"
                 >
                   {item.name}
@@ -120,7 +128,7 @@ export function ExpandableOntologyRow({ note, isExpanded, onToggle }: Expandable
                   ))}
                 </div>
               </div>
-            ))}
+            )})}
 
             {items.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-8">

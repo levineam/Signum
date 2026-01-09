@@ -1,4 +1,4 @@
-import type { ExerciseDefinition, ExerciseType } from '@/types/exercise'
+import type { ExerciseDefinition, ExerciseType, SelectionItem } from '@/types/exercise'
 import { VALUES_EXERCISE_ITEMS } from '@/lib/exercises/content/valuesExercise'
 import { HIGHER_POWER_EXERCISE_ITEMS } from '@/lib/exercises/content/higherPowerExercise'
 import { BELIEFS_EXERCISE_ITEMS } from '@/lib/exercises/content/beliefsExercise'
@@ -7,12 +7,12 @@ import { GOALS_EXERCISE_ITEMS } from '@/lib/exercises/content/goalsExercise'
 import { PROJECTS_EXERCISE_ITEMS } from '@/lib/exercises/content/projectsExercise'
 import { TASKS_EXERCISE_ITEMS } from '@/lib/exercises/content/tasksExercise'
 
-export const EXERCISE_CONTENT: Record<ExerciseType, typeof VALUES_EXERCISE_ITEMS> = {
+export const EXERCISE_CONTENT: Record<ExerciseType, ReadonlyArray<SelectionItem>> = {
   'higher-power': HIGHER_POWER_EXERCISE_ITEMS,
   beliefs: BELIEFS_EXERCISE_ITEMS,
   values: VALUES_EXERCISE_ITEMS,
   people: PEOPLE_EXERCISE_ITEMS,
-  mission: [], // Mission uses free-text, no selection items
+  mission: Object.freeze([]) as ReadonlyArray<SelectionItem>, // Mission uses free-text, no selection items
   goals: GOALS_EXERCISE_ITEMS,
   projects: PROJECTS_EXERCISE_ITEMS,
   tasks: TASKS_EXERCISE_ITEMS
