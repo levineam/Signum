@@ -29,6 +29,9 @@ const EMPTY_COMPLETION: Record<ExerciseType, boolean> = {
   tasks: false
 }
 
+// Max retries for version conflict (rare race condition)
+const MAX_VERSION_RETRIES = 3
+
 function getSupabaseClient(token?: string | null) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -77,41 +80,83 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: latest, error: latestError } = await supabase
-      .from('exercise_results')
-      .select('version')
-      .eq('user_id', user.id)
-      .eq('exercise_type', body.exerciseType)
-      .order('completed_at', { ascending: false })
-      .limit(1)
+    // Retry loop to handle version race conditions
+    // If a unique constraint on (user_id, exercise_type, version) exists,
+    // concurrent requests may collide. We retry with a fresh version number.
+    interface ExerciseResultRow {
+      id: string
+      user_id: string
+      exercise_type: ExerciseType
+      selections: ExerciseSelection[]
+      free_text: string | null
+      completed_at: string
+      version: number
+      generated_items?: Array<{ noteId: string; itemName: string }> | null
+    }
+    let data: ExerciseResultRow | null = null
+    let lastError: Error | null = null
 
-    if (latestError) {
+    for (let attempt = 0; attempt < MAX_VERSION_RETRIES; attempt++) {
+      const { data: latest, error: latestError } = await supabase
+        .from('exercise_results')
+        .select('version')
+        .eq('user_id', user.id)
+        .eq('exercise_type', body.exerciseType)
+        .order('completed_at', { ascending: false })
+        .limit(1)
+
+      if (latestError) {
+        return NextResponse.json<SaveExerciseResponse>(
+          { ok: false, error: latestError.message },
+          { status: 500 }
+        )
+      }
+
+      const nextVersion = ((latest as Array<{ version: number }> | null)?.[0]?.version ?? 0) + 1
+
+      const payload = {
+        user_id: user.id,
+        exercise_type: body.exerciseType,
+        selections: body.selections,
+        free_text: body.freeText ?? null,
+        completed_at: body.completedAt ?? new Date().toISOString(),
+        version: nextVersion
+      }
+
+      const { data: insertedData, error: insertError } = await supabase
+        .from('exercise_results')
+        .insert(payload)
+        .select('*')
+        .single()
+
+      if (!insertError && insertedData) {
+        data = insertedData as ExerciseResultRow
+        break
+      }
+
+      // Check if this is a unique constraint violation (version conflict)
+      // Postgres error code 23505 = unique_violation
+      const isVersionConflict =
+        insertError?.code === '23505' ||
+        insertError?.message?.toLowerCase().includes('unique') ||
+        insertError?.message?.toLowerCase().includes('duplicate')
+
+      if (isVersionConflict && attempt < MAX_VERSION_RETRIES - 1) {
+        // Retry with fresh version
+        lastError = new Error(insertError?.message ?? 'Version conflict')
+        continue
+      }
+
+      // Non-retryable error or max retries exceeded
       return NextResponse.json<SaveExerciseResponse>(
-        { ok: false, error: latestError.message },
+        { ok: false, error: insertError?.message ?? 'Failed to save result' },
         { status: 500 }
       )
     }
 
-    const nextVersion = ((latest as Array<{ version: number }> | null)?.[0]?.version ?? 0) + 1
-
-    const payload = {
-      user_id: user.id,
-      exercise_type: body.exerciseType,
-      selections: body.selections,
-      free_text: body.freeText ?? null,
-      completed_at: body.completedAt ?? new Date().toISOString(),
-      version: nextVersion
-    }
-
-    const { data, error } = await supabase
-      .from('exercise_results')
-      .insert(payload)
-      .select('*')
-      .single()
-
-    if (error || !data) {
+    if (!data) {
       return NextResponse.json<SaveExerciseResponse>(
-        { ok: false, error: error?.message ?? 'Failed to save result' },
+        { ok: false, error: lastError?.message ?? 'Failed to save result after retries' },
         { status: 500 }
       )
     }

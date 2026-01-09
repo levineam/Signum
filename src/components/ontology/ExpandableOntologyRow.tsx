@@ -14,6 +14,7 @@ interface ExpandableOntologyRowProps {
 export function ExpandableOntologyRow({ note, isExpanded, onToggle }: ExpandableOntologyRowProps) {
   const category = note.noteType.replace('ontology-', '')
   const contentId = `ontology-${category}-content`
+  const sectionHeadingId = `${category}-section-heading`
   const buttonRef = useRef<HTMLButtonElement>(null)
   const liveRegionRef = useRef<HTMLDivElement>(null)
   const title = getNoteDisplayTitle(note)
@@ -83,23 +84,28 @@ export function ExpandableOntologyRow({ note, isExpanded, onToggle }: Expandable
           id={contentId}
           className="expanded-content"
           role="region"
-          aria-labelledby={`${category}-heading`}
+          aria-labelledby={sectionHeadingId}
         >
           <CardContent className="px-6 pb-6 pt-0 space-y-6">
+            {/* Hidden heading for accessibility - labels the expanded region */}
+            <h3 id={sectionHeadingId} className="sr-only">
+              {title} details
+            </h3>
+
             {/* Auto-update notice */}
             <div className="rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 p-4 text-sm text-amber-900 dark:text-amber-100">
               This note is automatically updated as you write in your journal.
             </div>
 
             {/* Concept sections with excerpts */}
-            {items.map((item) => (
+            {items.map((item, index) => (
               <div key={item.name} className="space-y-3">
-                <h3
-                  id={`${category}-heading`}
+                <h4
+                  id={`${category}-item-${index}-heading`}
                   className="text-base font-semibold"
                 >
                   {item.name}
-                </h3>
+                </h4>
                 <div className="space-y-2">
                   {item.excerpts.map((excerpt, idx) => (
                     <blockquote

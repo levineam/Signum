@@ -28,6 +28,9 @@ import { ExerciseModal } from '@/components/exercises/ExerciseModal'
 const ONTOLOGY_BLURB =
   "Your ontology is a living map of what you believe, what you value, and what you're moving toward. As it gets clearer, it becomes easier to notice what matters most — and find the right thing to write about today."
 
+const AI_DISCLOSURE =
+  "This prompt is personalized using AI based on your ontology data."
+
 const DISMISS_KEY = 'signum-ontology-insight-dismissed-session'
 
 export function OntologyInsightCard() {
@@ -122,6 +125,11 @@ export function OntologyInsightCard() {
             {loading ? '…' : text}
           </p>
         </div>
+
+        {/* AI disclosure for transparency */}
+        <p className="text-xs text-foreground/50 mt-3 pr-8">
+          {AI_DISCLOSURE}
+        </p>
 
         {/* Exercise button - shown alongside prompt when an exercise is suggested */}
         {suggestedExercise && (

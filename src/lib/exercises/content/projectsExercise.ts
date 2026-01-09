@@ -1,6 +1,6 @@
 import type { SelectionItem } from '@/types/exercise'
 
-export const projectsExerciseItems: ReadonlyArray<SelectionItem> = Object.freeze([
+export const PROJECTS_EXERCISE_ITEMS: ReadonlyArray<SelectionItem> = Object.freeze([
   {
     id: 'creative-project',
     name: 'Creative Project',

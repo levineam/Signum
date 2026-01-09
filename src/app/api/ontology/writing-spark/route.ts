@@ -7,7 +7,10 @@ type WritingSparkResponse =
   | { ok: false; error: string }
 
 // Initialize OpenAI client only if API key is available
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null
+// 10s timeout prevents hung requests in serverless environments
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 10000 })
+  : null
 
 function fallbackSpark(input: OntologyWritingSparkInput): string {
   // Keep it inspirational, question-forward, never “homework”

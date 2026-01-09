@@ -1,21 +1,21 @@
 import type { ExerciseDefinition, ExerciseType } from '@/types/exercise'
-import { valuesExerciseItems } from '@/lib/exercises/content/valuesExercise'
-import { higherPowerExerciseItems } from '@/lib/exercises/content/higherPowerExercise'
-import { beliefsExerciseItems } from '@/lib/exercises/content/beliefsExercise'
-import { peopleExerciseItems } from '@/lib/exercises/content/peopleExercise'
-import { goalsExerciseItems } from '@/lib/exercises/content/goalsExercise'
-import { projectsExerciseItems } from '@/lib/exercises/content/projectsExercise'
-import { tasksExerciseItems } from '@/lib/exercises/content/tasksExercise'
+import { VALUES_EXERCISE_ITEMS } from '@/lib/exercises/content/valuesExercise'
+import { HIGHER_POWER_EXERCISE_ITEMS } from '@/lib/exercises/content/higherPowerExercise'
+import { BELIEFS_EXERCISE_ITEMS } from '@/lib/exercises/content/beliefsExercise'
+import { PEOPLE_EXERCISE_ITEMS } from '@/lib/exercises/content/peopleExercise'
+import { GOALS_EXERCISE_ITEMS } from '@/lib/exercises/content/goalsExercise'
+import { PROJECTS_EXERCISE_ITEMS } from '@/lib/exercises/content/projectsExercise'
+import { TASKS_EXERCISE_ITEMS } from '@/lib/exercises/content/tasksExercise'
 
-export const EXERCISE_CONTENT: Record<ExerciseType, typeof valuesExerciseItems> = {
-  'higher-power': higherPowerExerciseItems,
-  beliefs: beliefsExerciseItems,
-  values: valuesExerciseItems,
-  people: peopleExerciseItems,
+export const EXERCISE_CONTENT: Record<ExerciseType, typeof VALUES_EXERCISE_ITEMS> = {
+  'higher-power': HIGHER_POWER_EXERCISE_ITEMS,
+  beliefs: BELIEFS_EXERCISE_ITEMS,
+  values: VALUES_EXERCISE_ITEMS,
+  people: PEOPLE_EXERCISE_ITEMS,
   mission: [], // Mission uses free-text, no selection items
-  goals: goalsExerciseItems,
-  projects: projectsExerciseItems,
-  tasks: tasksExerciseItems
+  goals: GOALS_EXERCISE_ITEMS,
+  projects: PROJECTS_EXERCISE_ITEMS,
+  tasks: TASKS_EXERCISE_ITEMS
 }
 
 export const EXERCISE_DEFINITIONS: Record<ExerciseType, ExerciseDefinition> = {
