@@ -283,7 +283,7 @@ export function OntologyPage() {
     setExerciseQueue([type])
   }
 
-  const startPurposeFlow = async () => {
+  const startMissionFlow = async () => {
     if (!user) {
       toast.error('Please sign in to continue')
       return
@@ -292,9 +292,9 @@ export function OntologyPage() {
     try {
       const status = await getExerciseCompletionStatus(user.id)
       const queue: ExerciseType[] = []
-      if (!status.strengths) queue.push('strengths')
-      if (!status.impact) queue.push('impact')
-      queue.push('purpose')
+      if (!status.values) queue.push('values')
+      if (!status.people) queue.push('people')
+      queue.push('mission')
       setExerciseQueue(queue)
     } catch (error) {
       console.error(error)
@@ -308,21 +308,21 @@ export function OntologyPage() {
 
   const synthesizeAndMerge = async (exerciseType: ExerciseType, result: ExerciseResult) => {
     if (!user) return
-    if (exerciseType !== 'values' && exerciseType !== 'purpose') return
+    if (exerciseType !== 'values' && exerciseType !== 'mission') return
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     const token = await getAccessToken()
     if (token) headers.Authorization = `Bearer ${token}`
 
-    let context: { strengths?: string[]; impact?: string[] } | undefined
-    if (exerciseType === 'purpose') {
-      const [strengthsResult, impactResult] = await Promise.all([
-        getLatestExerciseResult(user.id, 'strengths'),
-        getLatestExerciseResult(user.id, 'impact')
+    let context: { values?: string[]; people?: string[] } | undefined
+    if (exerciseType === 'mission') {
+      const [valuesResult, peopleResult] = await Promise.all([
+        getLatestExerciseResult(user.id, 'values'),
+        getLatestExerciseResult(user.id, 'people')
       ])
       context = {
-        strengths: strengthsResult?.selections.map((item) => item.name) ?? [],
-        impact: impactResult?.selections.map((item) => item.name) ?? []
+        values: valuesResult?.selections.map((item) => item.name) ?? [],
+        people: peopleResult?.selections.map((item) => item.name) ?? []
       }
     }
 
@@ -378,7 +378,7 @@ export function OntologyPage() {
       await loadNotes()
     }
 
-    if (exerciseType === 'purpose') {
+    if (exerciseType === 'mission') {
       const existing = executionStack.goalItems.map((item) => item.name)
       const combined = dedupeNames([...names, ...existing])
       if (!goalsNote) return
@@ -1269,7 +1269,7 @@ export function OntologyPage() {
         {executionStack.hierarchy.goals.length === 0 && (
           <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 space-y-3">
             <p className="text-sm text-muted-foreground">No goals yet.</p>
-            <Button variant="outline" size="sm" onClick={startPurposeFlow}>
+            <Button variant="outline" size="sm" onClick={startMissionFlow}>
               <Sparkles className="h-4 w-4 mr-2" />
               Discover your purpose
             </Button>

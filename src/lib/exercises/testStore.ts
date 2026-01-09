@@ -24,10 +24,14 @@ export const testExerciseStore = {
   getCompletionStatus(userId: string): Record<ExerciseType, boolean> {
     const results = resultsByUser.get(userId) ?? []
     return {
+      'higher-power': results.some((item) => item.exerciseType === 'higher-power'),
+      beliefs: results.some((item) => item.exerciseType === 'beliefs'),
       values: results.some((item) => item.exerciseType === 'values'),
-      strengths: results.some((item) => item.exerciseType === 'strengths'),
-      impact: results.some((item) => item.exerciseType === 'impact'),
-      purpose: results.some((item) => item.exerciseType === 'purpose')
+      people: results.some((item) => item.exerciseType === 'people'),
+      mission: results.some((item) => item.exerciseType === 'mission'),
+      goals: results.some((item) => item.exerciseType === 'goals'),
+      projects: results.some((item) => item.exerciseType === 'projects'),
+      tasks: results.some((item) => item.exerciseType === 'tasks')
     }
   },
   update(resultId: string, userId: string, updates: Partial<ExerciseResult>) {

@@ -7,8 +7,8 @@ interface SynthesizeRequest {
   selections: ExerciseSelection[]
   freeText?: string
   context?: {
-    strengths?: string[]
-    impact?: string[]
+    values?: string[]
+    people?: string[]
   }
 }
 
@@ -18,19 +18,19 @@ type SynthesizeResponse =
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null
 
-function buildPurposeFallback(strengths: string[], impact: string[], freeText?: string) {
+function buildMissionFallback(values: string[], people: string[], freeText?: string) {
   const clean = (text: string) => text.replace(/[^a-zA-Z0-9\s]/g, '').trim()
   const shorten = (text: string, words: number) => clean(text).split(/\s+/).slice(0, words).join(' ')
 
-  const strength = strengths[0] ?? 'my strengths'
-  const impactGroup = impact[0] ?? 'people'
+  const value = values[0] ?? 'my values'
+  const peopleGroup = people[0] ?? 'people'
 
-  const first = `Use ${strength} to help ${impactGroup} thrive`
-  const secondSeed = freeText ? shorten(freeText, 10) : `create change for ${impactGroup}`
-  const second = freeText ? `Create ${secondSeed}` : `Create change for ${impactGroup}`
+  const first = `Live ${value} to help ${peopleGroup} thrive`
+  const secondSeed = freeText ? shorten(freeText, 10) : `create change for ${peopleGroup}`
+  const second = freeText ? `Create ${secondSeed}` : `Create change for ${peopleGroup}`
 
   return [
-    { name: first, reasoning: 'Blends your strengths with who you want to serve.' },
+    { name: first, reasoning: 'Blends your values with who matters most to you.' },
     { name: second, reasoning: 'Reflects the change you described in your own words.' }
   ]
 }
@@ -41,7 +41,7 @@ function extractJsonArray(text: string) {
 
   try {
     return JSON.parse(match[0]) as Array<{ name: string; reasoning?: string }>
-  } catch (error) {
+  } catch {
     return null
   }
 }
@@ -73,18 +73,18 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    if (exerciseType !== 'purpose') {
+    if (exerciseType !== 'mission') {
       return NextResponse.json<SynthesizeResponse>({ ok: true, items: [] })
     }
 
-    const strengths = body.context?.strengths ?? []
-    const impact = body.context?.impact ?? []
+    const values = body.context?.values ?? []
+    const people = body.context?.people ?? []
     const freeText = body.freeText ?? ''
 
     if (!openai) {
       return NextResponse.json<SynthesizeResponse>({
         ok: true,
-        items: buildPurposeFallback(strengths, impact, freeText)
+        items: buildMissionFallback(values, people, freeText)
       })
     }
 
@@ -92,13 +92,13 @@ export async function POST(request: NextRequest) {
       'Based on a user\'s self-discovery exercises, generate 2-3 personal mission/goal statements.',
       '',
       `User's Inputs:`,
-      `- Top Strengths: ${strengths.length ? strengths.join(', ') : 'Not provided'}`,
-      `- Who they want to help: ${impact.length ? impact.join(', ') : 'Not provided'}`,
+      `- Core Values: ${values.length ? values.join(', ') : 'Not provided'}`,
+      `- Who matters most to them: ${people.length ? people.join(', ') : 'Not provided'}`,
       `- Change they want to create: ${freeText || 'Not provided'}`,
       '',
       'Generate goal statements that:',
       '1. Are actionable and inspiring',
-      '2. Combine their strengths with who they want to serve',
+      '2. Combine their values with who matters most to them',
       '3. Feel personal (not generic)',
       '4. Are 5-15 words each',
       '',
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     if (!parsed || !parsed.length) {
       return NextResponse.json<SynthesizeResponse>({
         ok: true,
-        items: buildPurposeFallback(strengths, impact, freeText)
+        items: buildMissionFallback(values, people, freeText)
       })
     }
 
@@ -137,9 +137,9 @@ export async function POST(request: NextRequest) {
       }))
 
     return NextResponse.json<SynthesizeResponse>({ ok: true, items })
-  } catch (error) {
+  } catch {
     return NextResponse.json<SynthesizeResponse>(
-      { ok: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      { ok: false, error: 'Unknown error' },
       { status: 500 }
     )
   }

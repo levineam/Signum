@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils'
 import type { ExerciseStep } from '@/types/exercise'
 
 interface FreeTextContext {
-  strengths?: string[]
-  impact?: string[]
+  values?: string[]
+  people?: string[]
 }
 
 interface FreeTextStepProps {
@@ -16,22 +16,22 @@ interface FreeTextStepProps {
 }
 
 export function FreeTextStep({ step, value, onChange, context }: FreeTextStepProps) {
-  const strengths = context?.strengths ?? []
-  const impact = context?.impact ?? []
+  const values = context?.values ?? []
+  const people = context?.people ?? []
 
   return (
     <div className="space-y-4">
-      {(strengths.length > 0 || impact.length > 0) && (
+      {(values.length > 0 || people.length > 0) && (
         <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm">
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Your context
           </div>
           <div className="mt-3 space-y-2">
-            {strengths.length > 0 && (
+            {values.length > 0 && (
               <div>
-                <div className="text-xs font-semibold text-muted-foreground">Strengths</div>
+                <div className="text-xs font-semibold text-muted-foreground">Your values</div>
                 <div className="mt-1 flex flex-wrap gap-2">
-                  {strengths.map((item) => (
+                  {values.map((item) => (
                     <span
                       key={item}
                       className="rounded-full bg-background px-3 py-1 text-xs font-medium text-foreground"
@@ -42,11 +42,11 @@ export function FreeTextStep({ step, value, onChange, context }: FreeTextStepPro
                 </div>
               </div>
             )}
-            {impact.length > 0 && (
+            {people.length > 0 && (
               <div>
-                <div className="text-xs font-semibold text-muted-foreground">Who you want to help</div>
+                <div className="text-xs font-semibold text-muted-foreground">Who matters most</div>
                 <div className="mt-1 flex flex-wrap gap-2">
-                  {impact.map((item) => (
+                  {people.map((item) => (
                     <span
                       key={item}
                       className="rounded-full bg-background px-3 py-1 text-xs font-medium text-foreground"

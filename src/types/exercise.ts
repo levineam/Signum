@@ -1,4 +1,12 @@
-export type ExerciseType = 'values' | 'strengths' | 'impact' | 'purpose'
+export type ExerciseType =
+  | 'higher-power'
+  | 'beliefs'
+  | 'values'
+  | 'people'
+  | 'mission'
+  | 'goals'
+  | 'projects'
+  | 'tasks'
 export type StepType = 'multi-select' | 'ranking' | 'free-text'
 
 export interface SelectionItem {
@@ -23,8 +31,8 @@ export interface ExerciseStep {
 export interface ExerciseDefinition {
   id: ExerciseType
   title: string
-  subtitle: string
-  estimatedDuration: string
+  subtitle?: string
+  estimatedDuration?: string
   steps: ExerciseStep[]
   outputType: 'direct' | 'context' | 'ai-synthesis'
 }

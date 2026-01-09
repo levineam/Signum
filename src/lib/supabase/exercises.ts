@@ -2,10 +2,14 @@ import { supabase, hasPublicSupabase } from '@/lib/supabase'
 import type { ExerciseResult, ExerciseType } from '@/types/exercise'
 
 const EMPTY_COMPLETION: Record<ExerciseType, boolean> = {
+  'higher-power': false,
+  beliefs: false,
   values: false,
-  strengths: false,
-  impact: false,
-  purpose: false
+  people: false,
+  mission: false,
+  goals: false,
+  projects: false,
+  tasks: false
 }
 
 function requireSupabase() {

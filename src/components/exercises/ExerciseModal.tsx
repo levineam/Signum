@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { EXERCISE_CONTENT, EXERCISE_DEFINITIONS } from '@/lib/exercises/definitions'
@@ -43,9 +43,9 @@ export function ExerciseModal({ exerciseType, isOpen, onClose, onComplete }: Exe
   } = useExerciseState(definition)
 
   const [showDiscard, setShowDiscard] = useState(false)
-  const [purposeContext, setPurposeContext] = useState<{ strengths: string[]; impact: string[] }>({
-    strengths: [],
-    impact: []
+  const [missionContext, setMissionContext] = useState<{ values: string[]; people: string[] }>({
+    values: [],
+    people: []
   })
 
   const totalSteps = definition.steps.length
@@ -61,26 +61,26 @@ export function ExerciseModal({ exerciseType, isOpen, onClose, onComplete }: Exe
       return
     }
 
-    if (exerciseType !== 'purpose' || !user) {
-      setPurposeContext({ strengths: [], impact: [] })
+    if (exerciseType !== 'mission' || !user) {
+      setMissionContext({ values: [], people: [] })
       return
     }
 
     let isMounted = true
 
     Promise.all([
-      getLatestExerciseResult(user.id, 'strengths'),
-      getLatestExerciseResult(user.id, 'impact')
+      getLatestExerciseResult(user.id, 'values'),
+      getLatestExerciseResult(user.id, 'people')
     ])
-      .then(([strengthsResult, impactResult]) => {
+      .then(([valuesResult, peopleResult]) => {
         if (!isMounted) return
-        setPurposeContext({
-          strengths: strengthsResult?.selections.map((item) => item.name) ?? [],
-          impact: impactResult?.selections.map((item) => item.name) ?? []
+        setMissionContext({
+          values: valuesResult?.selections.map((item) => item.name) ?? [],
+          people: peopleResult?.selections.map((item) => item.name) ?? []
         })
       })
       .catch((error) => {
-        console.warn('[ExerciseModal] Unable to load purpose context', error)
+        console.warn('[ExerciseModal] Unable to load mission context', error)
       })
 
     return () => {
@@ -168,7 +168,7 @@ export function ExerciseModal({ exerciseType, isOpen, onClose, onComplete }: Exe
           step={currentStep}
           value={currentFreeText}
           onChange={(value) => setFreeTextForStep(currentStep.id, value)}
-          context={exerciseType === 'purpose' ? purposeContext : undefined}
+          context={exerciseType === 'mission' ? missionContext : undefined}
         />
       )
     }
@@ -181,12 +181,7 @@ export function ExerciseModal({ exerciseType, isOpen, onClose, onComplete }: Exe
       <Dialog open={isOpen} onOpenChange={(open) => (!open ? handleRequestClose() : null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Sparkles className="h-4 w-4" />
-              {definition.estimatedDuration}
-            </div>
             <DialogTitle className="text-2xl">{definition.title}</DialogTitle>
-            <DialogDescription>{definition.subtitle}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">

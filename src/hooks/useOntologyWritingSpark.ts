@@ -3,8 +3,9 @@ import { hasPublicSupabase } from '@/lib/supabase'
 import { getPinnedNotes } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
 import { analyzeOntologyForWritingSpark, type OntologyWritingSparkInput } from '@/lib/ontology/writingSparkAnalysis'
-import { getExerciseCompletionStatus, getLatestExerciseResult } from '@/lib/exercises/exerciseService'
+import { getLatestExerciseResult } from '@/lib/exercises/exerciseService'
 import type { ExerciseType } from '@/types/exercise'
+import type { OntologyCategory } from '@/types/note'
 
 type ExerciseStatusDetail = {
   completed: boolean
@@ -20,65 +21,83 @@ type WritingSparkState = {
   isRejuvenateMode: boolean
 }
 
-const SESSION_KEY_PREFIX = 'signum-writing-spark-v3-'
+const SESSION_KEY_PREFIX = 'signum-writing-spark-v4-'
 
 const REJUVENATE_THRESHOLD_DAYS = 90
 
-const EXERCISE_ORDER: ExerciseType[] = ['values', 'strengths', 'impact', 'purpose']
+// Exercise types now match ontology categories 1:1
+const EXERCISE_TYPES: ExerciseType[] = [
+  'higher-power',
+  'beliefs',
+  'values',
+  'people',
+  'mission',
+  'goals',
+  'projects',
+  'tasks'
+]
 
 const DEFAULT_EXERCISE_STATUS: Record<ExerciseType, ExerciseStatusDetail> = {
+  'higher-power': { completed: false },
+  beliefs: { completed: false },
   values: { completed: false },
-  strengths: { completed: false },
-  impact: { completed: false },
-  purpose: { completed: false }
+  people: { completed: false },
+  mission: { completed: false },
+  goals: { completed: false },
+  projects: { completed: false },
+  tasks: { completed: false }
 }
 
 const FALLBACK: WritingSparkState = {
   text: "What's been feeling important to you lately? Sometimes our priorities shift in ways we don't fully notice until we pause to reflect.",
-  input: { focus: 'values', signal: 'empty' },
+  input: { focus: 'higher-power', signal: 'empty' },
   exerciseStatus: DEFAULT_EXERCISE_STATUS,
   allExercisesCompleted: false,
-  suggestedExercise: 'values',
+  suggestedExercise: 'higher-power',
   isRejuvenateMode: false
 }
 
 /**
- * Compute which exercise to suggest next:
- * - First uncompleted exercise in order (values → strengths → impact → purpose)
- * - OR stalest exercise if all completed and any >90 days old
- * - OR null if all fresh
+ * Map ontology category to exercise type.
+ * They now match 1:1.
+ */
+function ontologyCategoryToExerciseType(category: OntologyCategory): ExerciseType {
+  return category as ExerciseType
+}
+
+/**
+ * Compute which exercise to suggest based on ontology focus.
+ * The exercise should match what the ontology analysis determined needs attention.
+ *
+ * - If the focused exercise is not completed, suggest it (first time mode)
+ * - If the focused exercise is completed but stale (>90 days), suggest it (rejuvenate mode)
+ * - If the focused exercise is fresh, still suggest it (they can redo if they want)
  */
 function computeExerciseSuggestion(
+  focus: OntologyCategory,
   status: Record<ExerciseType, ExerciseStatusDetail>
-): { suggestedExercise: ExerciseType | null; isRejuvenateMode: boolean } {
-  // Find first uncompleted
-  for (const type of EXERCISE_ORDER) {
-    if (!status[type].completed) {
-      return { suggestedExercise: type, isRejuvenateMode: false }
-    }
+): { suggestedExercise: ExerciseType; isRejuvenateMode: boolean } {
+  const exerciseType = ontologyCategoryToExerciseType(focus)
+  const exerciseStatus = status[exerciseType]
+
+  // If not completed, it's first time
+  if (!exerciseStatus?.completed) {
+    return { suggestedExercise: exerciseType, isRejuvenateMode: false }
   }
 
-  // All completed - check for staleness
+  // If completed, check staleness
   const now = Date.now()
-  let stalestType: ExerciseType | null = null
-  let stalestAge = 0
-
-  for (const type of EXERCISE_ORDER) {
-    const completedAt = status[type].lastCompletedAt
-    if (!completedAt) continue
-    const age = now - Date.parse(completedAt)
-    if (age > stalestAge) {
-      stalestAge = age
-      stalestType = type
+  const completedAt = exerciseStatus.lastCompletedAt
+  if (completedAt) {
+    const ageMs = now - Date.parse(completedAt)
+    const thresholdMs = REJUVENATE_THRESHOLD_DAYS * 24 * 60 * 60 * 1000
+    if (ageMs > thresholdMs) {
+      return { suggestedExercise: exerciseType, isRejuvenateMode: true }
     }
   }
 
-  const thresholdMs = REJUVENATE_THRESHOLD_DAYS * 24 * 60 * 60 * 1000
-  if (stalestAge > thresholdMs && stalestType) {
-    return { suggestedExercise: stalestType, isRejuvenateMode: true }
-  }
-
-  return { suggestedExercise: null, isRejuvenateMode: false }
+  // Fresh completion - still suggest the exercise (user can choose to redo)
+  return { suggestedExercise: exerciseType, isRejuvenateMode: false }
 }
 
 export function useOntologyWritingSpark() {
@@ -123,32 +142,41 @@ export function useOntologyWritingSpark() {
           }
         }
 
-        // Fetch exercise status (works in both test and production mode)
-        let exerciseStatus = DEFAULT_EXERCISE_STATUS
+        // Fetch exercise status for all exercise types
+        let exerciseStatus = { ...DEFAULT_EXERCISE_STATUS }
         try {
-          const completionStatus = await getExerciseCompletionStatus(user.id)
           const statusWithDates: Record<ExerciseType, ExerciseStatusDetail> = { ...DEFAULT_EXERCISE_STATUS }
 
-          for (const type of EXERCISE_ORDER) {
-            if (completionStatus[type]) {
-              const latest = await getLatestExerciseResult(user.id, type)
-              statusWithDates[type] = {
-                completed: true,
-                lastCompletedAt: latest?.completedAt
+          // Fetch status for each exercise type
+          await Promise.all(
+            EXERCISE_TYPES.map(async (type) => {
+              try {
+                const latest = await getLatestExerciseResult(user.id, type)
+                if (latest) {
+                  statusWithDates[type] = {
+                    completed: true,
+                    lastCompletedAt: latest.completedAt
+                  }
+                }
+              } catch {
+                // Individual fetch failed, keep default
               }
-            }
-          }
+            })
+          )
           exerciseStatus = statusWithDates
         } catch (err) {
           console.warn('[useOntologyWritingSpark] Failed to fetch exercise status:', err)
         }
 
-        const allExercisesCompleted = EXERCISE_ORDER.every((type) => exerciseStatus[type].completed)
-        const { suggestedExercise, isRejuvenateMode } = computeExerciseSuggestion(exerciseStatus)
+        const allExercisesCompleted = EXERCISE_TYPES.every((type) => exerciseStatus[type].completed)
 
         // If Supabase isn't available, keep a high-quality fallback (no slow timeouts)
         if (!canUseSupabase) {
           if (!cancelled) {
+            const { suggestedExercise, isRejuvenateMode } = computeExerciseSuggestion(
+              FALLBACK.input.focus,
+              exerciseStatus
+            )
             const next: WritingSparkState = {
               ...FALLBACK,
               exerciseStatus,
@@ -164,6 +192,12 @@ export function useOntologyWritingSpark() {
 
         const pinned = await getPinnedNotes(user.id)
         const input = analyzeOntologyForWritingSpark(pinned)
+
+        // Exercise suggestion is now based on ontology analysis focus
+        const { suggestedExercise, isRejuvenateMode } = computeExerciseSuggestion(
+          input.focus,
+          exerciseStatus
+        )
 
         const res = await fetch('/api/ontology/writing-spark', {
           method: 'POST',
@@ -217,5 +251,3 @@ export function useOntologyWritingSpark() {
 
   return { ...state, loading, clearCache }
 }
-
-

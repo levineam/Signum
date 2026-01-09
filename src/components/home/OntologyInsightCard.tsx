@@ -1,12 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { RefreshCw, Sparkles, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useOntologyWritingSpark } from '@/hooks/useOntologyWritingSpark'
 import { ExerciseModal } from '@/components/exercises/ExerciseModal'
-import type { ExerciseType } from '@/types/exercise'
 
 /**
  * OntologyInsightCard
@@ -31,26 +30,6 @@ const ONTOLOGY_BLURB =
 
 const DISMISS_KEY = 'signum-ontology-insight-dismissed-session'
 
-// Warm, inviting copy for exercise buttons
-const EXERCISE_COPY: Record<ExerciseType, { firstTime: string; rejuvenate: string }> = {
-  values: {
-    firstTime: 'Discover what matters most',
-    rejuvenate: 'Revisit your values'
-  },
-  strengths: {
-    firstTime: 'Explore your natural strengths',
-    rejuvenate: 'Check in with your strengths'
-  },
-  impact: {
-    firstTime: 'Clarify who you want to help',
-    rejuvenate: 'Reconnect with your impact'
-  },
-  purpose: {
-    firstTime: 'Shape your sense of purpose',
-    rejuvenate: 'Refresh your purpose'
-  }
-}
-
 export function OntologyInsightCard() {
   const [dismissed, setDismissed] = useState(false)
   const [exerciseModalOpen, setExerciseModalOpen] = useState(false)
@@ -58,7 +37,6 @@ export function OntologyInsightCard() {
     text,
     loading,
     suggestedExercise,
-    isRejuvenateMode,
     clearCache
   } = useOntologyWritingSpark()
 
@@ -87,12 +65,6 @@ export function OntologyInsightCard() {
     clearCache()
     setExerciseModalOpen(false)
   }
-
-  const exerciseCopy = suggestedExercise
-    ? (isRejuvenateMode
-        ? EXERCISE_COPY[suggestedExercise].rejuvenate
-        : EXERCISE_COPY[suggestedExercise].firstTime)
-    : null
 
   return (
     <>
@@ -151,24 +123,25 @@ export function OntologyInsightCard() {
         </div>
 
         {/* Exercise button - shown alongside prompt when an exercise is suggested */}
-        {suggestedExercise && exerciseCopy && (
+        {suggestedExercise && (
           <div className="mt-4 pt-4 border-t border-foreground/10">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-center gap-2"
-              onClick={(e) => {
-                e.stopPropagation()
-                setExerciseModalOpen(true)
-              }}
-            >
-              {isRejuvenateMode ? (
-                <RefreshCw className="h-4 w-4" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              {exerciseCopy}
-            </Button>
+            <div className="flex items-end justify-between gap-4">
+              <p className="text-xs text-foreground/60 leading-relaxed flex-1">
+                Want to improve these suggestions? Gain deeper insight into yourself
+                while building your ontology with the following exercise.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setExerciseModalOpen(true)
+                }}
+              >
+                Ontology Exercise
+              </Button>
+            </div>
           </div>
         )}
       </Card>

@@ -18,10 +18,14 @@ type CompletionResponse =
   | { ok: false; error: string }
 
 const EMPTY_COMPLETION: Record<ExerciseType, boolean> = {
+  'higher-power': false,
+  beliefs: false,
   values: false,
-  strengths: false,
-  impact: false,
-  purpose: false
+  people: false,
+  mission: false,
+  goals: false,
+  projects: false,
+  tasks: false
 }
 
 function getSupabaseClient(token?: string | null) {
