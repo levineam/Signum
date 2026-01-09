@@ -6,7 +6,7 @@ import type { ExerciseSelection, ExerciseStep, SelectionItem } from '@/types/exe
 
 interface MultiSelectStepProps {
   step: ExerciseStep
-  options: SelectionItem[]
+  options: ReadonlyArray<SelectionItem>
   selections: ExerciseSelection[]
   onChange: (next: ExerciseSelection[]) => void
 }

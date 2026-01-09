@@ -125,6 +125,7 @@ export function useOntologyWritingSpark() {
 
     async function run() {
       try {
+        if (!cancelled) setLoading(true)
         // If no user, skip caching and use fallback
         if (!sessionKey || !user?.id) {
           if (!cancelled) setLoading(false)
@@ -132,13 +133,22 @@ export function useOntologyWritingSpark() {
         }
 
         // Session cache first (fast, avoids repeat AI calls)
-        const cached = sessionStorage.getItem(sessionKey)
+        let cached: string | null = null
+        try {
+          cached = sessionStorage.getItem(sessionKey)
+        } catch {
+          // ignore
+        }
         if (cached) {
-          const parsed = JSON.parse(cached) as WritingSparkState
-          if (!cancelled && parsed?.text) {
-            setState(parsed)
-            setLoading(false)
-            return
+          try {
+            const parsed = JSON.parse(cached) as WritingSparkState
+            if (!cancelled && parsed?.text) {
+              setState(parsed)
+              setLoading(false)
+              return
+            }
+          } catch {
+            // ignore
           }
         }
 
@@ -216,7 +226,11 @@ export function useOntologyWritingSpark() {
               isRejuvenateMode
             }
             setState(next)
-            sessionStorage.setItem(sessionKey, JSON.stringify(next))
+            try {
+              sessionStorage.setItem(sessionKey, JSON.stringify(next))
+            } catch {
+              // ignore
+            }
             setLoading(false)
           }
           return
@@ -235,7 +249,11 @@ export function useOntologyWritingSpark() {
 
         if (!cancelled) {
           setState(next)
-          sessionStorage.setItem(sessionKey, JSON.stringify(next))
+          try {
+            sessionStorage.setItem(sessionKey, JSON.stringify(next))
+          } catch {
+            // ignore
+          }
           setLoading(false)
         }
       } catch {
@@ -247,7 +265,7 @@ export function useOntologyWritingSpark() {
     return () => {
       cancelled = true
     }
-  }, [canUseSupabase, sessionKey, user])
+  }, [canUseSupabase, sessionKey, user?.id])
 
   return { ...state, loading, clearCache }
 }

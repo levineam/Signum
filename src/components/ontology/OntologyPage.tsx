@@ -289,6 +289,11 @@ export function OntologyPage() {
       return
     }
 
+    if (!hasPublicSupabase()) {
+      toast.error('Supabase is not configured.')
+      return
+    }
+
     try {
       const status = await getExerciseCompletionStatus(user.id)
       const queue: ExerciseType[] = []
@@ -310,19 +315,24 @@ export function OntologyPage() {
     if (!user) return
     if (exerciseType !== 'values' && exerciseType !== 'mission') return
 
+    const canUseSupabase = hasPublicSupabase()
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     const token = await getAccessToken()
     if (token) headers.Authorization = `Bearer ${token}`
 
     let context: { values?: string[]; people?: string[] } | undefined
     if (exerciseType === 'mission') {
-      const [valuesResult, peopleResult] = await Promise.all([
-        getLatestExerciseResult(user.id, 'values'),
-        getLatestExerciseResult(user.id, 'people')
-      ])
-      context = {
-        values: valuesResult?.selections.map((item) => item.name) ?? [],
-        people: peopleResult?.selections.map((item) => item.name) ?? []
+      if (canUseSupabase) {
+        const [valuesResult, peopleResult] = await Promise.all([
+          getLatestExerciseResult(user.id, 'values'),
+          getLatestExerciseResult(user.id, 'people')
+        ])
+        context = {
+          values: valuesResult?.selections.map((item) => item.name) ?? [],
+          people: peopleResult?.selections.map((item) => item.name) ?? []
+        }
+      } else {
+        context = { values: [], people: [] }
       }
     }
 
@@ -368,7 +378,7 @@ export function OntologyPage() {
         user.id
       )
 
-      if (result.id) {
+      if (canUseSupabase && result.id) {
         await updateExerciseResultGeneratedItems(
           result.id,
           user.id,
@@ -386,7 +396,7 @@ export function OntologyPage() {
       const merged = mergeItems(goalsNote, combined)
       await persistExecutionItems('goals', merged)
 
-      if (result.id) {
+      if (canUseSupabase && result.id) {
         await updateExerciseResultGeneratedItems(
           result.id,
           user.id,

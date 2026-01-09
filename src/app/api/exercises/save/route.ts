@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { hasPublicSupabase } from '@/lib/supabase'
 import type { ExerciseResult, ExerciseSelection, ExerciseType } from '@/types/exercise'
 
 interface SaveExerciseRequest {
@@ -43,9 +44,10 @@ function getSupabaseClient(token?: string | null) {
 
 async function requireUser(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
-  const token = authHeader?.replace('Bearer ', '')
+  const [scheme, rawToken] = authHeader?.trim().split(/\s+/) ?? []
+  const token = rawToken?.trim()
 
-  if (!token) {
+  if (!scheme || scheme.toLowerCase() !== 'bearer' || !token) {
     throw new Error('AUTH_REQUIRED')
   }
 
@@ -60,6 +62,10 @@ async function requireUser(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!hasPublicSupabase()) {
+    return new Response('Supabase not configured', { status: 503 })
+  }
+
   try {
     const { supabase, user } = await requireUser(request)
     const body = (await request.json()) as SaveExerciseRequest
@@ -133,6 +139,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  if (!hasPublicSupabase()) {
+    return new Response('Supabase not configured', { status: 503 })
+  }
+
   try {
     const { supabase, user } = await requireUser(request)
 

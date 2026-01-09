@@ -1,6 +1,6 @@
 import type { SelectionItem } from '@/types/exercise'
 
-export const tasksExerciseItems: SelectionItem[] = [
+export const tasksExerciseItems: ReadonlyArray<SelectionItem> = Object.freeze([
   {
     id: 'urgent-important',
     name: 'Urgent & Important',
@@ -21,6 +21,13 @@ export const tasksExerciseItems: SelectionItem[] = [
     category: 'Priority Matrix',
     description: 'Interruptions, some calls, some emails.',
     clarifyingQuestion: 'What could you delegate or batch?'
+  },
+  {
+    id: 'not-urgent-not-important',
+    name: 'Not Urgent & Not Important',
+    category: 'Priority Matrix',
+    description: 'Low-value distractions or time wasters.',
+    clarifyingQuestion: 'What could you drop or minimize?'
   },
   {
     id: 'deep-work',
@@ -113,4 +120,4 @@ export const tasksExerciseItems: SelectionItem[] = [
     description: 'Things blocked by others.',
     clarifyingQuestion: 'What are you waiting on from someone else?'
   }
-]
+])

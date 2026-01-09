@@ -1,6 +1,6 @@
 import type { SelectionItem } from '@/types/exercise'
 
-export const goalsExerciseItems: SelectionItem[] = [
+export const goalsExerciseItems: ReadonlyArray<SelectionItem> = Object.freeze([
   {
     id: 'career-growth',
     name: 'Career Growth',
@@ -127,4 +127,4 @@ export const goalsExerciseItems: SelectionItem[] = [
     description: 'Creating your ideal space.',
     clarifyingQuestion: 'What does your ideal living space feel like?'
   }
-]
+])

@@ -53,6 +53,7 @@ export function OntologyInsightCard() {
   if (dismissed) return null
 
   const dispatchSeed = () => {
+    if (loading) return
     window.dispatchEvent(
       new CustomEvent('seed-journal-entry', {
         detail: { text },
@@ -115,7 +116,7 @@ export function OntologyInsightCard() {
               dispatchSeed()
             }
           }}
-          aria-label={`Use prompt: ${text}`}
+          aria-label="Use this prompt"
         >
           <p className="text-base leading-relaxed pr-8 text-foreground">
             {loading ? '…' : text}

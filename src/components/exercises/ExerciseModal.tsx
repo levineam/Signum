@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { EXERCISE_CONTENT, EXERCISE_DEFINITIONS } from '@/lib/exercises/definitions'
+import { hasPublicSupabase } from '@/lib/supabase'
 import { saveExerciseResult, getLatestExerciseResult } from '@/lib/exercises/exerciseService'
 import type { ExerciseResult, ExerciseType } from '@/types/exercise'
 import { useExerciseState } from '@/hooks/useExerciseState'
@@ -67,6 +68,15 @@ export function ExerciseModal({ exerciseType, isOpen, onClose, onComplete }: Exe
     }
 
     let isMounted = true
+
+    if (!hasPublicSupabase()) {
+      if (isMounted) {
+        setMissionContext({ values: [], people: [] })
+      }
+      return () => {
+        isMounted = false
+      }
+    }
 
     Promise.all([
       getLatestExerciseResult(user.id, 'values'),

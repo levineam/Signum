@@ -1,6 +1,6 @@
 import type { SelectionItem } from '@/types/exercise'
 
-export const higherPowerExerciseItems: SelectionItem[] = [
+export const higherPowerExerciseItems: ReadonlyArray<SelectionItem> = Object.freeze([
   {
     id: 'nature',
     name: 'Nature',
@@ -113,4 +113,4 @@ export const higherPowerExerciseItems: SelectionItem[] = [
     description: 'The quiet beneath the noise.',
     clarifyingQuestion: 'What do you find in silence?'
   }
-]
+])

@@ -52,7 +52,7 @@ export async function saveExerciseResult(result: Omit<ExerciseResult, 'id'>): Pr
       free_text: result.freeText ?? null,
       completed_at: result.completedAt,
       version: result.version,
-      generated_items: result.generatedItems ?? []
+      generated_items: result.generatedItems ?? null
     })
     .select('*')
     .single()
@@ -67,17 +67,22 @@ export async function saveExerciseResult(result: Omit<ExerciseResult, 'id'>): Pr
 export async function updateExerciseResult(
   id: string,
   userId: string,
-  updates: Partial<Pick<ExerciseResult, 'generatedItems' | 'freeText' | 'selections'>>
+  updates: Partial<{
+    generatedItems: ExerciseResult['generatedItems'] | null
+    freeText: string | null
+    selections: ExerciseResult['selections'] | null
+  }>
 ): Promise<ExerciseResult> {
   requireSupabase()
 
+  const patch: Record<string, unknown> = {}
+  if ('generatedItems' in updates) patch.generated_items = updates.generatedItems
+  if ('freeText' in updates) patch.free_text = updates.freeText
+  if ('selections' in updates) patch.selections = updates.selections
+
   const { data, error } = await supabase
     .from('exercise_results')
-    .update({
-      generated_items: updates.generatedItems ?? undefined,
-      free_text: updates.freeText ?? undefined,
-      selections: updates.selections ?? undefined
-    })
+    .update(patch)
     .eq('id', id)
     .eq('user_id', userId)
     .select('*')

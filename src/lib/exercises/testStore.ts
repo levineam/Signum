@@ -17,9 +17,18 @@ export const testExerciseStore = {
   },
   getLatest(userId: string, type: ExerciseType): ExerciseResult | null {
     const results = resultsByUser.get(userId) ?? []
-    const filtered = results.filter((item) => item.exerciseType === type)
-    if (!filtered.length) return null
-    return filtered.sort((a, b) => (a.completedAt < b.completedAt ? 1 : -1))[0] ?? null
+    let best: ExerciseResult | null = null
+    let bestTs = -Infinity
+    for (const item of results) {
+      if (item.exerciseType !== type) continue
+      const ts = Date.parse(item.completedAt)
+      if (!Number.isFinite(ts)) continue
+      if (ts > bestTs) {
+        best = item
+        bestTs = ts
+      }
+    }
+    return best
   },
   getCompletionStatus(userId: string): Record<ExerciseType, boolean> {
     const results = resultsByUser.get(userId) ?? []
@@ -34,7 +43,11 @@ export const testExerciseStore = {
       tasks: results.some((item) => item.exerciseType === 'tasks')
     }
   },
-  update(resultId: string, userId: string, updates: Partial<ExerciseResult>) {
+  update(
+    resultId: string,
+    userId: string,
+    updates: Partial<Pick<ExerciseResult, 'selections' | 'freeText' | 'generatedItems' | 'completedAt'>>
+  ) {
     const results = resultsByUser.get(userId) ?? []
     const next = results.map((item) => (item.id === resultId ? { ...item, ...updates } : item))
     resultsByUser.set(userId, next)
