@@ -53,8 +53,8 @@ export function ExpandableOntologyRow({ note, isExpanded, onToggle }: Expandable
               <h2 className="text-lg font-semibold mb-3">{title}</h2>
               {items.length > 0 && (
                 <ul className="space-y-1 text-sm text-muted-foreground">
-                  {items.map((item) => (
-                    <li key={item.name}>• {item.name}</li>
+                  {items.map((item, index) => (
+                    <li key={`${item.name}-${index}`}>• {item.name}</li>
                   ))}
                 </ul>
               )}
@@ -107,16 +107,16 @@ export function ExpandableOntologyRow({ note, isExpanded, onToggle }: Expandable
               const itemHeadingId = `${category}-${note.id}-item-${itemSlug || 'item'}-${index}-heading`
 
               return (
-                <div key={item.name} className="space-y-3">
+                <div key={`${item.name}-${index}`} className="space-y-3">
                   <h4 id={itemHeadingId} className="text-base font-semibold">
                     {item.name}
                   </h4>
                   <div className="space-y-2">
                     {item.excerpts.map((excerpt, idx) => (
                       <blockquote
-                        key={idx}
-                        className="border-l-4 border-muted pl-4 py-2 text-sm space-y-1"
-                      >
+                      key={excerpt.noteId}
+                      className="border-l-4 border-muted pl-4 py-2 text-sm space-y-1"
+                    >
                         <p className="text-foreground italic">&ldquo;{excerpt.excerpt}&rdquo;</p>
                         <cite className="text-xs text-muted-foreground not-italic">
                           {excerpt.noteTitle}
