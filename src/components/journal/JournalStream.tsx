@@ -13,7 +13,7 @@ import { YouTubeTranscriptDialog } from '@/components/journal/YouTubeTranscriptD
 import { Note } from '@/types/note'
 import { createLink, getOutgoingLinks } from '@/lib/supabase/notes'
 import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata } from '@/utils/textToLink'
-import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '@/lib/notes'
+import { getNotes, createNote, updateNote as updateNoteInDb } from '@/lib/notes'
 import { hasPublicSupabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocalNotes } from '@/contexts/LocalNotesContext'
@@ -87,6 +87,11 @@ function isContentEmpty(html: string): boolean {
   return text.trim() === ''
 }
 
+// Extracted for testing and clarity: selects only journal-entry notes.
+export function filterJournalEntries(allNotes: Note[]): Note[] {
+  return allNotes.filter(note => note.noteType === 'journal-entry')
+}
+
 interface JournalStreamProps {
   isGuest?: boolean
 }
@@ -98,9 +103,11 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const isDOMPurifyReady = useDOMPurifyReady()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const taskDetectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const saveErrorNotifiedRef = useRef(false)
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [currentEditingEntry, setCurrentEditingEntry] = useState<string | null>(null)
@@ -205,6 +212,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       try {
         const today = getLocalDateString() // Use local date instead of UTC
         console.log('[JournalStream] Today\'s date:', today)
+        setSaveError(null)
+        saveErrorNotifiedRef.current = false
 
         // Local-only mode: do not attempt Supabase reads/writes.
         if (!hasPublicSupabase()) {
@@ -231,27 +240,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         ])
         console.log('[JournalStream] Fetched notes:', allNotes.length)
 
-        // Clean up empty journal entries older than 24 hours (Issue #10, #67)
-        const now = new Date()
-        const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-        const emptyJournalEntries = allNotes.filter(note =>
-          note.noteType === 'journal-entry' &&
-          isContentEmpty(note.content) &&
-          new Date(note.createdAt) < oneDayAgo
-        )
-
-        if (emptyJournalEntries.length > 0) {
-          console.log(`[JournalStream] Cleaning up ${emptyJournalEntries.length} empty journal entries older than 24 hours`)
-          await Promise.all(
-            emptyJournalEntries.map(note => deleteNote(note.id, user.id))
-          )
-        }
-
-        // Filter to journal entries only (excluding the ones we just deleted)
-        const journalNotes = allNotes.filter(note =>
-          note.noteType === 'journal-entry' &&
-          !emptyJournalEntries.some(empty => empty.id === note.id)
-        )
+        // Note cleanup removed (See docs/root_cause_analysis.md for 2025-12-11 incident)
+        // Simply select journal entries; do not delete any on the client.
+        const journalNotes = filterJournalEntries(allNotes)
 
         // Convert Note format to JournalEntry format
         const journalEntriesWithDuplicates: JournalEntry[] = journalNotes.map(note => {
@@ -334,6 +325,11 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               timeoutId = null
             }
             console.error('[JournalStream] Failed to create today\'s entry, using local fallback:', creationError)
+            setSaveError('We could not save today\'s entry to the cloud. You are editing a local copy; please retry when your connection improves.')
+            if (!saveErrorNotifiedRef.current) {
+              toast.error('Unable to save today\'s entry. Working locally for now.')
+              saveErrorNotifiedRef.current = true
+            }
             initialEntries = [createLocalEntry(today), ...journalEntries]
           }
         }
@@ -504,8 +500,15 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         try {
           // Update the note in Supabase
           await updateNoteInDb(entryId, { content: newContent }, user.id)
+          setSaveError(null)
+          saveErrorNotifiedRef.current = false
         } catch (error) {
           console.error('Error auto-saving journal entry:', error)
+          setSaveError('Autosave failed. Your recent edits may not be synced to the cloud.')
+          if (!saveErrorNotifiedRef.current) {
+            toast.error('Autosave failed. Changes might be local only.')
+            saveErrorNotifiedRef.current = true
+          }
         }
       }
     }, 2000)
@@ -810,8 +813,19 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
         if (user) {
           updateNoteInDb(entryId, { content: updatedContent }, user.id)
-            .then(() => console.log('💾 Persisted link to Supabase'))
-            .catch(error => console.error('Error persisting link to Supabase:', error))
+            .then(() => {
+              console.log('💾 Persisted link to Supabase')
+              setSaveError(null)
+              saveErrorNotifiedRef.current = false
+            })
+            .catch(error => {
+              console.error('Error persisting link to Supabase:', error)
+              setSaveError('We could not sync this link to the cloud. It will stay local until the next successful save.')
+              if (!saveErrorNotifiedRef.current) {
+                toast.error('Link save failed. Changes may be local only.')
+                saveErrorNotifiedRef.current = true
+              }
+            })
         }
 
         setCreatingLink(false)
@@ -895,6 +909,18 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             const currentEntry = entries.find(e => e.id === capturedEntryId)
             if (currentEntry) {
               void updateNoteInDb(capturedEntryId, { content: updatedContent }, user.id)
+                .then(() => {
+                  setSaveError(null)
+                  saveErrorNotifiedRef.current = false
+                })
+                .catch(error => {
+                  console.error('Error persisting linked answer to Supabase:', error)
+                  setSaveError('We could not sync the linked answer to the cloud. It will stay local until the next successful save.')
+                  if (!saveErrorNotifiedRef.current) {
+                    toast.error('Save failed. Your link may be local only until sync succeeds.')
+                    saveErrorNotifiedRef.current = true
+                  }
+                })
             }
           }
 
@@ -1264,8 +1290,19 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         } else if (user) {
           // Authenticated mode: persist to Supabase
           updateNoteInDb(entryId, { content: finalContent }, user.id)
-            .then(() => console.log('💾 Persisted helper insertion to Supabase'))
-            .catch(error => console.error('Error persisting helper insertion:', error))
+            .then(() => {
+              console.log('💾 Persisted helper insertion to Supabase')
+              setSaveError(null)
+              saveErrorNotifiedRef.current = false
+            })
+            .catch(error => {
+              console.error('Error persisting helper insertion:', error)
+              setSaveError('We could not sync the helper text to the cloud. Keeping it local until sync succeeds.')
+              if (!saveErrorNotifiedRef.current) {
+                toast.error('Save failed. Helper text may be local only until sync succeeds.')
+                saveErrorNotifiedRef.current = true
+              }
+            })
         }
 
         setCreatingLink(false)
@@ -1328,6 +1365,11 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             </div>
           </Card>
         ) : null}
+        {saveError && (
+          <div className="px-3 py-2 rounded-md border border-destructive/30 bg-destructive/10 text-destructive text-sm">
+            {saveError}
+          </div>
+        )}
         {entries.map((entry) => {
           const isEditingThis = editingEntryId === entry.id
           const isTodayEntry = isToday(entry.date)
@@ -1336,11 +1378,9 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
             <Card
               key={entry.id}
               data-entry-id={entry.id}
-              className={`py-0 bg-card transition-all ${
-                isTodayEntry ? 'border-2 border-primary/20' : ''
-              } ${
-                isEditingThis ? 'ring-2 ring-primary/30' : ''
-              }`}
+              className={`py-0 bg-card transition-all ${isTodayEntry ? 'border-2 border-primary/20' : ''
+                } ${isEditingThis ? 'ring-2 ring-primary/30' : ''
+                }`}
             >
               {/* Header Section */}
               <div className="flex items-center justify-between px-3 md:px-2 py-3 md:py-2">
@@ -1459,24 +1499,24 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                             const target = e.target as HTMLElement
                             const linkElement = target.closest('a[data-note-id]') as HTMLElement
 
-                          console.log('🖱️ Read-only click:', {
-                            targetTag: target.tagName,
-                            linkElement: !!linkElement,
-                            noteId: linkElement?.getAttribute('data-note-id')
-                          })
+                            console.log('🖱️ Read-only click:', {
+                              targetTag: target.tagName,
+                              linkElement: !!linkElement,
+                              noteId: linkElement?.getAttribute('data-note-id')
+                            })
 
-                          if (linkElement) {
-                            console.log('✅ Valid link click in read-only mode')
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const noteId = linkElement.getAttribute('data-note-id')
-                            if (noteId) {
-                              console.log('📱 Opening note viewer for:', noteId)
-                              handleLinkClick(noteId)
+                            if (linkElement) {
+                              console.log('✅ Valid link click in read-only mode')
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const noteId = linkElement.getAttribute('data-note-id')
+                              if (noteId) {
+                                console.log('📱 Opening note viewer for:', noteId)
+                                handleLinkClick(noteId)
+                              }
                             }
-                          }
-                        }}
-                      />
+                          }}
+                        />
                       ) : (
                         <div className="text-muted-foreground px-2">Loading content...</div>
                       )
