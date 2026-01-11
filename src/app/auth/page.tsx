@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { AuthForms } from '@/components/auth/AuthForms'
 
@@ -14,6 +14,16 @@ export default function AuthPage() {
   })
   const { user, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Get redirect param, validate it's a relative path (security: prevent open redirect)
+  const getRedirectUrl = () => {
+    const redirect = searchParams.get('redirect')
+    if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+      return redirect
+    }
+    return '/'
+  }
 
   useEffect(() => {
     // Mark user as having visited the auth page
@@ -22,9 +32,10 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push('/')
+      router.push(getRedirectUrl())
     }
-  }, [user, loading, router])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading, router, searchParams])
 
   if (loading) {
     return (

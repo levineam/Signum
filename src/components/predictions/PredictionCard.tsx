@@ -3,10 +3,12 @@
 import { Prediction } from '@/types/prediction'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { PositionButton } from './PositionButton'
 import { ResolutionPanel } from './ResolutionPanel'
 import { format, formatDistanceToNow, isPast } from 'date-fns'
-import { Calendar, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { Calendar, CheckCircle2, XCircle, Clock, Share2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface PredictionCardProps {
   prediction: Prediction
@@ -28,6 +30,17 @@ export function PredictionCard({ prediction, currentUserId, onUpdate }: Predicti
   const agreePercentage = totalPositions > 0 ? Math.round((agreeCount / totalPositions) * 100) : 50
   const disagreePercentage = totalPositions > 0 ? 100 - agreePercentage : 50
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/predictions/${prediction.id}`
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success('Link copied to clipboard!')
+    } catch {
+      // Fallback for browsers that don't support clipboard API
+      toast.error('Failed to copy link')
+    }
+  }
+
   return (
     <Card className={isResolved ? 'opacity-80' : ''}>
       <CardHeader className="pb-2">
@@ -35,24 +48,34 @@ export function PredictionCard({ prediction, currentUserId, onUpdate }: Predicti
           <div className="flex-1">
             <p className="text-lg font-medium leading-snug">{prediction.statement}</p>
           </div>
-          {isResolved && (
-            <Badge
-              variant={prediction.resolution ? 'default' : 'secondary'}
-              className="shrink-0"
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleShare}
+              title="Share prediction"
             >
-              {prediction.resolution ? (
-                <>
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  True
-                </>
-              ) : (
-                <>
-                  <XCircle className="h-3 w-3 mr-1" />
-                  False
-                </>
-              )}
-            </Badge>
-          )}
+              <Share2 className="h-4 w-4" />
+            </Button>
+            {isResolved && (
+              <Badge
+                variant={prediction.resolution ? 'default' : 'secondary'}
+              >
+                {prediction.resolution ? (
+                  <>
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    True
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-3 w-3 mr-1" />
+                    False
+                  </>
+                )}
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
 
