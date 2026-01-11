@@ -13,8 +13,8 @@ interface ExpandableOntologyRowProps {
 
 export function ExpandableOntologyRow({ note, isExpanded, onToggle }: ExpandableOntologyRowProps) {
   const category = note.noteType.replace('ontology-', '')
-  const contentId = `ontology-${category}-content`
-  const sectionHeadingId = `${category}-section-heading`
+  const contentId = `ontology-${category}-${note.id}-content`
+  const sectionHeadingId = `${category}-section-heading-${note.id}`
   const buttonRef = useRef<HTMLButtonElement>(null)
   const liveRegionRef = useRef<HTMLDivElement>(null)
   const title = getNoteDisplayTitle(note)
@@ -98,37 +98,35 @@ export function ExpandableOntologyRow({ note, isExpanded, onToggle }: Expandable
             </div>
 
             {/* Concept sections with excerpts */}
-            {items.map((item) => {
+            {items.map((item, index) => {
               const itemSlug = item.name
                 .toLowerCase()
                 .trim()
                 .replace(/\s+/g, '-')
                 .replace(/[^a-z0-9-]/g, '')
-              const itemHeadingId = `${category}-item-${itemSlug || 'item'}-heading`
+              const itemHeadingId = `${category}-${note.id}-item-${itemSlug || 'item'}-${index}-heading`
 
               return (
-              <div key={item.name} className="space-y-3">
-                <h4
-                  id={itemHeadingId}
-                  className="text-base font-semibold"
-                >
-                  {item.name}
-                </h4>
-                <div className="space-y-2">
-                  {item.excerpts.map((excerpt, idx) => (
-                    <blockquote
-                      key={idx}
-                      className="border-l-4 border-muted pl-4 py-2 text-sm space-y-1"
-                    >
-                      <p className="text-foreground italic">&ldquo;{excerpt.excerpt}&rdquo;</p>
-                      <cite className="text-xs text-muted-foreground not-italic">
-                        {excerpt.noteTitle}
-                      </cite>
-                    </blockquote>
-                  ))}
+                <div key={item.name} className="space-y-3">
+                  <h4 id={itemHeadingId} className="text-base font-semibold">
+                    {item.name}
+                  </h4>
+                  <div className="space-y-2">
+                    {item.excerpts.map((excerpt, idx) => (
+                      <blockquote
+                        key={idx}
+                        className="border-l-4 border-muted pl-4 py-2 text-sm space-y-1"
+                      >
+                        <p className="text-foreground italic">&ldquo;{excerpt.excerpt}&rdquo;</p>
+                        <cite className="text-xs text-muted-foreground not-italic">
+                          {excerpt.noteTitle}
+                        </cite>
+                      </blockquote>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )})}
+              )
+            })}
 
             {items.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-8">
