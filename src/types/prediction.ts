@@ -34,7 +34,6 @@ export interface Prediction {
   agreeCount?: number
   disagreeCount?: number
   userPosition?: PositionType | null // Current user's position, if any
-  creatorEmail?: string // For display purposes
 }
 
 /**
