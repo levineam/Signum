@@ -13,7 +13,6 @@ import {
   TakePositionRequest,
   ResolvePredictionRequest,
   PositionType,
-  PointsResult,
   predictionFromRow,
   positionFromRow,
 } from '@/types/prediction'
@@ -432,48 +431,3 @@ async function getUserPositionsForPredictions(
   return positions
 }
 
-// ============================================================================
-// Points Calculation
-// ============================================================================
-
-/**
- * Calculate points for a resolved prediction.
- * - Win as majority: +1 point
- * - Win as minority: +floor(majority/minority) points
- * - Lose: 0 points
- */
-export function calculatePoints(
-  positions: PredictionPosition[],
-  resolution: boolean
-): PointsResult {
-  const agreePositions = positions.filter(p => p.position === 'agree')
-  const disagreePositions = positions.filter(p => p.position === 'disagree')
-
-  const winningSide: PositionType = resolution ? 'agree' : 'disagree'
-  const losingSide: PositionType = resolution ? 'disagree' : 'agree'
-
-  const winnerCount = winningSide === 'agree' ? agreePositions.length : disagreePositions.length
-  const loserCount = losingSide === 'agree' ? agreePositions.length : disagreePositions.length
-
-  const majorityCount = Math.max(winnerCount, loserCount)
-  const minorityCount = Math.min(winnerCount, loserCount)
-
-  // Calculate points
-  const majorityPoints = 1
-  const minorityPoints = minorityCount > 0
-    ? Math.floor(majorityCount / minorityCount)
-    : majorityCount > 0 ? majorityCount : 1
-
-  return {
-    winningSide,
-    losingSide,
-    majorityCount,
-    minorityCount,
-    majorityPoints,
-    minorityPoints,
-  }
-}
-
-/**
- * Award points to all positions after resolution.
- */

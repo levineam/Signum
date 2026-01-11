@@ -86,18 +86,6 @@ export interface PredictionOdds {
 }
 
 /**
- * Points calculation result for a resolved prediction
- */
-export interface PointsResult {
-  winningSide: PositionType
-  losingSide: PositionType
-  majorityCount: number
-  minorityCount: number
-  majorityPoints: number // Always +1
-  minorityPoints: number // +floor(majority/minority)
-}
-
-/**
  * Database row type for predictions table (snake_case)
  */
 export interface PredictionRow {
