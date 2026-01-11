@@ -30,6 +30,8 @@ export default function Home() {
       router.push('/notes')
     } else if (section === 'ontology') {
       router.push('/ontology')
+    } else if (section === 'predictions') {
+      router.push('/predictions')
     }
   }
 

@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { Logo } from '@/components/branding/Logo'
-import { Menu, X, BookOpen, StickyNote, Target, MessageCircle, FileText, Users, Coins, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
+import { Menu, X, BookOpen, StickyNote, Target, TrendingUp, MessageCircle, FileText, Users, Coins, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { isForcedTestUserEnabled } from '@/lib/e2eTestUtils'
 
 interface SidebarProps {
@@ -47,10 +48,16 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   // If no manual preference, let Tailwind responsive classes handle it
   const isCollapsed = manuallyCollapsed ?? false
 
-  const sections = [
+  const sections: Array<{
+    id: string
+    label: string
+    icon: React.ComponentType<{ className?: string }>
+    badge?: string
+  }> = [
     { id: 'journal', label: 'Journal', icon: BookOpen },
     { id: 'notes', label: 'Notes', icon: StickyNote },
     { id: 'ontology', label: 'Ontology', icon: Target },
+    { id: 'predictions', label: 'Predictions', icon: TrendingUp, badge: 'ALPHA' },
     { id: 'feedback', label: 'Feedback', icon: MessageCircle },
     { id: 'articles', label: 'Articles', icon: FileText },
     { id: 'meets', label: 'Meets', icon: Users },
@@ -217,6 +224,21 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                     `}>
                       {section.label}
                     </span>
+                    {section.badge && (
+                      <Badge
+                        variant="secondary"
+                        className={`
+                          ml-auto text-[10px] px-1.5 py-0
+                          ${
+                            manuallyCollapsed !== null
+                              ? (isCollapsed ? 'hidden' : '')
+                              : 'md:hidden xl:inline-flex'
+                          }
+                        `}
+                      >
+                        {section.badge}
+                      </Badge>
+                    )}
                   </Button>
                 )
 
@@ -316,6 +338,11 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                 >
                   <Icon className="h-5 w-5 mr-3" />
                   <span className="text-lg">{section.label}</span>
+                  {section.badge && (
+                    <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0">
+                      {section.badge}
+                    </Badge>
+                  )}
                 </Button>
               )
             })}

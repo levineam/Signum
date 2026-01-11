@@ -16,6 +16,8 @@ export default function NotesRoute() {
       router.push('/')
     } else if (section === 'ontology') {
       router.push('/ontology')
+    } else if (section === 'predictions') {
+      router.push('/predictions')
     } else if (section !== 'notes') {
       router.push('/')
     }
