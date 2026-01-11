@@ -108,15 +108,15 @@ export function ExpandableOntologyRow({ note, isExpanded, onToggle }: Expandable
 
               return (
                 <div key={`${item.name}-${index}`} className="space-y-3">
-                  <h4 id={itemHeadingId} className="text-base font-semibold">
+                  <h3 id={itemHeadingId} className="text-base font-semibold">
                     {item.name}
-                  </h4>
+                  </h3>
                   <div className="space-y-2">
-                    {item.excerpts.map((excerpt, idx) => (
+                    {item.excerpts.map((excerpt, excerptIdx) => (
                       <blockquote
-                      key={excerpt.noteId}
-                      className="border-l-4 border-muted pl-4 py-2 text-sm space-y-1"
-                    >
+                        key={`${excerpt.noteId}-${excerptIdx}`}
+                        className="border-l-4 border-muted pl-4 py-2 text-sm space-y-1"
+                      >
                         <p className="text-foreground italic">&ldquo;{excerpt.excerpt}&rdquo;</p>
                         <cite className="text-xs text-muted-foreground not-italic">
                           {excerpt.noteTitle}
