@@ -46,12 +46,13 @@ export async function getPredictions(options?: {
     query = query.is('resolved_at', null)
   }
 
-  if (options?.limit) {
+  if (options?.limit != null) {
     query = query.limit(options.limit)
   }
 
-  if (options?.offset) {
-    query = query.range(options.offset, options.offset + (options.limit || 50) - 1)
+  if (options?.offset != null) {
+    const rangeLimit = options.limit ?? 50
+    query = query.range(options.offset, options.offset + rangeLimit - 1)
   }
 
   const { data, error } = await query
@@ -198,38 +199,26 @@ export async function resolvePrediction(
     throw new Error('Prediction has already been resolved')
   }
 
-  // Get all positions to calculate points
-  const positions = await getPositionsForPrediction(request.predictionId)
-
-  // Calculate points for each position
-  const pointsResult = calculatePoints(positions, request.resolution)
-
-  // Update the prediction with resolution
-  const { data, error } = await supabase
-    .from('predictions')
-    .update({
-      resolution: request.resolution,
-      resolved_at: new Date().toISOString(),
-    })
-    .eq('id', request.predictionId)
-    .select()
-    .single()
+  const { data, error } = await supabase.rpc('resolve_prediction_and_award', {
+    prediction_id_input: request.predictionId,
+    resolution_input: request.resolution,
+  })
 
   if (error) {
     console.error('Error resolving prediction:', error)
     throw error
   }
 
-  // Award points to all positions
-  await awardPointsToPositions(positions, request.resolution, pointsResult)
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) {
+    throw new Error('Prediction could not be resolved')
+  }
 
-  const prediction = predictionFromRow(data as PredictionRow)
-  prediction.agreeCount = pointsResult.winningSide === 'agree'
-    ? positions.filter(p => p.position === 'agree').length
-    : positions.filter(p => p.position === 'disagree').length
-  prediction.disagreeCount = pointsResult.losingSide === 'agree'
-    ? positions.filter(p => p.position === 'agree').length
-    : positions.filter(p => p.position === 'disagree').length
+  const prediction = predictionFromRow(row as PredictionRow)
+  const counts = await getPositionCounts([prediction.id])
+  const count = counts.get(prediction.id)
+  prediction.agreeCount = count?.agree ?? 0
+  prediction.disagreeCount = count?.disagree ?? 0
 
   return prediction
 }
@@ -266,14 +255,13 @@ export async function deletePrediction(
  * User can only have one position per prediction.
  */
 export async function takePosition(
-  request: TakePositionRequest,
-  userId: string
+  request: TakePositionRequest
 ): Promise<PredictionPosition> {
   if (!hasPublicSupabase()) {
     throw new Error('Supabase not available')
   }
 
-  // First check if prediction is resolved
+  // First check if prediction is resolved (fast UX path)
   const prediction = await getPredictionById(request.predictionId)
   if (!prediction) {
     throw new Error('Prediction not found')
@@ -282,28 +270,22 @@ export async function takePosition(
     throw new Error('Cannot take position on resolved prediction')
   }
 
-  // Upsert the position (allows changing position before resolution)
-  const { data, error } = await supabase
-    .from('prediction_positions')
-    .upsert(
-      {
-        prediction_id: request.predictionId,
-        user_id: userId,
-        position: request.position,
-      },
-      {
-        onConflict: 'prediction_id,user_id',
-      }
-    )
-    .select()
-    .single()
+  const { data, error } = await supabase.rpc('take_prediction_position', {
+    prediction_id_input: request.predictionId,
+    position_input: request.position,
+  })
 
   if (error) {
     console.error('Error taking position:', error)
     throw error
   }
 
-  return positionFromRow(data as PredictionPositionRow)
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) {
+    throw new Error('Position could not be saved')
+  }
+
+  return positionFromRow(row as PredictionPositionRow)
 }
 
 /**
@@ -370,23 +352,41 @@ async function getPositionCounts(
     return counts
   }
 
-  const { data, error } = await supabase
-    .from('prediction_positions')
-    .select('prediction_id, position')
-    .in('prediction_id', predictionIds)
-
-  if (error) {
-    console.error('Error fetching position counts:', error)
-    return counts
-  }
-
   // Initialize counts for all prediction IDs
   predictionIds.forEach(id => {
     counts.set(id, { agree: 0, disagree: 0 })
   })
 
+  const { data, error } = await supabase.rpc('get_prediction_position_counts', {
+    prediction_ids: predictionIds,
+  })
+
+  if (!error && data) {
+    ;(data as Array<{ prediction_id: string; agree_count: number; disagree_count: number }>).forEach((row) => {
+      counts.set(row.prediction_id, {
+        agree: row.agree_count ?? 0,
+        disagree: row.disagree_count ?? 0,
+      })
+    })
+    return counts
+  }
+
+  if (error) {
+    console.error('Error fetching position counts:', error)
+  }
+
+  const { data: fallbackData, error: fallbackError } = await supabase
+    .from('prediction_positions')
+    .select('prediction_id, position')
+    .in('prediction_id', predictionIds)
+
+  if (fallbackError) {
+    console.error('Error fetching position counts fallback:', fallbackError)
+    return counts
+  }
+
   // Count positions
-  ;(data || []).forEach((row: { prediction_id: string; position: PositionType }) => {
+  ;(fallbackData || []).forEach((row: { prediction_id: string; position: PositionType }) => {
     const current = counts.get(row.prediction_id)
     if (current) {
       if (row.position === 'agree') {
@@ -477,31 +477,3 @@ export function calculatePoints(
 /**
  * Award points to all positions after resolution.
  */
-async function awardPointsToPositions(
-  positions: PredictionPosition[],
-  resolution: boolean,
-  pointsResult: PointsResult
-): Promise<void> {
-  if (!hasPublicSupabase() || positions.length === 0) {
-    return
-  }
-
-  const winningSide = resolution ? 'agree' : 'disagree'
-  const winnerCount = positions.filter(p => p.position === winningSide).length
-  const loserCount = positions.filter(p => p.position !== winningSide).length
-
-  // Determine if winners are majority or minority
-  const winnersAreMajority = winnerCount >= loserCount
-  const winnerPoints = winnersAreMajority ? pointsResult.majorityPoints : pointsResult.minorityPoints
-
-  // Update all positions with their points
-  for (const position of positions) {
-    const isWinner = position.position === winningSide
-    const points = isWinner ? winnerPoints : 0
-
-    await supabase
-      .from('prediction_positions')
-      .update({ points_awarded: points })
-      .eq('id', position.id)
-  }
-}

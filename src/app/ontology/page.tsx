@@ -5,22 +5,17 @@ import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { OntologyPage } from '@/components/ontology/OntologyPage'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { getSectionRoute } from '@/lib/sections'
 
 export default function OntologyRoute() {
   const [activeSection, setActiveSection] = useState('ontology')
   const router = useRouter()
 
   const handleSectionChange = (section: string) => {
+    if (section === 'ontology') return
     setActiveSection(section)
-    if (section === 'journal') {
-      router.push('/')
-    } else if (section === 'notes') {
-      router.push('/notes')
-    } else if (section === 'predictions') {
-      router.push('/predictions')
-    } else if (section !== 'ontology') {
-      router.push('/')
-    }
+    const route = getSectionRoute(section)
+    router.push(route ?? '/')
   }
 
   return (

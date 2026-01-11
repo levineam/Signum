@@ -10,14 +10,19 @@ import { Badge } from '@/components/ui/badge'
 import { TrendingUp, Loader2 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
+const TAB_VALUES = ['active', 'resolved'] as const
+type TabValue = (typeof TAB_VALUES)[number]
+
 export function PredictionsPage() {
   const { user } = useAuth()
   const [predictions, setPredictions] = useState<Prediction[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'active' | 'resolved'>('active')
+  const [activeTab, setActiveTab] = useState<TabValue>('active')
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const loadPredictions = useCallback(async () => {
     setIsLoading(true)
+    setLoadError(null)
     try {
       const data = await getPredictions({
         userId: user?.id,
@@ -26,6 +31,7 @@ export function PredictionsPage() {
       setPredictions(data)
     } catch (error) {
       console.error('Error loading predictions:', error)
+      setLoadError('Unable to load predictions right now.')
     } finally {
       setIsLoading(false)
     }
@@ -38,11 +44,7 @@ export function PredictionsPage() {
   const activePredictions = predictions.filter(p => !p.resolvedAt)
   const resolvedPredictions = predictions.filter(p => p.resolvedAt)
 
-  const handlePredictionCreated = () => {
-    loadPredictions()
-  }
-
-  const handlePredictionUpdated = () => {
+  const handlePredictionChange = () => {
     loadPredictions()
   }
 
@@ -63,7 +65,7 @@ export function PredictionsPage() {
 
       {/* Create prediction form */}
       {user && (
-        <CreatePredictionForm onCreated={handlePredictionCreated} />
+        <CreatePredictionForm onCreated={handlePredictionChange} />
       )}
 
       {/* Loading state */}
@@ -73,9 +75,23 @@ export function PredictionsPage() {
         </div>
       )}
 
+      {/* Error state */}
+      {!isLoading && loadError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {loadError}
+        </div>
+      )}
+
       {/* Predictions feed */}
       {!isLoading && (
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'resolved')}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            if ((TAB_VALUES as readonly string[]).includes(value)) {
+              setActiveTab(value as TabValue)
+            }
+          }}
+        >
           <TabsList>
             <TabsTrigger value="active">
               Active ({activePredictions.length})
@@ -98,7 +114,7 @@ export function PredictionsPage() {
                   key={prediction.id}
                   prediction={prediction}
                   currentUserId={user?.id}
-                  onUpdate={handlePredictionUpdated}
+                  onUpdate={handlePredictionChange}
                 />
               ))
             )}
@@ -115,7 +131,7 @@ export function PredictionsPage() {
                   key={prediction.id}
                   prediction={prediction}
                   currentUserId={user?.id}
-                  onUpdate={handlePredictionUpdated}
+                  onUpdate={handlePredictionChange}
                 />
               ))
             )}

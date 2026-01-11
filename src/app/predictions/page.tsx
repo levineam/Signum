@@ -1,26 +1,21 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { PredictionsPage } from '@/components/predictions/PredictionsPage'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { getSectionRoute } from '@/lib/sections'
 
 export default function PredictionsRoute() {
   const [activeSection, setActiveSection] = useState('predictions')
   const router = useRouter()
 
   const handleSectionChange = (section: string) => {
+    if (section === 'predictions') return
     setActiveSection(section)
-    if (section === 'journal') {
-      router.push('/')
-    } else if (section === 'notes') {
-      router.push('/notes')
-    } else if (section === 'ontology') {
-      router.push('/ontology')
-    } else if (section !== 'predictions') {
-      router.push('/')
-    }
+    const route = getSectionRoute(section)
+    router.push(route ?? '/')
   }
 
   return (
@@ -30,9 +25,7 @@ export default function PredictionsRoute() {
         <div className="flex min-h-screen flex-col">
           <AppHeader />
           <div className="flex-1">
-            <Suspense fallback={<div className="max-w-4xl mx-auto p-6">Loading predictions...</div>}>
-              <PredictionsPage />
-            </Suspense>
+            <PredictionsPage />
           </div>
         </div>
       </main>

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createPrediction } from '@/lib/supabase/predictions'
+import { hasPublicSupabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
@@ -29,6 +30,11 @@ export function CreatePredictionForm({ onCreated }: CreatePredictionFormProps) {
 
     if (!user) {
       toast.error('You must be signed in to create a prediction')
+      return
+    }
+
+    if (!hasPublicSupabase()) {
+      toast.error('Predictions feature is not available')
       return
     }
 

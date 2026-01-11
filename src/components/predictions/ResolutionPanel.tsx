@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { resolvePrediction } from '@/lib/supabase/predictions'
+import { hasPublicSupabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -39,6 +40,11 @@ export function ResolutionPanel({
 
   const handleResolve = async () => {
     if (!user || selectedResolution === null) return
+
+    if (!hasPublicSupabase()) {
+      toast.error('Predictions feature is not available')
+      return
+    }
 
     setIsResolving(true)
 

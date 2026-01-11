@@ -9,6 +9,7 @@ import { AppHeader } from '@/components/layout/AppHeader'
 import { RemindersWidget } from '@/components/widgets/RemindersWidget'
 import { TasksWidget } from '@/components/widgets/TasksWidget'
 import { FEATURES } from '@/config/features'
+import { getSectionRoute } from '@/lib/sections'
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth()
@@ -26,12 +27,9 @@ export default function Home() {
 
   const handleSectionChange = (section: string) => {
     setActiveSection(section)
-    if (section === 'notes') {
-      router.push('/notes')
-    } else if (section === 'ontology') {
-      router.push('/ontology')
-    } else if (section === 'predictions') {
-      router.push('/predictions')
+    const route = getSectionRoute(section)
+    if (route && route !== '/') {
+      router.push(route)
     }
   }
 

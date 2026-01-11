@@ -26,7 +26,7 @@ export function PredictionCard({ prediction, currentUserId, onUpdate }: Predicti
 
   // Calculate percentages for odds display
   const agreePercentage = totalPositions > 0 ? Math.round((agreeCount / totalPositions) * 100) : 50
-  const disagreePercentage = totalPositions > 0 ? Math.round((disagreeCount / totalPositions) * 100) : 50
+  const disagreePercentage = totalPositions > 0 ? 100 - agreePercentage : 50
 
   return (
     <Card className={isResolved ? 'opacity-80' : ''}>
@@ -124,7 +124,7 @@ export function PredictionCard({ prediction, currentUserId, onUpdate }: Predicti
         )}
 
         {/* User's position indicator */}
-        {prediction.userPosition && (
+        {currentUserId && prediction.userPosition && (
           <div className="w-full text-center">
             <Badge variant="outline" className="text-xs">
               <Clock className="h-3 w-3 mr-1" />

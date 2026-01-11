@@ -2,7 +2,20 @@
  * Prediction feature types for Alpha Predictions (Issue #231)
  */
 
-export type PositionType = 'agree' | 'disagree'
+export const POSITION_TYPES = ['agree', 'disagree'] as const
+export type PositionType = (typeof POSITION_TYPES)[number]
+
+export function isPositionType(value: string): value is PositionType {
+  return POSITION_TYPES.includes(value as PositionType)
+}
+
+function normalizePositionType(value: string): PositionType {
+  if (isPositionType(value)) {
+    return value
+  }
+  console.warn(`[predictions] Unexpected position value: ${value}`)
+  return 'agree'
+}
 
 /**
  * A prediction created by a user with a statement and settlement date.
@@ -105,7 +118,7 @@ export interface PredictionPositionRow {
   id: string
   prediction_id: string
   user_id: string
-  position: PositionType
+  position: string
   points_awarded: number | null
   created_at: string
   updated_at: string
@@ -135,7 +148,7 @@ export function positionFromRow(row: PredictionPositionRow): PredictionPosition 
     id: row.id,
     predictionId: row.prediction_id,
     userId: row.user_id,
-    position: row.position,
+    position: normalizePositionType(row.position),
     pointsAwarded: row.points_awarded,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { takePosition } from '@/lib/supabase/predictions'
+import { hasPublicSupabase } from '@/lib/supabase'
 import { PositionType } from '@/types/prediction'
 import { Button } from '@/components/ui/button'
 import { ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react'
@@ -36,6 +37,11 @@ export function PositionButton({
       return
     }
 
+    if (!hasPublicSupabase()) {
+      toast.error('Predictions feature is not available')
+      return
+    }
+
     if (isSelected) {
       // Already selected this position
       return
@@ -44,13 +50,10 @@ export function PositionButton({
     setIsLoading(true)
 
     try {
-      await takePosition(
-        {
-          predictionId,
-          position,
-        },
-        user.id
-      )
+      await takePosition({
+        predictionId,
+        position,
+      })
 
       toast.success(
         currentPosition
@@ -73,7 +76,6 @@ export function PositionButton({
         'flex-1',
         !isSelected && isAgree && 'hover:bg-green-100 hover:text-green-700 hover:border-green-300 dark:hover:bg-green-950 dark:hover:text-green-400',
         !isSelected && !isAgree && 'hover:bg-red-100 hover:text-red-700 hover:border-red-300 dark:hover:bg-red-950 dark:hover:text-red-400',
-        isSelected && isAgree && 'bg-green-600 hover:bg-green-700',
       )}
       onClick={handleClick}
       disabled={disabled || isLoading}
