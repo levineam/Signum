@@ -13,6 +13,7 @@ import {
   TakePositionRequest,
   ResolvePredictionRequest,
   PositionType,
+  isPositionType,
   predictionFromRow,
   positionFromRow,
 } from '@/types/prediction'
@@ -385,12 +386,12 @@ async function getPositionCounts(
   }
 
   // Count positions
-  ;(fallbackData || []).forEach((row: { prediction_id: string; position: PositionType }) => {
+  ;(fallbackData || []).forEach((row: { prediction_id: string; position: string }) => {
     const current = counts.get(row.prediction_id)
     if (current) {
       if (row.position === 'agree') {
         current.agree++
-      } else {
+      } else if (row.position === 'disagree') {
         current.disagree++
       }
     }
@@ -424,8 +425,10 @@ async function getUserPositionsForPredictions(
     return positions
   }
 
-  ;(data || []).forEach((row: { prediction_id: string; position: PositionType }) => {
-    positions.set(row.prediction_id, row.position)
+  ;(data || []).forEach((row: { prediction_id: string; position: string }) => {
+    if (isPositionType(row.position)) {
+      positions.set(row.prediction_id, row.position)
+    }
   })
 
   return positions
