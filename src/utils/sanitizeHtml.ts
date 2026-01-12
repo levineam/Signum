@@ -32,8 +32,6 @@ const sanitizeConfig: Config = {
     'blockquote', 'code', 'pre',
     'mark', // For text highlighting (including Obsidian imports)
     'iframe', // For YouTube video embeds (filtered by domain in hook)
-    'button', // For YouTube summarize button
-    'svg', 'path', // For button icons
   ],
   // Allow safe attributes (style will be filtered via hook)
   ALLOWED_ATTR: [
