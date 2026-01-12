@@ -86,12 +86,12 @@ export default function PredictionPage() {
               <p className="text-muted-foreground mb-6">
                 This prediction may have been deleted or doesn&apos;t exist.
               </p>
-              <Link href="/predictions">
-                <Button variant="outline">
+              <Button variant="outline" asChild>
+                <Link href="/predictions">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   View All Predictions
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -127,12 +127,12 @@ export default function PredictionPage() {
                 Sign up to agree or disagree and earn points when predictions are resolved.
               </p>
               <div className="flex gap-3 justify-center">
-                <Link href={`/auth?redirect=/predictions/${predictionId}`}>
-                  <Button>Sign Up</Button>
-                </Link>
-                <Link href={`/auth?redirect=/predictions/${predictionId}`}>
-                  <Button variant="outline">Sign In</Button>
-                </Link>
+                <Button asChild>
+                  <Link href={`/auth?redirect=/predictions/${predictionId}`}>Sign Up</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href={`/auth?redirect=/predictions/${predictionId}`}>Sign In</Link>
+                </Button>
               </div>
             </CardContent>
           </Card>
