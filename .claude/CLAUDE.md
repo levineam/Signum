@@ -13,9 +13,11 @@ This project uses PR-based deployment with auto-deploy to Vercel. You MUST follo
    - Verify functionality, run `npm run lint`
 3. **Commit & push**: `git add [files] && git commit`, then `git push`
 4. **Create PR**: `gh pr create` with description, test plan, screenshots. Apply appropriate labels (see GitHub Labels below).
+<!-- DISABLED: Codex reviews are costly; using CodeRabbit instead. Trigger manually with `gh pr comment [PR#] --body '@codex review'` if needed.
 5. **🚨 Codex review**: CI auto-comments `@codex review` after push. If not posted within ~30s, run manually: `gh pr comment [PR#] --body '@codex review'`
-6. **Test on Vercel Preview**: Test thoroughly on preview URL
-7. **User merges**: User reviews, approves, and merges (NOT Claude)
+-->
+5. **Test on Vercel Preview**: Test thoroughly on preview URL
+6. **User merges**: User reviews, approves, and merges (NOT Claude)
 
 ## Testing on Vercel Preview
 
@@ -41,7 +43,7 @@ Feature → `dev` (test) → `main` (production). Both `dev` and `main` are prot
 ❌ NEVER commit/push to `main` directly
 ❌ NEVER merge PRs yourself
 ❌ NEVER skip PR process or local testing
-✅ ALWAYS ensure Codex review is requested after EVERY push (CI auto-posts `@codex review`)
+<!-- DISABLED: ✅ ALWAYS ensure Codex review is requested after EVERY push (CI auto-posts `@codex review`) -->
 ✅ ALWAYS verify new AI models/APIs with Context7 MCP first
 
 ## GitHub Labels
