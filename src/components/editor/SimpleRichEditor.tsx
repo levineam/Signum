@@ -7,6 +7,7 @@ import { VoiceRecordButton } from '@/components/editor/VoiceRecordButton'
 import { AskAIDialog } from '@/components/journal/AskAIDialog'
 import { cn } from '@/lib/utils'
 import { detectYouTubeUrls, createEmbedHtml } from '@/utils/youtube'
+import { escapeHtml } from '@/utils/htmlEscape'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 
@@ -1106,16 +1107,28 @@ export function SimpleRichEditor({
     const youtubeUrls = detectYouTubeUrls(text)
 
     if (youtubeUrls.length > 0) {
-      // Insert the text first
-      document.execCommand('insertText', false, text)
+      // Replace URLs with embeds, preserving any surrounding text
+      // Process in reverse order to maintain correct indices when multiple URLs exist
+      const sortedUrls = [...youtubeUrls].sort((a, b) => b.startIndex - a.startIndex)
 
-      // Then insert embeds for all detected YouTube URLs (after the pasted text)
-      youtubeUrls.forEach(video => {
+      let result = text
+      sortedUrls.forEach(video => {
         const embedHtml = createEmbedHtml(video.videoId, video.url)
-        document.execCommand('insertHTML', false, embedHtml)
-        // Ensure there's an editable line beneath the embed so the user can keep typing.
-        document.execCommand('insertHTML', false, '<div><br></div>')
+        const before = result.slice(0, video.startIndex).trim()
+        const after = result.slice(video.endIndex).trim()
+
+        // Build HTML: [before text] + line break + embed + line break + [after text]
+        let html = ''
+        if (before) html += `<div>${escapeHtml(before)}</div>`
+        html += '<div><br></div>'  // Editable line before embed
+        html += embedHtml
+        html += '<div><br></div>'  // Editable line after embed
+        if (after) html += `<div>${escapeHtml(after)}</div>`
+
+        result = html
       })
+
+      document.execCommand('insertHTML', false, result)
 
       // Trigger onChange to save the content
       if (onChange && editorRef.current) {
