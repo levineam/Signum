@@ -23,8 +23,6 @@ interface SimpleRichEditorProps {
   entryId?: string
   onNoteCreated?: (noteId: string, selectedText: string, entryId?: string) => void
   onAskAISelection?: (selectedText: string) => void
-  onYouTubeSummarize?: (videoId: string, videoUrl: string | undefined) => void
-  onYouTubeTranscript?: (videoId: string, videoUrl: string | undefined) => void
   variant?: 'default' | 'flush'
   className?: string
 }
@@ -42,8 +40,6 @@ export function SimpleRichEditor({
   entryId,
   onNoteCreated,
   onAskAISelection,
-  onYouTubeSummarize,
-  onYouTubeTranscript,
   variant = 'default',
   className
 }: SimpleRichEditorProps) {
@@ -350,8 +346,8 @@ export function SimpleRichEditor({
     }
   }, [])
 
-  // Handle YouTube transcript/summarize/timestamp clicks via event delegation
-  const handleEditorClick = useCallback(async (e: React.MouseEvent) => {
+  // Handle YouTube timestamp clicks via event delegation
+  const handleEditorClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement
     const timestampLink = target.closest('a.youtube-timestamp') as HTMLAnchorElement | null
     if (timestampLink) {
@@ -370,131 +366,7 @@ export function SimpleRichEditor({
         return
       }
     }
-
-    const transcriptBtn = target.closest('.youtube-transcript-btn') as HTMLElement | null
-    if (transcriptBtn) {
-      e.preventDefault()
-      e.stopPropagation()
-
-      const videoId = transcriptBtn.dataset.videoId
-      const videoUrl = transcriptBtn.dataset.videoUrl
-      if (!videoId) {
-        toast.error('Could not find video ID')
-        return
-      }
-
-      const embedContainer = transcriptBtn.closest('.youtube-embed-container') as HTMLElement | null
-      if (embedContainer) {
-        const line = ensureEditableLineAfter(embedContainer)
-        if (line) moveCaretIntoStart(line)
-      }
-
-      onYouTubeTranscript?.(videoId, videoUrl || undefined)
-      setTimeout(() => editorRef.current?.focus(), 0)
-      suppressBlurRef.current = false
-      return
-    }
-
-    const summarizeBtn = target.closest('.youtube-summarize-btn') as HTMLElement | null
-    if (!summarizeBtn) return
-
-    e.preventDefault()
-    e.stopPropagation()
-
-    const videoId = summarizeBtn.dataset.videoId
-    const videoUrl = summarizeBtn.dataset.videoUrl
-
-    if (!videoId) {
-      toast.error('Could not find video ID')
-      return
-    }
-
-    // Always keep caret outside the embed after clicking summarize.
-    const embedContainer = summarizeBtn.closest('.youtube-embed-container') as HTMLElement | null
-    if (embedContainer) {
-      const line = ensureEditableLineAfter(embedContainer)
-      if (line) moveCaretIntoStart(line)
-    }
-
-    // If parent provided a handler, delegate to it (uses dialog flow)
-    if (onYouTubeSummarize) {
-      onYouTubeSummarize(videoId, videoUrl || undefined)
-      // Ensure focus stays in editor after triggering dialog flow.
-      setTimeout(() => editorRef.current?.focus(), 0)
-      suppressBlurRef.current = false
-      return
-    }
-
-    // Fallback: Original behavior for standalone usage (no dialog)
-    if (!session?.access_token) {
-      toast.error('Please sign in to use AI features')
-      return
-    }
-
-    // Add loading state to button, swapping only the text (preserves SVG icon)
-    const labelSpan = summarizeBtn.querySelector('span')
-    const originalLabel = labelSpan?.textContent || summarizeBtn.textContent || ''
-    summarizeBtn.classList.add('loading')
-    summarizeBtn.setAttribute('aria-disabled', 'true')
-    if (labelSpan) {
-      labelSpan.textContent = 'Generating summary...'
-    } else {
-      summarizeBtn.textContent = 'Generating summary...'
-    }
-
-    try {
-      const response = await fetch('/api/youtube/summarize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          videoId,
-          videoUrl,
-          entryId,
-        }),
-      })
-
-      if (!response.ok) {
-        let message = 'Failed to generate summary'
-        try {
-          const errorData = await response.json()
-          message = errorData.error || message
-        } catch {
-          const text = await response.text().catch(() => '')
-          if (text) message = text
-        }
-        throw new Error(message)
-      }
-
-      const data = await response.json()
-      toast.success('Video summary created!', {
-        description: 'A new note has been created with the summary.',
-        action: {
-          label: 'View Note',
-          onClick: () => {
-            // Emit custom event to open the note
-            window.dispatchEvent(new CustomEvent('openNote', { detail: { noteId: data.noteId } }))
-          },
-        },
-      })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to generate summary'
-      toast.error(message)
-    } finally {
-      // Remove loading state and restore label
-      summarizeBtn.classList.remove('loading')
-      summarizeBtn.removeAttribute('aria-disabled')
-      if (labelSpan) {
-        labelSpan.textContent = originalLabel
-      } else {
-        summarizeBtn.textContent = originalLabel
-      }
-      suppressBlurRef.current = false
-      setTimeout(() => editorRef.current?.focus(), 0)
-    }
-  }, [session?.access_token, entryId, ensureEditableLineAfter, moveCaretIntoStart, onYouTubeSummarize, onYouTubeTranscript, seekAndAutoplayEmbed])
+  }, [seekAndAutoplayEmbed])
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,

@@ -8,8 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Calendar, BookOpen } from 'lucide-react'
 import { NoteCreationModal } from '@/components/notes/NoteCreationModal'
 import { NoteViewer } from '@/components/notes/NoteViewer'
-import { YouTubeSummarizeDialog } from '@/components/journal/YouTubeSummarizeDialog'
-import { YouTubeTranscriptDialog } from '@/components/journal/YouTubeTranscriptDialog'
 import { Note } from '@/types/note'
 import { createLink, getOutgoingLinks } from '@/lib/supabase/notes'
 import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata } from '@/utils/textToLink'
@@ -116,20 +114,6 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const [noteLinkClicked, setNoteLinkClicked] = useState(false)
   const [creatingLink, setCreatingLink] = useState(false)
   const [, setEntryTasks] = useState<Map<string, ParsedTask[]>>(new Map())
-
-  // YouTube summarize dialog state
-  const [showYouTubeSummarizeDialog, setShowYouTubeSummarizeDialog] = useState(false)
-  const [youtubeSummarizeData, setYoutubeSummarizeData] = useState<{
-    videoId: string
-    videoUrl?: string
-    entryId: string
-  } | null>(null)
-  const [showYouTubeTranscriptDialog, setShowYouTubeTranscriptDialog] = useState(false)
-  const [youtubeTranscriptData, setYoutubeTranscriptData] = useState<{
-    videoId: string
-    videoUrl?: string
-    entryId: string
-  } | null>(null)
   const rejectedTaskHashes = useRef<Map<string, Set<string>>>(new Map())
   const [hasBootstrappedEntry, setHasBootstrappedEntry] = useState(false)
 
@@ -1028,175 +1012,6 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
     }
   }
 
-  // YouTube summarize button handler
-  const handleYouTubeSummarize = useCallback((videoId: string, videoUrl: string | undefined, entryId: string) => {
-    setYoutubeSummarizeData({ videoId, videoUrl, entryId })
-    setShowYouTubeSummarizeDialog(true)
-  }, [])
-
-  const handleYouTubeTranscript = useCallback((videoId: string, videoUrl: string | undefined, entryId: string) => {
-    setYoutubeTranscriptData({ videoId, videoUrl, entryId })
-    setShowYouTubeTranscriptDialog(true)
-  }, [])
-
-  const handleYouTubeEmbedActionClick = useCallback(
-    (e: React.MouseEvent, entryId: string) => {
-      const target = e.target as Element | null
-      const transcriptBtn = target?.closest('.youtube-transcript-btn')
-      if (transcriptBtn && transcriptBtn instanceof HTMLElement) {
-        e.preventDefault()
-        e.stopPropagation()
-        const videoId = (transcriptBtn as HTMLElement).dataset.videoId
-        const videoUrl = (transcriptBtn as HTMLElement).dataset.videoUrl
-        if (videoId) {
-          handleYouTubeTranscript(videoId, videoUrl, entryId)
-        }
-        return true
-      }
-
-      const summarizeBtn = target?.closest('.youtube-summarize-btn')
-      if (!summarizeBtn || !(summarizeBtn instanceof HTMLElement)) return false
-
-      e.preventDefault()
-      e.stopPropagation()
-      const videoId = (summarizeBtn as HTMLElement).dataset.videoId
-      const videoUrl = (summarizeBtn as HTMLElement).dataset.videoUrl
-      if (videoId) {
-        handleYouTubeSummarize(videoId, videoUrl, entryId)
-      }
-      return true
-    },
-    [handleYouTubeSummarize, handleYouTubeTranscript]
-  )
-
-  // Callback when YouTube summary is created - insert link to note below the embed
-  const handleYouTubeSummaryCreated = useCallback(async (
-    noteId: string,
-    noteTitle: string,
-    videoId: string,
-    entryId: string,
-    summaryHtml: string,
-    isLocal?: boolean
-  ) => {
-    console.log('[YouTube Summary] Created note:', { noteId, noteTitle, videoId, entryId })
-
-    // In test mode / local mode, store the generated note in LocalNotes so it can be opened.
-    if ((isLocal || noteId.startsWith('local-note-')) && summaryHtml) {
-      try {
-        addLocalNote({
-          id: noteId,
-          userId: user?.id || 'test-user',
-          title: noteTitle,
-          content: summaryHtml,
-          noteType: 'custom',
-          isPinned: false,
-          metadata: {
-            sourceType: 'video',
-            videoId,
-            videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
-            generatedAt: new Date().toISOString(),
-          },
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
-      } catch (e) {
-        console.warn('[YouTube Summary] Failed to store local summary note:', e)
-      }
-    }
-
-    // Switch to edit mode for this entry
-    setEditingEntryId(entryId)
-
-    // Wait for edit mode to activate
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    // Find and update the entry content to include a link to the summary note
-    setEntries(prev => prev.map(entry => {
-      if (entry.id !== entryId) return entry
-
-      try {
-        // Parse the content to find the YouTube embed container
-        const tempDiv = document.createElement('div')
-        tempDiv.innerHTML = entry.content
-
-        // Find the embed container for this video
-        // Use CSS.escape() to safely escape special characters in videoId
-        const embedContainer = tempDiv.querySelector(
-          `.youtube-embed-container[data-video-id="${CSS.escape(videoId)}"]`
-        )
-
-        if (embedContainer) {
-          // Check if a summary link already exists for this video
-          const existingLink = embedContainer.parentElement?.querySelector(
-            `.youtube-summary-link[data-video-id="${CSS.escape(videoId)}"]`
-          )
-
-          if (!existingLink) {
-            // Create the summary link element using DOM APIs (XSS-safe)
-            const summaryLinkDiv = document.createElement('p')
-            summaryLinkDiv.className = 'youtube-summary-link'
-            summaryLinkDiv.setAttribute('data-video-id', videoId)
-
-            const link = document.createElement('a')
-            link.href = '#'
-            link.setAttribute('data-note-id', noteId)
-            link.textContent = noteTitle // Safe: textContent escapes HTML
-            summaryLinkDiv.appendChild(link)
-
-            // Insert after the embed container
-            embedContainer.after(summaryLinkDiv)
-            console.log('[YouTube Summary] Inserted summary link after embed')
-          }
-        } else {
-          console.warn('[YouTube Summary] Could not find embed container for video:', videoId)
-        }
-
-        return {
-          ...entry,
-          content: tempDiv.innerHTML,
-          lastModified: new Date().toISOString()
-        }
-      } catch (error) {
-        console.error('[YouTube Summary] Error updating entry content:', error)
-        // Return entry unchanged if DOM manipulation fails
-        return entry
-      }
-    }))
-
-    // Persist the updated content to Supabase
-    setTimeout(async () => {
-      if (
-        entryId === 'guest-entry' ||
-        entryId.startsWith('local-entry-') ||
-        entryId.startsWith('local-note-') ||
-        !hasPublicSupabase()
-      ) {
-        return
-      }
-
-      if (user) {
-        // Re-read from DOM to get the latest content with the link
-        const editorElement = document.querySelector(
-          `[data-entry-id="${entryId}"] [contenteditable]`
-        ) as HTMLElement
-
-        if (editorElement) {
-          const updatedContent = editorElement.innerHTML
-          try {
-            await updateNoteInDb(entryId, { content: updatedContent }, user.id)
-            console.log('[YouTube Summary] Persisted link to Supabase')
-          } catch (error) {
-            console.error('[YouTube Summary] Failed to persist link:', error)
-          }
-        }
-      }
-    }, 200)
-
-    // Close the dialog
-    setShowYouTubeSummarizeDialog(false)
-    setYoutubeSummarizeData(null)
-  }, [addLocalNote, user])
-
   // Story 2.9: Handler for info icon clicks
   const handleInfoClick = (helperType: HelperType) => {
     setActiveHelper(helperType)
@@ -1426,8 +1241,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
               {/* Content Section */}
               <CardContent
-                onClick={(e) => {
-                  if (handleYouTubeEmbedActionClick(e, entry.id)) return
+                onClick={() => {
                   setEditingEntryId(entry.id)
                 }}
                 className="px-3 md:px-2 pb-3 md:pb-2 pt-0 cursor-text hover:bg-muted/30 rounded-md transition-colors"
@@ -1438,28 +1252,13 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                     value={entry.content}
                     placeholder={isTodayEntry ? "What's on your mind today? Start writing..." : "Continue your thoughts..."}
                     onChange={(content) => handleContentChange(entry.id, content)}
-                    onYouTubeTranscript={(videoId, videoUrl) => handleYouTubeTranscript(videoId, videoUrl, entry.id)}
                     onBlur={(e) => {
                       // Don't exit edit mode if the user clicked on a note link
                       if (noteLinkClicked) {
                         return
                       }
-                      // Don't exit edit mode if a modal (e.g. YouTube summary) is opening/active.
-                      if (showYouTubeSummarizeDialog) {
-                        return
-                      }
-                      if (showYouTubeTranscriptDialog) {
-                        return
-                      }
                       const relatedTarget = e.relatedTarget as HTMLElement
                       if (relatedTarget && relatedTarget.closest('a[data-note-id]')) {
-                        return
-                      }
-                      // Don't exit edit mode if the user clicked on the YouTube summarize button
-                      if (relatedTarget && relatedTarget.closest('.youtube-summarize-btn')) {
-                        return
-                      }
-                      if (relatedTarget && relatedTarget.closest('.youtube-transcript-btn')) {
                         return
                       }
                       // Don't exit edit mode if the user clicked on the voice button
@@ -1476,9 +1275,6 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                     entryId={entry.id}
                     onNoteCreated={handleAskAIAnswerCreated}
                     onAskAISelection={captureSelectionContext}
-                    onYouTubeSummarize={(videoId, videoUrl) => {
-                      handleYouTubeSummarize(videoId, videoUrl, entry.id)
-                    }}
                     onFocus={() => {
                       // Phase 2: Link rehydration from Supabase will be implemented here
                       // For now, links already in HTML remain functional
@@ -1493,9 +1289,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                           className="text-base leading-relaxed text-foreground rich-editor-body"
                           dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.content) }}
                           onClick={(e) => {
-                            // Handle link and button clicks in read-only mode
-                            if (handleYouTubeEmbedActionClick(e, entry.id)) return
-
+                            // Handle link clicks in read-only mode
                             const target = e.target as HTMLElement
                             const linkElement = target.closest('a[data-note-id]') as HTMLElement
 
@@ -1548,36 +1342,6 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         onClose={handleCloseNoteViewer}
         noteId={viewingNoteId}
       />
-
-      {/* YouTube Summarize Dialog */}
-      {youtubeSummarizeData && (
-        <YouTubeSummarizeDialog
-          isOpen={showYouTubeSummarizeDialog}
-          onClose={() => {
-            setShowYouTubeSummarizeDialog(false)
-            setYoutubeSummarizeData(null)
-          }}
-          videoId={youtubeSummarizeData.videoId}
-          videoUrl={youtubeSummarizeData.videoUrl}
-          entryId={youtubeSummarizeData.entryId}
-          onSummaryCreated={handleYouTubeSummaryCreated}
-        />
-      )}
-
-      {/* YouTube Transcript Dialog */}
-      {youtubeTranscriptData && (
-        <YouTubeTranscriptDialog
-          isOpen={showYouTubeTranscriptDialog}
-          onClose={() => {
-            setShowYouTubeTranscriptDialog(false)
-            setYoutubeTranscriptData(null)
-          }}
-          videoId={youtubeTranscriptData.videoId}
-          videoUrl={youtubeTranscriptData.videoUrl}
-          entryId={youtubeTranscriptData.entryId}
-          onTranscriptCreated={handleYouTubeSummaryCreated}
-        />
-      )}
 
       {/* Story 2.9: Helper Dialog (rendered once, outside entry loop) */}
       {activeHelper && (user || isGuest) && (activeHelperMode === 'info' || activeEntryId) && (

@@ -215,55 +215,6 @@ export default function NoteEditPage(props: { params: Promise<{ id: string }> })
     cacheSelectionContext(text)
   }
 
-  const handleYouTubeSummarizeInNote = async (
-    videoId: string,
-    videoUrl: string | undefined
-  ) => {
-    if (!note) return
-    if (!session?.access_token) {
-      toast.error('Please sign in to use AI features')
-      return
-    }
-
-    try {
-      const response = await fetch('/api/youtube/summarize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          videoId,
-          videoUrl,
-          targetNoteId: note.id,
-        }),
-      })
-
-      if (!response.ok) {
-        let message = `Failed to generate summary (${response.status})`
-        try {
-          const errorData = await response.json()
-          message = errorData.error || message
-        } catch {
-          const raw = await response.text().catch(() => '')
-          if (raw) message = `${message}: ${raw}`
-        }
-        throw new Error(message)
-      }
-
-      const data = await response.json()
-      const updatedHtml = data.noteHtml as string | undefined
-      if (updatedHtml) {
-        setContent(updatedHtml)
-        setNote((prev) => (prev ? { ...prev, content: updatedHtml } : prev))
-      }
-      toast.success('Summary added to note')
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to generate summary'
-      toast.error(message)
-    }
-  }
-
   const handleCloseNoteModal = () => {
     setShowNoteModal(false)
     clearSelectionContext()
@@ -605,7 +556,6 @@ const linkSelectionToNote = async (targetNoteId: string, createdNote?: Note) => 
                   onNoteCreated={handleAskAIAnswerCreated}
                   onAskAISelection={handleAskAISelection}
                   entryId={note.noteType === 'journal-entry' ? note.id : undefined}
-                  onYouTubeSummarize={handleYouTubeSummarizeInNote}
                   autoFocus
                 />
               ) : (
@@ -618,17 +568,6 @@ const linkSelectionToNote = async (targetNoteId: string, createdNote?: Note) => 
                         onClick={(e) => {
                           // Handle link clicks in read-only mode
                           const target = e.target as HTMLElement
-                          const summarizeBtn = target.closest('.youtube-summarize-btn') as HTMLElement | null
-                          if (summarizeBtn) {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const videoId = summarizeBtn.dataset.videoId
-                            const videoUrl = summarizeBtn.dataset.videoUrl
-                            if (videoId) {
-                              handleYouTubeSummarizeInNote(videoId, videoUrl)
-                            }
-                            return
-                          }
 
                           const timestampLink = target.closest('a.youtube-timestamp') as HTMLAnchorElement | null
                           if (timestampLink) {

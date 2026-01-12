@@ -158,8 +158,7 @@ export function detectYouTubeUrls(content: string): DetectedYouTubeUrl[] {
  * Creates an HTML string for a YouTube embed
  *
  * Generates the HTML for embedding a YouTube video with proper
- * security attributes and responsive styling. Includes a "Summarize Video"
- * button that triggers AI summarization.
+ * security attributes and responsive styling.
  *
  * @param videoId - The YouTube video ID
  * @param videoUrl - Optional original video URL for metadata
@@ -182,5 +181,5 @@ export function createEmbedHtml(videoId: string, videoUrl?: string): string {
 
   // IMPORTANT: keep this HTML compact (no newlines/indentation) because the editor uses
   // `white-space: pre-wrap`, which would otherwise render formatting whitespace as gaps.
-  return `<div class="youtube-embed-container" contenteditable="false" data-video-id="${safeVideoId}" data-video-url="${safeOriginalUrl}"><iframe contenteditable="false" tabindex="-1" src="${safeEmbedUrl}" title="YouTube video player" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe><div class="youtube-embed-actions" contenteditable="false"><span class="youtube-transcript-btn" role="button" contenteditable="false" tabindex="-1" data-video-id="${safeVideoId}" data-video-url="${safeOriginalUrl}">Transcript</span><span class="youtube-summarize-btn" role="button" contenteditable="false" tabindex="-1" data-video-id="${safeVideoId}" data-video-url="${safeOriginalUrl}">Summarize</span></div></div>`
+  return `<div class="youtube-embed-container" contenteditable="false" data-video-id="${safeVideoId}" data-video-url="${safeOriginalUrl}"><iframe contenteditable="false" tabindex="-1" src="${safeEmbedUrl}" title="YouTube video player" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`
 }
