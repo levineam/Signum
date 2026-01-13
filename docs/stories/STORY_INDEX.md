@@ -1,6 +1,6 @@
 # Signum Story Index
 
-**Last Updated:** November 6, 2025
+**Last Updated:** December 8, 2025
 **Purpose:** Comprehensive tracking of all stories across the Signum project
 
 ---
@@ -221,6 +221,37 @@ See `docs/stories/completed/` for:
 
 ---
 
+## Epic 2.14: YouTube Video Embedding & AI Summarization (NEW)
+
+**Epic Document:** `docs/stories/epic-2.14-youtube-embed-summarization.md`
+
+**Status**: 📋 Ready for Implementation
+
+**Type**: Brownfield Enhancement (AI Feature)
+
+**Duration**: 6-10 days
+
+**Related Issue:** [#220](https://github.com/levineam/Signum/issues/220)
+
+**Story Breakdown**:
+- Story 2.14.1: URL Detection & Embed Component (2-3 days)
+- Story 2.14.2: Transcript Extraction API (2-3 days)
+- Story 2.14.3: AI Summarization API (2-3 days)
+- Story 2.14.4: Editor Integration & UX (2-3 days)
+
+**Key Features**:
+- Auto-detect YouTube URLs when pasted
+- Embed responsive video players in journal/notes
+- Manual "Summarize Video" button triggers AI summarization
+- Summaries stored as linked notes (follows Ask AI pattern)
+- Secure iframe handling (YouTube domains only)
+
+**Dependencies**:
+- `youtube-transcript` npm package
+- Existing OpenAI integration (gpt-4o-mini)
+
+---
+
 ## Story File Organization
 
 ### Active Stories
@@ -271,6 +302,7 @@ See `docs/stories/completed/` for:
 | Epic 2 | N/A | AI Personal Ontology | 2.1-2.4.x |
 | Epic 2.5 | N/A | Helper System | 2.5.x |
 | **Epic 2.10** | **#29** | **Sidebar Responsive Redesign** | **2.10.1-2.10.3** |
+| **Epic 2.14** | **#220** | **YouTube Video Embedding & AI Summarization** | **2.14.1-2.14.4** |
 | Epic 4 | N/A | Social Layer (Future) | 4.x |
 
 ---
@@ -292,6 +324,7 @@ See `docs/stories/completed/` for:
 1. **Epic 1.11**: Database Security & Performance (✅ Ready) - 3 stories, 10-16 hours - **START IMMEDIATELY**
 2. **Epic 1.10**: Unified Tasks & Reminders (📋 Awaiting approval) - 27 stories, 4-5 weeks
 3. **Epic 2.10**: Sidebar Responsive Redesign (✅ Ready) - 3 stories, 5-7 days
+4. **Epic 2.14**: YouTube Video Embedding & AI Summarization (✅ Ready) - 4 stories, 6-10 days
 
 **High Priority:**
 1. Story 1.9: AI-Powered Task Assistance (Planned) - 21 story points, 3-4 weeks
@@ -317,6 +350,7 @@ See `docs/stories/completed/` for:
 - **Epic 1.10:** `docs/stories/epic-1.10-tasks-reminders-system.md`
 - **Epic 1.11:** `docs/stories/epic-1.11-database-security-performance.md`
 - **Epic 2.10:** `docs/stories/epic-2.10-sidebar-responsive-redesign.md`
+- **Epic 2.14:** `docs/stories/epic-2.14-youtube-embed-summarization.md`
 - **Epic 1 (Content Intelligence):** Issue #50
 - **Completed Stories:** `/docs/stories/completed/`
 - **CLAUDE.md:** Project instructions and workflow
@@ -334,6 +368,7 @@ See `docs/stories/completed/` for:
 ---
 
 **Change Log:**
+- **2025-12-08**: Added Epic 2.14 (YouTube Video Embedding & AI Summarization) - 4 stories for auto-embedding YouTube videos and generating AI summaries from transcripts. Related to Issue #220.
 - **2025-11-12**: Added Epic 1.11 (Database Security & Performance Optimization) - 3 stories addressing 2 security vulnerabilities + 21 performance issues from Supabase Database Linter.
 - **2025-11-06**: Renumbered Epic 3 → Epic 1.10 (Tasks & Reminders), Epic 2.5 (Sidebar) → Epic 2.10. Deprecated Stories 1.1-1.2.2, 1.4 (replaced by Epic 1.10).
 - **2025-11-03**: Added Story 2.4.6 completion details

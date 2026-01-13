@@ -11,7 +11,8 @@ import { NoteViewer } from '@/components/notes/NoteViewer'
 import { Note } from '@/types/note'
 import { createLink, getOutgoingLinks } from '@/lib/supabase/notes'
 import { convertTextToLink, captureSelectionMetadata, rehydrateLinksFromMetadata } from '@/utils/textToLink'
-import { getNotes, createNote, updateNote as updateNoteInDb, deleteNote } from '@/lib/notes'
+import { getNotes, createNote, updateNote as updateNoteInDb } from '@/lib/notes'
+import { hasPublicSupabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocalNotes } from '@/contexts/LocalNotesContext'
 import { toast } from 'sonner'
@@ -79,6 +80,8 @@ function createLocalEntry(date: string): JournalEntry {
 // Helper function to check if content is truly empty (handles HTML markup)
 function isContentEmpty(html: string): boolean {
   if (!html || html.trim() === '') return true
+  // Check for YouTube embeds - these are non-empty even without text
+  if (html.includes('youtube-embed-container')) return false
   // Use regex to strip HTML tags for SSR-safe text extraction
   const text = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
   return text.trim() === ''
@@ -95,7 +98,7 @@ interface JournalStreamProps {
 
 export function JournalStream({ isGuest = false }: JournalStreamProps) {
   const router = useRouter()
-  const { user, session } = useAuth()
+  const { user, session, loading: authLoading } = useAuth()
   const { addLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [entries, setEntries] = useState<JournalEntry[]>([])
@@ -177,6 +180,11 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         return
       }
 
+      // Avoid rendering a misleading signed-out UI during initial hydration in test mode.
+      if (authLoading) {
+        return
+      }
+
       if (!user) {
         console.log('[JournalStream] No user, clearing entries')
         // Clear entries and reset loading state when user signs out
@@ -192,6 +200,16 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         console.log('[JournalStream] Today\'s date:', today)
         setSaveError(null)
         saveErrorNotifiedRef.current = false
+
+        // Local-only mode: do not attempt Supabase reads/writes.
+        if (!hasPublicSupabase()) {
+          console.log('[JournalStream] Supabase not configured, using local-only journal entry')
+          const fallbackEntry = createLocalEntry(today)
+          setEntries([fallbackEntry])
+          setEditingEntryId(fallbackEntry.id)
+          setIsLoading(false)
+          return
+        }
 
         // Get all notes from Supabase
         console.log('[JournalStream] Fetching notes from Supabase...')
@@ -388,7 +406,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       setIsLoading(false)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, isGuest, guestDraft]) // Re-run when user ID, guest mode, or guest draft changes
+  }, [user?.id, isGuest, guestDraft, authLoading]) // Re-run when user ID, guest mode, guest draft, or auth loading changes
 
   // Story 2.8: Deep linking support - check URL for ?helper=type on mount
   // Story 2.9: Updated to set mode to 'use' for deep links
@@ -456,7 +474,14 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       // Save if content is non-empty OR if we're clearing previously non-empty content
       const shouldSave = newContent.trim() !== '' || previousContent.trim() !== ''
 
-      if (shouldSave && user) {
+      if (
+        shouldSave &&
+        user &&
+        hasPublicSupabase() &&
+        entryId !== 'guest-entry' &&
+        !entryId.startsWith('local-entry-') &&
+        !entryId.startsWith('local-note-')
+      ) {
         console.log('Auto-saving entry:', entryId)
         try {
           // Update the note in Supabase
@@ -489,7 +514,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
   }
 
   const detectTasksInContent = async (content: string, entryId: string) => {
-    if (!user || !session?.access_token) return
+    if (!user || !session?.access_token || !hasPublicSupabase()) return
 
     // Story 1.2.2: Get rejected task hashes from state
     const rejectedHashes = rejectedTaskHashes.current.get(entryId) || new Set<string>()
@@ -1140,7 +1165,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
 
       {/* Journal Entries - One per day */}
       <div className="space-y-4">
-        {!user && !isGuest ? (
+        {!user && !isGuest && !authLoading ? (
           <Card className="p-6">
             <div className="text-center">
               <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
@@ -1150,7 +1175,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               </Button>
             </div>
           </Card>
-        ) : isLoading ? (
+        ) : (isLoading || authLoading) ? (
           <Card className="p-6">
             <div className="text-center text-muted-foreground">
               Loading your journal...
@@ -1195,7 +1220,7 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               </div>
 
               {/* Helpers (only on today's entry) - Story 2.8: Tile-based UI */}
-              {isTodayEntry && (user || isGuest) && !isForcedTestUser && (
+              {isTodayEntry && (user || isGuest) && (
                 <div className="px-3 md:px-2">
                   <HelperTileGrid
                     helperTypes={[
@@ -1219,7 +1244,6 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
               {/* Content Section */}
               <CardContent
                 onClick={() => {
-                  // Toggle edit mode
                   setEditingEntryId(entry.id)
                 }}
                 className="px-3 md:px-2 pb-3 md:pb-2 pt-0 cursor-text hover:bg-muted/30 rounded-md transition-colors"
@@ -1269,8 +1293,6 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
                           onClick={(e) => {
                             // Handle link clicks in read-only mode
                             const target = e.target as HTMLElement
-
-                            // Find the closest link element (in case click is on nested content)
                             const linkElement = target.closest('a[data-note-id]') as HTMLElement
 
                             console.log('🖱️ Read-only click:', {
@@ -1323,9 +1345,8 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
         noteId={viewingNoteId}
       />
 
-
       {/* Story 2.9: Helper Dialog (rendered once, outside entry loop) */}
-      {!isForcedTestUser && activeHelper && (user || isGuest) && (activeHelperMode === 'info' || activeEntryId) && (
+      {activeHelper && (user || isGuest) && (activeHelperMode === 'info' || activeEntryId) && (
         <Dialog open={true} onOpenChange={(open) => !open && handleHelperClose()}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             {activeHelperMode === 'info' ? (

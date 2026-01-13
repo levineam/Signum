@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { getNoteById, updateNote, deleteNote } from '@/lib/notes'
 import { Note, getNoteDisplayTitle } from '@/types/note'
 import { Button } from '@/components/ui/button'
@@ -20,9 +20,10 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { useLocalNotes } from '@/contexts/LocalNotesContext'
 
-export default function NoteEditPage({ params }: { params: Promise<{ id: string }> }) {
+export default function NoteEditPage() {
+  const params = useParams<{ id: string }>()
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const { addLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
@@ -70,10 +71,8 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
     const userId = user.id // Capture user.id for closure
 
     async function loadNote() {
-      const resolvedParams = await params
-
       // Get note from Supabase
-      const loadedNote = await getNoteById(resolvedParams.id, userId)
+      const loadedNote = await getNoteById(params.id, userId)
 
       if (loadedNote) {
         setNote(loadedNote)
@@ -84,7 +83,7 @@ export default function NoteEditPage({ params }: { params: Promise<{ id: string 
       setIsLoading(false)
     }
     loadNote()
-  }, [params, user])
+  }, [params.id, user])
 
   // Cleanup: Flush pending autosave before unmount
   // Use empty dependency array so cleanup only runs on unmount, not on every keystroke
@@ -569,6 +568,32 @@ const linkSelectionToNote = async (targetNoteId: string, createdNote?: Note) => 
                         onClick={(e) => {
                           // Handle link clicks in read-only mode
                           const target = e.target as HTMLElement
+
+                          const timestampLink = target.closest('a.youtube-timestamp') as HTMLAnchorElement | null
+                          if (timestampLink) {
+                            const href = timestampLink.getAttribute('href') || ''
+                            const match = href.match(/^#yt=([^&]+)&t=(\d+)$/)
+                            if (match) {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const tsVideoId = match[1]
+                              const seconds = Number(match[2])
+                              const iframe = (e.currentTarget as HTMLElement).querySelector(
+                                `.youtube-embed-container[data-video-id="${CSS.escape(tsVideoId)}"] iframe`
+                              ) as HTMLIFrameElement | null
+                              if (iframe?.src) {
+                                try {
+                                  const url = new URL(iframe.src)
+                                  url.searchParams.set('start', String(Math.max(0, Math.floor(seconds))))
+                                  url.searchParams.set('autoplay', '1')
+                                  iframe.src = url.toString()
+                                } catch {
+                                  // ignore
+                                }
+                              }
+                              return
+                            }
+                          }
                           const linkElement = target.closest('a[data-note-id]') as HTMLElement
 
                           if (linkElement) {

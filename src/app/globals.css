@@ -377,4 +377,56 @@
       transition: none;
     }
   }
+
+  /* YouTube embed styling */
+  .youtube-embed-container,
+  .rich-editor-body .youtube-embed-container,
+  .prose .youtube-embed-container {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+    /* Editor uses white-space: pre-wrap; don't render embed formatting whitespace */
+    white-space: normal;
+  }
+
+  /* Context-specific spacing */
+  .youtube-embed-container {
+    margin: 1rem 0;
+  }
+
+  .rich-editor-body .youtube-embed-container {
+    margin: 0.5rem 0; /* tighter in edit mode */
+  }
+
+  .prose .youtube-embed-container {
+    margin: 1rem 0;
+  }
+
+  /* Collapse margins between paragraphs and YouTube embeds */
+  .rich-editor-body p + .youtube-embed-container {
+    margin-top: 0.25rem;
+  }
+
+  .rich-editor-body .youtube-embed-container + p {
+    margin-top: 0.5rem;
+  }
+
+  /* In contentEditable, lines are sometimes <div> instead of <p> */
+  .rich-editor-body div + .youtube-embed-container {
+    margin-top: 0.25rem;
+  }
+
+  .rich-editor-body .youtube-embed-container + div {
+    margin-top: 0.5rem;
+  }
+
+  .youtube-embed-container iframe,
+  .rich-editor-body .youtube-embed-container iframe,
+  .prose .youtube-embed-container iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 0.5rem;
+    border: 1px solid hsl(var(--border));
+  }
+
 }

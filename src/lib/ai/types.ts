@@ -94,3 +94,25 @@ export interface AIAnswerErrorResponse {
   /** Additional error details (dev/preview only) */
   details?: string
 }
+
+/**
+ * Metadata stored in note.metadata JSONB field for video summary notes
+ */
+export interface VideoSummaryNoteMetadata {
+  /** Source type identifier */
+  sourceType: 'video'
+  /** YouTube video ID */
+  videoId: string
+  /** Original YouTube URL */
+  videoUrl: string
+  /** Video title (if available) */
+  videoTitle?: string
+  /** ID of source journal entry (if summarized from a journal) */
+  journalEntryId?: string
+  /** Number of tokens used */
+  tokensUsed: number
+  /** Model used for generation */
+  model: string
+  /** Timestamp when summary was generated */
+  generatedAt: string
+}

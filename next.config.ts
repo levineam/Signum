@@ -2,6 +2,55 @@ import path from 'path';
 import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
 
+// Debug logging (only enabled when DEBUG_BUILD_LOG is set)
+const DEBUG_ENABLED = process.env.DEBUG_BUILD_LOG === 'true';
+const DEBUG_LOG_ENDPOINT = 'http://127.0.0.1:7242/ingest/afa0e6a4-a579-4cac-85ee-332cfca43b6a';
+const DEBUG_SESSION_ID = 'debug-session';
+const debugRunId = process.env.DEBUG_RUN_ID ?? 'pre-fix';
+
+const emitDebugLog = (
+  hypothesisId: string,
+  message: string,
+  data: Record<string, unknown>,
+  location: string
+) => {
+  if (!DEBUG_ENABLED) return;
+  // #region agent log
+  void fetch(DEBUG_LOG_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionId: DEBUG_SESSION_ID,
+      runId: debugRunId,
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+};
+
+if (DEBUG_ENABLED) {
+  emitDebugLog('H1', 'Build environment snapshot', {
+    node: process.version,
+    vercel: process.env.VERCEL ?? 'unset',
+    nodeEnv: process.env.NODE_ENV ?? 'unset',
+    userAgent: process.env.npm_config_user_agent ?? 'unset',
+    cwd: process.cwd(),
+  }, 'next.config.ts:env');
+
+  try {
+    const resolvedReactQuery = require.resolve('@tanstack/react-query');
+    emitDebugLog('H2', 'Resolved @tanstack/react-query', { resolvedReactQuery }, 'next.config.ts:resolve-react-query');
+  } catch (error) {
+    emitDebugLog('H2', 'Failed to resolve @tanstack/react-query', {
+      error: error instanceof Error ? error.message : 'unknown',
+    }, 'next.config.ts:resolve-react-query');
+  }
+}
+
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   async redirects() {
@@ -26,6 +75,11 @@ const nextConfig: NextConfig = {
 };
 
 const enableSentry = process.env.SENTRY_ENABLED === 'true';
+
+emitDebugLog('H3', 'Next config flags', {
+  enableSentry,
+  outputFileTracingRoot: nextConfig.outputFileTracingRoot,
+}, 'next.config.ts:config-flags');
 
 const sentryWrappedConfig = withSentryConfig(nextConfig, {
   // For all available options, see:

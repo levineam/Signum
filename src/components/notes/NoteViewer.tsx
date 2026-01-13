@@ -33,7 +33,7 @@ export function NoteViewer({
   resolveLocalNote
 }: NoteViewerProps) {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const { getLocalNote } = useLocalNotes()
   const isDOMPurifyReady = useDOMPurifyReady()
   const [note, setNote] = useState<Note | null>(null)
@@ -182,6 +182,21 @@ export function NoteViewer({
     })
   }
 
+  const seekAndAutoplayEmbed = (root: HTMLElement, videoId: string, seconds: number) => {
+    const iframe = root.querySelector(
+      `.youtube-embed-container[data-video-id="${CSS.escape(videoId)}"] iframe`
+    ) as HTMLIFrameElement | null
+    if (!iframe?.src) return
+    try {
+      const url = new URL(iframe.src)
+      url.searchParams.set('start', String(Math.max(0, Math.floor(seconds))))
+      url.searchParams.set('autoplay', '1')
+      iframe.src = url.toString()
+    } catch {
+      // ignore
+    }
+  }
+
   if (!note) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -304,6 +319,23 @@ export function NoteViewer({
                   <div
                     className="text-base leading-relaxed text-foreground rich-editor-body"
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement
+
+                      const timestampLink = target.closest('a.youtube-timestamp') as HTMLAnchorElement | null
+                      if (timestampLink) {
+                        const href = timestampLink.getAttribute('href') || ''
+                        const match = href.match(/^#yt=([^&]+)&t=(\d+)$/)
+                        if (match) {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const tsVideoId = match[1]
+                          const seconds = Number(match[2])
+                          seekAndAutoplayEmbed(e.currentTarget as HTMLElement, tsVideoId, seconds)
+                          return
+                        }
+                      }
+                    }}
                   />
                 ) : (
                   <div className="text-muted-foreground">Loading content...</div>

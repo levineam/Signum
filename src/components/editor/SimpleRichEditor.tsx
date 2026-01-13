@@ -6,6 +6,10 @@ import { Bold, Italic, Underline, Highlighter, List, ListOrdered, Heading1, Head
 import { VoiceRecordButton } from '@/components/editor/VoiceRecordButton'
 import { AskAIDialog } from '@/components/journal/AskAIDialog'
 import { cn } from '@/lib/utils'
+import { detectYouTubeUrls, createEmbedHtml } from '@/utils/youtube'
+import { escapeHtml } from '@/utils/htmlEscape'
+import { useAuth } from '@/contexts/AuthContext'
+import { toast } from 'sonner'
 
 interface SimpleRichEditorProps {
   value?: string
@@ -47,6 +51,323 @@ export function SimpleRichEditor({
   const isInternalChangeRef = useRef(false)
   const suppressBlurRef = useRef(false)
   const canShowAskAIButton = Boolean(entryId || onNoteCreated)
+  const { session } = useAuth()
+  const updateActiveFormatsRef = useRef<(() => void) | null>(null)
+
+  const emitEditorChange = useCallback(() => {
+    if (onChange && editorRef.current) {
+      const content = editorRef.current.innerHTML || ''
+      onChange(content)
+    }
+  }, [onChange])
+
+  const moveCaretIntoStart = useCallback((el: HTMLElement) => {
+    const selection = window.getSelection()
+    if (!selection) return
+    const range = document.createRange()
+    try {
+      range.selectNodeContents(el)
+      range.collapse(true)
+      selection.removeAllRanges()
+      selection.addRange(range)
+    } catch {
+      selection.collapseToEnd()
+    }
+  }, [])
+
+  const getEditorBlockFromSelection = useCallback((): HTMLElement | null => {
+    const editor = editorRef.current
+    if (!editor) return null
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return null
+
+    const range = selection.getRangeAt(0)
+    if (!editor.contains(range.startContainer)) return null
+
+    let el: HTMLElement | null =
+      range.startContainer instanceof HTMLElement
+        ? range.startContainer
+        : range.startContainer.parentElement
+
+    // Walk up to a direct child of the editor (our “block” element).
+    while (el && el.parentElement && el.parentElement !== editor) {
+      el = el.parentElement
+    }
+
+    return el && el.parentElement === editor ? el : null
+  }, [])
+
+  const getMeaningfulSiblingElement = useCallback(
+    (node: HTMLElement, direction: 'prev' | 'next'): HTMLElement | null => {
+      let sib: ChildNode | null = direction === 'prev' ? node.previousSibling : node.nextSibling
+      while (sib) {
+        if (sib.nodeType === Node.TEXT_NODE) {
+          if (!(sib.textContent || '').trim()) {
+            sib = direction === 'prev' ? sib.previousSibling : sib.nextSibling
+            continue
+          }
+          return null
+        }
+
+        if (sib.nodeType === Node.ELEMENT_NODE) {
+          const el = sib as HTMLElement
+          if (el.tagName === 'BR') {
+            sib = direction === 'prev' ? sib.previousSibling : sib.nextSibling
+            continue
+          }
+          return el
+        }
+
+        sib = direction === 'prev' ? sib.previousSibling : sib.nextSibling
+      }
+      return null
+    },
+    []
+  )
+
+  const isCaretAtBlockBoundary = useCallback((block: HTMLElement, where: 'start' | 'end') => {
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return false
+    const range = selection.getRangeAt(0)
+    if (!range.collapsed) return false
+
+    try {
+      const probe = range.cloneRange()
+      probe.selectNodeContents(block)
+      if (where === 'start') {
+        probe.setEnd(range.startContainer, range.startOffset)
+      } else {
+        probe.setStart(range.endContainer, range.endOffset)
+      }
+      const text = probe.toString().replace(/\u200B/g, '')
+      return text.trim() === ''
+    } catch {
+      return false
+    }
+  }, [])
+
+  const ensureEditableLineAfter = useCallback((container: HTMLElement) => {
+    const parent = container.parentNode
+    if (!parent) return null
+
+    let next: ChildNode | null = container.nextSibling
+    // Skip whitespace-only text nodes
+    while (next && next.nodeType === Node.TEXT_NODE && !(next.textContent || '').trim()) {
+      next = next.nextSibling
+    }
+
+    if (next && next.nodeType === Node.ELEMENT_NODE) {
+      const el = next as HTMLElement
+      // If the next thing is already a normal text line, reuse it.
+      if (!el.classList.contains('youtube-embed-container') && (el.tagName === 'DIV' || el.tagName === 'P')) {
+        return el
+      }
+    }
+
+    // Insert a new blank line beneath the embed.
+    const line = document.createElement('div')
+    line.appendChild(document.createElement('br'))
+    parent.insertBefore(line, next)
+    return line
+  }, [])
+
+  const isSelectionInsideYouTubeEmbed = useCallback(() => {
+    const selection = window.getSelection()
+    const node = selection?.anchorNode
+    const el = node
+      ? (node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement)
+      : null
+    return Boolean(el && (el as HTMLElement).closest?.('.youtube-embed-container'))
+  }, [])
+
+  // Prevent the editor from blurring when interacting with non-editable embeds/buttons.
+  const handleEditorMouseDown = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    const embedContainer = target.closest('.youtube-embed-container') as HTMLElement | null
+    if (!embedContainer) return
+
+    // Keep edit mode active: prevent focus from moving to iframe/button-like elements.
+    e.preventDefault()
+    e.stopPropagation()
+    suppressBlurRef.current = true
+    const line = ensureEditableLineAfter(embedContainer)
+    if (line) moveCaretIntoStart(line)
+    // Only suppress this click's blur.
+    setTimeout(() => {
+      suppressBlurRef.current = false
+    }, 0)
+  }, [ensureEditableLineAfter, moveCaretIntoStart])
+
+  const handleEditorBeforeInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
+    // Block any edits when the caret is inside a non-editable YouTube embed.
+    if (!isSelectionInsideYouTubeEmbed()) return
+    e.preventDefault()
+    e.stopPropagation()
+    const anchor = window.getSelection()?.anchorNode
+    const element = anchor instanceof Element ? anchor : anchor?.parentElement
+    const container = element?.closest?.('.youtube-embed-container') as HTMLElement | null
+    if (container) {
+      const line = ensureEditableLineAfter(container)
+      if (line) moveCaretIntoStart(line)
+    }
+  }, [isSelectionInsideYouTubeEmbed, ensureEditableLineAfter, moveCaretIntoStart])
+
+  const handleEditorKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const key = e.key
+    const isBackwardDelete = key === 'Backspace'
+    const isForwardDelete = key === 'Delete'
+
+    // Atomic deletion when deleting *across* an embed boundary (most common case: Backspace at start of line).
+    if (isBackwardDelete || isForwardDelete) {
+      const block = getEditorBlockFromSelection()
+      const selection = window.getSelection()
+      const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
+
+      if (block && range && range.collapsed) {
+        if (isBackwardDelete && isCaretAtBlockBoundary(block, 'start')) {
+          const prev = getMeaningfulSiblingElement(block, 'prev')
+          if (prev?.classList.contains('youtube-summary-link')) {
+            e.preventDefault()
+            e.stopPropagation()
+            prev.remove()
+            moveCaretIntoStart(block)
+            emitEditorChange()
+            updateActiveFormatsRef.current?.()
+            return
+          }
+          if (prev?.classList.contains('youtube-embed-container')) {
+            e.preventDefault()
+            e.stopPropagation()
+            const actions = prev.querySelector('.youtube-embed-actions') as HTMLElement | null
+            if (actions) {
+              actions.remove()
+            } else {
+              prev.remove()
+            }
+            moveCaretIntoStart(block)
+            emitEditorChange()
+            updateActiveFormatsRef.current?.()
+            return
+          }
+        }
+
+        // Optional forward delete behavior: Delete at end of line removes next summary link/actions/embed.
+        if (isForwardDelete && isCaretAtBlockBoundary(block, 'end')) {
+          const next = getMeaningfulSiblingElement(block, 'next')
+          if (next?.classList.contains('youtube-summary-link')) {
+            e.preventDefault()
+            e.stopPropagation()
+            next.remove()
+            moveCaretIntoStart(block)
+            emitEditorChange()
+            updateActiveFormatsRef.current?.()
+            return
+          }
+          if (next?.classList.contains('youtube-embed-container')) {
+            e.preventDefault()
+            e.stopPropagation()
+            const actions = next.querySelector('.youtube-embed-actions') as HTMLElement | null
+            if (actions) {
+              actions.remove()
+            } else {
+              next.remove()
+            }
+            moveCaretIntoStart(block)
+            emitEditorChange()
+            updateActiveFormatsRef.current?.()
+            return
+          }
+        }
+      }
+    }
+
+    // If selection is inside an embed, never allow destructive keys to push content “into” the embed.
+    if (isSelectionInsideYouTubeEmbed()) {
+      // Allow navigation keys to move away; intercept deletion/typing.
+      const allowed = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Shift', 'Meta', 'Control', 'Alt'])
+      if (allowed.has(key)) return
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      const anchor = window.getSelection()?.anchorNode
+      const element = anchor instanceof Element ? anchor : anchor?.parentElement
+      const container = element?.closest?.('.youtube-embed-container') as HTMLElement | null
+      if (container) {
+        // If user is trying to delete from within the embed, delete actions first, then embed.
+        const line = ensureEditableLineAfter(container)
+        const actions = container.querySelector('.youtube-embed-actions') as HTMLElement | null
+        if ((isBackwardDelete || isForwardDelete) && actions) {
+          actions.remove()
+          if (line) moveCaretIntoStart(line)
+          emitEditorChange()
+          updateActiveFormatsRef.current?.()
+          return
+        }
+
+        if (isBackwardDelete || isForwardDelete) {
+          // Ensure caret has somewhere valid to go after removal.
+          if (line) moveCaretIntoStart(line)
+          container.remove()
+          emitEditorChange()
+          updateActiveFormatsRef.current?.()
+          return
+        }
+
+        // Non-delete typing attempt: move caret to editable line after.
+        if (line) moveCaretIntoStart(line)
+      }
+    }
+  }, [
+    emitEditorChange,
+    ensureEditableLineAfter,
+    getEditorBlockFromSelection,
+    getMeaningfulSiblingElement,
+    isCaretAtBlockBoundary,
+    isSelectionInsideYouTubeEmbed,
+    moveCaretIntoStart,
+  ])
+
+  const seekAndAutoplayEmbed = useCallback((videoId: string, seconds: number) => {
+    const editor = editorRef.current
+    if (!editor) return false
+    const iframe = editor.querySelector(
+      `.youtube-embed-container[data-video-id="${CSS.escape(videoId)}"] iframe`
+    ) as HTMLIFrameElement | null
+    if (!iframe?.src) return false
+
+    try {
+      const url = new URL(iframe.src)
+      url.searchParams.set('start', String(Math.max(0, Math.floor(seconds))))
+      url.searchParams.set('autoplay', '1')
+      iframe.src = url.toString()
+      return true
+    } catch {
+      return false
+    }
+  }, [])
+
+  // Handle YouTube timestamp clicks via event delegation
+  const handleEditorClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    const timestampLink = target.closest('a.youtube-timestamp') as HTMLAnchorElement | null
+    if (timestampLink) {
+      const href = timestampLink.getAttribute('href') || ''
+      const match = href.match(/^#yt=([^&]+)&t=(\d+)$/)
+      if (match) {
+        e.preventDefault()
+        e.stopPropagation()
+        const tsVideoId = match[1]
+        const seconds = Number(match[2])
+        const ok = seekAndAutoplayEmbed(tsVideoId, seconds)
+        if (!ok) {
+          toast.error('Could not seek video')
+        }
+        setTimeout(() => editorRef.current?.focus(), 0)
+        return
+      }
+    }
+  }, [seekAndAutoplayEmbed])
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
@@ -104,6 +425,10 @@ export function SimpleRichEditor({
 
     setActiveFormats(formats)
   }, [])
+
+  useEffect(() => {
+    updateActiveFormatsRef.current = updateActiveFormats
+  }, [updateActiveFormats])
 
   const formatText = useCallback((command: string, value?: string) => {
     if (editorRef.current) {
@@ -777,8 +1102,50 @@ export function SimpleRichEditor({
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault()
     const text = e.clipboardData.getData('text/plain')
-    document.execCommand('insertText', false, text)
-  }, [])
+
+    // Check for YouTube URLs in pasted content
+    const youtubeUrls = detectYouTubeUrls(text)
+
+    if (youtubeUrls.length > 0) {
+      // Replace URLs with embeds, preserving any surrounding text
+      // Process in reverse order to maintain correct indices when multiple URLs exist
+      const sortedUrls = [...youtubeUrls].sort((a, b) => b.startIndex - a.startIndex)
+
+      let result = text
+      sortedUrls.forEach(video => {
+        const embedHtml = createEmbedHtml(video.videoId, video.url)
+        const before = result.slice(0, video.startIndex).trim()
+        const after = result.slice(video.endIndex).trim()
+
+        // Build HTML: [before text] + line break + embed + line break + [after text]
+        let html = ''
+        if (before) html += `<div>${escapeHtml(before)}</div>`
+        html += '<div><br></div>'  // Editable line before embed
+        html += embedHtml
+        html += '<div><br></div>'  // Editable line after embed
+        if (after) html += `<div>${escapeHtml(after)}</div>`
+
+        result = html
+      })
+
+      document.execCommand('insertHTML', false, result)
+
+      // Trigger onChange to save the content
+      if (onChange && editorRef.current) {
+        const content = editorRef.current.innerHTML || ''
+        onChange(content)
+      }
+    } else {
+      // Normal paste behavior - just insert plain text
+      document.execCommand('insertText', false, text)
+
+      // Trigger onChange to ensure content is saved
+      if (onChange && editorRef.current) {
+        const content = editorRef.current.innerHTML || ''
+        onChange(content)
+      }
+    }
+  }, [onChange])
 
   useEffect(() => {
     suppressBlurRef.current = showAskAI
@@ -986,10 +1353,14 @@ export function SimpleRichEditor({
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning={true}
+          onBeforeInput={handleEditorBeforeInput}
+          onKeyDown={handleEditorKeyDown}
           onInput={handleInput}
           onFocus={onFocus}
           onBlur={handleEditorBlur}
           onPaste={handlePaste}
+          onMouseDown={handleEditorMouseDown}
+          onClick={handleEditorClick}
           className={cn(
             "rich-editor-body min-h-[120px] w-full resize-none border-0 bg-transparent text-foreground focus:outline-none focus:ring-0 text-base leading-relaxed",
             variant === 'default' ? "p-4" : "px-2 py-0"

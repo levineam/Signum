@@ -30,13 +30,20 @@ const sanitizeConfig: Config = {
     'ul', 'ol', 'li',
     'a', 'span', 'div',
     'blockquote', 'code', 'pre',
-    'mark' // For text highlighting (including Obsidian imports)
+    'mark', // For text highlighting (including Obsidian imports)
+    'iframe', // For YouTube video embeds (filtered by domain in hook)
   ],
   // Allow safe attributes (style will be filtered via hook)
   ALLOWED_ATTR: [
-    'href', 'title', 'class', 'style',
+    'href', 'title', 'class', 'style', 'type',
     'data-note-id', // For internal note links
     'data-target', // For Obsidian wikilinks
+    'data-video-id', // For YouTube embed containers
+    'data-video-url', // For YouTube embed metadata
+    'contenteditable', // For YouTube embed containers (set to false)
+    'tabindex', // For YouTube iframe (set to -1)
+    // Iframe-specific attributes (used for YouTube embeds)
+    'src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'loading',
   ],
   // Allow only safe protocols for links
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
@@ -44,9 +51,44 @@ const sanitizeConfig: Config = {
   ALLOW_DATA_ATTR: false,
 }
 
+// Allowed domains for iframe src (YouTube only for security)
+const ALLOWED_IFRAME_DOMAINS = [
+  'youtube.com',
+  'www.youtube.com',
+  'youtube-nocookie.com',
+  'www.youtube-nocookie.com',
+]
+
 // Style filtering hook - registered once globally to avoid race conditions
 // This hook filters style attributes to only allow safe styling properties
+// Also filters iframe src to only allow trusted YouTube domains
 const styleFilterHook = (node: Element, data: { attrName: string; attrValue: string; keepAttr?: boolean }) => {
+  // Filter iframe src to only allow YouTube domains over HTTPS
+  if (node.tagName === 'IFRAME' && data.attrName === 'src') {
+    try {
+      const url = new URL(data.attrValue)
+      // Must be HTTPS for security
+      if (url.protocol !== 'https:') {
+        data.keepAttr = false
+        return
+      }
+      if (!ALLOWED_IFRAME_DOMAINS.includes(url.hostname)) {
+        // Not a YouTube domain - strip the src attribute
+        data.keepAttr = false
+        return
+      }
+      // Additional check: must be an embed URL
+      if (!url.pathname.startsWith('/embed/')) {
+        data.keepAttr = false
+        return
+      }
+    } catch {
+      // Invalid URL - strip the attribute
+      data.keepAttr = false
+      return
+    }
+  }
+
   if (data.attrName === 'style' && data.attrValue) {
     // Parse the style attribute and filter to only allow safe properties
     const styles = data.attrValue.split(';').map(s => s.trim()).filter(Boolean)
