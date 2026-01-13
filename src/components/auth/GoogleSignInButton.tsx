@@ -54,7 +54,7 @@ export function GoogleSignInButton({ disabled, onError, className }: GoogleSignI
           redirectTo,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
+            prompt: 'select_account',
           },
         },
       })

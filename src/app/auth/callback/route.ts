@@ -1,5 +1,20 @@
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+
+// Allowlist of valid redirect hosts to prevent open redirect attacks
+const ALLOWED_HOSTS = [
+  'ontology-mu.vercel.app',
+  'signum-im11dbdvv-levineams-projects.vercel.app',
+  'localhost',
+]
+
+function isAllowedHost(host: string): boolean {
+  const normalizedHost = host.trim().toLowerCase()
+  return ALLOWED_HOSTS.some(allowed =>
+    normalizedHost === allowed || normalizedHost.endsWith(`.${allowed}`)
+  )
+}
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -21,10 +36,18 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/auth?error=Configuration%20error`)
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
+    const cookieStore = await cookies()
+
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        },
       },
     })
 
@@ -36,12 +59,13 @@ export async function GET(request: Request) {
     }
 
     // Handle forwarded host for production environments behind load balancers
+    // Validate against allowlist to prevent open redirect attacks
     const forwardedHost = request.headers.get('x-forwarded-host')
     const isLocalEnv = process.env.NODE_ENV === 'development'
 
     if (isLocalEnv) {
       return NextResponse.redirect(`${origin}/`)
-    } else if (forwardedHost) {
+    } else if (forwardedHost && isAllowedHost(forwardedHost)) {
       return NextResponse.redirect(`https://${forwardedHost}/`)
     } else {
       return NextResponse.redirect(`${origin}/`)

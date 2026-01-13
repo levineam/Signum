@@ -13,8 +13,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { X } from 'lucide-react'
-import { Separator } from '@/components/ui/separator'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
+import { OrDivider } from '@/components/auth/OrDivider'
 
 interface GuestAuthModalProps {
   isOpen: boolean
@@ -188,21 +188,14 @@ export function GuestAuthModal({
           <>
             <GoogleSignInButton
               disabled={loading}
-              onError={(msg) => setMessage(msg)}
+              onError={(msg) => {
+                resetAutoDismissTimer()
+                setMessage(msg)
+              }}
               className="w-full mt-4"
             />
 
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <Separator className="w-full" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  or continue with email
-                </span>
-              </div>
-            </div>
+            <OrDivider />
           </>
         )}
 
