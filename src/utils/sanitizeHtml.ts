@@ -44,8 +44,6 @@ const sanitizeConfig: Config = {
     'tabindex', // For YouTube iframe (set to -1)
     // Iframe-specific attributes (used for YouTube embeds)
     'src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'loading',
-    // SVG attributes for icons
-    'xmlns', 'viewBox', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'd',
   ],
   // Allow only safe protocols for links
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
@@ -65,10 +63,15 @@ const ALLOWED_IFRAME_DOMAINS = [
 // This hook filters style attributes to only allow safe styling properties
 // Also filters iframe src to only allow trusted YouTube domains
 const styleFilterHook = (node: Element, data: { attrName: string; attrValue: string; keepAttr?: boolean }) => {
-  // Filter iframe src to only allow YouTube domains
+  // Filter iframe src to only allow YouTube domains over HTTPS
   if (node.tagName === 'IFRAME' && data.attrName === 'src') {
     try {
       const url = new URL(data.attrValue)
+      // Must be HTTPS for security
+      if (url.protocol !== 'https:') {
+        data.keepAttr = false
+        return
+      }
       if (!ALLOWED_IFRAME_DOMAINS.includes(url.hostname)) {
         // Not a YouTube domain - strip the src attribute
         data.keepAttr = false
