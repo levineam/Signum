@@ -40,6 +40,8 @@ const sanitizeConfig: Config = {
     'data-target', // For Obsidian wikilinks
     'data-video-id', // For YouTube embed containers
     'data-video-url', // For YouTube embed metadata
+    'contenteditable', // For YouTube embed containers (set to false)
+    'tabindex', // For YouTube iframe (set to -1)
     // Iframe-specific attributes (used for YouTube embeds)
     'src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'loading',
     // SVG attributes for icons
