@@ -75,41 +75,24 @@ export async function POST(req: NextRequest) {
     const focusTheme = FOCUS_THEMES[focus]
 
     const system = [
-      'You write warm, curious writing inspiration for a journaling app.',
-      'The user should feel understood and gently invited to write about the right thing for them today.',
-      'Never sound like homework, a task list, or psychoanalysis.',
-      'Use questions more than statements. Aim for 2–3 sentences total.',
-      'Do NOT mention ontology, models, AI, algorithms, gaps, staleness, or timestamps.',
-      'Avoid: "you should", "you need to", "before you...", "it has been N days...", "your X is empty/incomplete".',
+      'You write minimal, warm writing prompts for a journaling app.',
+      'Keep prompts SHORT: 1-2 sentences maximum.',
       '',
-      'CRITICAL - FOCUS THEME ALIGNMENT:',
-      '- The prompt MUST primarily invite reflection on the FOCUS THEME specified below.',
-      '- You may use the user\'s values or goals as bridges INTO the focus theme, but the core invitation must be about the focus area.',
-      '- Example for higher-power focus: "With creativity among what matters to you, what feels larger than that—something that calls you beyond yourself?"',
-      '- Example for beliefs focus: "Thinking about your goal of career growth, what belief about yourself makes that feel possible—or hard?"',
+      'CRITICAL RULE: The prompt must be PURELY about the FOCUS THEME.',
+      '- Do NOT mention goals, values, or other topics unless they subtly enrich the focus theme.',
+      '- Bridge context is optional. If used, it should add texture, not introduce new topics.',
+      '- GOOD: "What feels larger than yourself right now?"',
+      '- GOOD with bridge: "What feels larger than yourself—beyond even your creative work?"',
+      '- BAD: "As you think about your goal X, what feels larger..." (introduces goals as a topic)',
       '',
-      'When context includes specific values, goals, or themes:',
-      '- You MAY reference 1-2 items BY NAME as bridges to the focus theme',
-      '- But the question itself must be ABOUT the focus theme, not just a general writing prompt',
-      '- NEVER invent topics or themes the user hasn\'t expressed interest in',
-      '- If the ontology is empty, ask open questions specifically about the focus theme',
-      '',
-      "Echo the user's own language and themes without repeating them verbatim.",
-      'Make the prompt feel personally relevant, not generic.',
+      'Never mention: ontology, AI, algorithms, timestamps, gaps, staleness.',
+      'Avoid: "you should", "you need to", task-like language.',
     ].join('\n')
 
     // Build rich user prompt with available context
     // Order: Focus theme first, then focus-specific items, then secondary context (values/goals as bridges)
     const focusContextLines: string[] = []
     const secondaryContextLines: string[] = []
-
-    const hasContext = !!(
-      body.context?.missionExcerpt ||
-      body.context?.exampleItems?.length ||
-      body.context?.valueNames?.length ||
-      body.context?.goalNames?.length ||
-      body.context?.recentExcerpt
-    )
 
     // Focus-specific items come first (exampleItems are from the focus section)
     if (body.context?.exampleItems?.length) {
@@ -144,9 +127,7 @@ export async function POST(req: NextRequest) {
 
     const allContextLines = [...focusContextLines, ...secondaryContextLines]
 
-    const instructionLine = hasContext
-      ? `IMPORTANT: Write a warm, personalized writing invitation that is primarily about ${focus} (${focusTheme}). You may use bridge context items BY NAME to connect to the focus theme.`
-      : `The user is just starting out. Write a warm, open-ended question specifically about ${focus} (${focusTheme}) - do NOT invent specific topics.`
+    const instructionLine = `Write a minimal prompt PURELY about ${focus}. Bridge context is optional—only use it to subtly enrich the focus theme.`
 
     const user = [
       `FOCUS AREA: ${focus}`,

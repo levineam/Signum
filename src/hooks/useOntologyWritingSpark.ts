@@ -21,7 +21,7 @@ type WritingSparkState = {
   isRejuvenateMode: boolean
 }
 
-const SESSION_KEY_PREFIX = 'signum-writing-spark-v4-'
+const SESSION_KEY_PREFIX = 'signum-writing-spark-v5-'
 
 const REJUVENATE_THRESHOLD_DAYS = 90
 
