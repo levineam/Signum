@@ -236,6 +236,20 @@ export function sanitizeHtml(html: string): string {
     return ''
   }
 
+  // DEBUG: Log before/after to diagnose embed disappearance in read-only mode
+  const hasEmbed = html.includes('youtube-embed-container')
+  if (hasEmbed) {
+    console.log('🔵 sanitizeHtml INPUT:', html.substring(0, 500))
+  }
+
   // Use DOMPurify with the globally registered hook
-  return DOMPurify.sanitize(html, sanitizeConfig)
+  const result = DOMPurify.sanitize(html, sanitizeConfig)
+
+  if (hasEmbed) {
+    console.log('🟢 sanitizeHtml OUTPUT:', result.substring(0, 500))
+    console.log('🟢 OUTPUT has iframe?', result.includes('<iframe'))
+    console.log('🟢 OUTPUT has embed container?', result.includes('youtube-embed-container'))
+  }
+
+  return result
 }
