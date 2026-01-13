@@ -80,6 +80,8 @@ function createLocalEntry(date: string): JournalEntry {
 // Helper function to check if content is truly empty (handles HTML markup)
 function isContentEmpty(html: string): boolean {
   if (!html || html.trim() === '') return true
+  // Check for YouTube embeds - these are non-empty even without text
+  if (html.includes('youtube-embed-container')) return false
   // Use regex to strip HTML tags for SSR-safe text extraction
   const text = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
   return text.trim() === ''
