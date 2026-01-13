@@ -48,6 +48,14 @@ export const supabase = new Proxy({} as SupabaseClient, {
           signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
           signOut: () => Promise.resolve({ error: null }),
           resetPasswordForEmail: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+          signInWithOAuth: () => Promise.resolve({
+            data: { url: null, provider: null },
+            error: { message: 'Google sign-in is not available in test mode' },
+          }),
+          exchangeCodeForSession: () => Promise.resolve({
+            data: { session: null },
+            error: { message: 'Supabase not configured' },
+          }),
         }
       }
       return () => {
