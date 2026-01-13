@@ -3,17 +3,28 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 // Allowlist of valid redirect hosts to prevent open redirect attacks
+// Supports exact matches and pattern matching for Vercel preview deployments
 const ALLOWED_HOSTS = [
   'ontology-mu.vercel.app',
-  'signum-im11dbdvv-levineams-projects.vercel.app',
   'localhost',
+]
+
+// Allow any Vercel preview URL for this project
+const ALLOWED_PATTERNS = [
+  /^signum.*\.vercel\.app$/,  // Matches signum-*.vercel.app preview URLs
+  /^.*-levineams-projects\.vercel\.app$/,  // Matches *-levineams-projects.vercel.app
 ]
 
 function isAllowedHost(host: string): boolean {
   const normalizedHost = host.trim().toLowerCase()
-  return ALLOWED_HOSTS.some(allowed =>
-    normalizedHost === allowed || normalizedHost.endsWith(`.${allowed}`)
-  )
+
+  // Check exact matches
+  if (ALLOWED_HOSTS.includes(normalizedHost)) {
+    return true
+  }
+
+  // Check pattern matches for Vercel preview URLs
+  return ALLOWED_PATTERNS.some(pattern => pattern.test(normalizedHost))
 }
 
 export async function GET(request: Request) {
