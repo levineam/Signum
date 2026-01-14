@@ -149,7 +149,7 @@ export function OntologyInsightCard() {
         {suggestedExercise && (
           <div className="mt-4 pt-4 border-t border-foreground/10">
             <div className="flex items-end justify-between gap-4">
-              <p className="text-sm text-foreground/60 leading-relaxed flex-1">
+              <p className="text-base text-foreground/60 leading-relaxed flex-1">
                 Improve your ontology and gain deeper insight into yourself.
               </p>
               <Button
