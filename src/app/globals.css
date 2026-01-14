@@ -443,28 +443,31 @@
   /* Magical deep red metallic prompt styling */
   .magical-prompt {
     background: linear-gradient(
-      135deg,
+      90deg,
       #991b1b 0%,
-      #dc2626 25%,
-      #f87171 50%,
-      #dc2626 75%,
+      #dc2626 20%,
+      #f87171 40%,
+      #fca5a5 50%,
+      #f87171 60%,
+      #dc2626 80%,
       #991b1b 100%
     );
-    background-size: 200% 200%;
+    background-size: 300% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    transition: all 0.3s ease;
+    font-weight: 700;
+    animation: shimmer 3s ease-in-out infinite;
   }
 
   .magical-prompt:hover {
-    animation: shimmer 1.5s ease-in-out infinite;
     filter: brightness(1.2);
+    animation: shimmer 1.5s ease-in-out infinite;
   }
 
   @keyframes shimmer {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% { background-position: 100% 50%; }
+    50% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
   }
 }
