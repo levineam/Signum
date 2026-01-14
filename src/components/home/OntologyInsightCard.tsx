@@ -148,14 +148,14 @@ export function OntologyInsightCard() {
         {/* Exercise button - shown alongside prompt when an exercise is suggested */}
         {suggestedExercise && (
           <div className="mt-4 pt-4 border-t border-foreground/10">
-            <div className="flex items-end justify-between gap-4">
-              <p className="text-base text-foreground/60 leading-relaxed flex-1">
+            <div className="flex items-end justify-center gap-6">
+              <p className="text-base text-foreground/60 leading-relaxed">
                 Improve your ontology and gain deeper insight into yourself.
               </p>
               <Button
                 variant="outline"
                 size="sm"
-                className="shrink-0"
+                className=""
                 onClick={(e) => {
                   e.stopPropagation()
                   setExerciseModalOpen(true)
