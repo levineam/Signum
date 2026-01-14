@@ -157,7 +157,7 @@ export function OntologyInsightCard() {
 
         {/* Exercise button - shown alongside prompt when an exercise is suggested */}
         {suggestedExercise && (
-          <div className="mt-4 pt-4 border-t border-foreground/10">
+          <div className="mt-4">
             <div className="flex justify-center">
               <TooltipProvider delayDuration={300}>
                 <Tooltip>

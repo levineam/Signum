@@ -440,15 +440,15 @@
     opacity: 0.50;
   }
 
-  /* Magical purple metallic prompt styling */
+  /* Magical deep red metallic prompt styling */
   .magical-prompt {
     background: linear-gradient(
       135deg,
-      #8b5cf6 0%,
-      #a78bfa 25%,
-      #c4b5fd 50%,
-      #a78bfa 75%,
-      #8b5cf6 100%
+      #991b1b 0%,
+      #dc2626 25%,
+      #f87171 50%,
+      #dc2626 75%,
+      #991b1b 100%
     );
     background-size: 200% 200%;
     -webkit-background-clip: text;
