@@ -10,6 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { useOntologyWritingSpark } from '@/hooks/useOntologyWritingSpark'
 import { ExerciseModal } from '@/components/exercises/ExerciseModal'
 
@@ -120,49 +126,58 @@ export function OntologyInsightCard() {
         </div>
 
         {/* Writing prompt - clickable to seed journal */}
-        <div
-          role="button"
-          tabIndex={0}
-          className="cursor-pointer rounded-md p-2 -m-2 transition-colors hover:bg-foreground/5"
-          onClick={dispatchSeed}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              if (e.key === ' ') {
-                e.preventDefault()
-              }
-              dispatchSeed()
-            }
-          }}
-          aria-label="Click to use this writing prompt in your journal"
-        >
-          <p className="text-lg leading-relaxed pr-8 text-foreground italic">
-            {loading ? '…' : text}
-          </p>
-        </div>
-
-        {/* AI disclosure for transparency */}
-        <p className="text-xs text-foreground/50 mt-3 pr-8">
-          {AI_DISCLOSURE}
-        </p>
+        <TooltipProvider delayDuration={500}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                role="button"
+                tabIndex={0}
+                className="cursor-pointer rounded-md p-2 -m-2 transition-colors hover:bg-foreground/5"
+                onClick={dispatchSeed}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.key === ' ') {
+                      e.preventDefault()
+                    }
+                    dispatchSeed()
+                  }
+                }}
+                aria-label="Click to use this writing prompt in your journal"
+              >
+                <p className="text-xl leading-relaxed pr-8 italic magical-prompt">
+                  {loading ? '…' : text}
+                </p>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {AI_DISCLOSURE}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {/* Exercise button - shown alongside prompt when an exercise is suggested */}
         {suggestedExercise && (
           <div className="mt-4 pt-4 border-t border-foreground/10">
-            <div className="flex items-end justify-center gap-6">
-              <p className="text-base text-foreground/60 leading-relaxed">
-                Improve your ontology and gain deeper insight into yourself.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className=""
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setExerciseModalOpen(true)
-                }}
-              >
-                Ontology Exercise
-              </Button>
+            <div className="flex justify-center">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setExerciseModalOpen(true)
+                      }}
+                    >
+                      Ontology Exercise
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Improve your ontology and gain deeper insight into yourself.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         )}

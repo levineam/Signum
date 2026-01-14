@@ -439,4 +439,32 @@
     transform: translateX(18%) rotate(10deg);
     opacity: 0.50;
   }
+
+  /* Magical purple metallic prompt styling */
+  .magical-prompt {
+    background: linear-gradient(
+      135deg,
+      #8b5cf6 0%,
+      #a78bfa 25%,
+      #c4b5fd 50%,
+      #a78bfa 75%,
+      #8b5cf6 100%
+    );
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    transition: all 0.3s ease;
+  }
+
+  .magical-prompt:hover {
+    animation: shimmer 1.5s ease-in-out infinite;
+    filter: brightness(1.2);
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
 }
