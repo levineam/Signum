@@ -1,9 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Info } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useOntologyWritingSpark } from '@/hooks/useOntologyWritingSpark'
 import { ExerciseModal } from '@/components/exercises/ExerciseModal'
 
@@ -36,6 +42,7 @@ const DISMISS_KEY = 'signum-ontology-insight-dismissed-session'
 export function OntologyInsightCard() {
   const [dismissed, setDismissed] = useState(false)
   const [exerciseModalOpen, setExerciseModalOpen] = useState(false)
+  const [infoModalOpen, setInfoModalOpen] = useState(false)
   const {
     text,
     loading,
@@ -95,15 +102,22 @@ export function OntologyInsightCard() {
           <X className="h-4 w-4" />
         </Button>
 
-        <div className="mb-2 pr-8">
+        <div className="mb-3 pr-8 flex items-center gap-2">
           <div className="text-lg leading-none font-semibold tracking-wide text-foreground/80">
             Inspired by your ontology
           </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setInfoModalOpen(true)
+            }}
+            className="text-foreground/50 hover:text-foreground/80 transition-colors"
+            aria-label="Learn more about your ontology"
+          >
+            <Info className="h-4 w-4" />
+          </button>
         </div>
-
-        <p className="text-sm leading-relaxed text-foreground/75 mb-3 pr-8">
-          {ONTOLOGY_BLURB}
-        </p>
 
         {/* Writing prompt - clickable to seed journal */}
         <div
@@ -121,7 +135,7 @@ export function OntologyInsightCard() {
           }}
           aria-label="Click to use this writing prompt in your journal"
         >
-          <p className="text-base leading-relaxed pr-8 text-foreground">
+          <p className="text-lg leading-relaxed pr-8 text-foreground italic">
             {loading ? '…' : text}
           </p>
         </div>
@@ -135,9 +149,8 @@ export function OntologyInsightCard() {
         {suggestedExercise && (
           <div className="mt-4 pt-4 border-t border-foreground/10">
             <div className="flex items-end justify-between gap-4">
-              <p className="text-xs text-foreground/60 leading-relaxed flex-1">
-                Want to improve these suggestions? Gain deeper insight into yourself
-                while building your ontology with the following exercise.
+              <p className="text-sm text-foreground/60 leading-relaxed flex-1">
+                Improve your ontology and gain deeper insight into yourself.
               </p>
               <Button
                 variant="outline"
@@ -164,6 +177,18 @@ export function OntologyInsightCard() {
           onComplete={handleExerciseComplete}
         />
       )}
+
+      {/* Info Modal */}
+      <Dialog open={infoModalOpen} onOpenChange={setInfoModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>About Your Ontology</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {ONTOLOGY_BLURB}
+          </p>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
