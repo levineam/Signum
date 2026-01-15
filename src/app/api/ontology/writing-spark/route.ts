@@ -11,7 +11,8 @@ type WritingSparkResponse =
   | { ok: false; error: string }
 
 // Comparison mode - returns both pre-written and AI-generated prompts for A/B testing
-const COMPARISON_MODE = process.env.COMPARISON_MODE === 'true'
+// TODO: Remove before deploying to production - hardcoded to true for preview testing
+const COMPARISON_MODE = true
 
 // Focus theme descriptions - tells AI what each focus area is really about
 // Used to ensure writing prompts align with the corresponding exercise theme
