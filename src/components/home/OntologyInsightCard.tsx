@@ -53,8 +53,13 @@ export function OntologyInsightCard() {
     text,
     loading,
     suggestedExercise,
-    clearCache
+    clearCache,
+    prewrittenText,
+    aiText,
   } = useOntologyWritingSpark()
+
+  // Check if we're in comparison mode (both prompts available)
+  const isComparisonMode = !!prewrittenText && !!aiText
 
   useEffect(() => {
     try {
@@ -125,35 +130,59 @@ export function OntologyInsightCard() {
           </button>
         </div>
 
-        {/* Writing prompt - clickable to seed journal */}
-        <TooltipProvider delayDuration={500}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                role="button"
-                tabIndex={0}
-                className="cursor-pointer rounded-md p-2 -m-2 transition-colors hover:bg-foreground/5"
-                onClick={dispatchSeed}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    if (e.key === ' ') {
-                      e.preventDefault()
-                    }
-                    dispatchSeed()
-                  }
-                }}
-                aria-label="Click to use this writing prompt in your journal"
-              >
-                <p className="text-xl leading-relaxed pr-8 italic magical-prompt">
-                  {loading ? '…' : text}
-                </p>
+        {/* Writing prompts - comparison mode shows both */}
+        {isComparisonMode ? (
+          <div className="space-y-4">
+            {/* Pre-written prompt */}
+            <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 p-3">
+              <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2 uppercase tracking-wide">
+                Pre-written Prompt
               </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              {AI_DISCLOSURE}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+              <p className="text-lg leading-relaxed italic text-foreground/90">
+                {loading ? '…' : prewrittenText}
+              </p>
+            </div>
+
+            {/* AI-generated prompt */}
+            <div className="rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 p-3">
+              <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-2 uppercase tracking-wide">
+                AI-Generated (GPT-5-mini)
+              </div>
+              <p className="text-lg leading-relaxed italic text-foreground/90">
+                {loading ? '…' : aiText}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <TooltipProvider delayDuration={500}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer rounded-md p-2 -m-2 transition-colors hover:bg-foreground/5"
+                  onClick={dispatchSeed}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      if (e.key === ' ') {
+                        e.preventDefault()
+                      }
+                      dispatchSeed()
+                    }
+                  }}
+                  aria-label="Click to use this writing prompt in your journal"
+                >
+                  <p className="text-xl leading-relaxed pr-8 italic magical-prompt">
+                    {loading ? '…' : text}
+                  </p>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {AI_DISCLOSURE}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
 
         {/* Exercise button - shown alongside prompt when an exercise is suggested */}
         {suggestedExercise && (

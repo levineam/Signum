@@ -7,8 +7,11 @@ import { getRandomPrompt } from '@/lib/ontology/writingPrompts'
 const USE_PREWRITTEN_PROMPTS = process.env.USE_PREWRITTEN_PROMPTS === 'true'
 
 type WritingSparkResponse =
-  | { ok: true; text: string; focus: OntologyWritingSparkInput['focus']; signal: OntologyWritingSparkInput['signal'] }
+  | { ok: true; text: string; focus: OntologyWritingSparkInput['focus']; signal: OntologyWritingSparkInput['signal']; prewrittenText?: string; aiText?: string }
   | { ok: false; error: string }
+
+// Comparison mode - returns both pre-written and AI-generated prompts for A/B testing
+const COMPARISON_MODE = process.env.COMPARISON_MODE === 'true'
 
 // Focus theme descriptions - tells AI what each focus area is really about
 // Used to ensure writing prompts align with the corresponding exercise theme
@@ -66,13 +69,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Get pre-written prompt (always needed for comparison mode or as fallback)
+    const prewrittenText = getRandomPrompt(focus)
+
     // Use pre-written prompts if feature flag is enabled or no AI configured
     if (USE_PREWRITTEN_PROMPTS || !openai) {
       return NextResponse.json<WritingSparkResponse>({
         ok: true,
-        text: getRandomPrompt(focus),
+        text: prewrittenText,
         focus,
         signal,
+        prewrittenText: COMPARISON_MODE ? prewrittenText : undefined,
       })
     }
 
@@ -154,9 +161,21 @@ export async function POST(req: NextRequest) {
       max_tokens: 120,
     })
 
-    const text = completion.choices[0]?.message?.content?.trim() || fallbackSpark(focus, signal)
+    const aiText = completion.choices[0]?.message?.content?.trim() || fallbackSpark(focus, signal)
 
-    return NextResponse.json<WritingSparkResponse>({ ok: true, text, focus, signal })
+    // In comparison mode, return both prompts; otherwise just the AI text
+    if (COMPARISON_MODE) {
+      return NextResponse.json<WritingSparkResponse>({
+        ok: true,
+        text: aiText, // Default to AI text
+        focus,
+        signal,
+        prewrittenText,
+        aiText,
+      })
+    }
+
+    return NextResponse.json<WritingSparkResponse>({ ok: true, text: aiText, focus, signal })
   } catch (e) {
     console.error('[writing-spark] Error generating prompt:', e)
     return NextResponse.json<WritingSparkResponse>(

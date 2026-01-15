@@ -19,6 +19,9 @@ type WritingSparkState = {
   allExercisesCompleted: boolean
   suggestedExercise: ExerciseType | null
   isRejuvenateMode: boolean
+  // Comparison mode fields
+  prewrittenText?: string
+  aiText?: string
 }
 
 const SESSION_KEY_PREFIX = 'signum-writing-spark-v5-'
@@ -236,7 +239,7 @@ export function useOntologyWritingSpark() {
           return
         }
 
-        const data = (await res.json()) as { ok: boolean; text?: string }
+        const data = (await res.json()) as { ok: boolean; text?: string; prewrittenText?: string; aiText?: string }
         const text = data?.text?.trim() || FALLBACK.text
         const next: WritingSparkState = {
           text,
@@ -244,7 +247,9 @@ export function useOntologyWritingSpark() {
           exerciseStatus,
           allExercisesCompleted,
           suggestedExercise,
-          isRejuvenateMode
+          isRejuvenateMode,
+          prewrittenText: data?.prewrittenText,
+          aiText: data?.aiText,
         }
 
         if (!cancelled) {
