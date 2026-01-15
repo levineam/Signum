@@ -40,8 +40,8 @@ import { ExerciseModal } from '@/components/exercises/ExerciseModal'
 const ONTOLOGY_BLURB =
   "Your ontology is a living map of what you believe, what you value, and what you're moving toward. As it gets clearer, it becomes easier to notice what matters most — and find the right thing to write about today."
 
-const AI_DISCLOSURE =
-  "This prompt is personalized using AI based on your ontology data."
+const PROMPT_TOOLTIP =
+  "Click to use this prompt in your journal"
 
 const DISMISS_KEY = 'signum-ontology-insight-dismissed-session'
 
@@ -55,13 +55,8 @@ export function OntologyInsightCard() {
     suggestedExercise,
     clearCache,
     cycleFocus,
-    prewrittenText,
-    aiText,
     input,
   } = useOntologyWritingSpark()
-
-  // Check if we're in comparison mode (both prompts available)
-  const isComparisonMode = !!prewrittenText && !!aiText
 
   useEffect(() => {
     try {
@@ -160,59 +155,35 @@ export function OntologyInsightCard() {
           </button>
         </div>
 
-        {/* Writing prompts - comparison mode shows both */}
-        {isComparisonMode ? (
-          <div className="space-y-4">
-            {/* Pre-written prompt */}
-            <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 p-3">
-              <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2 uppercase tracking-wide">
-                Pre-written Prompt
-              </div>
-              <p className="text-lg leading-relaxed italic text-foreground/90">
-                {loading ? '…' : prewrittenText}
-              </p>
-            </div>
-
-            {/* AI-generated prompt */}
-            <div className="rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 p-3">
-              <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-2 uppercase tracking-wide">
-                AI-Generated (GPT-4o-mini)
-              </div>
-              <p className="text-lg leading-relaxed italic text-foreground/90">
-                {loading ? '…' : aiText}
-              </p>
-            </div>
-          </div>
-        ) : (
-          <TooltipProvider delayDuration={500}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-pointer rounded-md p-2 -m-2 transition-colors hover:bg-foreground/5"
-                  onClick={dispatchSeed}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      if (e.key === ' ') {
-                        e.preventDefault()
-                      }
-                      dispatchSeed()
+        {/* Writing prompt with glistening red text */}
+        <TooltipProvider delayDuration={500}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                role="button"
+                tabIndex={0}
+                className="cursor-pointer rounded-md p-2 -m-2 transition-colors hover:bg-foreground/5"
+                onClick={dispatchSeed}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.key === ' ') {
+                      e.preventDefault()
                     }
-                  }}
-                  aria-label="Click to use this writing prompt in your journal"
-                >
-                  <p className="text-xl leading-relaxed pr-8 italic magical-prompt">
-                    {loading ? '…' : text}
-                  </p>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                {AI_DISCLOSURE}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
+                    dispatchSeed()
+                  }
+                }}
+                aria-label="Click to use this writing prompt in your journal"
+              >
+                <p className="text-xl leading-relaxed pr-8 italic magical-prompt">
+                  {loading ? '…' : text}
+                </p>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {PROMPT_TOOLTIP}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {/* Exercise button - shown alongside prompt when an exercise is suggested */}
         {suggestedExercise && (
