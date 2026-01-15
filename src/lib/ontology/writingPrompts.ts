@@ -14,25 +14,25 @@ import type { OntologyCategory } from '@/types/note'
  */
 export const WRITING_PROMPTS: Record<OntologyCategory, readonly string[]> = {
   'higher-power': [
-    'What presence or force do you sense guiding you, even when you can\'t name it?',
-    'When was the last time you felt held by something greater than yourself?',
-    'What mystery keeps drawing you back, asking to be explored?',
-    'Where do you find awe hiding in your ordinary days?',
-    'What would it mean to surrender to something you can\'t control?',
+    'What feels bigger than you—something that grounds you or gives you perspective?',
+    'When was the last time you felt connected to something greater than yourself?',
+    'What source of meaning or guidance do you turn to when life feels uncertain?',
+    'Where do you find a sense of the sacred in your everyday life?',
+    'What do you trust in that you can\'t fully explain or control?',
   ],
   beliefs: [
-    'What story about the world have you been carrying lately—and does it still fit?',
+    'What do you believe about yourself that shapes how you move through the world?',
     'What conviction has quietly shifted in you without you noticing?',
     'What do you know in your bones to be true, even if you can\'t prove it?',
-    'What belief has been asking for your attention, waiting to be examined?',
-    'What assumption about life are you ready to gently question?',
+    'What belief about life have you been reconsidering lately?',
+    'What assumption do you hold that you\'ve never really examined?',
   ],
   values: [
-    'What have you been protecting lately, even at a cost?',
-    'Where does your heart say "this matters" when the world says otherwise?',
-    'What would you refuse to trade away, no matter what was offered?',
-    'What principle has been quietly shaping your choices this week?',
-    'When you feel most like yourself, what are you honoring?',
+    'What matters most to you right now, even if others don\'t understand?',
+    'What principle have you found yourself standing by this week?',
+    'If you had to name one thing you\'d never compromise on, what would it be?',
+    'What do you value that you wish you expressed more often?',
+    'When you feel most aligned with who you want to be, what value are you living?',
   ],
   people: [
     'Whose presence has been lingering in your thoughts lately?',
