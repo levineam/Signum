@@ -24,7 +24,7 @@ type WritingSparkState = {
   aiText?: string
 }
 
-const SESSION_KEY_PREFIX = 'signum-writing-spark-v5-'
+const SESSION_KEY_PREFIX = 'signum-writing-spark-v6-'
 
 const REJUVENATE_THRESHOLD_DAYS = 90
 
