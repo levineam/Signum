@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { hasPublicSupabase } from '@/lib/supabase'
 import { getPinnedNotes } from '@/lib/notes'
 import { useAuth } from '@/contexts/AuthContext'
-import { analyzeOntologyForWritingSpark, type OntologyWritingSparkInput } from '@/lib/ontology/writingSparkAnalysis'
+import { analyzeOntologyForWritingSpark, ONTOLOGY_CATEGORY_ORDER, type OntologyWritingSparkInput } from '@/lib/ontology/writingSparkAnalysis'
 import { getLatestExerciseResult } from '@/lib/exercises/exerciseService'
 import type { ExerciseType } from '@/types/exercise'
 import type { OntologyCategory } from '@/types/note'
@@ -122,6 +122,70 @@ export function useOntologyWritingSpark() {
       }
     }
   }, [sessionKey])
+
+  /**
+   * Cycle to the next ontology category and fetch new prompts.
+   * Advances: higher-power → beliefs → values → people → mission → goals → projects → tasks → (wraps)
+   */
+  const cycleFocus = useCallback(async () => {
+    const currentFocus = state.input.focus
+    const currentIndex = ONTOLOGY_CATEGORY_ORDER.indexOf(currentFocus)
+    const nextIndex = (currentIndex + 1) % ONTOLOGY_CATEGORY_ORDER.length
+    const nextFocus = ONTOLOGY_CATEGORY_ORDER[nextIndex]
+
+    setLoading(true)
+
+    try {
+      // Create input for the new focus
+      const input: OntologyWritingSparkInput = {
+        focus: nextFocus,
+        signal: 'healthy', // When manually cycling, treat as healthy exploration
+      }
+
+      const res = await fetch('/api/ontology/writing-spark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      })
+
+      if (!res.ok) {
+        setLoading(false)
+        return
+      }
+
+      const data = (await res.json()) as { ok: boolean; text?: string; prewrittenText?: string; aiText?: string }
+      const text = data?.text?.trim() || FALLBACK.text
+
+      // Compute exercise suggestion for new focus
+      const { suggestedExercise, isRejuvenateMode } = computeExerciseSuggestion(
+        nextFocus,
+        state.exerciseStatus
+      )
+
+      const next: WritingSparkState = {
+        ...state,
+        text,
+        input,
+        suggestedExercise,
+        isRejuvenateMode,
+        prewrittenText: data?.prewrittenText,
+        aiText: data?.aiText,
+      }
+
+      setState(next)
+
+      // Update cache with new state
+      if (sessionKey) {
+        try {
+          sessionStorage.setItem(sessionKey, JSON.stringify(next))
+        } catch {
+          // ignore
+        }
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [state, sessionKey])
 
   useEffect(() => {
     let cancelled = false
@@ -272,5 +336,5 @@ export function useOntologyWritingSpark() {
     }
   }, [canUseSupabase, sessionKey, user?.id])
 
-  return { ...state, loading, clearCache }
+  return { ...state, loading, clearCache, cycleFocus }
 }

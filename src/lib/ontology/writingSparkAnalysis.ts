@@ -1,5 +1,20 @@
 import type { Note, OntologyCategory, HierarchicalOntologyItem } from '@/types/note'
 
+/**
+ * The canonical order of ontology categories, from foundational to tactical.
+ * Used for cycling through categories and determining focus priority.
+ */
+export const ONTOLOGY_CATEGORY_ORDER: OntologyCategory[] = [
+  'higher-power',
+  'beliefs',
+  'values',
+  'people',
+  'mission',
+  'goals',
+  'projects',
+  'tasks',
+]
+
 export type OntologySparkSignal = 'empty' | 'stale' | 'healthy'
 
 export type OntologySparkFocus = OntologyCategory
@@ -162,19 +177,8 @@ function getRecentExcerpt(
 export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { staleDays?: number }): OntologyWritingSparkInput {
   const staleDays = opts?.staleDays ?? 45
 
-  const order: OntologyCategory[] = [
-    'higher-power',
-    'beliefs',
-    'values',
-    'people',
-    'mission',
-    'goals',
-    'projects',
-    'tasks',
-  ]
-
   const sectionMap = new Map<OntologyCategory, Note>()
-  for (const section of order) {
+  for (const section of ONTOLOGY_CATEGORY_ORDER) {
     const note = findSectionNote(pinnedNotes, section)
     if (note) sectionMap.set(section, note)
   }
@@ -191,7 +195,7 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
   const goalNames = getGoalNames(sectionMap)
 
   // 1) Prefer the first empty foundational-ish area in order
-  for (const section of order) {
+  for (const section of ONTOLOGY_CATEGORY_ORDER) {
     const note = sectionMap.get(section)
     if (!note) continue
     if (!hasAnyContent(note)) {
@@ -211,7 +215,7 @@ export function analyzeOntologyForWritingSpark(pinnedNotes: Note[], opts?: { sta
   }
 
   // 2) If nothing is empty, pick the earliest stale section (no mention of time in copy)
-  for (const section of order) {
+  for (const section of ONTOLOGY_CATEGORY_ORDER) {
     const note = sectionMap.get(section)
     if (!note) continue
     if (hasAnyContent(note) && isStale(note, staleDays)) {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, Info } from 'lucide-react'
+import { X, Info, RefreshCw } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -54,8 +54,10 @@ export function OntologyInsightCard() {
     loading,
     suggestedExercise,
     clearCache,
+    cycleFocus,
     prewrittenText,
     aiText,
+    input,
   } = useOntologyWritingSpark()
 
   // Check if we're in comparison mode (both prompts available)
@@ -95,23 +97,51 @@ export function OntologyInsightCard() {
         className="relative p-5 select-none ontology-insight-gold"
         data-ontology-insight-card
       >
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-3 right-3 size-7 opacity-60 hover:opacity-100 bg-background/0 hover:bg-background/10"
-          aria-label="Dismiss"
-          onClick={(e) => {
-            e.stopPropagation()
-            try {
-              sessionStorage.setItem(DISMISS_KEY, 'true')
-            } catch {
-              // ignore
-            }
-            setDismissed(true)
-          }}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        {/* Top-right action buttons */}
+        <div className="absolute top-3 right-3 flex items-center gap-1">
+          {/* Cycle to next category */}
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 opacity-60 hover:opacity-100 bg-background/0 hover:bg-background/10"
+                  aria-label="Cycle to next ontology category"
+                  disabled={loading}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    cycleFocus()
+                  }}
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Cycle to next category (currently: {input.focus})
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          {/* Dismiss */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 opacity-60 hover:opacity-100 bg-background/0 hover:bg-background/10"
+            aria-label="Dismiss"
+            onClick={(e) => {
+              e.stopPropagation()
+              try {
+                sessionStorage.setItem(DISMISS_KEY, 'true')
+              } catch {
+                // ignore
+              }
+              setDismissed(true)
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
 
         <div className="mb-3 pr-8 flex items-center gap-2">
           <div className="text-lg leading-none font-semibold tracking-wide text-foreground/80">
@@ -146,7 +176,7 @@ export function OntologyInsightCard() {
             {/* AI-generated prompt */}
             <div className="rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 p-3">
               <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-2 uppercase tracking-wide">
-                AI-Generated (GPT-5-mini)
+                AI-Generated (GPT-4o-mini)
               </div>
               <p className="text-lg leading-relaxed italic text-foreground/90">
                 {loading ? '…' : aiText}
