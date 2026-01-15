@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import type { OntologyWritingSparkInput, OntologySparkFocus } from '@/lib/ontology/writingSparkAnalysis'
+import { getRandomPrompt } from '@/lib/ontology/writingPrompts'
+
+// Feature flag to use pre-written prompts instead of AI-generated ones
+const USE_PREWRITTEN_PROMPTS = process.env.USE_PREWRITTEN_PROMPTS === 'true'
 
 type WritingSparkResponse =
   | { ok: true; text: string; focus: OntologyWritingSparkInput['focus']; signal: OntologyWritingSparkInput['signal'] }
@@ -62,11 +66,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // No AI configured → return a high-quality fallback (dev/test friendly)
-    if (!openai) {
+    // Use pre-written prompts if feature flag is enabled or no AI configured
+    if (USE_PREWRITTEN_PROMPTS || !openai) {
       return NextResponse.json<WritingSparkResponse>({
         ok: true,
-        text: fallbackSpark(focus, signal),
+        text: getRandomPrompt(focus),
         focus,
         signal,
       })
@@ -141,7 +145,7 @@ export async function POST(req: NextRequest) {
       .join('\n')
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: user },
