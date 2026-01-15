@@ -140,7 +140,7 @@ export function OntologyInsightCard() {
 
         <div className="mb-3 pr-8 flex items-center gap-2">
           <div className="text-lg leading-none font-semibold tracking-wide text-foreground/80">
-            Writer's Unblock
+            Writer&apos;s Unblock
           </div>
           <button
             type="button"
