@@ -140,7 +140,7 @@ export function OntologyInsightCard() {
 
         <div className="mb-3 pr-8 flex items-center gap-2">
           <div className="text-lg leading-none font-semibold tracking-wide text-foreground/80">
-            Inspired by your ontology
+            Writer's Unblock
           </div>
           <button
             type="button"
@@ -188,6 +188,9 @@ export function OntologyInsightCard() {
         {/* Exercise button - shown alongside prompt when an exercise is suggested */}
         {suggestedExercise && (
           <div className="mt-4">
+            <p className="text-sm text-center text-muted-foreground mb-3">
+              Need help exploring this? Try the exercise below.
+            </p>
             <div className="flex justify-center">
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
