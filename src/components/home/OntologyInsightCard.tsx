@@ -174,7 +174,7 @@ export function OntologyInsightCard() {
                 }}
                 aria-label="Click to use this writing prompt in your journal"
               >
-                <p className="text-xl leading-relaxed pr-8 italic magical-prompt">
+                <p className="text-xl leading-relaxed pr-8 italic magical-prompt text-center">
                   {loading ? '…' : text}
                 </p>
               </div>
