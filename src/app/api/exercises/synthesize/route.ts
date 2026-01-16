@@ -46,14 +46,35 @@ function extractJsonArray(text: string) {
   }
 }
 
+// Supported exercise types for synthesis
+const SUPPORTED_EXERCISE_TYPES: ExerciseType[] = ['values', 'mission']
+
 export async function POST(request: NextRequest) {
+  // Parse JSON body with explicit error handling for invalid JSON
+  let body: Partial<SynthesizeRequest>
   try {
-    const body = (await request.json()) as Partial<SynthesizeRequest>
+    body = await request.json()
+  } catch {
+    return NextResponse.json<SynthesizeResponse>(
+      { ok: false, error: 'Invalid JSON body' },
+      { status: 400 }
+    )
+  }
+
+  try {
     const exerciseType = body.exerciseType
 
     if (!exerciseType) {
       return NextResponse.json<SynthesizeResponse>(
         { ok: false, error: 'Missing exerciseType' },
+        { status: 400 }
+      )
+    }
+
+    // Validate exercise type is supported for synthesis
+    if (!SUPPORTED_EXERCISE_TYPES.includes(exerciseType)) {
+      return NextResponse.json<SynthesizeResponse>(
+        { ok: false, error: `Unsupported exercise type for synthesis: ${exerciseType}. Supported types: ${SUPPORTED_EXERCISE_TYPES.join(', ')}` },
         { status: 400 }
       )
     }
@@ -73,10 +94,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    if (exerciseType !== 'mission') {
-      return NextResponse.json<SynthesizeResponse>({ ok: true, items: [] })
-    }
-
+    // At this point, exerciseType must be 'mission' (validated above)
     const values = body.context?.values ?? []
     const people = body.context?.people ?? []
     const freeText = body.freeText ?? ''

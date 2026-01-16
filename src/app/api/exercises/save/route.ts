@@ -69,9 +69,19 @@ export async function POST(request: NextRequest) {
     return new Response('Supabase not configured', { status: 503 })
   }
 
+  // Parse JSON body with explicit error handling for invalid JSON
+  let body: SaveExerciseRequest
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json<SaveExerciseResponse>(
+      { ok: false, error: 'Invalid JSON body' },
+      { status: 400 }
+    )
+  }
+
   try {
     const { supabase, user } = await requireUser(request)
-    const body = (await request.json()) as SaveExerciseRequest
 
     if (!body.exerciseType || !Array.isArray(body.selections)) {
       return NextResponse.json<SaveExerciseResponse>(
@@ -97,12 +107,14 @@ export async function POST(request: NextRequest) {
     let lastError: Error | null = null
 
     for (let attempt = 0; attempt < MAX_VERSION_RETRIES; attempt++) {
+      // Order by version (not completed_at) to ensure monotonic versioning
+      // even if a client sends a backdated completedAt
       const { data: latest, error: latestError } = await supabase
         .from('exercise_results')
         .select('version')
         .eq('user_id', user.id)
         .eq('exercise_type', body.exerciseType)
-        .order('completed_at', { ascending: false })
+        .order('version', { ascending: false })
         .limit(1)
 
       if (latestError) {
