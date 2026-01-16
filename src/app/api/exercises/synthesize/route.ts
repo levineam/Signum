@@ -1,17 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { hasPublicSupabase } from '@/lib/supabase'
 import type { ExerciseSelection, ExerciseType } from '@/types/exercise'
 
 // Auth helper to prevent unauthenticated access (protects OpenAI token usage)
 async function requireAuth(request: NextRequest): Promise<{ ok: true } | { ok: false; error: string }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
   // If Supabase isn't configured, allow the request (uses fallback, no AI tokens)
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!hasPublicSupabase()) {
     return { ok: true }
   }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
   const authHeader = request.headers.get('authorization')
   const [scheme, rawToken] = authHeader?.trim().split(/\s+/) ?? []
@@ -195,8 +196,17 @@ export async function POST(request: NextRequest) {
         reasoning: item.reasoning
       }))
 
+    // If all items were filtered out (e.g., empty names), use fallback
+    if (!items.length) {
+      return NextResponse.json<SynthesizeResponse>({
+        ok: true,
+        items: buildMissionFallback(values, people, freeText)
+      })
+    }
+
     return NextResponse.json<SynthesizeResponse>({ ok: true, items })
-  } catch {
+  } catch (error) {
+    console.error('[synthesize] Unexpected error:', error)
     return NextResponse.json<SynthesizeResponse>(
       { ok: false, error: 'Unknown error' },
       { status: 500 }
