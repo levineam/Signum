@@ -13,6 +13,7 @@ import {
   TakePositionRequest,
   ResolvePredictionRequest,
   PositionType,
+  PositionWithUser,
   isPositionType,
   predictionFromRow,
   positionFromRow,
@@ -432,5 +433,48 @@ async function getUserPositionsForPredictions(
   })
 
   return positions
+}
+
+// ============================================================================
+// Position Display with User Info
+// ============================================================================
+
+/**
+ * Get all positions for a prediction with user email addresses.
+ * Uses an RPC function to join with auth.users (which is in a separate schema).
+ */
+export async function getPositionsWithUsers(
+  predictionId: string
+): Promise<PositionWithUser[]> {
+  if (!hasPublicSupabase()) {
+    return []
+  }
+
+  const { data, error } = await supabase.rpc('get_positions_with_users', {
+    prediction_id_input: predictionId,
+  })
+
+  if (error) {
+    console.error('Error fetching positions with users:', error)
+    return []
+  }
+
+  return (data || []).map(
+    (row: {
+      id: string
+      prediction_id: string
+      user_id: string
+      position: string
+      email: string
+      created_at: string
+    }): PositionWithUser => ({
+      id: row.id,
+      predictionId: row.prediction_id,
+      userId: row.user_id,
+      position: isPositionType(row.position) ? row.position : 'agree',
+      email: row.email,
+      createdAt: row.created_at,
+    })
+  )
 }
 

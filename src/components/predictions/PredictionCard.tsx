@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { Prediction } from '@/types/prediction'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PositionButton } from './PositionButton'
 import { ResolutionPanel } from './ResolutionPanel'
+import { PositionsList } from './PositionsList'
 import { format, formatDistanceToNow, isPast } from 'date-fns'
 import { Calendar, CheckCircle2, XCircle, Clock, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -17,6 +19,8 @@ interface PredictionCardProps {
 }
 
 export function PredictionCard({ prediction, currentUserId, onUpdate }: PredictionCardProps) {
+  const [positionsRefreshKey, setPositionsRefreshKey] = useState(0)
+
   const isResolved = prediction.resolvedAt !== null
   const isCreator = currentUserId === prediction.userId
   const settlementDate = new Date(prediction.settlementDate)
@@ -29,6 +33,11 @@ export function PredictionCard({ prediction, currentUserId, onUpdate }: Predicti
   // Calculate percentages for odds display
   const agreePercentage = totalPositions > 0 ? Math.round((agreeCount / totalPositions) * 100) : 50
   const disagreePercentage = totalPositions > 0 ? 100 - agreePercentage : 50
+
+  const handlePositionTaken = () => {
+    setPositionsRefreshKey(k => k + 1)
+    onUpdate()
+  }
 
   const handleShare = async () => {
     const url = `${window.location.origin}/predictions/${prediction.id}`
@@ -134,14 +143,14 @@ export function PredictionCard({ prediction, currentUserId, onUpdate }: Predicti
               position="agree"
               currentPosition={prediction.userPosition}
               disabled={isResolved}
-              onPositionTaken={onUpdate}
+              onPositionTaken={handlePositionTaken}
             />
             <PositionButton
               predictionId={prediction.id}
               position="disagree"
               currentPosition={prediction.userPosition}
               disabled={isResolved}
-              onPositionTaken={onUpdate}
+              onPositionTaken={handlePositionTaken}
             />
           </div>
         )}
@@ -155,6 +164,13 @@ export function PredictionCard({ prediction, currentUserId, onUpdate }: Predicti
             </Badge>
           </div>
         )}
+
+        {/* List of who agreed/disagreed */}
+        <PositionsList
+          predictionId={prediction.id}
+          currentUserId={currentUserId}
+          refreshKey={positionsRefreshKey}
+        />
 
         {/* Resolution panel (only show to creator if not resolved) */}
         {!isResolved && isCreator && (

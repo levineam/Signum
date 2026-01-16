@@ -51,6 +51,18 @@ export interface PredictionPosition {
 }
 
 /**
+ * A position with user email for display purposes.
+ */
+export interface PositionWithUser {
+  id: string
+  predictionId: string
+  userId: string
+  position: PositionType
+  email: string
+  createdAt: string
+}
+
+/**
  * Request payload for creating a new prediction
  */
 export interface CreatePredictionRequest {
