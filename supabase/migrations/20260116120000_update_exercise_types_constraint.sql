@@ -3,14 +3,20 @@
 --        but the app now uses ontology categories as exercise types
 --
 -- IMPORTANT: Order matters to avoid constraint violations:
--- 1. First, migrate data (before adding unique index)
--- 2. Handle potential duplicates that would violate unique constraint
--- 3. Drop old CHECK constraint
+-- 1. Drop old CHECK constraint FIRST (allows new type values)
+-- 2. Migrate data to new types
+-- 3. Handle potential duplicates that would violate unique constraint
 -- 4. Add new CHECK constraint
 -- 5. Add unique index (after data is clean)
 
--- Step 1: Migrate data from old types to new types FIRST (before unique index)
+-- Step 1: Drop the existing CHECK constraint FIRST
+-- Must drop before data migration, otherwise UPDATE would violate old constraint
+-- (old constraint only allows: 'values', 'strengths', 'impact', 'purpose')
+ALTER TABLE exercise_results DROP CONSTRAINT IF EXISTS exercise_results_exercise_type_check;
+
+-- Step 2: Migrate data from old types to new types
 -- Map: strengths → beliefs, impact → mission, purpose → mission
+-- This can now run because the CHECK constraint is dropped
 UPDATE exercise_results
 SET exercise_type = CASE exercise_type
   WHEN 'strengths' THEN 'beliefs'
@@ -20,7 +26,7 @@ SET exercise_type = CASE exercise_type
 END
 WHERE exercise_type IN ('strengths', 'impact', 'purpose');
 
--- Step 2: Handle potential duplicates from impact/purpose → mission mapping
+-- Step 3: Handle potential duplicates from impact/purpose → mission mapping
 -- If a user has both 'impact' version 1 and 'purpose' version 1, they'd collide after mapping
 -- Increment version for duplicates to make them unique
 -- This uses a CTE to find and fix duplicates by incrementing their version
@@ -36,10 +42,6 @@ UPDATE exercise_results er
 SET version = er.version + (d.rn - 1) * 1000  -- Offset duplicates by 1000 to avoid further conflicts
 FROM duplicates d
 WHERE er.id = d.id AND d.rn > 1;
-
--- Step 3: Drop the existing CHECK constraint
--- The constraint name is auto-generated as exercise_results_exercise_type_check
-ALTER TABLE exercise_results DROP CONSTRAINT IF EXISTS exercise_results_exercise_type_check;
 
 -- Step 4: Add the new CHECK constraint with all ontology category types
 ALTER TABLE exercise_results ADD CONSTRAINT exercise_results_exercise_type_check

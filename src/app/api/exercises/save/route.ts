@@ -1,7 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { hasPublicSupabase } from '@/lib/supabase'
-import type { ExerciseResult, ExerciseSelection, ExerciseType } from '@/types/exercise'
+import {
+  DEFAULT_EXERCISE_COMPLETION,
+  type ExerciseResult,
+  type ExerciseSelection,
+  type ExerciseType,
+} from '@/types/exercise'
 
 interface SaveExerciseRequest {
   exerciseType: ExerciseType
@@ -18,15 +23,16 @@ type CompletionResponse =
   | { ok: true; status: Record<ExerciseType, boolean> }
   | { ok: false; error: string }
 
-const EMPTY_COMPLETION: Record<ExerciseType, boolean> = {
-  'higher-power': false,
-  beliefs: false,
-  values: false,
-  people: false,
-  mission: false,
-  goals: false,
-  projects: false,
-  tasks: false
+// Database row type for exercise_results table
+interface ExerciseResultRow {
+  id: string
+  user_id: string
+  exercise_type: ExerciseType
+  selections: ExerciseSelection[]
+  free_text: string | null
+  completed_at: string
+  version: number
+  generated_items?: Array<{ noteId: string; itemName: string }> | null
 }
 
 // Max retries for version conflict (rare race condition)
@@ -93,16 +99,6 @@ export async function POST(request: NextRequest) {
     // Retry loop to handle version race conditions
     // If a unique constraint on (user_id, exercise_type, version) exists,
     // concurrent requests may collide. We retry with a fresh version number.
-    interface ExerciseResultRow {
-      id: string
-      user_id: string
-      exercise_type: ExerciseType
-      selections: ExerciseSelection[]
-      free_text: string | null
-      completed_at: string
-      version: number
-      generated_items?: Array<{ noteId: string; itemName: string }> | null
-    }
     let data: ExerciseResultRow | null = null
     let lastError: Error | null = null
 
@@ -215,7 +211,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const status = { ...EMPTY_COMPLETION }
+    const status = { ...DEFAULT_EXERCISE_COMPLETION }
     ;(data as Array<{ exercise_type: ExerciseType }> | null)?.forEach((row) => {
       if (row.exercise_type in status) {
         status[row.exercise_type] = true
@@ -225,10 +221,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json<CompletionResponse>({ ok: true, status })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    const status = message === 'AUTH_REQUIRED' ? 401 : 500
+    const httpStatus = message === 'AUTH_REQUIRED' ? 401 : 500
     return NextResponse.json<CompletionResponse>(
       { ok: false, error: message === 'AUTH_REQUIRED' ? 'Unauthorized' : message },
-      { status }
+      { status: httpStatus }
     )
   }
 }

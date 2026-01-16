@@ -1,16 +1,9 @@
 import { supabase, hasPublicSupabase } from '@/lib/supabase'
-import type { ExerciseResult, ExerciseType } from '@/types/exercise'
-
-const EMPTY_COMPLETION: Record<ExerciseType, boolean> = {
-  'higher-power': false,
-  beliefs: false,
-  values: false,
-  people: false,
-  mission: false,
-  goals: false,
-  projects: false,
-  tasks: false
-}
+import {
+  DEFAULT_EXERCISE_COMPLETION,
+  type ExerciseResult,
+  type ExerciseType,
+} from '@/types/exercise'
 
 function requireSupabase() {
   if (!hasPublicSupabase()) {
@@ -126,7 +119,7 @@ export async function getExerciseCompletionStatus(userId: string): Promise<Recor
     throw new Error(`Failed to fetch exercise completion status: ${error.message}`)
   }
 
-  const status = { ...EMPTY_COMPLETION }
+  const status = { ...DEFAULT_EXERCISE_COMPLETION }
   ;(data as Array<{ exercise_type: ExerciseType }> | null)?.forEach((row) => {
     if (row.exercise_type in status) {
       status[row.exercise_type] = true

@@ -141,7 +141,9 @@ export async function POST(request: NextRequest) {
     const people = body.context?.people ?? []
     const freeText = body.freeText ?? ''
 
-    if (!openai) {
+    // Use fallback if no OpenAI configured OR if Supabase isn't available
+    // (unauthenticated requests should not use AI tokens)
+    if (!openai || !hasPublicSupabase()) {
       return NextResponse.json<SynthesizeResponse>({
         ok: true,
         items: buildMissionFallback(values, people, freeText)

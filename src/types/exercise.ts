@@ -51,3 +51,18 @@ export interface ExerciseResult {
   version: number
   generatedItems?: Array<{ noteId: string; itemName: string }>
 }
+
+/**
+ * Default completion status for all exercise types (all false).
+ * Used to initialize exercise completion tracking.
+ */
+export const DEFAULT_EXERCISE_COMPLETION: Record<ExerciseType, boolean> = {
+  'higher-power': false,
+  beliefs: false,
+  values: false,
+  people: false,
+  mission: false,
+  goals: false,
+  projects: false,
+  tasks: false,
+}
