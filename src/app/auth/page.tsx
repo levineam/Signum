@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { AuthForms } from '@/components/auth/AuthForms'
 
@@ -12,13 +12,26 @@ export default function AuthPage() {
     const hasVisited = localStorage.getItem('signum_has_visited')
     return hasVisited ? 'signin' : 'signup'
   })
+  const [oauthError, setOauthError] = useState<string | null>(null)
   const { user, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     // Mark user as having visited the auth page
     localStorage.setItem('signum_has_visited', 'true')
   }, [])
+
+  // Check for OAuth error in URL params
+  useEffect(() => {
+    const error = searchParams.get('error')
+    if (error) {
+      // searchParams.get() already returns decoded string, no need to decode again
+      setOauthError(error)
+      // Clear error from URL without triggering navigation
+      window.history.replaceState({}, '', '/auth')
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (!loading && user) {
@@ -48,6 +61,13 @@ export default function AuthPage() {
           <h1 className="text-3xl font-bold text-foreground mb-2">Signum</h1>
           <p className="text-muted-foreground">Build your personal ontology</p>
         </div>
+
+        {/* OAuth error display */}
+        {oauthError && (
+          <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+            <p className="text-sm text-destructive">{oauthError}</p>
+          </div>
+        )}
 
         <AuthForms
           mode={mode}

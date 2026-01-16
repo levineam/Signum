@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { X } from 'lucide-react'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
+import { OrDivider } from '@/components/auth/OrDivider'
 
 interface GuestAuthModalProps {
   isOpen: boolean
@@ -180,6 +182,22 @@ export function GuestAuthModal({
                 : 'Sign in to save your journal entry'}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Google Sign In - only show for signin/signup, not reset */}
+        {mode !== 'reset' && (
+          <>
+            <GoogleSignInButton
+              disabled={loading}
+              onError={(msg) => {
+                resetAutoDismissTimer()
+                setMessage(msg)
+              }}
+              className="w-full mt-4"
+            />
+
+            <OrDivider />
+          </>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

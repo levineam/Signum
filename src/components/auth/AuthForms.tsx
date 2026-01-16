@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
+import { OrDivider } from '@/components/auth/OrDivider'
 
 interface AuthFormsProps {
   mode: 'signin' | 'signup'
@@ -141,6 +143,15 @@ export function AuthForms({ mode, onToggleMode }: AuthFormsProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Google Sign In */}
+        <GoogleSignInButton
+          disabled={loading}
+          onError={(msg) => setMessage(msg)}
+          className="w-full"
+        />
+
+        <OrDivider />
+
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
