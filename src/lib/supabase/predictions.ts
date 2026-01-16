@@ -465,7 +465,7 @@ export async function getPositionsWithUsers(
       prediction_id: string
       user_id: string
       position: string
-      email: string
+      email: string | null
       created_at: string
     }): PositionWithUser => ({
       id: row.id,

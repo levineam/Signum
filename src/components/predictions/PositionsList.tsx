@@ -42,12 +42,13 @@ export function PositionsList({ predictionId, currentUserId, refreshKey }: Posit
 
   const renderEmail = (position: PositionWithUser) => {
     const isCurrentUser = currentUserId === position.userId
+    const displayEmail = position.email || 'Anonymous user'
     return (
       <span
         key={position.id}
         className={`text-sm ${isCurrentUser ? 'font-medium text-foreground' : 'text-muted-foreground'}`}
       >
-        {position.email}
+        {displayEmail}
         {isCurrentUser && <span className="text-xs ml-1">(you)</span>}
       </span>
     )

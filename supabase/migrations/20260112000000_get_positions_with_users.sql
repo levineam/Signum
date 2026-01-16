@@ -27,6 +27,5 @@ AS $$
   ORDER BY pp.created_at ASC;
 $$;
 
--- Grant execute permission to authenticated users and anon (for guest viewing)
+-- Grant execute permission to authenticated users only (email is PII)
 GRANT EXECUTE ON FUNCTION get_positions_with_users(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION get_positions_with_users(UUID) TO anon;

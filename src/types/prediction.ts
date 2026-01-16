@@ -58,7 +58,7 @@ export interface PositionWithUser {
   predictionId: string
   userId: string
   position: PositionType
-  email: string
+  email: string | null // Can be null for phone-based auth users
   createdAt: string
 }
 
