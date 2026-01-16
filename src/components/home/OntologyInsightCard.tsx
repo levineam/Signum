@@ -155,6 +155,9 @@ export function OntologyInsightCard() {
           </button>
         </div>
 
+        {/* Divider above prompt */}
+        <hr className="border-foreground/10 mb-4" />
+
         {/* Writing prompt with glistening red text */}
         <TooltipProvider delayDuration={500}>
           <Tooltip>
@@ -184,6 +187,9 @@ export function OntologyInsightCard() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+
+        {/* Divider below prompt */}
+        <hr className="border-foreground/10 mt-4" />
 
         {/* Exercise button - shown alongside prompt when an exercise is suggested */}
         {suggestedExercise && (
