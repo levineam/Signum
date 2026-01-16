@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { HelperType } from '@/types/helper'
 import { HELPER_TILES } from '@/constants/helperTitles'
 import { sanitizeHtml, useDOMPurifyReady } from '@/utils/sanitizeHtml'
+import { escapeHtml } from '@/utils/htmlEscape'
 import { useGuestDraft } from '@/hooks/useGuestDraft'
 import { useIdleTimer } from '@/hooks/useIdleTimer'
 import { GuestAuthModal } from '@/components/auth/GuestAuthModal'
@@ -50,6 +51,20 @@ interface ParsedTask {
   dueAt: string | null
   rrule: string | null
   status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
+}
+
+function toWritingSparkHtml(text: string): string {
+  const trimmed = text.trim()
+  const safe = escapeHtml(trimmed)
+  const paragraphs = safe
+    .split(/\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => `<p>${p}</p>`)
+    .join('')
+
+  // Marker to avoid duplicate insertions on repeated clicks.
+  return `<div data-writing-spark="true">${paragraphs}</div><p><br></p>`
 }
 
 // Helper: Get today's date in local timezone as YYYY-MM-DD
@@ -1105,6 +1120,98 @@ export function JournalStream({ isGuest = false }: JournalStreamProps) {
       setCreatingLink(false)
     }
   }
+
+  const handleWritingSparkInsertion = useCallback(async (sparkText: string) => {
+    const today = getLocalDateString()
+    const todayEntry = entries.find((e) => e.date === today)
+    if (!todayEntry) {
+      return
+    }
+
+    // Clear any pending auto-save timeout to prevent race condition
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+
+    setCreatingLink(true)
+
+    try {
+      const entryId = todayEntry.id
+
+      if (editingEntryId !== entryId) {
+        setEditingEntryId(entryId)
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+
+      const entryContainer = document.querySelector(`[data-entry-id="${entryId}"]`) as HTMLElement | null
+      if (entryContainer) {
+        const rect = entryContainer.getBoundingClientRect()
+        const isInViewport = rect.top >= 0 && rect.bottom <= window.innerHeight
+        if (!isInViewport) {
+          entryContainer.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }
+
+      const editorElement = document.querySelector(`[data-entry-id="${entryId}"] [contenteditable]`) as HTMLElement | null
+      if (!editorElement) {
+        toast.error('Could not find today’s editor. Please try again.')
+        setCreatingLink(false)
+        return
+      }
+
+      const currentContent = editorElement.innerHTML || ''
+      if (currentContent.includes('data-writing-spark="true"')) {
+        // Already inserted this session; avoid duplicates.
+        editorElement.focus()
+        setCreatingLink(false)
+        return
+      }
+
+      const seedHtml = toWritingSparkHtml(sparkText)
+      const updatedContent = seedHtml + currentContent
+      editorElement.innerHTML = updatedContent
+      editorElement.focus()
+
+      setTimeout(() => {
+        const finalContent = editorElement.innerHTML
+
+        setEntries((prev) =>
+          prev.map((entry) =>
+            entry.id === entryId
+              ? { ...entry, content: finalContent, lastModified: new Date().toISOString() }
+              : entry
+          )
+        )
+
+        if (isGuest) {
+          saveGuestDraft(finalContent)
+        } else if (user) {
+          updateNoteInDb(entryId, { content: finalContent }, user.id).catch((error) =>
+            console.error('Error persisting writing spark insertion:', error)
+          )
+        }
+
+        setCreatingLink(false)
+      }, 50)
+    } catch (error) {
+      console.error('❌ Error inserting writing spark:', error)
+      toast.error('Failed to insert inspiration. Please try again.')
+      setCreatingLink(false)
+    }
+  }, [entries, editingEntryId, isGuest, saveGuestDraft, user])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<{ text?: string }>
+      const sparkText = custom.detail?.text
+      if (!sparkText) return
+      handleWritingSparkInsertion(sparkText)
+    }
+
+    window.addEventListener('seed-journal-entry', handler as EventListener)
+    return () => window.removeEventListener('seed-journal-entry', handler as EventListener)
+  }, [handleWritingSparkInsertion])
 
 
   const formatDate = (dateStr: string) => {

@@ -37,6 +37,7 @@ const sanitizeConfig: Config = {
     'href', 'title', 'class', 'style',
     'data-note-id', // For internal note links
     'data-target', // For Obsidian wikilinks
+    'data-writing-spark', // For journaling seed marker persistence
   ],
   // Allow only safe protocols for links
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,

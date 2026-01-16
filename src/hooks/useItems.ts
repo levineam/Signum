@@ -141,3 +141,21 @@ export function useSnoozeReminder() {
     },
   })
 }
+
+/**
+ * Mutation hook for uncompleting an item (marking as pending)
+ *
+ * @example
+ * const { mutate } = useUncompleteItem()
+ * mutate('item-id-123')
+ */
+export function useUncompleteItem() {
+  const queryClient = useQueryClient()
+  return useMutation<Item, Error, string>({
+    mutationFn: (id) => itemQueries.uncompleteItem(id),
+    onSuccess: (data) => {
+      queryClient.setQueryData([ITEMS_QUERY_KEY, data.id], data)
+      queryClient.invalidateQueries({ queryKey: [ITEMS_QUERY_KEY] })
+    },
+  })
+}

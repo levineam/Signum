@@ -13,7 +13,8 @@ interface ExpandableOntologyRowProps {
 
 export function ExpandableOntologyRow({ note, isExpanded, onToggle }: ExpandableOntologyRowProps) {
   const category = note.noteType.replace('ontology-', '')
-  const contentId = `ontology-${category}-content`
+  const contentId = `ontology-${category}-${note.id}-content`
+  const sectionHeadingId = `${category}-section-heading-${note.id}`
   const buttonRef = useRef<HTMLButtonElement>(null)
   const liveRegionRef = useRef<HTMLDivElement>(null)
   const title = getNoteDisplayTitle(note)
@@ -52,8 +53,8 @@ export function ExpandableOntologyRow({ note, isExpanded, onToggle }: Expandable
               <h2 className="text-lg font-semibold mb-3">{title}</h2>
               {items.length > 0 && (
                 <ul className="space-y-1 text-sm text-muted-foreground">
-                  {items.map((item) => (
-                    <li key={item.name}>• {item.name}</li>
+                  {items.map((item, index) => (
+                    <li key={`${item.name}-${index}`}>• {item.name}</li>
                   ))}
                 </ul>
               )}
@@ -83,38 +84,49 @@ export function ExpandableOntologyRow({ note, isExpanded, onToggle }: Expandable
           id={contentId}
           className="expanded-content"
           role="region"
-          aria-labelledby={`${category}-heading`}
+          aria-labelledby={sectionHeadingId}
         >
           <CardContent className="px-6 pb-6 pt-0 space-y-6">
+            {/* Hidden heading for accessibility - labels the expanded region */}
+            <h3 id={sectionHeadingId} className="sr-only">
+              {title} details
+            </h3>
+
             {/* Auto-update notice */}
             <div className="rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 p-4 text-sm text-amber-900 dark:text-amber-100">
               This note is automatically updated as you write in your journal.
             </div>
 
             {/* Concept sections with excerpts */}
-            {items.map((item) => (
-              <div key={item.name} className="space-y-3">
-                <h3
-                  id={`${category}-heading`}
-                  className="text-base font-semibold"
-                >
-                  {item.name}
-                </h3>
-                <div className="space-y-2">
-                  {item.excerpts.map((excerpt, idx) => (
-                    <blockquote
-                      key={idx}
-                      className="border-l-4 border-muted pl-4 py-2 text-sm space-y-1"
-                    >
-                      <p className="text-foreground italic">&ldquo;{excerpt.excerpt}&rdquo;</p>
-                      <cite className="text-xs text-muted-foreground not-italic">
-                        {excerpt.noteTitle}
-                      </cite>
-                    </blockquote>
-                  ))}
+            {items.map((item, index) => {
+              const itemSlug = item.name
+                .toLowerCase()
+                .trim()
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9-]/g, '')
+              const itemHeadingId = `${category}-${note.id}-item-${itemSlug || 'item'}-${index}-heading`
+
+              return (
+                <div key={`${item.name}-${index}`} className="space-y-3">
+                  <h3 id={itemHeadingId} className="text-base font-semibold">
+                    {item.name}
+                  </h3>
+                  <div className="space-y-2">
+                    {item.excerpts.map((excerpt, excerptIdx) => (
+                      <blockquote
+                        key={`${excerpt.noteId}-${excerptIdx}`}
+                        className="border-l-4 border-muted pl-4 py-2 text-sm space-y-1"
+                      >
+                        <p className="text-foreground italic">&ldquo;{excerpt.excerpt}&rdquo;</p>
+                        <cite className="text-xs text-muted-foreground not-italic">
+                          {excerpt.noteTitle}
+                        </cite>
+                      </blockquote>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
 
             {items.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-8">

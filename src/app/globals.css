@@ -377,4 +377,97 @@
       transition: none;
     }
   }
+
+  /* Ontology Insight Card: subtle metallic-gold treatment (no AI vibes, just "special") */
+  .ontology-insight-gold {
+    position: relative;
+    overflow: hidden;
+    border-color: rgba(212, 175, 55, 0.35);
+    box-shadow:
+      0 10px 30px rgba(212, 175, 55, 0.10),
+      var(--shadow-sm);
+    background-image:
+      radial-gradient(900px 90px at 28% 0%, rgba(255, 246, 183, 0.35), transparent 60%),
+      linear-gradient(
+        135deg,
+        rgba(184, 134, 11, 0.30) 0%,
+        rgba(247, 239, 138, 0.18) 22%,
+        rgba(212, 175, 55, 0.28) 45%,
+        rgba(255, 246, 183, 0.12) 60%,
+        rgba(184, 134, 11, 0.24) 100%
+      ),
+      linear-gradient(0deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03));
+  }
+
+  .dark .ontology-insight-gold {
+    border-color: rgba(212, 175, 55, 0.30);
+    box-shadow:
+      0 12px 34px rgba(212, 175, 55, 0.12),
+      0 0 0 1px rgba(0, 0, 0, 0.15),
+      var(--shadow-sm);
+    background-image:
+      radial-gradient(900px 90px at 28% 0%, rgba(255, 246, 183, 0.16), transparent 60%),
+      linear-gradient(
+        135deg,
+        rgba(184, 134, 11, 0.22) 0%,
+        rgba(247, 239, 138, 0.10) 24%,
+        rgba(212, 175, 55, 0.18) 48%,
+        rgba(255, 246, 183, 0.07) 62%,
+        rgba(184, 134, 11, 0.16) 100%
+      ),
+      linear-gradient(0deg, rgba(0, 0, 0, 0.10), rgba(0, 0, 0, 0.10));
+  }
+
+  /* Subtle sheen sweep on hover */
+  .ontology-insight-gold::after {
+    content: "";
+    position: absolute;
+    inset: -60%;
+    pointer-events: none;
+    background: linear-gradient(
+      120deg,
+      transparent 42%,
+      rgba(255, 255, 255, 0.18) 50%,
+      transparent 58%
+    );
+    transform: translateX(-55%) rotate(10deg);
+    opacity: 0.35;
+    transition: transform 650ms ease, opacity 650ms ease;
+  }
+
+  .ontology-insight-gold:hover::after {
+    transform: translateX(18%) rotate(10deg);
+    opacity: 0.50;
+  }
+
+  /* Magical deep red metallic prompt styling */
+  .magical-prompt {
+    background: linear-gradient(
+      90deg,
+      #991b1b 0%,
+      #dc2626 20%,
+      #f87171 40%,
+      #fca5a5 50%,
+      #f87171 60%,
+      #dc2626 80%,
+      #991b1b 100%
+    );
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 700;
+    animation: shimmer 3s ease-in-out infinite;
+  }
+
+  .magical-prompt:hover {
+    filter: brightness(1.2);
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 100% 50%; }
+    50% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+  }
 }

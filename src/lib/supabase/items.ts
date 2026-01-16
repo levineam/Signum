@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabase, hasPublicSupabase } from '@/lib/supabase'
 import {
   Item,
   CreateItemRequest,
@@ -7,7 +7,17 @@ import {
   JsonValue,
 } from '@/types/temporal'
 
+/**
+ * Ensure Supabase is available before making any calls
+ */
+function requireSupabase() {
+  if (!hasPublicSupabase()) {
+    throw new Error('Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
+  }
+}
+
 async function requireUserId() {
+  requireSupabase()
   const {
     data: { user },
     error,
@@ -215,6 +225,7 @@ export const itemQueries = {
    * Delete an item
    */
   async deleteItem(id: string): Promise<void> {
+    requireSupabase()
     const { error } = await supabase.from('items').delete().eq('id', id)
 
     if (error) throw new Error(`Failed to delete item: ${error.message}`)
@@ -224,6 +235,7 @@ export const itemQueries = {
    * Mark an item as completed
    */
   async completeItem(id: string): Promise<Item> {
+    requireSupabase()
     const { data, error } = await supabase
       .from('items')
       .update({
@@ -243,6 +255,7 @@ export const itemQueries = {
    * Snooze a reminder until a specific time
    */
   async snoozeReminder(id: string, until: string): Promise<Item> {
+    requireSupabase()
     const { data, error } = await supabase
       .from('items')
       .update({ snooze_until: until })
@@ -252,6 +265,26 @@ export const itemQueries = {
 
     if (error) throw new Error(`Failed to snooze reminder: ${error.message}`)
     if (!data) throw new Error('Reminder not found')
+    return mapItemRow(data as ItemRow)
+  },
+
+  /**
+   * Mark an item as pending (uncomplete)
+   */
+  async uncompleteItem(id: string): Promise<Item> {
+    requireSupabase()
+    const { data, error } = await supabase
+      .from('items')
+      .update({
+        status: 'pending',
+        completed_at: null,
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw new Error(`Failed to uncomplete item: ${error.message}`)
+    if (!data) throw new Error('Item not found')
     return mapItemRow(data as ItemRow)
   },
 }
