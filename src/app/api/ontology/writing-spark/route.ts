@@ -58,15 +58,36 @@ function fallbackSpark(
   return byFocus[focus]
 }
 
+// Valid focus values for runtime validation
+const VALID_FOCUS_VALUES = Object.keys(FOCUS_THEMES) as OntologySparkFocus[]
+
 export async function POST(req: NextRequest) {
+  // Parse JSON body with explicit error handling for invalid JSON
+  let body: Partial<OntologyWritingSparkInput>
   try {
-    const body = (await req.json()) as Partial<OntologyWritingSparkInput>
+    body = await req.json()
+  } catch {
+    return NextResponse.json<WritingSparkResponse>(
+      { ok: false, error: 'Invalid JSON body' },
+      { status: 400 }
+    )
+  }
+
+  try {
     const focus = body.focus
     const signal = body.signal
 
     if (!focus || !signal) {
       return NextResponse.json<WritingSparkResponse>(
         { ok: false, error: 'Missing required fields: focus, signal' },
+        { status: 400 }
+      )
+    }
+
+    // Validate focus is a valid ontology category
+    if (!VALID_FOCUS_VALUES.includes(focus)) {
+      return NextResponse.json<WritingSparkResponse>(
+        { ok: false, error: `Invalid focus value: ${focus}` },
         { status: 400 }
       )
     }

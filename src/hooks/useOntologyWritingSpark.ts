@@ -219,7 +219,28 @@ export function useOntologyWritingSpark() {
           }
         }
 
-        // Fetch exercise status for all exercise types
+        // If Supabase isn't available, keep a high-quality fallback (no slow timeouts)
+        // Check this BEFORE attempting any Supabase calls to avoid slow timeouts
+        if (!canUseSupabase) {
+          if (!cancelled) {
+            const { suggestedExercise, isRejuvenateMode } = computeExerciseSuggestion(
+              FALLBACK.input.focus,
+              DEFAULT_EXERCISE_STATUS
+            )
+            const next: WritingSparkState = {
+              ...FALLBACK,
+              exerciseStatus: DEFAULT_EXERCISE_STATUS,
+              allExercisesCompleted: false,
+              suggestedExercise,
+              isRejuvenateMode
+            }
+            setState(next)
+            setLoading(false)
+          }
+          return
+        }
+
+        // Fetch exercise status for all exercise types (only if Supabase is available)
         let exerciseStatus = { ...DEFAULT_EXERCISE_STATUS }
         try {
           const statusWithDates: Record<ExerciseType, ExerciseStatusDetail> = { ...DEFAULT_EXERCISE_STATUS }
@@ -246,26 +267,6 @@ export function useOntologyWritingSpark() {
         }
 
         const allExercisesCompleted = EXERCISE_TYPES.every((type) => exerciseStatus[type].completed)
-
-        // If Supabase isn't available, keep a high-quality fallback (no slow timeouts)
-        if (!canUseSupabase) {
-          if (!cancelled) {
-            const { suggestedExercise, isRejuvenateMode } = computeExerciseSuggestion(
-              FALLBACK.input.focus,
-              exerciseStatus
-            )
-            const next: WritingSparkState = {
-              ...FALLBACK,
-              exerciseStatus,
-              allExercisesCompleted,
-              suggestedExercise,
-              isRejuvenateMode
-            }
-            setState(next)
-            setLoading(false)
-          }
-          return
-        }
 
         const pinned = await getPinnedNotes(user.id)
         const input = analyzeOntologyForWritingSpark(pinned)
