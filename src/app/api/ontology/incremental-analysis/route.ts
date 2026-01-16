@@ -23,7 +23,7 @@ import {
   type AnalysisRunSummary
 } from '@/lib/ontology/state'
 import { runIncrementalExtraction } from '@/lib/ontology/extractor'
-import { hasAdminKey } from '@/lib/supabase-admin'
+import { hasAdminKey, supabaseAdmin } from '@/lib/supabase-admin'
 import logger from '@/utils/logger'
 
 // Feature flag - server-side control
@@ -35,6 +35,33 @@ const RATE_LIMIT_WINDOW = 60 * 60 * 1000 // 1 hour
 const RATE_LIMIT_MAX = 6
 
 const isTestMode = ['1', 'true'].includes(process.env.E2E_TEST_MODE ?? '')
+
+/**
+ * Convert snake_case DB row to camelCase Note type
+ */
+function convertToNote(row: {
+  id: string
+  user_id: string
+  title: string
+  content: string
+  note_type: string
+  is_pinned: boolean
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}): Note {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    content: row.content,
+    noteType: row.note_type as Note['noteType'],
+    isPinned: row.is_pinned,
+    metadata: row.metadata as Note['metadata'],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }
+}
 
 /**
  * Count recent runs within the rate limit window (SECURITY FIX: Issue #3)
@@ -216,18 +243,40 @@ export async function POST(request: NextRequest) {
           return (state.lastRunSummary as AnalysisRunSummary & { runCountInWindow?: number })?.runCountInWindow
         })()
 
+    // Parse request body for bulk import parameters (body already parsed at line 109)
+    const noteIdsFromRequest: string[] = body.noteIds || []
+    const updateCursorFlag = body.updateCursor !== false // Default to true (backward compatible)
+
     let notesToAnalyze: Note[] = [] // Declare outside try block for error handler access
 
     try {
       // 8. Get notes for incremental analysis
-      const lastAnalyzed = state?.lastAnalyzedAt
-        ? new Date(state.lastAnalyzedAt)
-        : null
+      // Codex Finding #1: Support explicit note ID list (bulk import path)
+      if (noteIdsFromRequest && noteIdsFromRequest.length > 0) {
+        // Bulk import path: fetch specific notes by ID
+        // SECURITY: Verify notes belong to authenticated user
+        const { data: notes, error } = await supabaseAdmin
+          .from('notes')
+          .select('*')
+          .eq('user_id', userId)
+          .in('id', noteIdsFromRequest)
 
-      notesToAnalyze = await getNotesForIncrementalAnalysis(
-        userId,
-        lastAnalyzed
-      )
+        if (error) {
+          throw new Error(`Failed to fetch requested notes: ${error.message}`)
+        }
+
+        notesToAnalyze = (notes || []).map(convertToNote)
+      } else {
+        // Incremental path: use cursor-based selection
+        const lastAnalyzed = state?.lastAnalyzedAt
+          ? new Date(state.lastAnalyzedAt)
+          : null
+
+        notesToAnalyze = await getNotesForIncrementalAnalysis(
+          userId,
+          lastAnalyzed
+        )
+      }
 
       // 9. Check if there are notes to analyze
       if (notesToAnalyze.length === 0) {
@@ -291,10 +340,19 @@ export async function POST(request: NextRequest) {
         runSummary.runCountInWindow = runCountInWindow
       }
 
-      await updateAnalysisState(userId, maxNoteTimestamp, runSummary)
+      // 13b. Handle cursor update (Codex Finding #1)
+      // Only update lastAnalyzedAt if updateCursor=true (bulk import sample runs skip this)
+      if (updateCursorFlag) {
+        await updateAnalysisState(userId, maxNoteTimestamp, runSummary)
+      } else {
+        // Sample run: update summary but NOT lastAnalyzedAt
+        await releaseLock(userId, runSummary)
+      }
 
-      // 14. Release lock
-      await releaseLock(userId, runSummary)
+      // 14. Release lock (only if updateCursor=true, otherwise done above)
+      if (updateCursorFlag) {
+        await releaseLock(userId, runSummary)
+      }
 
       // 15. Return success
       return NextResponse.json({

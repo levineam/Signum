@@ -5,8 +5,23 @@
  * Manages transactions, deduplication, and progress tracking
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { ParsedNote } from './obsidian-parser';
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { ParsedNote } from './obsidian-parser'
+import { createQueueJob, insertTelemetry } from '@/lib/ontology/queue'
+import { runIncrementalExtraction } from '@/lib/ontology/extractor'
+import { updateAnalysisState } from '@/lib/ontology/state'
+import { Note } from '@/types/note'
+
+/**
+ * Generate a simple UUID v4 without external dependency
+ */
+function generateImportId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
 
 export interface ImportOptions {
   preserveTimestamps: boolean;
@@ -89,7 +104,137 @@ export class BatchImporter {
     result.summary.totalProcessed = parsedNotes.length;
     result.success = result.errors.length === 0;
 
+    // Story 2.5.1: Trigger ontology analysis after successful import
+    if (result.success && result.noteIds.length > 0) {
+      await this.triggerOntologyAnalysis(options.userId, result.noteIds);
+    }
+
     return result;
+  }
+
+  /**
+   * Trigger ontology analysis based on import size (tiered approach)
+   * Story 2.5.1: Bulk Import Ontology Analysis
+   * Codex Finding #1: Manages cursor updates appropriately
+   */
+  private async triggerOntologyAnalysis(userId: string, noteIds: string[]): Promise<void> {
+    const noteCount = noteIds.length;
+    const importId = generateImportId();
+    const sampleStart = Date.now();
+    let sampleExtraction:
+      | {
+          newValues: number;
+          newBeliefs: number;
+          newAims: number;
+        }
+      | null = null;
+
+    try {
+      // Fetch timestamps for snapshot calculation
+      const { data: noteTimestamps } = await this.supabase
+        .from('notes')
+        .select('id, updated_at')
+        .in('id', noteIds);
+
+      if (!noteTimestamps || noteTimestamps.length === 0) {
+        console.warn('No notes found for ontology analysis');
+        return;
+      }
+
+      // Calculate snapshot timestamp (max updated_at)
+      const importSnapshotTimestamp = new Date(
+        Math.max(...noteTimestamps.map((n) => new Date(n.updated_at).getTime()))
+      );
+
+      // Tiered sample sizing
+      const sampleSize = noteCount <= 200 ? noteCount : noteCount <= 500 ? 200 : 400;
+      const sampleNoteIds = noteIds.slice(0, sampleSize);
+      const remainingNoteIds = noteIds.slice(sampleSize);
+
+      // Run immediate sample analysis (does not advance cursor for tier 2/3)
+      if (sampleNoteIds.length > 0) {
+        await insertTelemetry({
+          userId,
+          eventType: 'import_sample_start',
+          importId,
+          noteCount: sampleNoteIds.length
+        });
+
+        const { data: sampleNotes } = await this.supabase
+          .from('notes')
+          .select(
+            'id, user_id, title, content, note_type, is_pinned, metadata, created_at, updated_at'
+          )
+          .in('id', sampleNoteIds);
+
+        if (!sampleNotes || sampleNotes.length === 0) {
+          console.warn('Sample notes missing for ontology analysis');
+        } else {
+          try {
+            const notesForExtraction: Note[] = sampleNotes.map((row) => ({
+              id: row.id,
+              userId: row.user_id,
+              title: row.title,
+              content: row.content,
+              noteType: row.note_type as Note['noteType'],
+              isPinned: row.is_pinned ?? false,
+              metadata: row.metadata,
+              createdAt: row.created_at,
+              updatedAt: row.updated_at
+            }));
+
+            const extraction = await runIncrementalExtraction(userId, notesForExtraction);
+            sampleExtraction = {
+              newValues: extraction.newValues,
+              newBeliefs: extraction.newBeliefs,
+              newAims: extraction.newAims
+            };
+
+            await insertTelemetry({
+              userId,
+              eventType: 'import_sample_complete',
+              importId,
+              noteCount: sampleNoteIds.length,
+              runtimeMs: Date.now() - sampleStart,
+              extractedValues: extraction.newValues,
+              extractedBeliefs: extraction.newBeliefs,
+              extractedAims: extraction.newAims
+            });
+          } catch (sampleError) {
+            console.error('Sample ontology analysis failed:', sampleError);
+          }
+
+          // If no remaining notes and sample succeeded, advance the cursor immediately
+          if (remainingNoteIds.length === 0 && sampleExtraction) {
+            await updateAnalysisState(userId, importSnapshotTimestamp, {
+              triggeredBy: 'manual',
+              noteCount: sampleNoteIds.length,
+              status: 'success',
+              runtime: Date.now() - sampleStart,
+              extractedCounts: {
+                values: sampleExtraction.newValues,
+                beliefs: sampleExtraction.newBeliefs,
+                aims: sampleExtraction.newAims
+              },
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+      }
+
+      // P1 FIX: Use queue system for all import sizes instead of server-side fetch
+      // Server-side fetch() requires absolute URLs and adds unnecessary complexity
+      // The queue system handles analysis asynchronously and provides retry logic
+      if (remainingNoteIds.length > 0) {
+        await createQueueJob(userId, importId, remainingNoteIds, importSnapshotTimestamp);
+        console.log(
+          `[BatchImporter] Created queue job for ${remainingNoteIds.length} notes (remaining after sample)`
+        );
+      }
+    } catch (e) {
+      console.error('Failed to trigger ontology analysis:', e);
+      // Don't fail the import if analysis setup fails
+    }
   }
 
   /**
