@@ -1,6 +1,38 @@
+import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import type { ExerciseSelection, ExerciseType } from '@/types/exercise'
+
+// Auth helper to prevent unauthenticated access (protects OpenAI token usage)
+async function requireAuth(request: NextRequest): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  // If Supabase isn't configured, allow the request (uses fallback, no AI tokens)
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return { ok: true }
+  }
+
+  const authHeader = request.headers.get('authorization')
+  const [scheme, rawToken] = authHeader?.trim().split(/\s+/) ?? []
+  const token = rawToken?.trim()
+
+  if (!scheme || scheme.toLowerCase() !== 'bearer' || !token) {
+    return { ok: false, error: 'Unauthorized' }
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } }
+  })
+
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    return { ok: false, error: 'Unauthorized' }
+  }
+
+  return { ok: true }
+}
 
 interface SynthesizeRequest {
   exerciseType: ExerciseType
@@ -50,6 +82,15 @@ function extractJsonArray(text: string) {
 const SUPPORTED_EXERCISE_TYPES: ExerciseType[] = ['values', 'mission']
 
 export async function POST(request: NextRequest) {
+  // Require authentication to prevent unauthorized OpenAI token usage
+  const authResult = await requireAuth(request)
+  if (!authResult.ok) {
+    return NextResponse.json<SynthesizeResponse>(
+      { ok: false, error: authResult.error },
+      { status: 401 }
+    )
+  }
+
   // Parse JSON body with explicit error handling for invalid JSON
   let body: Partial<SynthesizeRequest>
   try {
