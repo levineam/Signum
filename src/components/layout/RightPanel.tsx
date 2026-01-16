@@ -9,6 +9,14 @@ interface RightPanelProps {
 }
 
 export function RightPanel({ className }: RightPanelProps) {
+  // TODO: Re-enable when Daily Reminders and Todos are ready for release
+  // Currently hidden while these features are in development
+  const SHOW_RIGHT_PANEL = false
+
+  if (!SHOW_RIGHT_PANEL) {
+    return null
+  }
+
   return (
     <aside
       className={cn(

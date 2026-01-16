@@ -61,7 +61,8 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
       <RightPanel />
-      <main className="md:pl-20 xl:pl-64 lg:pr-80 transition-all duration-300">
+      {/* Note: lg:pr-80 removed while RightPanel is hidden. Re-add when panel is enabled. */}
+      <main className="md:pl-20 xl:pl-64 transition-all duration-300">
         <div className="flex min-h-screen flex-col">
           <AppHeader />
           <div className="flex-1">
